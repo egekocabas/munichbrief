@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["replicaCount", "image", "application", "persistence"],
+  "properties": {
+    "replicaCount": {
+      "type": "integer",
+      "const": 1,
+      "description": "SQLite requires exactly one application replica."
+    },
+    "image": {
+      "type": "object",
+      "required": ["repository", "tag", "digest", "pullPolicy"],
+      "properties": {
+        "repository": {"type": "string", "minLength": 1},
+        "tag": {"type": "string", "minLength": 1},
+        "digest": {"type": "string", "pattern": "^$|^sha256:[a-f0-9]{64}$"},
+        "pullPolicy": {"enum": ["Always", "IfNotPresent", "Never"]}
+      },
+      "additionalProperties": false
+    },
+    "application": {
+      "type": "object",
+      "required": ["sourceMode", "pageSize", "feedURL", "userAgent", "syncInterval", "httpTimeout", "articleRefreshInterval"],
+      "properties": {
+        "sourceMode": {"enum": ["fixture", "live"]},
+        "pageSize": {"type": "integer", "minimum": 1, "maximum": 100},
+        "feedURL": {"type": "string", "pattern": "^https://"},
+        "userAgent": {"type": "string", "minLength": 1},
+        "syncInterval": {"type": "string", "minLength": 2},
+        "httpTimeout": {"type": "string", "minLength": 2},
+        "articleRefreshInterval": {"type": "string", "minLength": 2},
+        "existingSecret": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "persistence": {
+      "type": "object",
+      "required": ["enabled", "accessMode", "size"],
+      "properties": {
+        "enabled": {"const": true},
+        "storageClass": {"type": "string"},
+        "accessMode": {"const": "ReadWriteOnce"},
+        "size": {"type": "string", "minLength": 2},
+        "annotations": {"type": "object"}
+      }
+    }
+  }
+}

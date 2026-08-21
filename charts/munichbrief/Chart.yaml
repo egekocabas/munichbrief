@@ -1,0 +1,12 @@
+apiVersion: v2
+name: munichbrief
+description: Local-first reader for Munich Police press releases
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/egekocabas/munichbrief
+sources:
+  - https://github.com/egekocabas/munichbrief
+maintainers:
+  - name: egekocabas
+    url: https://github.com/egekocabas

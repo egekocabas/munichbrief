@@ -1,0 +1,28 @@
+{{define "title"}}About{{end}}
+
+{{define "content"}}
+<article class="about-page">
+  <header class="hero compact-hero">
+    <p class="eyebrow">Methodology</p>
+    <h1>What MunichBrief does—and what it does not</h1>
+    <p class="hero-copy">MunichBrief reorganizes official Munich Police press releases into readable incident cards. It is an independent, unofficial service.</p>
+  </header>
+
+  <section aria-labelledby="source-policy">
+    <h2 id="source-policy">Source policy</h2>
+    <p>New source documents are discovered only through the dedicated Munich Police RSS feed. MunichBrief does not crawl the general press listing or archive. Combined daily reports are split at their official numbered headings; separately published reports remain separate.</p>
+    <p>The linked Bavarian Police report is the authoritative source. Reports describe an investigation at publication time, may later be amended, and do not establish guilt. The presumption of innocence applies.</p>
+  </section>
+
+  <section aria-labelledby="processing-policy">
+    <h2 id="processing-policy">Processing and retention</h2>
+    <p>During the current pre-AI stage, parsed German article text is stored locally so the reader remains useful during temporary source outages. Complete source HTML, scripts, navigation, and browser attributes are discarded.</p>
+    <p>Future German summaries and English translations will be clearly labeled as machine-generated. Once both derivations are accepted, full incident bodies will be deleted. Source metadata and derived content will be retained for at most 365 days.</p>
+  </section>
+
+  <section aria-labelledby="privacy-policy">
+    <h2 id="privacy-policy">Privacy and independence</h2>
+    <p>MunichBrief has no accounts, analytics, advertising, cookies, or third-party browser assets. It is not operated by or affiliated with the Bavarian Police.</p>
+  </section>
+</article>
+{{end}}

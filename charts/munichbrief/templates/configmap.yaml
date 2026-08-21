@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "munichbrief.fullname" . }}
+  labels:
+    {{- include "munichbrief.labels" . | nindent 4 }}
+data:
+  MUNICHBRIEF_ADDR: ":8080"
+  MUNICHBRIEF_METRICS_ADDR: ":9090"
+  MUNICHBRIEF_DATABASE_PATH: "/data/munichbrief.db"
+  MUNICHBRIEF_SOURCE_MODE: {{ .Values.application.sourceMode | quote }}
+  MUNICHBRIEF_PAGE_SIZE: {{ .Values.application.pageSize | quote }}
+  MUNICHBRIEF_FEED_URL: {{ .Values.application.feedURL | quote }}
+  MUNICHBRIEF_USER_AGENT: {{ .Values.application.userAgent | quote }}
+  MUNICHBRIEF_SYNC_INTERVAL: {{ .Values.application.syncInterval | quote }}
+  MUNICHBRIEF_HTTP_TIMEOUT: {{ .Values.application.httpTimeout | quote }}
+  MUNICHBRIEF_ARTICLE_REFRESH_INTERVAL: {{ .Values.application.articleRefreshInterval | quote }}

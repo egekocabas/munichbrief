@@ -1,0 +1,33 @@
+{{define "title"}}{{.Incident.TitleDE}}{{end}}
+
+{{define "content"}}
+<nav class="back-link" aria-label="Breadcrumb">
+  <a href="/"><span aria-hidden="true">←</span> Back to timeline</a>
+</nav>
+
+<article class="detail-card">
+  <header>
+    <div class="incident-meta">
+      {{if .Incident.Number}}<span>Report {{.Incident.Number}}</span>{{end}}
+      <time datetime="{{.Incident.PublishedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime .Incident.PublishedAt}}</time>
+    </div>
+    <h1 lang="de">{{.Incident.TitleDE}}</h1>
+    <p class="source-name">Published within: {{.Incident.SourceTitle}}</p>
+	<p class="source-name">Last processed: <time datetime="{{.Incident.UpdatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime .Incident.UpdatedAt}}</time></p>
+  </header>
+
+  <div class="incident-body" lang="de">{{.Incident.BodyDE}}</div>
+
+  <footer class="source-panel">
+    <div>
+      <p class="eyebrow">Authoritative source</p>
+	  {{if .Fixture}}
+	    <p>This page uses synthetic fixture content. Live releases always link back to the original Bavarian Police page.</p>
+	  {{else}}
+	    <p>This is an unofficial rendering of the official release. The original Bavarian Police report remains authoritative.</p>
+	  {{end}}
+    </div>
+    <a class="source-button" href="{{.Incident.SourceURL}}" rel="noopener noreferrer">Open source <span aria-hidden="true">↗</span></a>
+  </footer>
+</article>
+{{end}}

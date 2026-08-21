@@ -1,0 +1,71 @@
+{{define "title"}}Timeline{{end}}
+
+{{define "content"}}
+<section class="hero">
+  <p class="eyebrow">{{if .Fixture}}Local walking skeleton{{else}}Munich Police feed{{end}}</p>
+  <h1>Recent incidents from Munich Police releases</h1>
+  <p class="hero-copy">Combined daily releases and standalone reports share one readable timeline, with a direct link to every authoritative source.</p>
+</section>
+
+<section aria-labelledby="timeline-heading">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Timeline</p>
+      <h2 id="timeline-heading">{{if .Fixture}}Fixture incidents{{else}}Latest incidents{{end}}</h2>
+    </div>
+    <p class="result-count">{{.Total}} reports</p>
+  </div>
+
+  {{if .Groups}}
+    <div class="timeline">
+      {{range .Groups}}
+        <section class="day-group" aria-labelledby="day-{{.ID}}">
+          <div class="day-marker">
+            <span aria-hidden="true"></span>
+            <h3 id="day-{{.ID}}">{{.Label}}</h3>
+          </div>
+          <div class="incident-list">
+            {{range .Incidents}}
+              <article class="incident-card">
+                <div class="incident-meta">
+                  {{if .HasIncident}}{{if .Number}}<span>Report {{.Number}}</span>{{end}}{{else}}<span>Source metadata</span>{{end}}
+                  <time datetime="{{.PublishedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime .PublishedAt}}</time>
+                </div>
+                {{if .HasIncident}}
+                  <h4><a href="/incidents/{{.ID}}" lang="de">{{.TitleDE}}</a></h4>
+                  <p lang="de">{{excerpt .BodyDE}}</p>
+                  {{if eq .FetchStatus "error"}}<p class="status-note">The last source refresh failed; this stored copy remains available.</p>{{end}}
+                {{else}}
+                  <h4 lang="de">{{.TitleDE}}</h4>
+                  <p>The release body is not available yet. Use the official source while MunichBrief retries.</p>
+                {{end}}
+                <div class="card-footer">
+                  <span>{{.SourceTitle}}</span>
+                  {{if .HasIncident}}
+                    <a class="read-more" href="/incidents/{{.ID}}">Read incident <span aria-hidden="true">→</span></a>
+                  {{else}}
+                    <a class="read-more" href="{{.SourceURL}}" rel="noopener noreferrer">Open official source <span aria-hidden="true">↗</span></a>
+                  {{end}}
+                </div>
+              </article>
+            {{end}}
+          </div>
+        </section>
+      {{end}}
+    </div>
+
+    {{if or .HasPrevious .HasNext}}
+      <nav class="pagination" aria-label="Timeline pages">
+        {{if .HasPrevious}}<a href="/?page={{.Previous}}">← Newer</a>{{else}}<span></span>{{end}}
+        <span>Page {{.Page}} of {{.TotalPages}}</span>
+        {{if .HasNext}}<a href="/?page={{.Next}}">Older →</a>{{end}}
+      </nav>
+    {{end}}
+  {{else}}
+    <div class="empty-state">
+      <h3>No incidents yet</h3>
+      <p>{{if .Fixture}}Run fixture ingestion to populate the local timeline.{{else}}The live synchronizer has not discovered an in-window release yet.{{end}}</p>
+    </div>
+  {{end}}
+</section>
+{{end}}

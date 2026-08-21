@@ -1,0 +1,33 @@
+[
+  {
+    "external_id": "fixture-daily-2026-08-21",
+    "source_url": "https://fixture.invalid/releases/daily-2026-08-21",
+    "title": "Synthetic daily media information for local development",
+    "published_at": "2026-08-21T13:15:00+02:00",
+    "incidents": [
+      {
+        "number": "1244",
+        "title_de": "Fahrradunfall; eine Person leicht verletzt – Maxvorstadt",
+        "body_de": "Am Freitagvormittag kam es an einer Kreuzung in der Maxvorstadt zu einem Zusammenstoß zwischen einem Fahrrad und einem Pkw.\n\nDie verletzte Person wurde vor Ort medizinisch versorgt. Die weiteren Ermittlungen zum Unfallhergang dauern an."
+      },
+      {
+        "number": "1245",
+        "title_de": "Einbruch in ein Geschäft – Schwabing",
+        "body_de": "In der Nacht bemerkte eine Mitarbeiterin Beschädigungen am Eingang eines Geschäfts. Mehrere Gegenstände fehlten.\n\nZeugenaufruf\nPersonen mit sachdienlichen Beobachtungen werden gebeten, sich an eine Polizeidienststelle zu wenden."
+      }
+    ]
+  },
+  {
+    "external_id": "fixture-special-2026-08-20",
+    "source_url": "https://fixture.invalid/releases/special-2026-08-20",
+    "title": "Synthetic standalone media information for local development",
+    "published_at": "2026-08-20T18:40:00+02:00",
+    "incidents": [
+      {
+        "number": "1243",
+        "title_de": "Größerer Polizeieinsatz – Altstadt",
+        "body_de": "Am Donnerstagabend fand in der Altstadt ein größerer Polizeieinsatz statt. Der Bereich wurde vorübergehend abgesperrt.\n\nNach Abschluss der Maßnahmen wurden die Absperrungen aufgehoben."
+      }
+    ]
+  }
+]
