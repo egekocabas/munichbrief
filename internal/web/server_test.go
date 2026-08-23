@@ -35,9 +35,23 @@ func TestTimelineAndDetailRenderFixtureData(t *testing.T) {
 		"Größerer Polizeieinsatz",
 		"Fixture mode · Review mode",
 		"Not yet summarized or translated",
+		"28 reports",
+		"Page 1 of 2",
+		"/?page=2",
 	} {
 		if !strings.Contains(timeline.Body.String(), expected) {
 			t.Errorf("timeline body does not contain %q", expected)
+		}
+	}
+
+	olderTimeline := httptest.NewRecorder()
+	handler.ServeHTTP(olderTimeline, englishRequest(http.MethodGet, "/?page=2", nil))
+	if olderTimeline.Code != http.StatusOK {
+		t.Fatalf("older timeline status = %d, want 200", olderTimeline.Code)
+	}
+	for _, expected := range []string{"Page 2 of 2", "Beschädigte Eingangstür", "← Newer"} {
+		if !strings.Contains(olderTimeline.Body.String(), expected) {
+			t.Errorf("older timeline body does not contain %q", expected)
 		}
 	}
 

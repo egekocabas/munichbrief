@@ -34,8 +34,8 @@ func TestFixtureIngestionIsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListIncidents() error = %v", err)
 	}
-	if total != 3 || len(records) != 3 {
-		t.Fatalf("incident totals = %d/%d, want 3/3", total, len(records))
+	if total != 28 || len(records) != 20 {
+		t.Fatalf("incident totals = %d/%d, want 28/20", total, len(records))
 	}
 	if records[0].Number != "1244" || records[1].Number != "1245" {
 		t.Errorf("daily incident order = %q, %q; want 1244, 1245", records[0].Number, records[1].Number)
@@ -86,8 +86,8 @@ func TestBackupCreatesRestorableDatabaseWithoutOverwriting(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read backup: %v", err)
 	}
-	if total != 3 {
-		t.Fatalf("backup incident total = %d, want 3", total)
+	if total != 28 {
+		t.Fatalf("backup incident total = %d, want 28", total)
 	}
 	if err := database.Backup(ctx, backupPath); err == nil {
 		t.Fatal("second Backup() error = nil, want overwrite refusal")

@@ -29,5 +29,154 @@
         "body_de": "Am Donnerstagabend fand in der Altstadt ein größerer Polizeieinsatz statt. Der Bereich wurde vorübergehend abgesperrt.\n\nNach Abschluss der Maßnahmen wurden die Absperrungen aufgehoben."
       }
     ]
+  },
+  {
+    "external_id": "fixture-daily-2026-08-19",
+    "source_url": "https://fixture.invalid/releases/daily-2026-08-19",
+    "title": "Synthetic daily media information for pagination testing",
+    "published_at": "2026-08-19T14:05:00+02:00",
+    "incidents": [
+      {
+        "number": "1242",
+        "title_de": "Verkehrsunfall mit Sachschaden – Sendling",
+        "body_de": "Am Mittwochvormittag stießen in Sendling zwei Fahrzeuge zusammen. Beide konnten die Fahrt nach der Unfallaufnahme fortsetzen.\n\nDie weiteren Ermittlungen zum Unfallhergang dauern an."
+      },
+      {
+        "number": "1241",
+        "title_de": "Beschädigtes Schaufenster – Haidhausen",
+        "body_de": "Am frühen Mittwochmorgen wurde an einem Geschäft in Haidhausen eine beschädigte Scheibe festgestellt.\n\nDie Polizei nahm vor Ort die Ermittlungen auf."
+      },
+      {
+        "number": "1240",
+        "title_de": "Fundsache in einer Grünanlage – Neuhausen",
+        "body_de": "In einer Grünanlage in Neuhausen wurde am Mittwoch eine zurückgelassene Tasche gefunden. Sie wurde zur weiteren Prüfung an eine Polizeidienststelle übergeben."
+      },
+      {
+        "number": "1239",
+        "title_de": "Zusammenstoß zweier Fahrräder – Isarvorstadt",
+        "body_de": "Auf einem Radweg in der Isarvorstadt kam es zu einem Zusammenstoß zweier Fahrräder. Eine Person wurde vorsorglich medizinisch untersucht."
+      },
+      {
+        "number": "1238",
+        "title_de": "Fehlalarm in einem Bürogebäude – Bogenhausen",
+        "body_de": "Ein technischer Alarm führte am Mittwoch zu einem Einsatz in einem Bürogebäude in Bogenhausen. Eine Gefahr bestand nicht."
+      },
+      {
+        "number": "1237",
+        "title_de": "Diebstahl eines Fahrrads – Giesing",
+        "body_de": "Am Mittwochnachmittag wurde in Giesing das Fehlen eines abgestellten Fahrrads bemerkt.\n\nDie Polizei ermittelt wegen Diebstahls."
+      },
+      {
+        "number": "1236",
+        "title_de": "Verkehrskontrolle – Milbertshofen",
+        "body_de": "Bei einer Verkehrskontrolle in Milbertshofen überprüften Einsatzkräfte mehrere Fahrzeuge. Die Maßnahme wurde am Abend beendet."
+      },
+      {
+        "number": "1235",
+        "title_de": "Kleinbrand auf einem Balkon – Laim",
+        "body_de": "Auf einem Balkon in Laim geriet ein Gegenstand in Brand. Das Feuer konnte schnell gelöscht werden; das Gebäude blieb bewohnbar."
+      },
+      {
+        "number": "1234",
+        "title_de": "Unbekannte Flüssigkeit auf der Fahrbahn – Moosach",
+        "body_de": "Eine Verunreinigung auf einer Fahrbahn in Moosach führte kurzzeitig zu Verkehrsbehinderungen. Die Stelle wurde gereinigt."
+      },
+      {
+        "number": "1233",
+        "title_de": "Beschädigter Parkscheinautomat – Pasing",
+        "body_de": "In Pasing wurde am Mittwoch ein beschädigter Parkscheinautomat gemeldet. Die Ermittlungen zur Ursache wurden aufgenommen."
+      }
+    ]
+  },
+  {
+    "external_id": "fixture-daily-2026-08-18",
+    "source_url": "https://fixture.invalid/releases/daily-2026-08-18",
+    "title": "Synthetic archived media information for pagination testing",
+    "published_at": "2026-08-18T13:30:00+02:00",
+    "incidents": [
+      {
+        "number": "1232",
+        "title_de": "Unfall beim Ausparken – Ramersdorf",
+        "body_de": "Beim Ausparken kam es am Dienstag in Ramersdorf zu einem Zusammenstoß. Es entstand leichter Sachschaden."
+      },
+      {
+        "number": "1231",
+        "title_de": "Aufgebrochener Kellerraum – Westend",
+        "body_de": "In einem Mehrfamilienhaus im Westend wurde ein aufgebrochener Kellerraum festgestellt. Die Polizei sicherte Spuren."
+      },
+      {
+        "number": "1230",
+        "title_de": "Verlorene Ladung – Freimann",
+        "body_de": "Ein Fahrzeug verlor in Freimann einen Teil seiner Ladung. Die Fahrbahn wurde vorübergehend gesperrt und anschließend geräumt."
+      },
+      {
+        "number": "1229",
+        "title_de": "Rauchentwicklung in einer Küche – Lehel",
+        "body_de": "Eine Rauchentwicklung in einer Küche im Lehel löste einen Einsatz aus. Nach dem Lüften konnten die Bewohnerinnen und Bewohner zurückkehren."
+      },
+      {
+        "number": "1228",
+        "title_de": "Sachbeschädigung an einer Haltestelle – Trudering",
+        "body_de": "An einer Haltestelle in Trudering wurde eine beschädigte Glasscheibe entdeckt. Hinweise auf die Verursachung werden geprüft."
+      },
+      {
+        "number": "1227",
+        "title_de": "Zusammenstoß im Kreuzungsbereich – Solln",
+        "body_de": "Im Kreuzungsbereich in Solln stießen am Dienstag zwei Pkw zusammen. Der Verkehr wurde kurzzeitig an der Unfallstelle vorbeigeleitet."
+      },
+      {
+        "number": "1226",
+        "title_de": "Gestohlener E-Scooter – Au",
+        "body_de": "In der Au wurde ein abgestellter E-Scooter entwendet. Die Polizei nahm eine Anzeige auf."
+      },
+      {
+        "number": "1225",
+        "title_de": "Beschädigte Eingangstür – Feldmoching",
+        "body_de": "An einem Gebäude in Feldmoching wurden Beschädigungen an der Eingangstür festgestellt. Der Tatzeitraum wird noch eingegrenzt."
+      },
+      {
+        "number": "1224",
+        "title_de": "Kurzzeitige Straßensperrung – Allach",
+        "body_de": "Wegen eines liegengebliebenen Fahrzeugs wurde eine Straße in Allach kurzzeitig gesperrt. Nach der Bergung war sie wieder frei befahrbar."
+      },
+      {
+        "number": "1223",
+        "title_de": "Kontrolle in einer Grünanlage – Nymphenburg",
+        "body_de": "Einsatzkräfte führten am Dienstag eine Kontrolle in einer Grünanlage in Nymphenburg durch. Die Maßnahme verlief ohne besondere Vorkommnisse."
+      }
+    ]
+  },
+  {
+    "external_id": "fixture-special-2026-08-17",
+    "source_url": "https://fixture.invalid/releases/special-2026-08-17",
+    "title": "Synthetic older standalone information for pagination testing",
+    "published_at": "2026-08-17T17:20:00+02:00",
+    "incidents": [
+      {
+        "number": "1222",
+        "title_de": "Polizeieinsatz nach Alarmmeldung – Harlaching",
+        "body_de": "Eine Alarmmeldung führte am Montag zu einem Polizeieinsatz in Harlaching. Vor Ort wurde keine Gefahr festgestellt."
+      },
+      {
+        "number": "1221",
+        "title_de": "Verkehrsbehinderung durch Panne – Obermenzing",
+        "body_de": "Ein liegengebliebenes Fahrzeug verursachte in Obermenzing vorübergehend Verkehrsbehinderungen. Es wurde abgeschleppt."
+      },
+      {
+        "number": "1220",
+        "title_de": "Beschädigtes Fahrradabteil – Berg am Laim",
+        "body_de": "In Berg am Laim wurde ein beschädigtes Fahrradabteil gemeldet. Die Polizei dokumentierte die Spuren."
+      },
+      {
+        "number": "1219",
+        "title_de": "Kollision mit einem Verkehrsschild – Forstenried",
+        "body_de": "Ein Fahrzeug kollidierte in Forstenried mit einem Verkehrsschild. Verletzt wurde niemand."
+      },
+      {
+        "number": "1218",
+        "title_de": "Zurückgelassener Gegenstand – Riem",
+        "body_de": "Ein zurückgelassener Gegenstand wurde in Riem überprüft. Nach Abschluss der Maßnahmen bestand keine Gefahr."
+      }
+    ]
   }
 ]

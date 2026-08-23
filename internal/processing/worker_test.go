@@ -106,8 +106,8 @@ func TestReleaseSpecificFailureContinuesWithNextJobs(t *testing.T) {
 		t.Fatal(err)
 	}
 	worker.processAvailable(ctx)
-	if generator.calls != 3 {
-		t.Fatalf("generator calls = %d, want one failed and two successful jobs", generator.calls)
+	if generator.calls != 28 {
+		t.Fatalf("generator calls = %d, want one failed and 27 successful jobs", generator.calls)
 	}
 	stats, err := database.ProcessingQueueStats(ctx, worker.operation, time.Now())
 	if err != nil || stats.Retrying != 1 || stats.Running != 0 {
