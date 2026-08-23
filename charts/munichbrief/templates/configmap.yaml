@@ -14,7 +14,6 @@ data:
   MUNICHBRIEF_PAGE_SIZE: {{ .Values.application.pageSize | quote }}
   MUNICHBRIEF_FEED_URL: {{ .Values.application.feedURL | quote }}
   MUNICHBRIEF_USER_AGENT: {{ .Values.application.userAgent | quote }}
-  MUNICHBRIEF_SYNC_INTERVAL: {{ .Values.application.syncInterval | quote }}
   MUNICHBRIEF_HTTP_TIMEOUT: {{ .Values.application.httpTimeout | quote }}
   MUNICHBRIEF_ARTICLE_REFRESH_INTERVAL: {{ .Values.application.articleRefreshInterval | quote }}
   MUNICHBRIEF_AI_ENABLED: {{ .Values.application.aiEnabled | quote }}

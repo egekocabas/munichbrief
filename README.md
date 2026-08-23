@@ -42,7 +42,7 @@ MUNICHBRIEF_DATABASE_PATH=.data/munichbrief-live.db \
 go run ./cmd/munichbrief
 ```
 
-Live mode polls immediately and then every 15 minutes. It makes low-rate automated requests to RSS-linked police articles under the source-access policy and risks documented below. Routine development and CI should continue to use fixture mode.
+Live mode polls immediately at startup and then once per day at a randomized time between 02:00 and 05:00 Europe/Berlin time. It makes low-rate automated requests to RSS-linked police articles under the source-access policy and risks documented below. Routine development and CI should continue to use fixture mode.
 
 To test AI processing safely against the synthetic fixtures, run:
 
@@ -69,7 +69,6 @@ Useful configuration:
 | `MUNICHBRIEF_PAGE_SIZE` | `20` | Timeline incidents per page, from 1 to 100 |
 | `MUNICHBRIEF_FEED_URL` | Official Munich RSS URL | Live discovery feed; must be HTTPS |
 | `MUNICHBRIEF_USER_AGENT` | Repository-identifying development agent | Identifies outbound source requests; must retain the repository URL |
-| `MUNICHBRIEF_SYNC_INTERVAL` | `15m` | Live feed polling interval; minimum one minute |
 | `MUNICHBRIEF_HTTP_TIMEOUT` | `10s` | Per-request live source timeout; minimum one second |
 | `MUNICHBRIEF_ARTICLE_REFRESH_INTERVAL` | `6h` | Maximum age before an unchanged article can be refreshed |
 | `MUNICHBRIEF_AI_ENABLED` | `false` | Enable asynchronous Ollama processing |
@@ -185,7 +184,7 @@ The application will be one Go process responsible for HTTP serving, scheduled s
 
 ### Discovery and synchronization
 
-- Synchronize immediately at application startup and every 15 minutes afterward.
+- Synchronize immediately at application startup and once per day at a randomized time between 02:00 and 05:00 Europe/Berlin time.
 - Seed releases from the current Munich calendar date and the preceding two calendar dates.
 - Use `ETag` and `Last-Modified` for conditional RSS requests.
 - Canonicalize and validate article URLs before persistence or fetching.
