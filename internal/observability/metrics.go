@@ -62,6 +62,10 @@ func (m *Metrics) RecordFeedFailure() {
 	m.feedFailures.Add(1)
 }
 
+func (m *Metrics) SetLastFeedSuccess(at time.Time) {
+	m.lastFeedSuccess.Store(at.Unix())
+}
+
 func (m *Metrics) RecordFeedSuccess(notModified bool, discovered, fetched, fetchFailures, parserFailures int, at time.Time) {
 	if notModified {
 		m.feedNotModified.Add(1)
@@ -70,7 +74,7 @@ func (m *Metrics) RecordFeedSuccess(notModified bool, discovered, fetched, fetch
 	m.articlesFetched.Add(uint64(max(fetched, 0)))
 	m.articleFetchFailures.Add(uint64(max(fetchFailures, 0)))
 	m.parserFailures.Add(uint64(max(parserFailures, 0)))
-	m.lastFeedSuccess.Store(at.Unix())
+	m.SetLastFeedSuccess(at)
 }
 
 func (m *Metrics) RecordFeedDuration(duration time.Duration) {

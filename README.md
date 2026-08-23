@@ -188,6 +188,7 @@ The application will be one Go process responsible for HTTP serving, scheduled s
 ### Discovery and synchronization
 
 - Synchronize immediately at application startup and approximately every six hours with up to 30 minutes of jitter.
+- Retry failed feed synchronization with exponential backoff capped at 30 minutes before resuming the normal schedule.
 - Seed releases from the current Munich calendar date and the preceding two calendar dates.
 - Use `ETag` and `Last-Modified` for conditional RSS requests.
 - Canonicalize and validate article URLs before persistence or fetching.

@@ -27,8 +27,10 @@ import (
 var version = "dev"
 
 const (
-	liveSyncInterval = 6 * time.Hour
-	liveSyncJitter   = 30 * time.Minute
+	liveSyncInterval     = 6 * time.Hour
+	liveSyncJitter       = 30 * time.Minute
+	liveSyncRetryInitial = time.Minute
+	liveSyncRetryMaximum = 30 * time.Minute
 )
 
 func main() {
@@ -102,6 +104,9 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 			return err
 		}
 	} else {
+		if err := restoreFeedSuccessMetric(ctx, database, metrics); err != nil {
+			return err
+		}
 		liveSyncer, err = newLiveSyncer(database, cfg, metrics.ObserveSourceResponse, logger)
 		if err != nil {
 			return err
@@ -170,6 +175,17 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 		}
 		return err
 	}
+}
+
+func restoreFeedSuccessMetric(ctx context.Context, database *store.Store, metrics *observability.Metrics) error {
+	state, err := database.GetSyncState(ctx)
+	if err != nil {
+		return err
+	}
+	if state.LastSuccessAt != nil {
+		metrics.SetLastFeedSuccess(*state.LastSuccessAt)
+	}
+	return nil
 }
 
 func runAIRetry(ctx context.Context, logger *slog.Logger, cfg config.Config, arguments []string) error {
@@ -329,7 +345,7 @@ func shutdownServers(ctx context.Context, logger *slog.Logger, servers ...*http.
 }
 
 func runLiveSyncLoop(ctx context.Context, location *time.Location, syncer *ingest.Syncer, metrics *observability.Metrics, logger *slog.Logger) {
-	synchronize := func() {
+	synchronize := func() bool {
 		metrics.RecordFeedAttempt()
 		startedAt := time.Now()
 		result, err := syncer.Sync(ctx)
@@ -339,7 +355,7 @@ func runLiveSyncLoop(ctx context.Context, location *time.Location, syncer *inges
 			if !errors.Is(err, context.Canceled) {
 				logger.Error("live synchronization failed", "error", err)
 			}
-			return
+			return false
 		}
 		metrics.RecordFeedSuccess(result.NotModified, result.Discovered, result.Fetched, result.FetchFailures, result.ParserFailures, time.Now())
 		logger.Info("live synchronization completed",
@@ -350,27 +366,48 @@ func runLiveSyncLoop(ctx context.Context, location *time.Location, syncer *inges
 			"parser_failures", result.ParserFailures,
 			"skipped", result.Skipped,
 		)
+		return true
 	}
 
-	synchronize()
+	succeeded := synchronize()
+	failedAttempts := 0
 	for {
-		delay := randomizedLiveSyncDelay(time.Duration(rand.Int64N(int64(2 * liveSyncJitter))))
+		var delay time.Duration
+		if succeeded {
+			failedAttempts = 0
+			delay = randomizedLiveSyncDelay(time.Duration(rand.Int64N(int64(2 * liveSyncJitter))))
+		} else {
+			failedAttempts++
+			delay = liveSyncRetryDelay(failedAttempts)
+		}
 		nextRun := time.Now().Add(delay).In(location)
 		metrics.SetNextFeedSync(nextRun)
-		logger.Info("next live synchronization scheduled", "scheduled_at", nextRun)
+		logger.Info("next live synchronization scheduled",
+			"scheduled_at", nextRun,
+			"retrying_after_failure", !succeeded,
+			"failed_attempts", failedAttempts,
+		)
 		timer := time.NewTimer(delay)
 		select {
 		case <-ctx.Done():
 			timer.Stop()
 			return
 		case <-timer.C:
-			synchronize()
+			succeeded = synchronize()
 		}
 	}
 }
 
 func randomizedLiveSyncDelay(offset time.Duration) time.Duration {
 	return liveSyncInterval - liveSyncJitter + offset
+}
+
+func liveSyncRetryDelay(failedAttempts int) time.Duration {
+	delay := liveSyncRetryInitial
+	for attempt := 1; attempt < failedAttempts && delay < liveSyncRetryMaximum; attempt++ {
+		delay *= 2
+	}
+	return min(delay, liveSyncRetryMaximum)
 }
 
 func printUsage(writer io.Writer) {
