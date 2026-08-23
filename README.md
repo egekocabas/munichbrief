@@ -2,7 +2,7 @@
 
 MunichBrief is a lightweight, local-first reader for press releases from the Munich Police Headquarters (`Polizeipräsidium München`). It discovers official releases, splits daily collections into individual incident cards, and presents them with clear attribution and links to the authoritative source.
 
-The application runs locally on a Mac and is packaged for private deployment to the single-node K3s cluster on `pi16`. A separate Raspberry Pi, `pi8`, will eventually provide German summarization and English translation over the LAN.
+The application runs locally on a Mac and is packaged for private deployment to the single-node K3s cluster on `pi16`. A separate Raspberry Pi, `pi8`, provides privacy-minimised German summarization and English translation over the LAN.
 
 > [!IMPORTANT]
 > MunichBrief is an unofficial project. The original Bavarian Police release is always authoritative. Police reports describe the state of an investigation at publication time; the presumption of innocence applies to accused and suspected persons.
@@ -17,9 +17,9 @@ The agreed direction is:
 - Go, server-rendered HTML, and SQLite;
 - one application process and one Kubernetes replica;
 - official RSS discovery followed by bounded fetching of RSS-linked articles;
-- temporary storage of full German incident text before local AI is available;
-- German summaries and aligned English translations produced by `pi8` later;
-- 365-day retention for source metadata and derived content;
+- retained extracted German incident text with no automated deletion deadline for now;
+- German summaries and aligned English translations produced in one request by `pi8`;
+- restricted review mode now and fail-closed public mode for a later legally reviewed launch;
 - deployment through the operational `homelab-infra` Argo CD path, with application CI limited to artifact publication.
 
 Public internet access is not part of the initial release.
@@ -50,6 +50,7 @@ To test AI processing safely against the synthetic fixtures, run:
 MUNICHBRIEF_AI_ENABLED=true \
 MUNICHBRIEF_OLLAMA_BASE_URL=http://192.168.178.102:11434 \
 MUNICHBRIEF_OLLAMA_MODEL=qwen3.5:4b \
+MUNICHBRIEF_PRESENTATION_MODE=review \
 go run ./cmd/munichbrief
 ```
 
@@ -63,6 +64,8 @@ Useful configuration:
 | `MUNICHBRIEF_METRICS_ADDR` | `127.0.0.1:9090` | Separate internal Prometheus listener |
 | `MUNICHBRIEF_DATABASE_PATH` | `.data/munichbrief.db` | SQLite database path |
 | `MUNICHBRIEF_SOURCE_MODE` | `fixture` | Source provider: `fixture` or explicit `live` mode |
+| `MUNICHBRIEF_PRESENTATION_MODE` | `review` for fixtures, `public` for live | `review` exposes original QA text and states; `public` serves only current privacy-safe AI output |
+| `MUNICHBRIEF_SECURE_COOKIES` | `false` | Set the language preference cookie's `Secure` attribute; enabled by the TLS Helm deployment |
 | `MUNICHBRIEF_PAGE_SIZE` | `20` | Timeline incidents per page, from 1 to 100 |
 | `MUNICHBRIEF_FEED_URL` | Official Munich RSS URL | Live discovery feed; must be HTTPS |
 | `MUNICHBRIEF_USER_AGENT` | Repository-identifying development agent | Identifies outbound source requests; must retain the repository URL |
@@ -100,7 +103,7 @@ The second command currently checks official articles `107252`, `107292`, and `1
 - Run comfortably on Raspberry Pi hardware.
 - Support deterministic local development without requiring live external requests.
 - Be packaged for ARM64 K3s deployment without making Kubernetes part of the inner development loop.
-- Minimize retained source content once summarization is operational.
+- Keep source retention explicit and operator-reviewed rather than deleting records implicitly.
 - Start with useful logs, health checks, and metrics rather than adding observability after failures occur.
 
 ## Non-goals
@@ -323,43 +326,33 @@ Every incident view will display:
 
 The application must continue synchronizing and serving existing data when `pi8` is unavailable. AI processing will therefore be asynchronous and outside browser request paths.
 
-The first application-facing processing operation creates one aligned presentation:
+The application-facing processing operation creates one aligned presentation and privacy assessment:
 
 ```text
-Present(GermanIncident) -> GermanTitle + GermanSummary + EnglishTitle + EnglishSummary
+Present(GermanIncident) -> GermanTitle + GermanSummary + EnglishTitle + EnglishSummary + PrivacyStatus
 ```
 
-The planned processing sequence is:
+The processing sequence is:
 
 1. Generate a fact-constrained German title and summary from the German incident body.
 2. Generate aligned English translations in the same structured response.
-3. Validate all four fields and reject empty, malformed, or oversized responses.
-4. Record the source hash, model, prompt version, and processing time.
-5. Retain the stored German body during the quality-evaluation phase; deletion remains a later operator-reviewed step.
+3. Require the model's privacy assessment and validate schema, lengths, and recognizable direct identifiers.
+4. Persist only privacy-safe output and record source hash, model, prompt version, and processing time.
+5. Retain the stored German body indefinitely for now; deletion remains a later operator-reviewed step.
 
 The LAN base URL, timeouts, model names, and optional authorization token will be configurable. Secrets will not be committed. The `pi8` inference port should be restricted to `pi16` at the host firewall or equivalent network boundary.
 
-Transient failures will use bounded exponential backoff. Processing will be idempotent for the combination of incident source hash, operation, model, and prompt version.
+Transient endpoint failures use capped backoff and a circuit breaker. Release-specific malformed or privacy-uncertain output yields to the next release and becomes `needs_review` after three attempts. Processing is idempotent for the combination of incident source hash, operation, model, and prompt version.
 
 The initial model is `qwen3.5:4b`. Model identity and prompt version are part of job and derivation identity, so changing either queues a fresh presentation without overwriting provenance.
 
 ## Retention
 
-### Before AI is available
-
-- Store parsed German bodies so the local reader is useful.
+- Store parsed German bodies so the restricted local reader remains useful and AI output can be reviewed.
 - Never retain raw downloaded HTML after parsing.
-- Do not retain German bodies or their metadata beyond 365 days from publication.
-
-### After AI is available
-
-- Fetch and parse source text for processing.
-- Keep the body only until the German and English derivations succeed.
-- Store summaries, metadata, provenance, and official source links.
-- Purge source metadata and derived content 365 days after publication.
-- Migrate existing pre-AI records through the same processing and deletion workflow.
-
-Retention deletion must be observable and testable with a configurable clock.
+- Keep source metadata, extracted German text, derived presentations, and provenance without an automated deletion deadline for now.
+- Do not render stored originals in public mode, even after AI succeeds.
+- Treat this as an explicit temporary operational policy, not a conclusion that indefinite storage is legally permissible. A later deletion or review policy requires legal and operator approval.
 
 ## Local development strategy
 
@@ -493,10 +486,9 @@ The application provides a consistent SQLite backup command and documented resto
 
 ### 6. pi8 summarization and translation
 
-- **Initial implementation complete.** Ollama-backed asynchronous German/English titles and summaries include structured validation, provenance, bounded retries, and restart-safe jobs.
-- Run quality evaluations across the installed pi8 models and refine the prompt.
-- Decide whether generated content is acceptable before deleting any stored source bodies.
-- Enforce the steady-state 365-day retention policy.
+- **Privacy-safe review implementation complete.** One Ollama request creates German/English titles, summaries, and a privacy assessment with deterministic identifier checks, provenance, categorized retries, circuit breaking, and restart-safe jobs.
+- Continue synthetic quality evaluation of `qwen3.5:4b` and refine the versioned prompt when evidence requires it.
+- Keep stored source bodies indefinitely for now; any deletion policy remains an explicit future legal and operator decision.
 
 ### 7. Public-readiness review
 
@@ -545,14 +537,14 @@ Maps, accounts, comments, notifications, native applications, and highly availab
 - Bundled and standalone detail rendering.
 - Pagination, attribution, disclaimers, and output escaping.
 
-### AI and retention
+### AI, privacy, and retention
 
-- `pi8` unavailability, timeouts, malformed output, and retry exhaustion.
+- `pi8` unavailability, timeouts, malformed output, circuit breaking, and privacy-review states.
 - Source changes during processing.
 - Aligned German and English results.
 - Provenance for model and prompt versions.
-- Body deletion only after successful required derivations.
-- 365-day deletion using a fake clock.
+- Review/public visibility and current prompt/model/source provenance.
+- Original-body retention without automated deletion.
 
 ### Packaging
 
@@ -577,11 +569,11 @@ The local MVP is complete when a clean start can:
 
 - “Three-day backfill” means today plus the preceding two calendar dates in `Europe/Berlin`.
 - Missing historical items will not trigger an archive crawl.
-- Full German bodies may be stored during the pre-AI private phase, but never beyond 365 days.
-- Bodies become transient after successful AI processing is available.
+- Full German bodies are retained indefinitely for now but are visible only in restricted review mode.
+- Public mode never renders stored originals and publishes only current privacy-safe AI output.
 - English output is a translation of the accepted German summary.
 - Local-first access, Go, SQLite, server rendering, one replica, and GitOps-only K3s deployment are fixed decisions.
-- Model selection is deferred; the application-facing processing interface is stable.
+- `qwen3.5:4b` is the initial model; model and prompt changes create fresh processing identities.
 
 ## References
 
@@ -591,5 +583,7 @@ The local MVP is complete when a clean start can:
 - [Latest Bavarian Police press releases](https://www.polizei.bayern.de/aktuelles/pressemitteilungen/index.html)
 - [Bavarian Police robots.txt](https://www.polizei.bayern.de/robots.txt)
 - [German Copyright Act, Section 5](https://www.gesetze-im-internet.de/urhg/__5.html)
+- [EU General Data Protection Regulation](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=celex%3A32016R0679)
+- [BfDI guidance on data protection and the press](https://www.bfdi.bund.de/DE/Buerger/Inhalte/Allgemein/Datenschutz/Datenschutz_Presse.html)
 - [GitHub documentation: publishing Docker images](https://docs.github.com/en/actions/tutorials/publish-packages/publish-docker-images)
 - [Kubernetes documentation: persistent volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)

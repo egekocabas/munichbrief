@@ -26,27 +26,30 @@ const (
 	defaultAIInterval   = 5 * time.Second
 	defaultAITimeout    = 5 * time.Minute
 	defaultAIContext    = 8192
+	defaultSecureCookie = false
 	repositoryURL       = "https://github.com/egekocabas/munichbrief"
 )
 
 // Config contains the runtime settings for the walking skeleton.
 type Config struct {
-	Address        string
-	MetricsAddress string
-	DatabasePath   string
-	SourceMode     string
-	PageSize       int
-	FeedURL        string
-	UserAgent      string
-	SyncInterval   time.Duration
-	HTTPTimeout    time.Duration
-	RefreshAfter   time.Duration
-	AIEnabled      bool
-	OllamaBaseURL  string
-	OllamaModel    string
-	AIInterval     time.Duration
-	AITimeout      time.Duration
-	AIContextSize  int
+	Address          string
+	MetricsAddress   string
+	DatabasePath     string
+	SourceMode       string
+	PageSize         int
+	FeedURL          string
+	UserAgent        string
+	SyncInterval     time.Duration
+	HTTPTimeout      time.Duration
+	RefreshAfter     time.Duration
+	AIEnabled        bool
+	OllamaBaseURL    string
+	OllamaModel      string
+	AIInterval       time.Duration
+	AITimeout        time.Duration
+	AIContextSize    int
+	PresentationMode string
+	SecureCookies    bool
 }
 
 // Load reads configuration from the environment and applies local-safe defaults.
@@ -68,13 +71,26 @@ func Load() (Config, error) {
 		AIInterval:     defaultAIInterval,
 		AITimeout:      defaultAITimeout,
 		AIContextSize:  defaultAIContext,
+		SecureCookies:  defaultSecureCookie,
 	}
+	defaultPresentationMode := "review"
+	if cfg.SourceMode == "live" {
+		defaultPresentationMode = "public"
+	}
+	cfg.PresentationMode = envOrDefault("MUNICHBRIEF_PRESENTATION_MODE", defaultPresentationMode)
 	if raw := os.Getenv("MUNICHBRIEF_AI_ENABLED"); raw != "" {
 		value, err := strconv.ParseBool(raw)
 		if err != nil {
 			return Config{}, fmt.Errorf("MUNICHBRIEF_AI_ENABLED must be true or false")
 		}
 		cfg.AIEnabled = value
+	}
+	if raw := os.Getenv("MUNICHBRIEF_SECURE_COOKIES"); raw != "" {
+		value, err := strconv.ParseBool(raw)
+		if err != nil {
+			return Config{}, fmt.Errorf("MUNICHBRIEF_SECURE_COOKIES must be true or false")
+		}
+		cfg.SecureCookies = value
 	}
 
 	if raw := os.Getenv("MUNICHBRIEF_PAGE_SIZE"); raw != "" {
@@ -87,6 +103,9 @@ func Load() (Config, error) {
 
 	if cfg.SourceMode != "fixture" && cfg.SourceMode != "live" {
 		return Config{}, fmt.Errorf("unsupported MUNICHBRIEF_SOURCE_MODE %q: use fixture or live", cfg.SourceMode)
+	}
+	if cfg.PresentationMode != "review" && cfg.PresentationMode != "public" {
+		return Config{}, fmt.Errorf("unsupported MUNICHBRIEF_PRESENTATION_MODE %q: use review or public", cfg.PresentationMode)
 	}
 
 	var err error

@@ -24,11 +24,31 @@ go run ./cmd/munichbrief migrate
 MUNICHBRIEF_SOURCE_MODE=live \
 MUNICHBRIEF_DATABASE_PATH=.data/munichbrief-live.db \
 go run ./cmd/munichbrief sync
+
+MUNICHBRIEF_DATABASE_PATH=.data/munichbrief-live.db \
+MUNICHBRIEF_OLLAMA_MODEL=qwen3.5:4b \
+go run ./cmd/munichbrief ai-retry --incident 123
+
+MUNICHBRIEF_DATABASE_PATH=.data/munichbrief-live.db \
+MUNICHBRIEF_OLLAMA_MODEL=qwen3.5:4b \
+go run ./cmd/munichbrief ai-retry --all
 ```
 
 The reader listens on `127.0.0.1:8080` and metrics listen separately on
 `127.0.0.1:9090`. The reader provides `/healthz` and `/readyz`; only the
 metrics listener provides `/metrics`.
+
+`review` presentation mode displays stored German source text and processing
+states and must remain behind access control. `public` mode fails closed: it
+lists only incidents with a privacy-safe presentation from the active source
+hash, model, and prompt, and never renders stored originals. Back up SQLite
+before deploying a migration. The language selector uses one one-year,
+HTTP-only preference cookie; enable secure cookies behind TLS.
+
+The configured pi8 endpoint currently uses unencrypted HTTP on a restricted
+LAN. Limit egress to `192.168.178.102/32:11434` and do not enable public mode
+until this hop is protected by HTTPS or an encrypted tunnel and the legal
+launch review is complete.
 
 ## Production-style container
 

@@ -21,9 +21,11 @@
     },
     "application": {
       "type": "object",
-      "required": ["sourceMode", "pageSize", "feedURL", "userAgent", "syncInterval", "httpTimeout", "articleRefreshInterval", "aiEnabled", "ollamaBaseURL", "ollamaModel", "aiInterval", "aiTimeout", "aiContextSize"],
+      "required": ["sourceMode", "presentationMode", "secureCookies", "pageSize", "feedURL", "userAgent", "syncInterval", "httpTimeout", "articleRefreshInterval", "aiEnabled", "ollamaBaseURL", "ollamaModel", "aiInterval", "aiTimeout", "aiContextSize"],
       "properties": {
         "sourceMode": {"enum": ["fixture", "live"]},
+        "presentationMode": {"enum": ["review", "public"]},
+        "secureCookies": {"type": "boolean"},
         "pageSize": {"type": "integer", "minimum": 1, "maximum": 100},
         "feedURL": {"type": "string", "pattern": "^https://"},
         "userAgent": {"type": "string", "minLength": 1},

@@ -12,13 +12,15 @@ fullnameOverride: ""
 
 application:
   sourceMode: live
+  presentationMode: review
+  secureCookies: true
   pageSize: 20
   feedURL: https://www.polizei.bayern.de/rss/polizeiprasidium-munchen.xml
   userAgent: MunichBrief/0.1.0 (+https://github.com/egekocabas/munichbrief)
   syncInterval: 15m
   httpTimeout: 10s
   articleRefreshInterval: 6h
-  aiEnabled: false
+  aiEnabled: true
   ollamaBaseURL: http://192.168.178.102:11434
   ollamaModel: qwen3.5:4b
   aiInterval: 5s
@@ -80,7 +82,7 @@ networkPolicy:
     - observability
   allowPublicHTTPS: true
   pi8:
-    enabled: false
+    enabled: true
     cidr: 192.168.178.102/32
     port: 11434
 

@@ -18,6 +18,11 @@ required_patterns=(
   'path: /healthz'
   'path: /readyz'
   'kind: NetworkPolicy'
+  'MUNICHBRIEF_PRESENTATION_MODE: "review"'
+  'MUNICHBRIEF_SECURE_COOKIES: "true"'
+  'MUNICHBRIEF_AI_ENABLED: "true"'
+  'cidr: 192.168.178.102/32'
+  'port: 11434'
 )
 
 for pattern in "${required_patterns[@]}"; do

@@ -7,33 +7,44 @@ import (
 	"strconv"
 	"sync/atomic"
 	"time"
+
+	"github.com/egekocabas/munichbrief/internal/store"
 )
 
 type Metrics struct {
-	version              string
-	startedAt            time.Time
-	feedAttempts         atomic.Uint64
-	feedFailures         atomic.Uint64
-	feedNotModified      atomic.Uint64
-	itemsDiscovered      atomic.Uint64
-	articlesFetched      atomic.Uint64
-	articleFetchFailures atomic.Uint64
-	parserFailures       atomic.Uint64
-	lastFeedSuccess      atomic.Int64
-	httpResponses        [6]atomic.Uint64
-	sourceFeedResponses  [6]atomic.Uint64
-	sourcePageResponses  [6]atomic.Uint64
-	processingAttempts   atomic.Uint64
-	processingSuccesses  atomic.Uint64
-	processingFailures   atomic.Uint64
-	processingQueueDepth atomic.Int64
+	version                string
+	startedAt              time.Time
+	feedAttempts           atomic.Uint64
+	feedFailures           atomic.Uint64
+	feedNotModified        atomic.Uint64
+	itemsDiscovered        atomic.Uint64
+	articlesFetched        atomic.Uint64
+	articleFetchFailures   atomic.Uint64
+	parserFailures         atomic.Uint64
+	lastFeedSuccess        atomic.Int64
+	httpResponses          [6]atomic.Uint64
+	sourceFeedResponses    [6]atomic.Uint64
+	sourcePageResponses    [6]atomic.Uint64
+	processingAttempts     atomic.Uint64
+	processingSuccesses    atomic.Uint64
+	processingFailures     atomic.Uint64
+	processingFailureKinds [4]atomic.Uint64
+	processingQueued       atomic.Int64
+	processingRunning      atomic.Int64
+	processingRetrying     atomic.Int64
+	processingReview       atomic.Int64
+	processingFailed       atomic.Int64
+	processingOldestAge    atomic.Int64
+	processorAvailable     atomic.Int64
 }
 
 func NewMetrics(version string, startedAt time.Time) *Metrics {
 	if version == "" {
 		version = "dev"
 	}
-	return &Metrics{version: version, startedAt: startedAt}
+	metrics := &Metrics{version: version, startedAt: startedAt}
+	metrics.processorAvailable.Store(1)
+	return metrics
 }
 
 func (m *Metrics) RecordFeedAttempt() {
@@ -75,12 +86,27 @@ func (m *Metrics) RecordProcessingSuccess() {
 	m.processingSuccesses.Add(1)
 }
 
-func (m *Metrics) RecordProcessingFailure() {
+func (m *Metrics) RecordProcessingFailure(kind string) {
 	m.processingFailures.Add(1)
+	index := map[string]int{"transient": 0, "configuration": 1, "output": 2, "privacy": 3}[kind]
+	m.processingFailureKinds[index].Add(1)
 }
 
-func (m *Metrics) SetProcessingQueueDepth(depth int) {
-	m.processingQueueDepth.Store(int64(max(depth, 0)))
+func (m *Metrics) SetProcessingStats(stats store.ProcessingStats) {
+	m.processingQueued.Store(int64(max(stats.Queued, 0)))
+	m.processingRunning.Store(int64(max(stats.Running, 0)))
+	m.processingRetrying.Store(int64(max(stats.Retrying, 0)))
+	m.processingReview.Store(int64(max(stats.NeedsReview, 0)))
+	m.processingFailed.Store(int64(max(stats.Failed, 0)))
+	m.processingOldestAge.Store(int64(max(stats.OldestPendingAge.Seconds(), 0)))
+}
+
+func (m *Metrics) SetProcessorAvailable(available bool) {
+	if available {
+		m.processorAvailable.Store(1)
+		return
+	}
+	m.processorAvailable.Store(0)
 }
 
 func (m *Metrics) Handler() http.Handler {
@@ -131,12 +157,26 @@ func (m *Metrics) write(writer io.Writer) {
 	writeCounter(writer, "munichbrief_processing_attempts_total", "AI presentation processing attempts.", m.processingAttempts.Load())
 	writeCounter(writer, "munichbrief_processing_successes_total", "AI presentations generated successfully.", m.processingSuccesses.Load())
 	writeCounter(writer, "munichbrief_processing_failures_total", "AI presentation processing failures.", m.processingFailures.Load())
-	fmt.Fprintln(writer, "# HELP munichbrief_processing_queue_depth Pending AI processing jobs.")
-	fmt.Fprintln(writer, "# TYPE munichbrief_processing_queue_depth gauge")
-	fmt.Fprintf(writer, "munichbrief_processing_queue_depth %d\n", m.processingQueueDepth.Load())
+	fmt.Fprintln(writer, "# HELP munichbrief_processing_failures_by_kind_total AI processing failures by safe machine-readable category.")
+	fmt.Fprintln(writer, "# TYPE munichbrief_processing_failures_by_kind_total counter")
+	for index, kind := range []string{"transient", "configuration", "output", "privacy"} {
+		fmt.Fprintf(writer, "munichbrief_processing_failures_by_kind_total{kind=%q} %d\n", kind, m.processingFailureKinds[index].Load())
+	}
+	fmt.Fprintln(writer, "# HELP munichbrief_processing_jobs AI processing jobs by state.")
+	fmt.Fprintln(writer, "# TYPE munichbrief_processing_jobs gauge")
+	for state, value := range map[string]int64{
+		"queued": m.processingQueued.Load(), "running": m.processingRunning.Load(),
+		"retrying": m.processingRetrying.Load(), "needs_review": m.processingReview.Load(),
+		"failed": m.processingFailed.Load(),
+	} {
+		fmt.Fprintf(writer, "munichbrief_processing_jobs{state=%q} %d\n", state, value)
+	}
 	fmt.Fprintln(writer, "# HELP munichbrief_processing_oldest_job_age_seconds Age of the oldest pending AI processing job.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_processing_oldest_job_age_seconds gauge")
-	fmt.Fprintln(writer, "munichbrief_processing_oldest_job_age_seconds 0")
+	fmt.Fprintf(writer, "munichbrief_processing_oldest_job_age_seconds %d\n", m.processingOldestAge.Load())
+	fmt.Fprintln(writer, "# HELP munichbrief_ai_processor_available Whether the AI processor circuit is closed and available.")
+	fmt.Fprintln(writer, "# TYPE munichbrief_ai_processor_available gauge")
+	fmt.Fprintf(writer, "munichbrief_ai_processor_available %d\n", m.processorAvailable.Load())
 	writeCounter(writer, "munichbrief_retention_deletions_total", "Records removed by retention processing.", 0)
 }
 

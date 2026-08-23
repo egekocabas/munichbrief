@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/egekocabas/munichbrief/internal/domain"
 	"github.com/egekocabas/munichbrief/internal/source"
 	"github.com/egekocabas/munichbrief/internal/store"
 )
@@ -18,11 +19,26 @@ func (fakeGenerator) ModelIdentity() string { return "test-model" }
 
 func (fakeGenerator) Generate(context.Context, string, string) (store.AIPresentation, string, error) {
 	return store.AIPresentation{
-		TitleDE:   "Kurzer deutscher Titel",
-		SummaryDE: "Eine kurze deutsche Zusammenfassung.",
-		TitleEN:   "Short English title",
-		SummaryEN: "A short English summary.",
+		TitleDE:       "Kurzer deutscher Titel",
+		SummaryDE:     "Eine kurze deutsche Zusammenfassung.",
+		TitleEN:       "Short English title",
+		SummaryEN:     "A short English summary.",
+		PrivacyStatus: "safe",
 	}, "test-model", nil
+}
+
+type sequenceGenerator struct {
+	calls int
+	fail  func(int) error
+}
+
+func (g *sequenceGenerator) ModelIdentity() string { return "test-model" }
+func (g *sequenceGenerator) Generate(context.Context, string, string) (store.AIPresentation, string, error) {
+	g.calls++
+	if err := g.fail(g.calls); err != nil {
+		return store.AIPresentation{}, "", err
+	}
+	return fakeGenerator{}.Generate(context.Background(), "", "")
 }
 
 func TestWorkerProcessesExistingIncidentsAndPersistsPresentation(t *testing.T) {
@@ -62,4 +78,116 @@ func TestWorkerProcessesExistingIncidentsAndPersistsPresentation(t *testing.T) {
 	if err != nil || depth != 0 {
 		t.Errorf("queue depth = %d, err=%v; want 0", depth, err)
 	}
+}
+
+func TestReleaseSpecificFailureContinuesWithNextJobs(t *testing.T) {
+	ctx := context.Background()
+	database := fixtureProcessingStore(t, ctx)
+	generator := &sequenceGenerator{fail: func(call int) error {
+		if call == 1 {
+			return errorOf(ErrorOutput, "synthetic malformed output")
+		}
+		return nil
+	}}
+	worker, err := NewWorker(database, generator, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, time.Now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker.processAvailable(ctx)
+	if generator.calls != 3 {
+		t.Fatalf("generator calls = %d, want one failed and two successful jobs", generator.calls)
+	}
+	stats, err := database.ProcessingQueueStats(ctx, worker.operation, time.Now())
+	if err != nil || stats.Retrying != 1 || stats.Running != 0 {
+		t.Fatalf("processing stats = %#v, err=%v", stats, err)
+	}
+}
+
+func TestEndpointFailureOpensCircuitAndStopsQueue(t *testing.T) {
+	ctx := context.Background()
+	database := fixtureProcessingStore(t, ctx)
+	now := time.Date(2026, time.August, 23, 12, 0, 0, 0, time.UTC)
+	generator := &sequenceGenerator{fail: func(int) error { return errorOf(ErrorTransient, "synthetic endpoint outage") }}
+	worker, err := NewWorker(database, generator, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now })
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker.processAvailable(ctx)
+	if generator.calls != 1 || !worker.circuitUntil.After(now) {
+		t.Fatalf("calls/circuit = %d/%s", generator.calls, worker.circuitUntil)
+	}
+	worker.processAvailable(ctx)
+	if generator.calls != 1 {
+		t.Fatalf("open circuit made %d calls, want 1", generator.calls)
+	}
+}
+
+func TestPrivacyFailureBecomesNeedsReviewAfterThreeAttempts(t *testing.T) {
+	ctx := context.Background()
+	database := singleIncidentProcessingStore(t, ctx)
+	now := time.Date(2026, time.August, 23, 12, 0, 0, 0, time.UTC)
+	generator := &sequenceGenerator{fail: func(int) error { return errorOf(ErrorPrivacy, "synthetic privacy uncertainty") }}
+	worker, err := NewWorker(database, generator, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now })
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker.processAvailable(ctx)
+	now = now.Add(2 * time.Minute)
+	worker.processAvailable(ctx)
+	now = now.Add(11 * time.Minute)
+	worker.processAvailable(ctx)
+	stats, err := database.ProcessingQueueStats(ctx, worker.operation, now)
+	if err != nil || stats.NeedsReview != 1 || generator.calls != 3 {
+		t.Fatalf("processing stats/calls = %#v/%d, err=%v", stats, generator.calls, err)
+	}
+}
+
+func TestRetrySchedulesAndJitterBounds(t *testing.T) {
+	if transientRetryDelay(1) != 30*time.Second || transientRetryDelay(99) != 2*time.Hour {
+		t.Fatal("transient retry schedule is incorrect")
+	}
+	if configurationRetryDelay(1) != 10*time.Minute || contentRetryDelay(3) != time.Hour {
+		t.Fatal("configuration or content retry schedule is incorrect")
+	}
+	base := 10 * time.Minute
+	value := jitter(base, 42, 3)
+	if value < 8*time.Minute || value > 12*time.Minute {
+		t.Fatalf("jitter = %s, outside 20%% bound", value)
+	}
+}
+
+func fixtureProcessingStore(t *testing.T, ctx context.Context) *store.Store {
+	t.Helper()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "processing.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { database.Close() })
+	documents, err := source.NewFixtureProvider().Load(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := database.UpsertDocuments(ctx, documents, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	return database
+}
+
+func singleIncidentProcessingStore(t *testing.T, ctx context.Context) *store.Store {
+	t.Helper()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "single.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { database.Close() })
+	now := time.Date(2026, time.August, 23, 10, 0, 0, 0, time.UTC)
+	documents := []domain.SourceDocument{{
+		ExternalID: "one", SourceURL: "https://fixture.invalid/one", Title: "One",
+		PublishedAt: now, FeedFingerprint: "feed", SourceHash: "source",
+		Incidents: []domain.Incident{{Number: "1", Position: 0, TitleDE: "Titel", BodyDE: "Text", ContentHash: "content"}},
+	}}
+	if err := database.UpsertDocuments(ctx, documents, now); err != nil {
+		t.Fatal(err)
+	}
+	return database
 }

@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/egekocabas/munichbrief/internal/store"
 )
 
 func TestMetricsExposeSynchronizationAndHTTPState(t *testing.T) {
@@ -17,8 +19,9 @@ func TestMetricsExposeSynchronizationAndHTTPState(t *testing.T) {
 	metrics.ObserveSourceResponse("article", 0)
 	metrics.RecordProcessingAttempt()
 	metrics.RecordProcessingSuccess()
-	metrics.RecordProcessingFailure()
-	metrics.SetProcessingQueueDepth(2)
+	metrics.RecordProcessingFailure("privacy")
+	metrics.SetProcessingStats(store.ProcessingStats{Queued: 2, Running: 1, Retrying: 3, NeedsReview: 4, Failed: 5, OldestPendingAge: 45 * time.Second})
+	metrics.SetProcessorAvailable(false)
 
 	wrapped := metrics.Wrap(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
 		http.Error(response, "unavailable", http.StatusServiceUnavailable)
@@ -46,7 +49,11 @@ func TestMetricsExposeSynchronizationAndHTTPState(t *testing.T) {
 		"munichbrief_processing_attempts_total 1",
 		"munichbrief_processing_successes_total 1",
 		"munichbrief_processing_failures_total 1",
-		"munichbrief_processing_queue_depth 2",
+		`munichbrief_processing_failures_by_kind_total{kind="privacy"} 1`,
+		`munichbrief_processing_jobs{state="queued"} 2`,
+		`munichbrief_processing_jobs{state="needs_review"} 4`,
+		"munichbrief_processing_oldest_job_age_seconds 45",
+		"munichbrief_ai_processor_available 0",
 		"munichbrief_retention_deletions_total 0",
 	} {
 		if !strings.Contains(recorder.Body.String(), expected) {

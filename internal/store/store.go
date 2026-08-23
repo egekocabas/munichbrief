@@ -29,29 +29,54 @@ type Store struct {
 }
 
 type IncidentRecord struct {
-	ID               int64
-	SourceDocumentID int64
-	HasIncident      bool
-	Number           string
-	Position         int
-	TitleDE          string
-	BodyDE           string
-	ContentHash      string
-	SourceTitle      string
-	SourceURL        string
-	SourceExternalID string
-	PublishedAt      time.Time
-	UpdatedAt        time.Time
-	FetchStatus      string
-	ErrorMessage     string
-	AITitleDE        string
-	AISummaryDE      string
-	AITitleEN        string
-	AISummaryEN      string
-	AIModel          string
-	AIPromptVersion  string
-	AIGeneratedAt    *time.Time
-	HasAI            bool
+	ID                    int64
+	SourceDocumentID      int64
+	HasIncident           bool
+	Number                string
+	Position              int
+	TitleDE               string
+	BodyDE                string
+	ContentHash           string
+	SourceTitle           string
+	SourceURL             string
+	SourceExternalID      string
+	PublishedAt           time.Time
+	UpdatedAt             time.Time
+	FetchStatus           string
+	ErrorMessage          string
+	AITitleDE             string
+	AISummaryDE           string
+	AITitleEN             string
+	AISummaryEN           string
+	AIModel               string
+	AIPromptVersion       string
+	AIGeneratedAt         *time.Time
+	HasAI                 bool
+	ProcessingStatus      string
+	ProcessingAttempts    int
+	ProcessingNextRetryAt *time.Time
+	ProcessingFailureKind string
+}
+
+func (r IncidentRecord) ProcessingState() string {
+	if r.HasAI {
+		return "ready"
+	}
+	switch r.ProcessingStatus {
+	case "running":
+		return "running"
+	case "pending":
+		if r.ProcessingAttempts > 0 {
+			return "retrying"
+		}
+		return "queued"
+	case "needs_review":
+		return "needs_review"
+	case "failed":
+		return "failed"
+	default:
+		return "not_processed"
+	}
 }
 
 const incidentAIColumns = `

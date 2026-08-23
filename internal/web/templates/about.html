@@ -1,28 +1,9 @@
-{{define "title"}}About{{end}}
-
+{{define "title"}}{{.T.About}}{{end}}
 {{define "content"}}
 <article class="about-page">
-  <header class="hero compact-hero">
-    <p class="eyebrow">Methodology</p>
-    <h1>What MunichBrief does—and what it does not</h1>
-    <p class="hero-copy">MunichBrief reorganizes official Munich Police press releases into readable incident cards. It is an independent, unofficial service.</p>
-  </header>
-
-  <section aria-labelledby="source-policy">
-    <h2 id="source-policy">Source policy</h2>
-    <p>New source documents are discovered only through the dedicated Munich Police RSS feed. MunichBrief does not crawl the general press listing or archive. Combined daily reports are split at their official numbered headings; separately published reports remain separate.</p>
-    <p>The linked Bavarian Police report is the authoritative source. Reports describe an investigation at publication time, may later be amended, and do not establish guilt. The presumption of innocence applies.</p>
-  </section>
-
-  <section aria-labelledby="processing-policy">
-    <h2 id="processing-policy">Processing and retention</h2>
-    <p>Parsed German article text is stored locally so the reader remains useful during temporary source outages. Complete source HTML, scripts, navigation, and browser attributes are discarded.</p>
-    <p>When AI processing is enabled, concise German and English presentations are clearly labeled as machine-generated and retain their model and prompt provenance. Original extracted text remains available during quality evaluation. Source metadata and derived content are planned to be retained for at most 365 days.</p>
-  </section>
-
-  <section aria-labelledby="privacy-policy">
-    <h2 id="privacy-policy">Privacy and independence</h2>
-    <p>MunichBrief has no accounts, analytics, advertising, cookies, or third-party browser assets. It is not operated by or affiliated with the Bavarian Police.</p>
-  </section>
+  <header class="hero compact-hero"><p class="eyebrow">{{.T.Methodology}}</p><h1>{{.T.AboutTitle}}</h1><p class="hero-copy">{{.T.AboutIntro}}</p></header>
+  <section><h2>{{.T.SourcePolicy}}</h2><p>{{.T.SourcePolicyCopy}}</p><p>{{.T.SourceAuthorityCopy}}</p></section>
+  <section><h2>{{.T.ProcessingRetention}}</h2><p>{{.T.ProcessingCopy}}</p><p>{{.T.AICopy}}</p><p>{{.T.VisibilityCopy}}</p></section>
+  <section><h2>{{.T.PrivacyIndependence}}</h2><p>{{.T.PrivacyCopy}}</p><p>{{.T.LegalCopy}}</p></section>
 </article>
 {{end}}

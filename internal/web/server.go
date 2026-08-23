@@ -10,11 +10,14 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
+	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
 
+	"github.com/egekocabas/munichbrief/internal/processing"
 	"github.com/egekocabas/munichbrief/internal/store"
 )
 
@@ -34,23 +37,50 @@ var aboutTemplate string
 var stylesheet []byte
 
 type incidentStore interface {
-	ListTimelineEntries(context.Context, int, int, string) ([]store.IncidentRecord, int, error)
-	GetIncident(context.Context, int64) (store.IncidentRecord, error)
+	ListPresentationEntries(context.Context, int, int, string, store.PresentationScope) ([]store.IncidentRecord, int, error)
+	GetPresentationIncident(context.Context, int64, store.PresentationScope) (store.IncidentRecord, error)
 	Ready(context.Context) error
+}
+
+type Options struct {
+	PageSize         int
+	SourceMode       string
+	PresentationMode string
+	ModelIdentity    string
+	PromptVersion    string
+	SecureCookies    bool
 }
 
 type Server struct {
 	store            incidentStore
 	logger           *slog.Logger
-	pageSize         int
-	sourceMode       string
+	options          Options
 	location         *time.Location
 	timelineTemplate *template.Template
 	detailTemplate   *template.Template
 	aboutTemplate    *template.Template
 }
 
+type basePage struct {
+	Lang      string
+	T         map[string]string
+	ReturnTo  string
+	Fixture   bool
+	Review    bool
+	ModeLabel string
+}
+
+type incidentView struct {
+	Record              store.IncidentRecord
+	Title               string
+	Summary             string
+	ContentLanguage     string
+	ProcessingLabel     string
+	ShowOriginalMessage bool
+}
+
 type timelinePage struct {
+	basePage
 	Groups      []dayGroup
 	Page        int
 	TotalPages  int
@@ -59,52 +89,56 @@ type timelinePage struct {
 	Next        int
 	HasPrevious bool
 	HasNext     bool
-	Fixture     bool
-	ModeLabel   string
 }
 
 type dayGroup struct {
 	ID        string
 	Label     string
-	Incidents []store.IncidentRecord
+	Incidents []incidentView
 }
 
 type detailPage struct {
-	Incident  store.IncidentRecord
-	Fixture   bool
-	ModeLabel string
+	basePage
+	Incident            incidentView
+	ShowOriginalSection bool
 }
 
-type aboutPage struct {
-	Fixture   bool
-	ModeLabel string
-}
+type aboutPage struct{ basePage }
 
 func New(database incidentStore, logger *slog.Logger, pageSize int, sourceMode string) (*Server, error) {
+	return NewWithOptions(database, logger, Options{
+		PageSize: pageSize, SourceMode: sourceMode, PresentationMode: "review",
+		ModelIdentity: "qwen3.5:4b", PromptVersion: processing.PromptVersion,
+	})
+}
+
+func NewWithOptions(database incidentStore, logger *slog.Logger, options Options) (*Server, error) {
 	if database == nil {
 		return nil, errors.New("incident store is required")
 	}
 	if logger == nil {
 		return nil, errors.New("logger is required")
 	}
-	if pageSize < 1 {
+	if options.PageSize < 1 {
 		return nil, errors.New("page size must be positive")
 	}
-	if sourceMode != "fixture" && sourceMode != "live" {
+	if options.SourceMode != "fixture" && options.SourceMode != "live" {
 		return nil, errors.New("source mode must be fixture or live")
 	}
-
+	if options.PresentationMode != "review" && options.PresentationMode != "public" {
+		return nil, errors.New("presentation mode must be review or public")
+	}
+	if strings.TrimSpace(options.ModelIdentity) == "" || strings.TrimSpace(options.PromptVersion) == "" {
+		return nil, errors.New("presentation model and prompt version are required")
+	}
 	location, err := time.LoadLocation("Europe/Berlin")
 	if err != nil {
 		return nil, fmt.Errorf("load Europe/Berlin timezone: %w", err)
 	}
 	functions := template.FuncMap{
-		"excerpt": func(value string) string { return excerpt(value, 190) },
-		"formatDateTime": func(value time.Time) string {
-			return value.In(location).Format("02 January 2006, 15:04 MST")
-		},
+		"excerpt":        func(value string) string { return excerpt(value, 190) },
+		"formatDateTime": func(language string, value time.Time) string { return formatDateTime(language, value.In(location)) },
 	}
-
 	timeline, err := template.New("layout").Funcs(functions).Parse(layoutTemplate + timelineTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("parse timeline templates: %w", err)
@@ -117,17 +151,7 @@ func New(database incidentStore, logger *slog.Logger, pageSize int, sourceMode s
 	if err != nil {
 		return nil, fmt.Errorf("parse about template: %w", err)
 	}
-
-	return &Server{
-		store:            database,
-		logger:           logger,
-		pageSize:         pageSize,
-		sourceMode:       sourceMode,
-		location:         location,
-		timelineTemplate: timeline,
-		detailTemplate:   detail,
-		aboutTemplate:    about,
-	}, nil
+	return &Server{store: database, logger: logger, options: options, location: location, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about}, nil
 }
 
 func (s *Server) Handler() http.Handler {
@@ -135,39 +159,44 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /", s.timeline)
 	mux.HandleFunc("GET /incidents/{id}", s.detail)
 	mux.HandleFunc("GET /about", s.about)
+	mux.HandleFunc("POST /language", s.language)
 	mux.HandleFunc("GET /healthz", s.health)
 	mux.HandleFunc("GET /readyz", s.ready)
 	mux.HandleFunc("GET /static/app.css", s.css)
 	return s.requestLogger(mux)
 }
 
-func (s *Server) about(response http.ResponseWriter, _ *http.Request) {
+func (s *Server) scope() store.PresentationScope {
+	return store.PresentationScope{
+		Operation: processing.Operation(s.options.ModelIdentity), ModelIdentity: s.options.ModelIdentity,
+		PromptVersion: s.options.PromptVersion, PublicOnly: s.options.PresentationMode == "public",
+	}
+}
+
+func (s *Server) base(request *http.Request) basePage {
+	language := requestedLanguage(request)
+	modeLabel := localizedText[language]["FixtureMode"]
+	if s.options.SourceMode == "live" {
+		modeLabel = localizedText[language]["LiveSource"]
+	}
+	if s.options.PresentationMode == "review" {
+		modeLabel += " · " + localizedText[language]["ReviewMode"]
+	}
+	return basePage{
+		Lang: language, T: localizedText[language], ReturnTo: safeReturnPath(request.URL.RequestURI()),
+		Fixture: s.options.SourceMode == "fixture", Review: s.options.PresentationMode == "review", ModeLabel: modeLabel,
+	}
+}
+
+func prepareHTML(response http.ResponseWriter, language string, review bool) {
 	response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := s.aboutTemplate.ExecuteTemplate(response, "layout", aboutPage{
-		Fixture:   s.sourceMode == "fixture",
-		ModeLabel: modeLabel(s.sourceMode),
-	}); err != nil {
-		s.logger.Error("render about page", "error", err)
+	response.Header().Set("Content-Language", language)
+	response.Header().Set("Vary", "Cookie, Accept-Language")
+	response.Header().Set("Cache-Control", "private, no-store")
+	response.Header().Set("X-Content-Type-Options", "nosniff")
+	if review {
+		response.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive")
 	}
-}
-
-func (s *Server) health(response http.ResponseWriter, _ *http.Request) {
-	response.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	response.WriteHeader(http.StatusOK)
-	_, _ = response.Write([]byte("ok\n"))
-}
-
-func (s *Server) ready(response http.ResponseWriter, request *http.Request) {
-	ctx, cancel := context.WithTimeout(request.Context(), time.Second)
-	defer cancel()
-	if err := s.store.Ready(ctx); err != nil {
-		s.logger.ErrorContext(request.Context(), "readiness check failed", "error", err)
-		http.Error(response, "not ready", http.StatusServiceUnavailable)
-		return
-	}
-	response.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	response.WriteHeader(http.StatusOK)
-	_, _ = response.Write([]byte("ready\n"))
 }
 
 func (s *Server) timeline(response http.ResponseWriter, request *http.Request) {
@@ -175,38 +204,27 @@ func (s *Server) timeline(response http.ResponseWriter, request *http.Request) {
 		http.NotFound(response, request)
 		return
 	}
-
 	page, err := requestedPage(request)
 	if err != nil {
 		http.Error(response, "invalid page", http.StatusBadRequest)
 		return
 	}
-	incidents, total, err := s.store.ListTimelineEntries(request.Context(), s.pageSize, (page-1)*s.pageSize, s.sourceMode)
+	incidents, total, err := s.store.ListPresentationEntries(request.Context(), s.options.PageSize, (page-1)*s.options.PageSize, s.options.SourceMode, s.scope())
 	if err != nil {
 		s.internalError(response, request, "list incidents", err)
 		return
 	}
-
-	totalPages := max(1, (total+s.pageSize-1)/s.pageSize)
+	totalPages := max(1, (total+s.options.PageSize-1)/s.options.PageSize)
 	if page > totalPages && total > 0 {
 		http.NotFound(response, request)
 		return
 	}
+	base := s.base(request)
 	data := timelinePage{
-		Groups:      s.groupByDay(incidents),
-		Page:        page,
-		TotalPages:  totalPages,
-		Total:       total,
-		Previous:    page - 1,
-		Next:        page + 1,
-		HasPrevious: page > 1,
-		HasNext:     page < totalPages,
-		Fixture:     s.sourceMode == "fixture",
-		ModeLabel:   modeLabel(s.sourceMode),
+		basePage: base, Groups: s.groupByDay(incidents, base.Lang), Page: page, TotalPages: totalPages, Total: total,
+		Previous: page - 1, Next: page + 1, HasPrevious: page > 1, HasNext: page < totalPages,
 	}
-
-	response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	response.Header().Set("X-Content-Type-Options", "nosniff")
+	prepareHTML(response, base.Lang, base.Review)
 	if err := s.timelineTemplate.ExecuteTemplate(response, "layout", data); err != nil {
 		s.logger.ErrorContext(request.Context(), "render timeline", "error", err)
 	}
@@ -218,8 +236,7 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 		http.NotFound(response, request)
 		return
 	}
-
-	incident, err := s.store.GetIncident(request.Context(), id)
+	incident, err := s.store.GetPresentationIncident(request.Context(), id, s.scope())
 	if errors.Is(err, store.ErrNotFound) {
 		http.NotFound(response, request)
 		return
@@ -228,55 +245,182 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 		s.internalError(response, request, "get incident", err)
 		return
 	}
-	if (s.sourceMode == "fixture" && incident.FetchStatus != "fixture") ||
-		(s.sourceMode == "live" && incident.FetchStatus == "fixture") {
+	if (s.options.SourceMode == "fixture" && incident.FetchStatus != "fixture") || (s.options.SourceMode == "live" && incident.FetchStatus == "fixture") {
 		http.NotFound(response, request)
 		return
 	}
-
-	response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	response.Header().Set("X-Content-Type-Options", "nosniff")
-	if err := s.detailTemplate.ExecuteTemplate(response, "layout", detailPage{
-		Incident:  incident,
-		Fixture:   s.sourceMode == "fixture",
-		ModeLabel: modeLabel(s.sourceMode),
-	}); err != nil {
+	base := s.base(request)
+	view := incidentForLanguage(incident, base.Lang, base.T)
+	data := detailPage{basePage: base, Incident: view, ShowOriginalSection: base.Review && incident.HasAI}
+	prepareHTML(response, base.Lang, base.Review)
+	if err := s.detailTemplate.ExecuteTemplate(response, "layout", data); err != nil {
 		s.logger.ErrorContext(request.Context(), "render incident detail", "incident_id", id, "error", err)
 	}
 }
 
-func modeLabel(mode string) string {
-	if mode == "live" {
-		return "Live source"
+func (s *Server) about(response http.ResponseWriter, request *http.Request) {
+	base := s.base(request)
+	prepareHTML(response, base.Lang, base.Review)
+	if err := s.aboutTemplate.ExecuteTemplate(response, "layout", aboutPage{basePage: base}); err != nil {
+		s.logger.ErrorContext(request.Context(), "render about page", "error", err)
 	}
-	return "Fixture mode"
 }
 
-func (s *Server) css(response http.ResponseWriter, _ *http.Request) {
-	response.Header().Set("Content-Type", "text/css; charset=utf-8")
-	response.Header().Set("Cache-Control", "public, max-age=3600")
-	response.Header().Set("X-Content-Type-Options", "nosniff")
-	_, _ = response.Write(stylesheet)
+func (s *Server) language(response http.ResponseWriter, request *http.Request) {
+	request.Body = http.MaxBytesReader(response, request.Body, 4096)
+	if err := request.ParseForm(); err != nil {
+		http.Error(response, "invalid language selection", http.StatusBadRequest)
+		return
+	}
+	language := request.PostForm.Get("language")
+	if language != "de" && language != "en" {
+		http.Error(response, "invalid language selection", http.StatusBadRequest)
+		return
+	}
+	http.SetCookie(response, &http.Cookie{
+		Name: "munichbrief_language", Value: language, Path: "/", MaxAge: 365 * 24 * 60 * 60,
+		Expires: time.Now().Add(365 * 24 * time.Hour), HttpOnly: true,
+		Secure: s.options.SecureCookies, SameSite: http.SameSiteLaxMode,
+	})
+	http.Redirect(response, request, safeReturnPath(request.PostForm.Get("return_to")), http.StatusSeeOther)
 }
 
-func (s *Server) groupByDay(incidents []store.IncidentRecord) []dayGroup {
+func requestedLanguage(request *http.Request) string {
+	if cookie, err := request.Cookie("munichbrief_language"); err == nil && (cookie.Value == "de" || cookie.Value == "en") {
+		return cookie.Value
+	}
+	type preference struct {
+		language string
+		quality  float64
+		order    int
+	}
+	preferences := make([]preference, 0)
+	for order, part := range strings.Split(request.Header.Get("Accept-Language"), ",") {
+		pieces := strings.Split(strings.TrimSpace(part), ";")
+		language := strings.ToLower(strings.TrimSpace(pieces[0]))
+		if index := strings.IndexByte(language, '-'); index >= 0 {
+			language = language[:index]
+		}
+		if language != "de" && language != "en" {
+			continue
+		}
+		quality := 1.0
+		for _, parameter := range pieces[1:] {
+			parameter = strings.TrimSpace(parameter)
+			if strings.HasPrefix(parameter, "q=") {
+				if parsed, err := strconv.ParseFloat(strings.TrimPrefix(parameter, "q="), 64); err == nil {
+					quality = parsed
+				}
+			}
+		}
+		preferences = append(preferences, preference{language: language, quality: quality, order: order})
+	}
+	sort.SliceStable(preferences, func(i, j int) bool { return preferences[i].quality > preferences[j].quality })
+	if len(preferences) > 0 && preferences[0].quality > 0 {
+		return preferences[0].language
+	}
+	return "de"
+}
+
+func safeReturnPath(raw string) string {
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.IsAbs() || parsed.Host != "" || !strings.HasPrefix(parsed.Path, "/") || strings.HasPrefix(parsed.Path, "//") {
+		return "/"
+	}
+	if parsed.Path != "/" && parsed.Path != "/about" && !strings.HasPrefix(parsed.Path, "/incidents/") {
+		return "/"
+	}
+	return parsed.RequestURI()
+}
+
+func incidentForLanguage(record store.IncidentRecord, language string, text map[string]string) incidentView {
+	view := incidentView{Record: record, ContentLanguage: "de", ProcessingLabel: processingLabel(record.ProcessingState(), text)}
+	if record.HasAI {
+		view.ContentLanguage = language
+		if language == "en" {
+			view.Title, view.Summary = record.AITitleEN, record.AISummaryEN
+		} else {
+			view.Title, view.Summary = record.AITitleDE, record.AISummaryDE
+		}
+		return view
+	}
+	view.Title, view.Summary = record.TitleDE, excerpt(record.BodyDE, 190)
+	view.ShowOriginalMessage = record.HasIncident
+	return view
+}
+
+func processingLabel(state string, text map[string]string) string {
+	switch state {
+	case "ready":
+		return text["AISummary"]
+	case "queued":
+		return text["Queued"]
+	case "running":
+		return text["Running"]
+	case "retrying":
+		return text["Retrying"]
+	case "needs_review":
+		return text["NeedsReview"]
+	case "failed":
+		return text["NeedsReview"]
+	default:
+		return text["NotProcessed"]
+	}
+}
+
+func (s *Server) groupByDay(incidents []store.IncidentRecord, language string) []dayGroup {
 	groups := make([]dayGroup, 0)
 	var currentDate string
 	for _, incident := range incidents {
 		localTime := incident.PublishedAt.In(s.location)
 		date := localTime.Format("2006-01-02")
 		if date != currentDate {
-			groups = append(groups, dayGroup{
-				ID:    date,
-				Label: localTime.Format("Monday, 02 January 2006"),
-			})
+			groups = append(groups, dayGroup{ID: date, Label: formatDay(language, localTime)})
 			currentDate = date
 		}
-		groups[len(groups)-1].Incidents = append(groups[len(groups)-1].Incidents, incident)
+		groups[len(groups)-1].Incidents = append(groups[len(groups)-1].Incidents, incidentForLanguage(incident, language, localizedText[language]))
 	}
 	return groups
 }
 
+func formatDay(language string, value time.Time) string {
+	if language == "de" {
+		return germanWeekdays[value.Weekday()] + ", " + value.Format("02.") + " " + germanMonths[value.Month()] + " " + value.Format("2006")
+	}
+	return value.Format("Monday, 02 January 2006")
+}
+
+func formatDateTime(language string, value time.Time) string {
+	if language == "de" {
+		return value.Format("02.") + " " + germanMonths[value.Month()] + value.Format(" 2006, 15:04 MST")
+	}
+	return value.Format("02 January 2006, 15:04 MST")
+}
+
+var germanMonths = map[time.Month]string{time.January: "Januar", time.February: "Februar", time.March: "März", time.April: "April", time.May: "Mai", time.June: "Juni", time.July: "Juli", time.August: "August", time.September: "September", time.October: "Oktober", time.November: "November", time.December: "Dezember"}
+var germanWeekdays = map[time.Weekday]string{time.Sunday: "Sonntag", time.Monday: "Montag", time.Tuesday: "Dienstag", time.Wednesday: "Mittwoch", time.Thursday: "Donnerstag", time.Friday: "Freitag", time.Saturday: "Samstag"}
+
+func (s *Server) health(response http.ResponseWriter, _ *http.Request) {
+	response.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	_, _ = response.Write([]byte("ok\n"))
+}
+func (s *Server) ready(response http.ResponseWriter, request *http.Request) {
+	ctx, cancel := context.WithTimeout(request.Context(), time.Second)
+	defer cancel()
+	if err := s.store.Ready(ctx); err != nil {
+		s.logger.ErrorContext(request.Context(), "readiness check failed", "error", err)
+		http.Error(response, "not ready", http.StatusServiceUnavailable)
+		return
+	}
+	response.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	_, _ = response.Write([]byte("ready\n"))
+}
+func (s *Server) css(response http.ResponseWriter, _ *http.Request) {
+	response.Header().Set("Content-Type", "text/css; charset=utf-8")
+	response.Header().Set("Cache-Control", "public, max-age=3600")
+	response.Header().Set("X-Content-Type-Options", "nosniff")
+	_, _ = response.Write(stylesheet)
+}
 func (s *Server) internalError(response http.ResponseWriter, request *http.Request, message string, err error) {
 	s.logger.ErrorContext(request.Context(), message, "error", err)
 	http.Error(response, "internal server error", http.StatusInternalServerError)
@@ -300,14 +444,7 @@ func (s *Server) requestLogger(next http.Handler) http.Handler {
 		response.Header().Set("X-Frame-Options", "DENY")
 		recorder := &statusRecorder{ResponseWriter: response, status: http.StatusOK}
 		next.ServeHTTP(recorder, request)
-		s.logger.InfoContext(request.Context(), "http request",
-			"method", request.Method,
-			"path", request.URL.Path,
-			"status", recorder.status,
-			"duration_ms", time.Since(startedAt).Milliseconds(),
-			"request_id", requestID,
-			"correlation_id", correlationID,
-		)
+		s.logger.InfoContext(request.Context(), "http request", "method", request.Method, "path", request.URL.Path, "status", recorder.status, "duration_ms", time.Since(startedAt).Milliseconds(), "request_id", requestID, "correlation_id", correlationID)
 	})
 }
 
@@ -325,7 +462,6 @@ func (r *statusRecorder) WriteHeader(status int) {
 	r.wroteHeader = true
 	r.ResponseWriter.WriteHeader(status)
 }
-
 func (r *statusRecorder) Write(contents []byte) (int, error) {
 	if !r.wroteHeader {
 		r.WriteHeader(http.StatusOK)
@@ -338,15 +474,13 @@ func validIdentifier(value string) string {
 		return ""
 	}
 	for _, character := range value {
-		if (character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z') ||
-			(character >= '0' && character <= '9') || character == '-' || character == '_' || character == '.' {
+		if (character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z') || (character >= '0' && character <= '9') || character == '-' || character == '_' || character == '.' {
 			continue
 		}
 		return ""
 	}
 	return value
 }
-
 func randomIdentifier() string {
 	var bytes [16]byte
 	if _, err := rand.Read(bytes[:]); err != nil {
@@ -354,7 +488,6 @@ func randomIdentifier() string {
 	}
 	return hex.EncodeToString(bytes[:])
 }
-
 func requestedPage(request *http.Request) (int, error) {
 	raw := request.URL.Query().Get("page")
 	if raw == "" {
@@ -366,7 +499,6 @@ func requestedPage(request *http.Request) (int, error) {
 	}
 	return page, nil
 }
-
 func excerpt(value string, limit int) string {
 	normalized := strings.Join(strings.Fields(value), " ")
 	if utf8.RuneCountInString(normalized) <= limit {

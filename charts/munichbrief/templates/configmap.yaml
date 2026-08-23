@@ -9,6 +9,8 @@ data:
   MUNICHBRIEF_METRICS_ADDR: ":9090"
   MUNICHBRIEF_DATABASE_PATH: "/data/munichbrief.db"
   MUNICHBRIEF_SOURCE_MODE: {{ .Values.application.sourceMode | quote }}
+  MUNICHBRIEF_PRESENTATION_MODE: {{ .Values.application.presentationMode | quote }}
+  MUNICHBRIEF_SECURE_COOKIES: {{ .Values.application.secureCookies | quote }}
   MUNICHBRIEF_PAGE_SIZE: {{ .Values.application.pageSize | quote }}
   MUNICHBRIEF_FEED_URL: {{ .Values.application.feedURL | quote }}
   MUNICHBRIEF_USER_AGENT: {{ .Values.application.userAgent | quote }}

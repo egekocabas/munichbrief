@@ -116,6 +116,25 @@ a:focus-visible {
   gap: 1rem;
 }
 
+.language-form {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.language-form select,
+.language-form button {
+  border: 1px solid var(--line);
+  border-radius: 0.35rem;
+  padding: 0.3rem 0.45rem;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
 .site-nav > a {
   color: var(--ink);
   font-size: 0.85rem;
@@ -135,6 +154,13 @@ a:focus-visible {
   background: rgb(255 253 248 / 78%);
   color: #4e3d38;
   font-size: 0.9rem;
+}
+
+.review-warning {
+  display: block;
+  margin-top: 0.35rem;
+  color: #7e281e;
+  font-weight: 750;
 }
 
 .hero {
@@ -340,6 +366,13 @@ h2 {
   color: var(--blue);
 }
 
+.state-running,
+.state-retrying,
+.state-needs_review,
+.state-failed {
+  color: #8a551c;
+}
+
 .incident-card .status-note {
   border-left: 3px solid #bb7c2b;
   padding-left: 0.75rem;
@@ -476,6 +509,12 @@ h2 {
   padding: 1.5rem 0 0;
 }
 
+details.original-report > summary {
+  cursor: pointer;
+  color: var(--blue);
+  font-weight: 750;
+}
+
 .source-panel {
   display: flex;
   align-items: center;
@@ -527,8 +566,17 @@ h2 {
 	}
 
 	.site-nav {
+		flex-wrap: wrap;
 		gap: 0.65rem;
 	}
+
+  .language-form label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
 
 	.site-nav > a {
 		font-size: 0.78rem;

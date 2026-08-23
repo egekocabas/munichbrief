@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -54,6 +55,8 @@ func run(ctx context.Context, logger *slog.Logger, arguments []string) error {
 		return runOneShotSync(ctx, logger, cfg)
 	case "backup":
 		return runBackup(ctx, cfg, arguments, os.Stdout)
+	case "ai-retry":
+		return runAIRetry(ctx, logger, cfg, arguments)
 	case "help", "-h", "--help":
 		printUsage(os.Stdout)
 		return nil
@@ -63,6 +66,12 @@ func run(ctx context.Context, logger *slog.Logger, arguments []string) error {
 }
 
 func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
+	if cfg.PresentationMode == "review" {
+		logger.Warn("review presentation mode exposes stored original text and must remain access-restricted")
+	}
+	if cfg.AIEnabled && strings.HasPrefix(cfg.OllamaBaseURL, "http://") && !strings.Contains(cfg.OllamaBaseURL, "127.0.0.1") && !strings.Contains(cfg.OllamaBaseURL, "localhost") {
+		logger.Warn("remote Ollama traffic is unencrypted; restrict this deployment and use an encrypted transport before public launch")
+	}
 	database, err := store.Open(ctx, cfg.DatabasePath)
 	if err != nil {
 		return err
@@ -103,7 +112,10 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 		}
 	}
 
-	webServer, err := web.New(database, logger, cfg.PageSize, cfg.SourceMode)
+	webServer, err := web.NewWithOptions(database, logger, web.Options{
+		PageSize: cfg.PageSize, SourceMode: cfg.SourceMode, PresentationMode: cfg.PresentationMode,
+		ModelIdentity: cfg.OllamaModel, PromptVersion: processing.PromptVersion, SecureCookies: cfg.SecureCookies,
+	})
 	if err != nil {
 		return err
 	}
@@ -132,6 +144,34 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 		}
 		return err
 	}
+}
+
+func runAIRetry(ctx context.Context, logger *slog.Logger, cfg config.Config, arguments []string) error {
+	flags := flag.NewFlagSet("ai-retry", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	incidentID := flags.Int64("incident", 0, "retry one incident ID")
+	all := flags.Bool("all", false, "retry all failed or review-required incidents")
+	if err := flags.Parse(arguments); err != nil {
+		return fmt.Errorf("parse ai-retry arguments: %w", err)
+	}
+	if (*incidentID > 0) == *all {
+		return errors.New("ai-retry requires exactly one of --incident ID or --all")
+	}
+	database, err := store.Open(ctx, cfg.DatabasePath)
+	if err != nil {
+		return err
+	}
+	defer database.Close()
+	var selectedID *int64
+	if *incidentID > 0 {
+		selectedID = incidentID
+	}
+	count, err := database.RetryProcessingJobs(ctx, processing.Operation(cfg.OllamaModel), selectedID, time.Now())
+	if err != nil {
+		return err
+	}
+	logger.Info("AI processing jobs queued for retry", "count", count, "model", cfg.OllamaModel)
+	return nil
 }
 
 func runMigrate(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
@@ -304,4 +344,6 @@ func printUsage(writer io.Writer) {
 	fmt.Fprintln(writer, "  munichbrief sync                  Run one live synchronization")
 	fmt.Fprintln(writer, "  munichbrief backup --output PATH  Create a consistent SQLite backup")
 	fmt.Fprintln(writer, "  munichbrief backup --output -     Stream a consistent backup to stdout")
+	fmt.Fprintln(writer, "  munichbrief ai-retry --incident ID  Retry one failed or review-required AI job")
+	fmt.Fprintln(writer, "  munichbrief ai-retry --all          Retry all current failed or review-required AI jobs")
 }

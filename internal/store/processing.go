@@ -17,17 +17,29 @@ type ProcessingJob struct {
 	AttemptCount int
 }
 
+type ProcessingStats struct {
+	Queued           int
+	Running          int
+	Retrying         int
+	NeedsReview      int
+	Failed           int
+	OldestPendingAge time.Duration
+}
+
 type AIPresentation struct {
-	TitleDE   string `json:"title_de"`
-	SummaryDE string `json:"summary_de"`
-	TitleEN   string `json:"title_en"`
-	SummaryEN string `json:"summary_en"`
+	TitleDE       string   `json:"title_de"`
+	SummaryDE     string   `json:"summary_de"`
+	TitleEN       string   `json:"title_en"`
+	SummaryEN     string   `json:"summary_en"`
+	PrivacyStatus string   `json:"privacy_status"`
+	PrivacyFlags  []string `json:"privacy_flags"`
 }
 
 func (s *Store) RecoverProcessingJobs(ctx context.Context, operation string, recoveredAt time.Time) error {
 	_, err := s.db.ExecContext(ctx, `
 		UPDATE processing_jobs
-		SET status = 'pending', next_retry_at = ?, error_message = 'worker restarted during processing', updated_at = ?
+		SET status = 'pending', next_retry_at = ?, failure_kind = 'transient',
+			error_message = 'worker restarted during processing', updated_at = ?
 		WHERE operation = ? AND status = 'running'`,
 		formatTime(recoveredAt.UTC()), formatTime(recoveredAt.UTC()), operation)
 	if err != nil {
@@ -86,7 +98,7 @@ func (s *Store) QueueAndClaimProcessingJob(ctx context.Context, operation string
 	result, err := tx.ExecContext(ctx, `
 		UPDATE processing_jobs
 		SET status = 'running', attempt_count = ?, next_retry_at = NULL,
-			error_message = NULL, updated_at = ?
+			failure_kind = NULL, error_message = NULL, updated_at = ?
 		WHERE id = ? AND status = 'pending'`, job.AttemptCount, formattedNow, job.ID)
 	if err != nil {
 		return ProcessingJob{}, false, fmt.Errorf("claim processing job: %w", err)
@@ -107,6 +119,9 @@ func (s *Store) CompleteProcessingJob(
 	modelIdentity, promptVersion string,
 	generatedAt time.Time,
 ) error {
+	if presentation.PrivacyStatus != "safe" {
+		return errors.New("refuse to persist AI presentation without safe privacy status")
+	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin processing completion: %w", err)
@@ -140,7 +155,8 @@ func (s *Store) CompleteProcessingJob(
 
 	result, err := tx.ExecContext(ctx, `
 		UPDATE processing_jobs
-		SET status = 'succeeded', next_retry_at = NULL, error_message = NULL, updated_at = ?
+		SET status = 'succeeded', next_retry_at = NULL, failure_kind = NULL,
+			error_message = NULL, updated_at = ?
 		WHERE id = ? AND status = 'running'`, formattedTime, job.ID)
 	if err != nil {
 		return fmt.Errorf("complete processing job: %w", err)
@@ -154,18 +170,19 @@ func (s *Store) CompleteProcessingJob(
 	return nil
 }
 
-func (s *Store) FailProcessingJob(ctx context.Context, job ProcessingJob, maxAttempts int, retryAt, failedAt time.Time, processingError error) error {
-	status := "pending"
-	var nextRetry any = formatTime(retryAt.UTC())
-	if job.AttemptCount >= maxAttempts {
-		status = "failed"
-		nextRetry = nil
+func (s *Store) FailProcessingJob(ctx context.Context, job ProcessingJob, status, failureKind string, retryAt *time.Time, failedAt time.Time, processingError error) error {
+	if status != "pending" && status != "failed" && status != "needs_review" {
+		return fmt.Errorf("invalid processing failure status %q", status)
+	}
+	var nextRetry any
+	if retryAt != nil {
+		nextRetry = formatTime(retryAt.UTC())
 	}
 	result, err := s.db.ExecContext(ctx, `
 		UPDATE processing_jobs
-		SET status = ?, next_retry_at = ?, error_message = ?, updated_at = ?
+		SET status = ?, next_retry_at = ?, failure_kind = ?, error_message = ?, updated_at = ?
 		WHERE id = ? AND status = 'running'`,
-		status, nextRetry, sanitizedError(processingError), formatTime(failedAt.UTC()), job.ID)
+		status, nextRetry, failureKind, sanitizedError(processingError), formatTime(failedAt.UTC()), job.ID)
 	if err != nil {
 		return fmt.Errorf("fail processing job: %w", err)
 	}
@@ -175,12 +192,59 @@ func (s *Store) FailProcessingJob(ctx context.Context, job ProcessingJob, maxAtt
 	return nil
 }
 
-func (s *Store) ProcessingQueueDepth(ctx context.Context, operation string) (int, error) {
-	var depth int
+func (s *Store) ProcessingQueueStats(ctx context.Context, operation string, now time.Time) (ProcessingStats, error) {
+	var stats ProcessingStats
+	var oldest string
 	if err := s.db.QueryRowContext(ctx, `
-		SELECT COUNT(*) FROM processing_jobs
-		WHERE operation = ? AND status IN ('pending', 'running')`, operation).Scan(&depth); err != nil {
-		return 0, fmt.Errorf("read processing queue depth: %w", err)
+		SELECT
+			COALESCE(SUM(CASE WHEN status = 'pending' AND attempt_count = 0 THEN 1 ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN status = 'pending' AND attempt_count > 0 THEN 1 ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN status = 'needs_review' THEN 1 ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END), 0),
+			COALESCE(MIN(CASE WHEN status IN ('pending', 'running') THEN created_at END), '')
+		FROM processing_jobs WHERE operation = ?`, operation).Scan(
+		&stats.Queued, &stats.Running, &stats.Retrying, &stats.NeedsReview, &stats.Failed, &oldest,
+	); err != nil {
+		return ProcessingStats{}, fmt.Errorf("read processing queue stats: %w", err)
 	}
-	return depth, nil
+	if oldest != "" {
+		oldestAt, err := time.Parse(time.RFC3339Nano, oldest)
+		if err != nil {
+			return ProcessingStats{}, fmt.Errorf("parse oldest processing job time: %w", err)
+		}
+		stats.OldestPendingAge = max(now.UTC().Sub(oldestAt), 0)
+	}
+	return stats, nil
+}
+
+func (s *Store) ProcessingQueueDepth(ctx context.Context, operation string) (int, error) {
+	stats, err := s.ProcessingQueueStats(ctx, operation, time.Now())
+	if err != nil {
+		return 0, err
+	}
+	return stats.Queued + stats.Running + stats.Retrying, nil
+}
+
+func (s *Store) RetryProcessingJobs(ctx context.Context, operation string, incidentID *int64, retriedAt time.Time) (int64, error) {
+	query := `
+		UPDATE processing_jobs
+		SET status = 'pending', attempt_count = 0, next_retry_at = ?,
+			failure_kind = NULL, error_message = NULL, updated_at = ?
+		WHERE operation = ? AND status IN ('failed', 'needs_review')
+			AND source_hash = (SELECT content_hash FROM incidents WHERE id = processing_jobs.incident_id)`
+	arguments := []any{formatTime(retriedAt.UTC()), formatTime(retriedAt.UTC()), operation}
+	if incidentID != nil {
+		query += " AND incident_id = ?"
+		arguments = append(arguments, *incidentID)
+	}
+	result, err := s.db.ExecContext(ctx, query, arguments...)
+	if err != nil {
+		return 0, fmt.Errorf("retry processing jobs: %w", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("read retried processing job count: %w", err)
+	}
+	return affected, nil
 }

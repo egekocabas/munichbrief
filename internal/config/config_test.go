@@ -19,6 +19,8 @@ func TestLoadDefaults(t *testing.T) {
 	t.Setenv("MUNICHBRIEF_AI_INTERVAL", "")
 	t.Setenv("MUNICHBRIEF_AI_TIMEOUT", "")
 	t.Setenv("MUNICHBRIEF_AI_CONTEXT_SIZE", "")
+	t.Setenv("MUNICHBRIEF_PRESENTATION_MODE", "")
+	t.Setenv("MUNICHBRIEF_SECURE_COOKIES", "")
 
 	cfg, err := Load()
 	if err != nil {
@@ -42,6 +44,9 @@ func TestLoadDefaults(t *testing.T) {
 	}
 	if cfg.AIEnabled || cfg.OllamaModel != defaultOllamaModel || cfg.AIContextSize != defaultAIContext {
 		t.Errorf("AI defaults = enabled:%t model:%q context:%d", cfg.AIEnabled, cfg.OllamaModel, cfg.AIContextSize)
+	}
+	if cfg.PresentationMode != "review" || cfg.SecureCookies {
+		t.Errorf("presentation defaults = %q/secure:%t", cfg.PresentationMode, cfg.SecureCookies)
 	}
 }
 
@@ -81,6 +86,7 @@ func TestLoadRejectsUnsupportedSourceMode(t *testing.T) {
 
 func TestLoadAcceptsLiveMode(t *testing.T) {
 	t.Setenv("MUNICHBRIEF_SOURCE_MODE", "live")
+	t.Setenv("MUNICHBRIEF_PRESENTATION_MODE", "")
 	t.Setenv("MUNICHBRIEF_SYNC_INTERVAL", "2m")
 
 	cfg, err := Load()
@@ -89,6 +95,22 @@ func TestLoadAcceptsLiveMode(t *testing.T) {
 	}
 	if cfg.SourceMode != "live" {
 		t.Fatalf("SourceMode = %q, want live", cfg.SourceMode)
+	}
+	if cfg.PresentationMode != "public" {
+		t.Fatalf("live presentation mode = %q, want public", cfg.PresentationMode)
+	}
+}
+
+func TestLoadAcceptsExplicitReviewAndSecureCookies(t *testing.T) {
+	t.Setenv("MUNICHBRIEF_SOURCE_MODE", "live")
+	t.Setenv("MUNICHBRIEF_PRESENTATION_MODE", "review")
+	t.Setenv("MUNICHBRIEF_SECURE_COOKIES", "true")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.PresentationMode != "review" || !cfg.SecureCookies {
+		t.Fatalf("presentation config = %q/secure:%t", cfg.PresentationMode, cfg.SecureCookies)
 	}
 }
 

@@ -1,45 +1,46 @@
 {{define "layout"}}
 <!doctype html>
-<html lang="en">
+<html lang="{{.Lang}}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A local-first reader for Munich Police press releases.">
+  <meta name="description" content="{{.T.SiteDescription}}">
   <title>{{template "title" .}} · MunichBrief</title>
   <link rel="stylesheet" href="/static/app.css">
 </head>
 <body>
   <header class="site-header">
     <div class="shell header-inner">
-      <a class="brand" href="/" aria-label="MunichBrief home">
+      <a class="brand" href="/" aria-label="MunichBrief">
         <span class="brand-mark" aria-hidden="true">M</span>
-        <span>
-          <strong>MunichBrief</strong>
-          <small>Police releases, clearly structured</small>
-        </span>
+        <span><strong>MunichBrief</strong><small>{{.T.BrandTagline}}</small></span>
       </a>
-      <nav class="site-nav" aria-label="Primary navigation">
-        <a href="/">Timeline</a>
-        <a href="/about">About</a>
+      <nav class="site-nav" aria-label="{{.T.PrimaryNavigation}}">
+        <a href="/">{{.T.Timeline}}</a>
+        <a href="/about">{{.T.About}}</a>
+        <form class="language-form" method="post" action="/language">
+          <input type="hidden" name="return_to" value="{{.ReturnTo}}">
+          <label for="language-select">{{.T.Language}}</label>
+          <select id="language-select" name="language" aria-label="{{.T.ChangeLanguage}}" onchange="this.form.submit()">
+            <option value="de"{{if eq .Lang "de"}} selected{{end}}>{{.T.German}}</option>
+            <option value="en"{{if eq .Lang "en"}} selected{{end}}>{{.T.English}}</option>
+          </select>
+          <noscript><button type="submit">{{.T.ChangeLanguage}}</button></noscript>
+        </form>
         <span class="environment-badge">{{.ModeLabel}}</span>
       </nav>
     </div>
   </header>
-
   <main class="shell">
-    <aside class="notice" aria-label="Important notice">
-      <strong>Unofficial local prototype.</strong>
-      {{if .Fixture}}Fixture content is synthetic.{{else}}Content is derived from official releases.{{end}}
-      The official police release remains authoritative, and the presumption of innocence applies.
+    <aside class="notice" aria-label="{{.T.NoticeLabel}}">
+      <strong>{{.T.NoticeLead}}</strong>
+      {{if .Fixture}}{{.T.FixtureNotice}}{{else}}{{.T.LiveNotice}}{{end}}
+      {{.T.AuthorityNotice}}
+      {{if .Review}}<span class="review-warning">{{.T.ReviewNotice}}</span>{{end}}
     </aside>
     {{template "content" .}}
   </main>
-
-  <footer class="site-footer">
-    <div class="shell">
-      <p>MunichBrief is independent from the Bavarian Police. No analytics, accounts, or advertising.</p>
-    </div>
-  </footer>
+  <footer class="site-footer"><div class="shell"><p>{{.T.Footer}}</p></div></footer>
 </body>
 </html>
 {{end}}

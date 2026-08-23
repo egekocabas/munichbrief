@@ -13,6 +13,8 @@ imagePullSecrets:
 
 application:
   sourceMode: live
+  presentationMode: review
+  secureCookies: true
   pageSize: 20
   feedURL: https://www.polizei.bayern.de/rss/polizeiprasidium-munchen.xml
   userAgent: MunichBrief/0.1.0 (+https://github.com/egekocabas/munichbrief)
