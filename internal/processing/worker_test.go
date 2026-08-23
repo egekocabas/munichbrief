@@ -1,10 +1,12 @@
 package processing
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"log/slog"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -56,7 +58,8 @@ func TestWorkerProcessesExistingIncidentsAndPersistsPresentation(t *testing.T) {
 		t.Fatalf("UpsertDocuments() error = %v", err)
 	}
 
-	worker, err := NewWorker(database, fakeGenerator{}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, time.Now)
+	var logs bytes.Buffer
+	worker, err := NewWorker(database, fakeGenerator{}, nil, slog.New(slog.NewTextHandler(&logs, nil)), time.Second, time.Now)
 	if err != nil {
 		t.Fatalf("NewWorker() error = %v", err)
 	}
@@ -77,6 +80,15 @@ func TestWorkerProcessesExistingIncidentsAndPersistsPresentation(t *testing.T) {
 	depth, err := database.ProcessingQueueDepth(ctx, worker.operation)
 	if err != nil || depth != 0 {
 		t.Errorf("queue depth = %d, err=%v; want 0", depth, err)
+	}
+	logText := logs.String()
+	for _, expected := range []string{"AI request started", "AI response received and validated", "AI processing completed and persisted", "duration_seconds="} {
+		if !strings.Contains(logText, expected) {
+			t.Errorf("AI lifecycle logs do not contain %q: %s", expected, logText)
+		}
+	}
+	if strings.Contains(logText, "Am Freitagvormittag") {
+		t.Fatalf("AI lifecycle logs contain source body text: %s", logText)
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -31,6 +32,7 @@ type Syncer struct {
 	clock        func() time.Time
 	location     *time.Location
 	refreshAfter time.Duration
+	logger       *slog.Logger
 }
 
 type Result struct {
@@ -45,9 +47,9 @@ type Result struct {
 	WindowEnd       time.Time
 }
 
-func NewSyncer(repository Repository, client source.LiveClient, refreshAfter time.Duration, clock func() time.Time) (*Syncer, error) {
-	if repository == nil || client == nil {
-		return nil, errors.New("repository and live source client are required")
+func NewSyncer(repository Repository, client source.LiveClient, refreshAfter time.Duration, clock func() time.Time, logger *slog.Logger) (*Syncer, error) {
+	if repository == nil || client == nil || logger == nil {
+		return nil, errors.New("repository, live source client, and logger are required")
 	}
 	if refreshAfter <= 0 {
 		return nil, errors.New("article refresh interval must be positive")
@@ -65,6 +67,7 @@ func NewSyncer(repository Repository, client source.LiveClient, refreshAfter tim
 		clock:        clock,
 		location:     location,
 		refreshAfter: refreshAfter,
+		logger:       logger,
 	}, nil
 }
 
@@ -73,8 +76,10 @@ func (s *Syncer) Sync(ctx context.Context) (Result, error) {
 	defer s.mu.Unlock()
 
 	now := s.clock()
+	syncStartedAt := time.Now()
 	start, end := s.threeDayWindow(now)
 	result := Result{WindowStart: start, WindowEnd: end}
+	s.logger.Info("RSS synchronization started", "window_start", start, "window_end", end)
 
 	state, err := s.repository.GetSyncState(ctx)
 	if err != nil {
@@ -84,10 +89,20 @@ func (s *Syncer) Sync(ctx context.Context) (Result, error) {
 		return result, err
 	}
 
+	feedStartedAt := time.Now()
+	s.logger.Info("RSS feed request started", "conditional", state.ETag != "" || state.LastModified != "")
 	feed, err := s.client.FetchFeed(ctx, state.ETag, state.LastModified)
 	if err != nil {
+		s.logger.Warn("RSS feed request failed", durationAttributes(feedStartedAt, time.Now())...)
 		return result, s.fail(ctx, now, err)
 	}
+	feedAttributes := []any{
+		"not_modified", feed.NotModified,
+		"documents", len(feed.Documents),
+		"skipped", feed.Skipped,
+	}
+	feedAttributes = append(feedAttributes, durationAttributes(feedStartedAt, time.Now())...)
+	s.logger.Info("RSS feed response received", feedAttributes...)
 	result.NotModified = feed.NotModified
 	result.Skipped = feed.Skipped
 
@@ -110,8 +125,18 @@ func (s *Syncer) Sync(ctx context.Context) (Result, error) {
 		return result, s.fail(ctx, now, err)
 	}
 	for _, document := range documents {
+		articleStartedAt := time.Now()
+		s.logger.Info("press release request started",
+			"document_id", document.ID,
+			"external_id", document.ExternalID,
+			"source_url", document.SourceURL,
+			"published_at", document.PublishedAt,
+		)
 		contents, fetchErr := s.client.FetchArticle(ctx, document.SourceURL)
 		if fetchErr != nil {
+			attributes := []any{"document_id", document.ID, "external_id", document.ExternalID, "failure_kind", "fetch"}
+			attributes = append(attributes, durationAttributes(articleStartedAt, time.Now())...)
+			s.logger.Warn("press release request failed", attributes...)
 			result.FetchFailures++
 			result.ArticleFailures++
 			if markErr := s.repository.MarkDocumentFetchFailed(ctx, document.ID, now, fetchErr); markErr != nil {
@@ -119,8 +144,19 @@ func (s *Syncer) Sync(ctx context.Context) (Result, error) {
 			}
 			continue
 		}
+		responseAt := time.Now()
+		responseAttributes := []any{
+			"document_id", document.ID,
+			"external_id", document.ExternalID,
+			"response_bytes", len(contents),
+		}
+		responseAttributes = append(responseAttributes, durationAttributes(articleStartedAt, responseAt)...)
+		s.logger.Info("press release response received", responseAttributes...)
 		parsed, err := parser.ParsePoliceRelease(contents)
 		if err != nil {
+			attributes := []any{"document_id", document.ID, "external_id", document.ExternalID, "failure_kind", "parse"}
+			attributes = append(attributes, durationAttributes(articleStartedAt, time.Now())...)
+			s.logger.Warn("press release processing failed", attributes...)
 			result.ParserFailures++
 			result.ArticleFailures++
 			if markErr := s.repository.MarkDocumentFetchFailed(ctx, document.ID, now, err); markErr != nil {
@@ -131,6 +167,13 @@ func (s *Syncer) Sync(ctx context.Context) (Result, error) {
 		if err := s.repository.ReplaceDocumentIncidents(ctx, document.ID, parsed.SourceHash, parsed.Incidents, now); err != nil {
 			return result, s.fail(ctx, now, err)
 		}
+		attributes := []any{
+			"document_id", document.ID,
+			"external_id", document.ExternalID,
+			"incidents", len(parsed.Incidents),
+		}
+		attributes = append(attributes, durationAttributes(articleStartedAt, time.Now())...)
+		s.logger.Info("press release processed and stored", attributes...)
 		result.Fetched++
 	}
 
@@ -153,7 +196,25 @@ func (s *Syncer) Sync(ctx context.Context) (Result, error) {
 	if err := s.repository.RecordSyncSuccess(ctx, etag, lastModified, now, resultText); err != nil {
 		return result, err
 	}
+	syncAttributes := []any{
+		"not_modified", result.NotModified,
+		"discovered", result.Discovered,
+		"fetched", result.Fetched,
+		"fetch_failures", result.FetchFailures,
+		"parser_failures", result.ParserFailures,
+		"skipped", result.Skipped,
+	}
+	syncAttributes = append(syncAttributes, durationAttributes(syncStartedAt, time.Now())...)
+	s.logger.Info("RSS synchronization completed", syncAttributes...)
 	return result, nil
+}
+
+func durationAttributes(startedAt, completedAt time.Time) []any {
+	duration := completedAt.Sub(startedAt)
+	return []any{
+		"duration", duration.Round(time.Millisecond).String(),
+		"duration_seconds", duration.Seconds(),
+	}
 }
 
 func (s *Syncer) threeDayWindow(value time.Time) (time.Time, time.Time) {

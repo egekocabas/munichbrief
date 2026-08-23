@@ -424,6 +424,9 @@ GitHub Actions builds and publishes artifacts but has no cluster credentials. Re
 The runnable version provides:
 
 - structured JSON logs with request and correlation IDs;
+- AI request start, validated response, persistence/failure category, attempt, and human/numeric duration;
+- RSS request/response and synchronization counts with durations;
+- per-release fetch, parse, and storage lifecycle events with document IDs, byte/incident counts, and durations;
 - liveness and readiness endpoints;
 - Prometheus metrics for feed attempts and failures;
 - last successful synchronization time;

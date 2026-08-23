@@ -89,7 +89,7 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 			return err
 		}
 	} else {
-		liveSyncer, err = newLiveSyncer(database, cfg, metrics.ObserveSourceResponse)
+		liveSyncer, err = newLiveSyncer(database, cfg, metrics.ObserveSourceResponse, logger)
 		if err != nil {
 			return err
 		}
@@ -196,7 +196,7 @@ func runOneShotSync(ctx context.Context, logger *slog.Logger, cfg config.Config)
 		return err
 	}
 	defer database.Close()
-	syncer, err := newLiveSyncer(database, cfg, nil)
+	syncer, err := newLiveSyncer(database, cfg, nil, logger)
 	if err != nil {
 		return err
 	}
@@ -259,7 +259,7 @@ func runBackup(ctx context.Context, cfg config.Config, arguments []string, outpu
 	return nil
 }
 
-func newLiveSyncer(database *store.Store, cfg config.Config, observer func(string, int)) (*ingest.Syncer, error) {
+func newLiveSyncer(database *store.Store, cfg config.Config, observer func(string, int), logger *slog.Logger) (*ingest.Syncer, error) {
 	liveClient, err := source.NewHTTPClient(
 		cfg.FeedURL,
 		cfg.UserAgent,
@@ -272,7 +272,7 @@ func newLiveSyncer(database *store.Store, cfg config.Config, observer func(strin
 		return nil, err
 	}
 	liveClient.SetResponseObserver(observer)
-	return ingest.NewSyncer(database, liveClient, cfg.RefreshAfter, time.Now)
+	return ingest.NewSyncer(database, liveClient, cfg.RefreshAfter, time.Now, logger)
 }
 
 func configuredServer(address string, handler http.Handler) *http.Server {

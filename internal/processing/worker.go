@@ -111,10 +111,28 @@ func (w *Worker) process(ctx context.Context, job store.ProcessingJob) bool {
 		w.observer.RecordProcessingAttempt()
 	}
 	startedAt := w.clock()
+	w.logger.Info("AI request started",
+		"job_id", job.ID,
+		"incident_id", job.IncidentID,
+		"attempt", job.AttemptCount,
+		"model", w.generator.ModelIdentity(),
+		"prompt_version", PromptVersion,
+	)
 	presentation, modelIdentity, err := w.generator.Generate(ctx, job.TitleDE, job.BodyDE)
 	if err != nil {
 		return w.handleFailure(ctx, job, startedAt, err)
 	}
+	responseAt := w.clock()
+	responseDuration := responseAt.Sub(startedAt)
+	w.logger.Info("AI response received and validated",
+		"job_id", job.ID,
+		"incident_id", job.IncidentID,
+		"attempt", job.AttemptCount,
+		"model", modelIdentity,
+		"prompt_version", PromptVersion,
+		"duration", responseDuration.Round(time.Millisecond).String(),
+		"duration_seconds", responseDuration.Seconds(),
+	)
 	completedAt := w.clock()
 	if err := w.repository.CompleteProcessingJob(ctx, job, presentation, modelIdentity, PromptVersion, completedAt); err != nil {
 		return w.handleFailure(ctx, job, startedAt, err)
@@ -125,11 +143,15 @@ func (w *Worker) process(ctx context.Context, job store.ProcessingJob) bool {
 		w.observer.RecordProcessingSuccess()
 		w.observer.SetProcessorAvailable(true)
 	}
-	w.logger.Info("AI processing completed",
+	totalDuration := completedAt.Sub(startedAt)
+	w.logger.Info("AI processing completed and persisted",
+		"job_id", job.ID,
 		"incident_id", job.IncidentID,
+		"attempt", job.AttemptCount,
 		"model", modelIdentity,
 		"prompt_version", PromptVersion,
-		"duration_ms", completedAt.Sub(startedAt).Milliseconds(),
+		"duration", totalDuration.Round(time.Millisecond).String(),
+		"duration_seconds", totalDuration.Seconds(),
 	)
 	w.updateStats(ctx)
 	return true
@@ -174,16 +196,18 @@ func (w *Worker) handleFailure(ctx context.Context, job store.ProcessingJob, sta
 		w.observer.RecordProcessingFailure(string(kind))
 	}
 	attributes := []any{
+		"job_id", job.ID,
 		"incident_id", job.IncidentID,
 		"attempt", job.AttemptCount,
 		"failure_kind", kind,
 		"status", status,
-		"duration_ms", failedAt.Sub(startedAt).Milliseconds(),
+		"duration", failedAt.Sub(startedAt).Round(time.Millisecond).String(),
+		"duration_seconds", failedAt.Sub(startedAt).Seconds(),
 	}
 	if retryAt != nil {
 		attributes = append(attributes, "retry_at", *retryAt)
 	}
-	w.logger.Warn("AI processing failed", attributes...)
+	w.logger.Warn("AI request finished with failure", attributes...)
 	w.updateStats(ctx)
 	return continueQueue
 }

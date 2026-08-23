@@ -1,9 +1,13 @@
 package ingest
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"io"
+	"log/slog"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -54,7 +58,8 @@ func TestSyncerIngestsThreeDayWindowAndUsesConditionalState(t *testing.T) {
 		article: []byte(`<section class="bp-template bp-presse"><div class="bp-iwe2"><h2>1300. Test incident – Munich</h2><p>Body text.</p></div></section>`),
 	}
 	clockValue := now
-	syncer, err := NewSyncer(database, client, 6*time.Hour, func() time.Time { return clockValue })
+	var logs bytes.Buffer
+	syncer, err := NewSyncer(database, client, 6*time.Hour, func() time.Time { return clockValue }, slog.New(slog.NewTextHandler(&logs, nil)))
 	if err != nil {
 		t.Fatalf("NewSyncer() error = %v", err)
 	}
@@ -85,6 +90,15 @@ func TestSyncerIngestsThreeDayWindowAndUsesConditionalState(t *testing.T) {
 	if client.receivedETag != `"feed-v1"` || client.receivedModified == "" {
 		t.Errorf("conditional state = %q/%q", client.receivedETag, client.receivedModified)
 	}
+	logText := logs.String()
+	for _, expected := range []string{"RSS synchronization started", "RSS feed request started", "RSS feed response received", "press release request started", "press release response received", "press release processed and stored", "duration_seconds="} {
+		if !strings.Contains(logText, expected) {
+			t.Errorf("ingestion lifecycle logs do not contain %q: %s", expected, logText)
+		}
+	}
+	if strings.Contains(logText, "Body text.") {
+		t.Fatalf("ingestion lifecycle logs contain press release body text: %s", logText)
+	}
 }
 
 func TestSyncerKeepsMetadataWhenArticleFetchFails(t *testing.T) {
@@ -95,7 +109,7 @@ func TestSyncerKeepsMetadataWhenArticleFetchFails(t *testing.T) {
 		feedResults:  []source.FeedResult{{Documents: []domain.SourceDocument{testDocument("107500", now)}}},
 		articleError: errors.New("source unavailable"),
 	}
-	syncer, err := NewSyncer(database, client, 6*time.Hour, func() time.Time { return now })
+	syncer, err := NewSyncer(database, client, 6*time.Hour, func() time.Time { return now }, discardLogger())
 	if err != nil {
 		t.Fatalf("NewSyncer() error = %v", err)
 	}
@@ -127,7 +141,7 @@ func TestSyncerReportsParserFailuresSeparately(t *testing.T) {
 		feedResults: []source.FeedResult{{Documents: []domain.SourceDocument{testDocument("107500", now)}}},
 		article:     []byte(`<main>unexpected page format</main>`),
 	}
-	syncer, err := NewSyncer(database, client, 6*time.Hour, func() time.Time { return now })
+	syncer, err := NewSyncer(database, client, 6*time.Hour, func() time.Time { return now }, discardLogger())
 	if err != nil {
 		t.Fatalf("NewSyncer() error = %v", err)
 	}
@@ -156,7 +170,7 @@ func TestSyncerRefetchesChangedFeedEntryWithoutValidators(t *testing.T) {
 		article: []byte(`<section class="bp-template bp-presse"><h2>1300. Test incident</h2><p>Body text.</p></section>`),
 	}
 	clockValue := now
-	syncer, err := NewSyncer(database, client, 6*time.Hour, func() time.Time { return clockValue })
+	syncer, err := NewSyncer(database, client, 6*time.Hour, func() time.Time { return clockValue }, discardLogger())
 	if err != nil {
 		t.Fatalf("NewSyncer() error = %v", err)
 	}
@@ -184,7 +198,7 @@ func TestSyncerSerializesConcurrentTriggers(t *testing.T) {
 		},
 		article: []byte(`<section class="bp-template bp-presse"><h2>1300. Concurrent test</h2><p>Body.</p></section>`),
 	}
-	syncer, err := NewSyncer(database, client, 6*time.Hour, func() time.Time { return now })
+	syncer, err := NewSyncer(database, client, 6*time.Hour, func() time.Time { return now }, discardLogger())
 	if err != nil {
 		t.Fatalf("NewSyncer() error = %v", err)
 	}
@@ -214,6 +228,10 @@ func testStore(t *testing.T) *store.Store {
 	}
 	t.Cleanup(func() { database.Close() })
 	return database
+}
+
+func discardLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
 
 func testDocument(id string, publishedAt time.Time) domain.SourceDocument {

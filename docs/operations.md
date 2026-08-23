@@ -43,6 +43,12 @@ stored German text. It processes ready incidents newest-first, one at a time.
 The five-second AI interval is an idle queue check, while the ten-minute AI
 timeout bounds a single Ollama request.
 
+Structured logs identify AI job and incident IDs, attempts, safe failure
+categories, RSS synchronization stages, and press-release document stages.
+Completed stages include both a human-readable `duration` and numeric
+`duration_seconds`. Source bodies, prompts, generated text, and model responses
+are deliberately excluded.
+
 `review` presentation mode displays stored German source text and processing
 states and must remain behind access control. `public` mode fails closed: it
 lists only incidents with a privacy-safe presentation from the active source
