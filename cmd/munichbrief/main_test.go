@@ -71,46 +71,22 @@ func TestRunAIRetryRequiresExactlyOneSelector(t *testing.T) {
 	}
 }
 
-func TestNextDailySyncTimeUsesFollowingBerlinCalendarDay(t *testing.T) {
-	location, err := time.LoadLocation("Europe/Berlin")
-	if err != nil {
-		t.Fatal(err)
-	}
-	now := time.Date(2026, time.August, 23, 4, 30, 0, 0, location)
-
+func TestRandomizedLiveSyncDelayStaysAroundSixHours(t *testing.T) {
 	tests := []struct {
 		name   string
 		offset time.Duration
-		want   time.Time
+		want   time.Duration
 	}{
-		{name: "window start", offset: 0, want: time.Date(2026, time.August, 24, 2, 0, 0, 0, location)},
-		{name: "inside window", offset: 90 * time.Minute, want: time.Date(2026, time.August, 24, 3, 30, 0, 0, location)},
-		{name: "window end exclusive", offset: liveSyncWindow - time.Second, want: time.Date(2026, time.August, 24, 4, 59, 59, 0, location)},
+		{name: "minimum", offset: 0, want: 5*time.Hour + 30*time.Minute},
+		{name: "center", offset: liveSyncJitter, want: 6 * time.Hour},
+		{name: "maximum exclusive", offset: 2*liveSyncJitter - time.Second, want: 6*time.Hour + 30*time.Minute - time.Second},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if got := nextDailySyncTime(now, test.offset); !got.Equal(test.want) {
-				t.Fatalf("nextDailySyncTime() = %s, want %s", got, test.want)
+			if got := randomizedLiveSyncDelay(test.offset); got != test.want {
+				t.Fatalf("randomizedLiveSyncDelay() = %s, want %s", got, test.want)
 			}
 		})
-	}
-}
-
-func TestNextDailySyncTimeStaysInWindowAcrossDaylightSavingChanges(t *testing.T) {
-	location, err := time.LoadLocation("Europe/Berlin")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, now := range []time.Time{
-		time.Date(2026, time.March, 28, 12, 0, 0, 0, location),
-		time.Date(2026, time.October, 24, 12, 0, 0, 0, location),
-	} {
-		for _, offset := range []time.Duration{0, 30 * time.Minute, 2*time.Hour + 59*time.Minute} {
-			next := nextDailySyncTime(now, offset)
-			if next.Hour() < 2 || next.Hour() >= 5 {
-				t.Errorf("nextDailySyncTime(%s, %s) = %s, outside 02:00-05:00", now, offset, next)
-			}
-		}
 	}
 }
 

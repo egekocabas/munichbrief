@@ -42,19 +42,20 @@ MUNICHBRIEF_DATABASE_PATH=.data/munichbrief-live.db \
 go run ./cmd/munichbrief
 ```
 
-Live mode polls immediately at startup and then once per day at a randomized time between 02:00 and 05:00 Europe/Berlin time. It makes low-rate automated requests to RSS-linked police articles under the source-access policy and risks documented below. Routine development and CI should continue to use fixture mode.
+Live mode polls immediately at startup and then approximately every six hours with up to 30 minutes of jitter in either direction. It makes low-rate automated requests to RSS-linked police articles under the source-access policy and risks documented below. Routine development and CI should continue to use fixture mode.
 
 To test AI processing safely against the synthetic fixtures, run:
 
 ```bash
 MUNICHBRIEF_AI_ENABLED=true \
+MUNICHBRIEF_AI_IMMEDIATE=true \
 MUNICHBRIEF_OLLAMA_BASE_URL=http://192.168.178.102:11434 \
 MUNICHBRIEF_OLLAMA_MODEL=qwen3.5:4b \
 MUNICHBRIEF_PRESENTATION_MODE=review \
 go run ./cmd/munichbrief
 ```
 
-The worker immediately queues existing incidents and creates a short German title and summary plus an aligned English title and summary. Processing stays outside browser requests, and the original fixture text remains visible for quality comparison.
+Immediate mode bypasses the default overnight processing window so the worker creates a short German title and summary plus an aligned English title and summary during local development. Processing stays outside browser requests, and the original fixture text remains visible for quality comparison.
 
 Useful configuration:
 
@@ -72,6 +73,8 @@ Useful configuration:
 | `MUNICHBRIEF_HTTP_TIMEOUT` | `10s` | Per-request live source timeout; minimum one second |
 | `MUNICHBRIEF_ARTICLE_REFRESH_INTERVAL` | `6h` | Maximum age before an unchanged article can be refreshed |
 | `MUNICHBRIEF_AI_ENABLED` | `false` | Enable asynchronous Ollama processing |
+| `MUNICHBRIEF_AI_IMMEDIATE` | `false` | Process AI jobs at any time, ignoring the configured window; useful for local development |
+| `MUNICHBRIEF_AI_WINDOW` | `03:00-08:00` | Europe/Berlin wall-clock window in which new Ollama requests may start when immediate mode is off |
 | `MUNICHBRIEF_OLLAMA_BASE_URL` | `http://127.0.0.1:11434` | Ollama LAN or local base URL |
 | `MUNICHBRIEF_OLLAMA_MODEL` | `qwen3.5:4b` | Exact Ollama model tag recorded with generated content |
 | `MUNICHBRIEF_AI_INTERVAL` | `5s` | How often an idle worker checks for new jobs |
@@ -184,7 +187,7 @@ The application will be one Go process responsible for HTTP serving, scheduled s
 
 ### Discovery and synchronization
 
-- Synchronize immediately at application startup and once per day at a randomized time between 02:00 and 05:00 Europe/Berlin time.
+- Synchronize immediately at application startup and approximately every six hours with up to 30 minutes of jitter.
 - Seed releases from the current Munich calendar date and the preceding two calendar dates.
 - Use `ETag` and `Last-Modified` for conditional RSS requests.
 - Canonicalize and validate article URLs before persistence or fetching.
@@ -325,7 +328,7 @@ Every incident view will display:
 
 The application must continue synchronizing and serving existing data when `pi8` is unavailable. AI processing will therefore be asynchronous and outside browser request paths.
 
-On startup, the worker creates current processing jobs for every stored incident that has a German body but no job for the active source hash, model, and prompt version. This includes historical incidents and incidents whose only AI output is stale. Ready work is processed from the newest publication to the oldest; a request already in progress is allowed to finish before a newly synchronized release is selected.
+During the configured `03:00-08:00` Europe/Berlin processing window, the worker creates current processing jobs for every stored incident that has a German body but no job for the active source hash, model, and prompt version. This includes historical incidents and incidents whose only AI output is stale. Ready work is processed from the newest publication to the oldest; a request already in progress may finish after the window closes, but no new request starts outside the window. Immediate mode bypasses the window for local development.
 
 The application-facing processing operation creates one aligned presentation and privacy assessment:
 

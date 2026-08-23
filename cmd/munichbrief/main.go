@@ -27,8 +27,8 @@ import (
 var version = "dev"
 
 const (
-	liveSyncWindowStart = 2 * time.Hour
-	liveSyncWindow      = 3 * time.Hour
+	liveSyncInterval = 6 * time.Hour
+	liveSyncJitter   = 30 * time.Minute
 )
 
 func main() {
@@ -85,8 +85,14 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 	defer database.Close()
 
 	metrics := observability.NewMetrics(version, time.Now())
+	var berlinLocation *time.Location
+	if cfg.SourceMode == "live" || cfg.AIEnabled {
+		berlinLocation, err = time.LoadLocation("Europe/Berlin")
+		if err != nil {
+			return fmt.Errorf("load Europe/Berlin timezone: %w", err)
+		}
+	}
 	var liveSyncer *ingest.Syncer
-	var liveSyncLocation *time.Location
 	if cfg.SourceMode == "fixture" {
 		documents, err := source.NewFixtureProvider().Load(ctx)
 		if err != nil {
@@ -96,10 +102,6 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 			return err
 		}
 	} else {
-		liveSyncLocation, err = time.LoadLocation("Europe/Berlin")
-		if err != nil {
-			return fmt.Errorf("load Europe/Berlin timezone: %w", err)
-		}
 		liveSyncer, err = newLiveSyncer(database, cfg, metrics.ObserveSourceResponse, logger)
 		if err != nil {
 			return err
@@ -117,7 +119,13 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 		if err != nil {
 			return err
 		}
-		aiWorker, err = processing.NewWorker(database, ollamaClient, metrics, logger, cfg.AIInterval, time.Now)
+		schedule := processing.Schedule{
+			Immediate: cfg.AIImmediate,
+			Location:  berlinLocation,
+			Start:     cfg.AIWindowStart,
+			End:       cfg.AIWindowEnd,
+		}
+		aiWorker, err = processing.NewWorker(database, ollamaClient, metrics, logger, cfg.AIInterval, time.Now, schedule)
 		if err != nil {
 			return err
 		}
@@ -137,10 +145,17 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 	go serve(httpServer, "reader", cfg.Address, cfg.SourceMode, logger, serveErrors)
 	go serve(metricsServer, "metrics", cfg.MetricsAddress, cfg.SourceMode, logger, serveErrors)
 	if liveSyncer != nil {
-		go runLiveSyncLoop(ctx, liveSyncLocation, liveSyncer, metrics, logger)
+		go runLiveSyncLoop(ctx, berlinLocation, liveSyncer, metrics, logger)
 	}
 	if aiWorker != nil {
-		logger.Info("AI processing worker started", "base_url", cfg.OllamaBaseURL, "model", cfg.OllamaModel)
+		logger.Info("AI processing worker started",
+			"base_url", cfg.OllamaBaseURL,
+			"model", cfg.OllamaModel,
+			"immediate", cfg.AIImmediate,
+			"window_start", cfg.AIWindowStart,
+			"window_end", cfg.AIWindowEnd,
+			"timezone", berlinLocation,
+		)
 		go aiWorker.Run(ctx)
 	}
 
@@ -337,9 +352,10 @@ func runLiveSyncLoop(ctx context.Context, location *time.Location, syncer *inges
 
 	synchronize()
 	for {
-		nextRun := nextDailySyncTime(time.Now().In(location), time.Duration(rand.Int64N(int64(liveSyncWindow))))
+		delay := randomizedLiveSyncDelay(time.Duration(rand.Int64N(int64(2 * liveSyncJitter))))
+		nextRun := time.Now().Add(delay).In(location)
 		logger.Info("next live synchronization scheduled", "scheduled_at", nextRun)
-		timer := time.NewTimer(time.Until(nextRun))
+		timer := time.NewTimer(delay)
 		select {
 		case <-ctx.Done():
 			timer.Stop()
@@ -350,16 +366,8 @@ func runLiveSyncLoop(ctx context.Context, location *time.Location, syncer *inges
 	}
 }
 
-func nextDailySyncTime(now time.Time, offset time.Duration) time.Time {
-	nextDay := now.AddDate(0, 0, 1)
-	wallClockOffset := liveSyncWindowStart + offset
-	hour := int(wallClockOffset / time.Hour)
-	wallClockOffset %= time.Hour
-	minute := int(wallClockOffset / time.Minute)
-	wallClockOffset %= time.Minute
-	second := int(wallClockOffset / time.Second)
-	nanosecond := int(wallClockOffset % time.Second)
-	return time.Date(nextDay.Year(), nextDay.Month(), nextDay.Day(), hour, minute, second, nanosecond, nextDay.Location())
+func randomizedLiveSyncDelay(offset time.Duration) time.Duration {
+	return liveSyncInterval - liveSyncJitter + offset
 }
 
 func printUsage(writer io.Writer) {

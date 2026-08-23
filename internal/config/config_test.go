@@ -21,6 +21,8 @@ func TestLoadDefaults(t *testing.T) {
 	t.Setenv("MUNICHBRIEF_AI_INTERVAL", "")
 	t.Setenv("MUNICHBRIEF_AI_TIMEOUT", "")
 	t.Setenv("MUNICHBRIEF_AI_CONTEXT_SIZE", "")
+	t.Setenv("MUNICHBRIEF_AI_IMMEDIATE", "")
+	t.Setenv("MUNICHBRIEF_AI_WINDOW", "")
 	t.Setenv("MUNICHBRIEF_PRESENTATION_MODE", "")
 	t.Setenv("MUNICHBRIEF_SECURE_COOKIES", "")
 
@@ -50,6 +52,9 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.AITimeout != 10*time.Minute {
 		t.Errorf("AITimeout = %s, want 10m", cfg.AITimeout)
 	}
+	if cfg.AIImmediate || cfg.AIWindowStart != 3*time.Hour || cfg.AIWindowEnd != 8*time.Hour {
+		t.Errorf("AI schedule defaults = immediate:%t window:%s-%s", cfg.AIImmediate, cfg.AIWindowStart, cfg.AIWindowEnd)
+	}
 	if cfg.PresentationMode != "review" || cfg.SecureCookies {
 		t.Errorf("presentation defaults = %q/secure:%t", cfg.PresentationMode, cfg.SecureCookies)
 	}
@@ -60,13 +65,38 @@ func TestLoadAcceptsRemoteOllamaConfiguration(t *testing.T) {
 	t.Setenv("MUNICHBRIEF_OLLAMA_BASE_URL", "http://192.168.178.102:11434")
 	t.Setenv("MUNICHBRIEF_OLLAMA_MODEL", "qwen3.5:4b")
 	t.Setenv("MUNICHBRIEF_AI_CONTEXT_SIZE", "8192")
+	t.Setenv("MUNICHBRIEF_AI_IMMEDIATE", "true")
+	t.Setenv("MUNICHBRIEF_AI_WINDOW", "22:30-06:15")
 
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
-	if !cfg.AIEnabled || cfg.OllamaBaseURL != "http://192.168.178.102:11434" {
+	if !cfg.AIEnabled || !cfg.AIImmediate || cfg.OllamaBaseURL != "http://192.168.178.102:11434" {
 		t.Fatalf("AI configuration = %#v", cfg)
+	}
+	if cfg.AIWindowStart != 22*time.Hour+30*time.Minute || cfg.AIWindowEnd != 6*time.Hour+15*time.Minute {
+		t.Fatalf("AI window = %s-%s", cfg.AIWindowStart, cfg.AIWindowEnd)
+	}
+}
+
+func TestLoadRejectsInvalidAISchedule(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		immediate string
+		window    string
+	}{
+		{name: "immediate", immediate: "sometimes", window: defaultAIWindow},
+		{name: "format", window: "3am-8am"},
+		{name: "same time", window: "03:00-03:00"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv("MUNICHBRIEF_AI_IMMEDIATE", test.immediate)
+			t.Setenv("MUNICHBRIEF_AI_WINDOW", test.window)
+			if _, err := Load(); err == nil {
+				t.Fatal("Load() error = nil, want invalid AI schedule error")
+			}
+		})
 	}
 }
 

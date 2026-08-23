@@ -38,12 +38,32 @@ type Worker struct {
 	logger          *slog.Logger
 	interval        time.Duration
 	clock           func() time.Time
+	schedule        Schedule
 	operation       string
 	circuitUntil    time.Time
 	circuitFailures int
 }
 
-func NewWorker(repository Repository, generator Generator, observer Observer, logger *slog.Logger, interval time.Duration, clock func() time.Time) (*Worker, error) {
+type Schedule struct {
+	Immediate bool
+	Location  *time.Location
+	Start     time.Duration
+	End       time.Duration
+}
+
+func (s Schedule) Allows(value time.Time) bool {
+	if s.Immediate {
+		return true
+	}
+	local := value.In(s.Location)
+	current := time.Duration(local.Hour())*time.Hour + time.Duration(local.Minute())*time.Minute + time.Duration(local.Second())*time.Second
+	if s.Start < s.End {
+		return current >= s.Start && current < s.End
+	}
+	return current >= s.Start || current < s.End
+}
+
+func NewWorker(repository Repository, generator Generator, observer Observer, logger *slog.Logger, interval time.Duration, clock func() time.Time, schedule Schedule) (*Worker, error) {
 	if repository == nil || generator == nil || logger == nil {
 		return nil, fmt.Errorf("processing repository, generator, and logger are required")
 	}
@@ -53,6 +73,9 @@ func NewWorker(repository Repository, generator Generator, observer Observer, lo
 	if clock == nil {
 		clock = time.Now
 	}
+	if !schedule.Immediate && (schedule.Location == nil || schedule.Start < 0 || schedule.Start >= 24*time.Hour || schedule.End < 0 || schedule.End >= 24*time.Hour || schedule.Start == schedule.End) {
+		return nil, fmt.Errorf("a valid AI processing schedule is required")
+	}
 	return &Worker{
 		repository: repository,
 		generator:  generator,
@@ -60,6 +83,7 @@ func NewWorker(repository Repository, generator Generator, observer Observer, lo
 		logger:     logger,
 		interval:   interval,
 		clock:      clock,
+		schedule:   schedule,
 		operation:  Operation(generator.ModelIdentity()),
 	}, nil
 }
@@ -83,6 +107,10 @@ func (w *Worker) Run(ctx context.Context) {
 }
 
 func (w *Worker) processAvailable(ctx context.Context) {
+	if !w.schedule.Allows(w.clock()) {
+		w.updateStats(ctx)
+		return
+	}
 	if w.clock().Before(w.circuitUntil) {
 		w.updateStats(ctx)
 		return
@@ -91,6 +119,10 @@ func (w *Worker) processAvailable(ctx context.Context) {
 		w.observer.SetProcessorAvailable(true)
 	}
 	for ctx.Err() == nil {
+		if !w.schedule.Allows(w.clock()) {
+			w.updateStats(ctx)
+			return
+		}
 		job, found, err := w.repository.QueueAndClaimProcessingJob(ctx, w.operation, w.clock())
 		if err != nil {
 			w.logger.Error("claim AI processing job", "error", err)

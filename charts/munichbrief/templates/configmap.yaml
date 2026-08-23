@@ -17,6 +17,8 @@ data:
   MUNICHBRIEF_HTTP_TIMEOUT: {{ .Values.application.httpTimeout | quote }}
   MUNICHBRIEF_ARTICLE_REFRESH_INTERVAL: {{ .Values.application.articleRefreshInterval | quote }}
   MUNICHBRIEF_AI_ENABLED: {{ .Values.application.aiEnabled | quote }}
+  MUNICHBRIEF_AI_IMMEDIATE: {{ .Values.application.aiImmediate | quote }}
+  MUNICHBRIEF_AI_WINDOW: {{ .Values.application.aiWindow | quote }}
   MUNICHBRIEF_OLLAMA_BASE_URL: {{ .Values.application.ollamaBaseURL | quote }}
   MUNICHBRIEF_OLLAMA_MODEL: {{ .Values.application.ollamaModel | quote }}
   MUNICHBRIEF_AI_INTERVAL: {{ .Values.application.aiInterval | quote }}

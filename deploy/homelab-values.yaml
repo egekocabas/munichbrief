@@ -21,6 +21,8 @@ application:
   httpTimeout: 10s
   articleRefreshInterval: 6h
   aiEnabled: true
+  aiImmediate: false
+  aiWindow: "03:00-08:00"
   ollamaBaseURL: http://192.168.178.102:11434
   ollamaModel: qwen3.5:4b
   aiInterval: 5s

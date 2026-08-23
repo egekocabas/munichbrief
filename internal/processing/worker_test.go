@@ -59,7 +59,7 @@ func TestWorkerProcessesExistingIncidentsAndPersistsPresentation(t *testing.T) {
 	}
 
 	var logs bytes.Buffer
-	worker, err := NewWorker(database, fakeGenerator{}, nil, slog.New(slog.NewTextHandler(&logs, nil)), time.Second, time.Now)
+	worker, err := NewWorker(database, fakeGenerator{}, nil, slog.New(slog.NewTextHandler(&logs, nil)), time.Second, time.Now, Schedule{Immediate: true})
 	if err != nil {
 		t.Fatalf("NewWorker() error = %v", err)
 	}
@@ -101,7 +101,7 @@ func TestReleaseSpecificFailureContinuesWithNextJobs(t *testing.T) {
 		}
 		return nil
 	}}
-	worker, err := NewWorker(database, generator, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, time.Now)
+	worker, err := NewWorker(database, generator, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, time.Now, Schedule{Immediate: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +120,7 @@ func TestEndpointFailureOpensCircuitAndStopsQueue(t *testing.T) {
 	database := fixtureProcessingStore(t, ctx)
 	now := time.Date(2026, time.August, 23, 12, 0, 0, 0, time.UTC)
 	generator := &sequenceGenerator{fail: func(int) error { return errorOf(ErrorTransient, "synthetic endpoint outage") }}
-	worker, err := NewWorker(database, generator, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now })
+	worker, err := NewWorker(database, generator, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,7 +139,7 @@ func TestPrivacyFailureBecomesNeedsReviewAfterThreeAttempts(t *testing.T) {
 	database := singleIncidentProcessingStore(t, ctx)
 	now := time.Date(2026, time.August, 23, 12, 0, 0, 0, time.UTC)
 	generator := &sequenceGenerator{fail: func(int) error { return errorOf(ErrorPrivacy, "synthetic privacy uncertainty") }}
-	worker, err := NewWorker(database, generator, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now })
+	worker, err := NewWorker(database, generator, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,6 +165,58 @@ func TestRetrySchedulesAndJitterBounds(t *testing.T) {
 	value := jitter(base, 42, 3)
 	if value < 8*time.Minute || value > 12*time.Minute {
 		t.Fatalf("jitter = %s, outside 20%% bound", value)
+	}
+}
+
+func TestWorkerOnlyStartsJobsInsideProcessingWindow(t *testing.T) {
+	ctx := context.Background()
+	database := singleIncidentProcessingStore(t, ctx)
+	location, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, time.August, 23, 12, 0, 0, 0, location)
+	generator := &sequenceGenerator{fail: func(int) error { return nil }}
+	schedule := Schedule{Location: location, Start: 3 * time.Hour, End: 8 * time.Hour}
+	worker, err := NewWorker(database, generator, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, schedule)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	worker.processAvailable(ctx)
+	if generator.calls != 0 {
+		t.Fatalf("daytime processing calls = %d, want 0", generator.calls)
+	}
+
+	now = time.Date(2026, time.August, 24, 3, 0, 0, 0, location)
+	worker.processAvailable(ctx)
+	if generator.calls != 1 {
+		t.Fatalf("overnight processing calls = %d, want 1", generator.calls)
+	}
+}
+
+func TestScheduleSupportsOvernightWindowsAndImmediateMode(t *testing.T) {
+	location, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	schedule := Schedule{Location: location, Start: 22 * time.Hour, End: 6 * time.Hour}
+	for _, test := range []struct {
+		hour int
+		want bool
+	}{
+		{hour: 21, want: false},
+		{hour: 22, want: true},
+		{hour: 5, want: true},
+		{hour: 6, want: false},
+	} {
+		value := time.Date(2026, time.August, 23, test.hour, 0, 0, 0, location)
+		if got := schedule.Allows(value); got != test.want {
+			t.Errorf("Allows(%02d:00) = %t, want %t", test.hour, got, test.want)
+		}
+	}
+	if !(Schedule{Immediate: true}).Allows(time.Time{}) {
+		t.Fatal("immediate schedule blocked processing")
 	}
 }
 

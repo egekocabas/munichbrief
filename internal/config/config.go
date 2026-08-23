@@ -25,6 +25,8 @@ const (
 	defaultAIInterval   = 5 * time.Second
 	defaultAITimeout    = 10 * time.Minute
 	defaultAIContext    = 8192
+	defaultAIImmediate  = false
+	defaultAIWindow     = "03:00-08:00"
 	defaultSecureCookie = false
 	repositoryURL       = "https://github.com/egekocabas/munichbrief"
 )
@@ -46,6 +48,9 @@ type Config struct {
 	AIInterval       time.Duration
 	AITimeout        time.Duration
 	AIContextSize    int
+	AIImmediate      bool
+	AIWindowStart    time.Duration
+	AIWindowEnd      time.Duration
 	PresentationMode string
 	SecureCookies    bool
 }
@@ -68,6 +73,7 @@ func Load() (Config, error) {
 		AIInterval:     defaultAIInterval,
 		AITimeout:      defaultAITimeout,
 		AIContextSize:  defaultAIContext,
+		AIImmediate:    defaultAIImmediate,
 		SecureCookies:  defaultSecureCookie,
 	}
 	defaultPresentationMode := "review"
@@ -81,6 +87,13 @@ func Load() (Config, error) {
 			return Config{}, fmt.Errorf("MUNICHBRIEF_AI_ENABLED must be true or false")
 		}
 		cfg.AIEnabled = value
+	}
+	if raw := os.Getenv("MUNICHBRIEF_AI_IMMEDIATE"); raw != "" {
+		value, err := strconv.ParseBool(raw)
+		if err != nil {
+			return Config{}, fmt.Errorf("MUNICHBRIEF_AI_IMMEDIATE must be true or false")
+		}
+		cfg.AIImmediate = value
 	}
 	if raw := os.Getenv("MUNICHBRIEF_SECURE_COOKIES"); raw != "" {
 		value, err := strconv.ParseBool(raw)
@@ -125,6 +138,10 @@ func Load() (Config, error) {
 		}
 		cfg.AIContextSize = contextSize
 	}
+	cfg.AIWindowStart, cfg.AIWindowEnd, err = dailyWindowFromEnv("MUNICHBRIEF_AI_WINDOW", defaultAIWindow)
+	if err != nil {
+		return Config{}, err
+	}
 
 	feedURL, err := url.Parse(cfg.FeedURL)
 	if err != nil || feedURL.Scheme != "https" || feedURL.Host == "" || feedURL.User != nil {
@@ -142,6 +159,31 @@ func Load() (Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func dailyWindowFromEnv(key, fallback string) (time.Duration, time.Duration, error) {
+	raw := envOrDefault(key, fallback)
+	parts := strings.Split(raw, "-")
+	if len(parts) != 2 {
+		return 0, 0, fmt.Errorf("%s must use HH:MM-HH:MM format", key)
+	}
+	start, err := wallClockDuration(parts[0])
+	if err != nil {
+		return 0, 0, fmt.Errorf("%s must use HH:MM-HH:MM format", key)
+	}
+	end, err := wallClockDuration(parts[1])
+	if err != nil || start == end {
+		return 0, 0, fmt.Errorf("%s must use distinct times in HH:MM-HH:MM format", key)
+	}
+	return start, end, nil
+}
+
+func wallClockDuration(value string) (time.Duration, error) {
+	parsed, err := time.Parse("15:04", value)
+	if err != nil {
+		return 0, err
+	}
+	return time.Duration(parsed.Hour())*time.Hour + time.Duration(parsed.Minute())*time.Minute, nil
 }
 
 func durationFromEnv(key string, fallback, minimum time.Duration) (time.Duration, error) {

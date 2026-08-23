@@ -41,7 +41,9 @@ metrics listener provides `/metrics`.
 The AI worker discovers both existing and newly synchronized incidents with
 stored German text. It processes ready incidents newest-first, one at a time.
 The five-second AI interval is an idle queue check, while the ten-minute AI
-timeout bounds a single Ollama request.
+timeout bounds a single Ollama request. Unless immediate mode is enabled, new
+Ollama requests start only during the configured Europe/Berlin processing
+window; a request already running when the window closes is allowed to finish.
 
 Structured logs identify AI job and incident IDs, attempts, safe failure
 categories, RSS synchronization stages, and press-release document stages.
