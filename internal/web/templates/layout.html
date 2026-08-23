@@ -21,11 +21,11 @@
         <form class="language-form" method="post" action="/language">
           <input type="hidden" name="return_to" value="{{.ReturnTo}}">
           <label for="language-select">{{.T.Language}}</label>
-          <select id="language-select" name="language" aria-label="{{.T.ChangeLanguage}}" onchange="this.form.submit()">
+          <select id="language-select" name="language" aria-label="{{.T.ChangeLanguage}}">
             <option value="de"{{if eq .Lang "de"}} selected{{end}}>{{.T.German}}</option>
             <option value="en"{{if eq .Lang "en"}} selected{{end}}>{{.T.English}}</option>
           </select>
-          <noscript><button type="submit">{{.T.ChangeLanguage}}</button></noscript>
+          <button type="submit">{{.T.ChangeLanguage}}</button>
         </form>
         <span class="environment-badge">{{.ModeLabel}}</span>
       </nav>
