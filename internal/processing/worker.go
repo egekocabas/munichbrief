@@ -25,10 +25,12 @@ type Repository interface {
 
 type Observer interface {
 	RecordProcessingAttempt()
-	RecordProcessingSuccess()
+	RecordProcessingSuccess(time.Time)
 	RecordProcessingFailure(string)
+	RecordProcessingDuration(time.Duration)
 	SetProcessingStats(store.ProcessingStats)
 	SetProcessorAvailable(bool)
+	SetProcessingWindowOpen(bool)
 }
 
 type Worker struct {
@@ -107,7 +109,11 @@ func (w *Worker) Run(ctx context.Context) {
 }
 
 func (w *Worker) processAvailable(ctx context.Context) {
-	if !w.schedule.Allows(w.clock()) {
+	windowOpen := w.schedule.Allows(w.clock())
+	if w.observer != nil {
+		w.observer.SetProcessingWindowOpen(windowOpen)
+	}
+	if !windowOpen {
 		w.updateStats(ctx)
 		return
 	}
@@ -119,7 +125,11 @@ func (w *Worker) processAvailable(ctx context.Context) {
 		w.observer.SetProcessorAvailable(true)
 	}
 	for ctx.Err() == nil {
-		if !w.schedule.Allows(w.clock()) {
+		windowOpen = w.schedule.Allows(w.clock())
+		if w.observer != nil {
+			w.observer.SetProcessingWindowOpen(windowOpen)
+		}
+		if !windowOpen {
 			w.updateStats(ctx)
 			return
 		}
@@ -143,6 +153,9 @@ func (w *Worker) process(ctx context.Context, job store.ProcessingJob) bool {
 		w.observer.RecordProcessingAttempt()
 	}
 	startedAt := w.clock()
+	if w.observer != nil {
+		defer func() { w.observer.RecordProcessingDuration(w.clock().Sub(startedAt)) }()
+	}
 	w.logger.Info("AI request started",
 		"job_id", job.ID,
 		"incident_id", job.IncidentID,
@@ -172,7 +185,7 @@ func (w *Worker) process(ctx context.Context, job store.ProcessingJob) bool {
 	w.circuitFailures = 0
 	w.circuitUntil = time.Time{}
 	if w.observer != nil {
-		w.observer.RecordProcessingSuccess()
+		w.observer.RecordProcessingSuccess(completedAt)
 		w.observer.SetProcessorAvailable(true)
 	}
 	totalDuration := completedAt.Sub(startedAt)

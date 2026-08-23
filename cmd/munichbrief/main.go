@@ -331,7 +331,9 @@ func shutdownServers(ctx context.Context, logger *slog.Logger, servers ...*http.
 func runLiveSyncLoop(ctx context.Context, location *time.Location, syncer *ingest.Syncer, metrics *observability.Metrics, logger *slog.Logger) {
 	synchronize := func() {
 		metrics.RecordFeedAttempt()
+		startedAt := time.Now()
 		result, err := syncer.Sync(ctx)
+		metrics.RecordFeedDuration(time.Since(startedAt))
 		if err != nil {
 			metrics.RecordFeedFailure()
 			if !errors.Is(err, context.Canceled) {
@@ -354,6 +356,7 @@ func runLiveSyncLoop(ctx context.Context, location *time.Location, syncer *inges
 	for {
 		delay := randomizedLiveSyncDelay(time.Duration(rand.Int64N(int64(2 * liveSyncJitter))))
 		nextRun := time.Now().Add(delay).In(location)
+		metrics.SetNextFeedSync(nextRun)
 		logger.Info("next live synchronization scheduled", "scheduled_at", nextRun)
 		timer := time.NewTimer(delay)
 		select {

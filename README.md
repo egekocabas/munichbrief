@@ -430,12 +430,12 @@ The runnable version provides:
 - RSS request/response and synchronization counts with durations;
 - per-release fetch, parse, and storage lifecycle events with document IDs, byte/incident counts, and durations;
 - liveness and readiness endpoints;
-- Prometheus metrics for feed attempts and failures;
-- last successful synchronization time;
+- Prometheus metrics for feed attempts, failures, duration, and the next scheduled check;
+- last successful synchronization and AI processing times;
 - source HTTP response classes;
 - items discovered and updated;
 - parser failures;
-- processing queue depth and age;
+- processing queue depth and age, AI duration, processor availability, and processing-window state;
 - retention deletions.
 
 Alerts should report failed synchronization rather than merely an absence of new articles, because legitimate publication frequency varies around weekends and holidays.

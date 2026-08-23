@@ -12,30 +12,37 @@ import (
 )
 
 type Metrics struct {
-	version                string
-	startedAt              time.Time
-	feedAttempts           atomic.Uint64
-	feedFailures           atomic.Uint64
-	feedNotModified        atomic.Uint64
-	itemsDiscovered        atomic.Uint64
-	articlesFetched        atomic.Uint64
-	articleFetchFailures   atomic.Uint64
-	parserFailures         atomic.Uint64
-	lastFeedSuccess        atomic.Int64
-	httpResponses          [6]atomic.Uint64
-	sourceFeedResponses    [6]atomic.Uint64
-	sourcePageResponses    [6]atomic.Uint64
-	processingAttempts     atomic.Uint64
-	processingSuccesses    atomic.Uint64
-	processingFailures     atomic.Uint64
-	processingFailureKinds [4]atomic.Uint64
-	processingQueued       atomic.Int64
-	processingRunning      atomic.Int64
-	processingRetrying     atomic.Int64
-	processingReview       atomic.Int64
-	processingFailed       atomic.Int64
-	processingOldestAge    atomic.Int64
-	processorAvailable     atomic.Int64
+	version                 string
+	startedAt               time.Time
+	feedAttempts            atomic.Uint64
+	feedFailures            atomic.Uint64
+	feedNotModified         atomic.Uint64
+	itemsDiscovered         atomic.Uint64
+	articlesFetched         atomic.Uint64
+	articleFetchFailures    atomic.Uint64
+	parserFailures          atomic.Uint64
+	lastFeedSuccess         atomic.Int64
+	nextFeedSync            atomic.Int64
+	feedDurationNanos       atomic.Uint64
+	feedDurationCount       atomic.Uint64
+	httpResponses           [6]atomic.Uint64
+	sourceFeedResponses     [6]atomic.Uint64
+	sourcePageResponses     [6]atomic.Uint64
+	processingAttempts      atomic.Uint64
+	processingSuccesses     atomic.Uint64
+	processingFailures      atomic.Uint64
+	processingFailureKinds  [4]atomic.Uint64
+	processingQueued        atomic.Int64
+	processingRunning       atomic.Int64
+	processingRetrying      atomic.Int64
+	processingReview        atomic.Int64
+	processingFailed        atomic.Int64
+	processingOldestAge     atomic.Int64
+	processorAvailable      atomic.Int64
+	processingWindowOpen    atomic.Int64
+	lastProcessingSuccess   atomic.Int64
+	processingDurationNanos atomic.Uint64
+	processingDurationCount atomic.Uint64
 }
 
 func NewMetrics(version string, startedAt time.Time) *Metrics {
@@ -66,6 +73,15 @@ func (m *Metrics) RecordFeedSuccess(notModified bool, discovered, fetched, fetch
 	m.lastFeedSuccess.Store(at.Unix())
 }
 
+func (m *Metrics) RecordFeedDuration(duration time.Duration) {
+	m.feedDurationNanos.Add(uint64(max(duration.Nanoseconds(), 0)))
+	m.feedDurationCount.Add(1)
+}
+
+func (m *Metrics) SetNextFeedSync(at time.Time) {
+	m.nextFeedSync.Store(at.Unix())
+}
+
 func (m *Metrics) ObserveHTTPResponse(status int) {
 	m.httpResponses[responseClass(status)].Add(1)
 }
@@ -82,8 +98,9 @@ func (m *Metrics) RecordProcessingAttempt() {
 	m.processingAttempts.Add(1)
 }
 
-func (m *Metrics) RecordProcessingSuccess() {
+func (m *Metrics) RecordProcessingSuccess(at time.Time) {
 	m.processingSuccesses.Add(1)
+	m.lastProcessingSuccess.Store(at.Unix())
 }
 
 func (m *Metrics) RecordProcessingFailure(kind string) {
@@ -107,6 +124,19 @@ func (m *Metrics) SetProcessorAvailable(available bool) {
 		return
 	}
 	m.processorAvailable.Store(0)
+}
+
+func (m *Metrics) SetProcessingWindowOpen(open bool) {
+	if open {
+		m.processingWindowOpen.Store(1)
+		return
+	}
+	m.processingWindowOpen.Store(0)
+}
+
+func (m *Metrics) RecordProcessingDuration(duration time.Duration) {
+	m.processingDurationNanos.Add(uint64(max(duration.Nanoseconds(), 0)))
+	m.processingDurationCount.Add(1)
 }
 
 func (m *Metrics) Handler() http.Handler {
@@ -148,6 +178,10 @@ func (m *Metrics) write(writer io.Writer) {
 	fmt.Fprintln(writer, "# HELP munichbrief_last_feed_success_timestamp_seconds Unix timestamp of the last completed feed synchronization.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_last_feed_success_timestamp_seconds gauge")
 	fmt.Fprintf(writer, "munichbrief_last_feed_success_timestamp_seconds %d\n", m.lastFeedSuccess.Load())
+	fmt.Fprintln(writer, "# HELP munichbrief_next_feed_sync_timestamp_seconds Unix timestamp of the next scheduled feed synchronization.")
+	fmt.Fprintln(writer, "# TYPE munichbrief_next_feed_sync_timestamp_seconds gauge")
+	fmt.Fprintf(writer, "munichbrief_next_feed_sync_timestamp_seconds %d\n", m.nextFeedSync.Load())
+	writeDurationSummary(writer, "munichbrief_feed_sync_duration_seconds", "Feed synchronization duration.", m.feedDurationNanos.Load(), m.feedDurationCount.Load())
 	fmt.Fprintln(writer, "# HELP munichbrief_process_uptime_seconds Process uptime in seconds.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_process_uptime_seconds gauge")
 	fmt.Fprintf(writer, "munichbrief_process_uptime_seconds %.0f\n", time.Since(m.startedAt).Seconds())
@@ -157,6 +191,10 @@ func (m *Metrics) write(writer io.Writer) {
 	writeCounter(writer, "munichbrief_processing_attempts_total", "AI presentation processing attempts.", m.processingAttempts.Load())
 	writeCounter(writer, "munichbrief_processing_successes_total", "AI presentations generated successfully.", m.processingSuccesses.Load())
 	writeCounter(writer, "munichbrief_processing_failures_total", "AI presentation processing failures.", m.processingFailures.Load())
+	writeDurationSummary(writer, "munichbrief_processing_duration_seconds", "AI processing attempt duration.", m.processingDurationNanos.Load(), m.processingDurationCount.Load())
+	fmt.Fprintln(writer, "# HELP munichbrief_last_processing_success_timestamp_seconds Unix timestamp of the last successful AI presentation.")
+	fmt.Fprintln(writer, "# TYPE munichbrief_last_processing_success_timestamp_seconds gauge")
+	fmt.Fprintf(writer, "munichbrief_last_processing_success_timestamp_seconds %d\n", m.lastProcessingSuccess.Load())
 	fmt.Fprintln(writer, "# HELP munichbrief_processing_failures_by_kind_total AI processing failures by safe machine-readable category.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_processing_failures_by_kind_total counter")
 	for index, kind := range []string{"transient", "configuration", "output", "privacy"} {
@@ -177,7 +215,17 @@ func (m *Metrics) write(writer io.Writer) {
 	fmt.Fprintln(writer, "# HELP munichbrief_ai_processor_available Whether the AI processor circuit is closed and available.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_ai_processor_available gauge")
 	fmt.Fprintf(writer, "munichbrief_ai_processor_available %d\n", m.processorAvailable.Load())
+	fmt.Fprintln(writer, "# HELP munichbrief_ai_processing_window_open Whether new AI requests may start under the configured schedule.")
+	fmt.Fprintln(writer, "# TYPE munichbrief_ai_processing_window_open gauge")
+	fmt.Fprintf(writer, "munichbrief_ai_processing_window_open %d\n", m.processingWindowOpen.Load())
 	writeCounter(writer, "munichbrief_retention_deletions_total", "Records removed by retention processing.", 0)
+}
+
+func writeDurationSummary(writer io.Writer, name, help string, nanoseconds, count uint64) {
+	fmt.Fprintf(writer, "# HELP %s %s\n", name, help)
+	fmt.Fprintf(writer, "# TYPE %s summary\n", name)
+	fmt.Fprintf(writer, "%s_sum %.6f\n", name, float64(nanoseconds)/float64(time.Second))
+	fmt.Fprintf(writer, "%s_count %d\n", name, count)
 }
 
 func writeCounter(writer io.Writer, name, help string, value uint64) {
