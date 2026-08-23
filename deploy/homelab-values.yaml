@@ -19,6 +19,12 @@ application:
   syncInterval: 15m
   httpTimeout: 10s
   articleRefreshInterval: 6h
+  aiEnabled: true
+  ollamaBaseURL: http://192.168.178.102:11434
+  ollamaModel: qwen3.5:4b
+  aiInterval: 5s
+  aiTimeout: 5m
+  aiContextSize: 8192
   existingSecret: ""
 
 ingress:
@@ -37,6 +43,6 @@ serviceMonitor:
 networkPolicy:
   enabled: true
   pi8:
-    enabled: false
+    enabled: true
     cidr: 192.168.178.102/32
-    port: 8080
+    port: 11434

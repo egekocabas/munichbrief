@@ -21,7 +21,7 @@
     },
     "application": {
       "type": "object",
-      "required": ["sourceMode", "pageSize", "feedURL", "userAgent", "syncInterval", "httpTimeout", "articleRefreshInterval"],
+      "required": ["sourceMode", "pageSize", "feedURL", "userAgent", "syncInterval", "httpTimeout", "articleRefreshInterval", "aiEnabled", "ollamaBaseURL", "ollamaModel", "aiInterval", "aiTimeout", "aiContextSize"],
       "properties": {
         "sourceMode": {"enum": ["fixture", "live"]},
         "pageSize": {"type": "integer", "minimum": 1, "maximum": 100},
@@ -30,6 +30,12 @@
         "syncInterval": {"type": "string", "minLength": 2},
         "httpTimeout": {"type": "string", "minLength": 2},
         "articleRefreshInterval": {"type": "string", "minLength": 2},
+        "aiEnabled": {"type": "boolean"},
+        "ollamaBaseURL": {"type": "string", "pattern": "^https?://"},
+        "ollamaModel": {"type": "string", "minLength": 1},
+        "aiInterval": {"type": "string", "minLength": 2},
+        "aiTimeout": {"type": "string", "minLength": 2},
+        "aiContextSize": {"type": "integer", "minimum": 2048, "maximum": 32768},
         "existingSecret": {"type": "string"}
       },
       "additionalProperties": false

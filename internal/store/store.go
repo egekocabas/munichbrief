@@ -44,7 +44,24 @@ type IncidentRecord struct {
 	UpdatedAt        time.Time
 	FetchStatus      string
 	ErrorMessage     string
+	AITitleDE        string
+	AISummaryDE      string
+	AITitleEN        string
+	AISummaryEN      string
+	AIModel          string
+	AIPromptVersion  string
+	AIGeneratedAt    *time.Time
+	HasAI            bool
 }
+
+const incidentAIColumns = `
+			COALESCE((SELECT value FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND kind = 'title_de' ORDER BY generated_at DESC LIMIT 1), ''),
+			COALESCE((SELECT value FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND kind = 'summary_de' ORDER BY generated_at DESC LIMIT 1), ''),
+			COALESCE((SELECT value FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND kind = 'title_en' ORDER BY generated_at DESC LIMIT 1), ''),
+			COALESCE((SELECT value FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND kind = 'summary_en' ORDER BY generated_at DESC LIMIT 1), ''),
+			COALESCE((SELECT model_identity FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND kind = 'summary_de' ORDER BY generated_at DESC LIMIT 1), ''),
+			COALESCE((SELECT prompt_version FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND kind = 'summary_de' ORDER BY generated_at DESC LIMIT 1), ''),
+			COALESCE((SELECT generated_at FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND kind = 'summary_de' ORDER BY generated_at DESC LIMIT 1), '')`
 
 func Open(ctx context.Context, path string) (*Store, error) {
 	if path == "" {
@@ -256,7 +273,7 @@ func (s *Store) ListIncidents(ctx context.Context, limit, offset int) ([]Inciden
 		SELECT
 			i.id, d.id, 1, i.incident_number, i.position, i.title_de, COALESCE(i.body_de, ''),
 			i.content_hash, d.title, d.source_url, d.external_id, d.published_at, i.updated_at,
-			d.fetch_status, COALESCE(d.error_message, '')
+			d.fetch_status, COALESCE(d.error_message, ''),`+incidentAIColumns+`
 		FROM incidents i
 		JOIN source_documents d ON d.id = i.source_document_id
 		ORDER BY d.published_at DESC, i.position ASC
@@ -285,7 +302,7 @@ func (s *Store) GetIncident(ctx context.Context, id int64) (IncidentRecord, erro
 		SELECT
 			i.id, d.id, 1, i.incident_number, i.position, i.title_de, COALESCE(i.body_de, ''),
 			i.content_hash, d.title, d.source_url, d.external_id, d.published_at, i.updated_at,
-			d.fetch_status, COALESCE(d.error_message, '')
+			d.fetch_status, COALESCE(d.error_message, ''),`+incidentAIColumns+`
 		FROM incidents i
 		JOIN source_documents d ON d.id = i.source_document_id
 		WHERE i.id = ?`, id)
@@ -308,6 +325,7 @@ func scanIncident(row scanner) (IncidentRecord, error) {
 	var record IncidentRecord
 	var publishedAt string
 	var updatedAt string
+	var aiGeneratedAt string
 	if err := row.Scan(
 		&record.ID,
 		&record.SourceDocumentID,
@@ -324,6 +342,13 @@ func scanIncident(row scanner) (IncidentRecord, error) {
 		&updatedAt,
 		&record.FetchStatus,
 		&record.ErrorMessage,
+		&record.AITitleDE,
+		&record.AISummaryDE,
+		&record.AITitleEN,
+		&record.AISummaryEN,
+		&record.AIModel,
+		&record.AIPromptVersion,
+		&aiGeneratedAt,
 	); err != nil {
 		return IncidentRecord{}, err
 	}
@@ -337,6 +362,14 @@ func scanIncident(row scanner) (IncidentRecord, error) {
 	if err != nil {
 		return IncidentRecord{}, fmt.Errorf("parse update time: %w", err)
 	}
+	if aiGeneratedAt != "" {
+		generatedAt, err := time.Parse(time.RFC3339Nano, aiGeneratedAt)
+		if err != nil {
+			return IncidentRecord{}, fmt.Errorf("parse AI generation time: %w", err)
+		}
+		record.AIGeneratedAt = &generatedAt
+	}
+	record.HasAI = record.AITitleDE != "" && record.AISummaryDE != "" && record.AITitleEN != "" && record.AISummaryEN != ""
 	return record, nil
 }
 

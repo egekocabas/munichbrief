@@ -20,6 +20,12 @@ const (
 	defaultSyncInterval = 15 * time.Minute
 	defaultHTTPTimeout  = 10 * time.Second
 	defaultRefreshAfter = 6 * time.Hour
+	defaultAIEnabled    = false
+	defaultOllamaURL    = "http://127.0.0.1:11434"
+	defaultOllamaModel  = "qwen3.5:4b"
+	defaultAIInterval   = 5 * time.Second
+	defaultAITimeout    = 5 * time.Minute
+	defaultAIContext    = 8192
 	repositoryURL       = "https://github.com/egekocabas/munichbrief"
 )
 
@@ -35,6 +41,12 @@ type Config struct {
 	SyncInterval   time.Duration
 	HTTPTimeout    time.Duration
 	RefreshAfter   time.Duration
+	AIEnabled      bool
+	OllamaBaseURL  string
+	OllamaModel    string
+	AIInterval     time.Duration
+	AITimeout      time.Duration
+	AIContextSize  int
 }
 
 // Load reads configuration from the environment and applies local-safe defaults.
@@ -50,6 +62,19 @@ func Load() (Config, error) {
 		SyncInterval:   defaultSyncInterval,
 		HTTPTimeout:    defaultHTTPTimeout,
 		RefreshAfter:   defaultRefreshAfter,
+		AIEnabled:      defaultAIEnabled,
+		OllamaBaseURL:  envOrDefault("MUNICHBRIEF_OLLAMA_BASE_URL", defaultOllamaURL),
+		OllamaModel:    envOrDefault("MUNICHBRIEF_OLLAMA_MODEL", defaultOllamaModel),
+		AIInterval:     defaultAIInterval,
+		AITimeout:      defaultAITimeout,
+		AIContextSize:  defaultAIContext,
+	}
+	if raw := os.Getenv("MUNICHBRIEF_AI_ENABLED"); raw != "" {
+		value, err := strconv.ParseBool(raw)
+		if err != nil {
+			return Config{}, fmt.Errorf("MUNICHBRIEF_AI_ENABLED must be true or false")
+		}
+		cfg.AIEnabled = value
 	}
 
 	if raw := os.Getenv("MUNICHBRIEF_PAGE_SIZE"); raw != "" {
@@ -74,6 +99,19 @@ func Load() (Config, error) {
 	if cfg.RefreshAfter, err = durationFromEnv("MUNICHBRIEF_ARTICLE_REFRESH_INTERVAL", cfg.RefreshAfter, 15*time.Minute); err != nil {
 		return Config{}, err
 	}
+	if cfg.AIInterval, err = durationFromEnv("MUNICHBRIEF_AI_INTERVAL", cfg.AIInterval, time.Second); err != nil {
+		return Config{}, err
+	}
+	if cfg.AITimeout, err = durationFromEnv("MUNICHBRIEF_AI_TIMEOUT", cfg.AITimeout, time.Second); err != nil {
+		return Config{}, err
+	}
+	if raw := os.Getenv("MUNICHBRIEF_AI_CONTEXT_SIZE"); raw != "" {
+		contextSize, parseErr := strconv.Atoi(raw)
+		if parseErr != nil || contextSize < 2048 || contextSize > 32768 {
+			return Config{}, fmt.Errorf("MUNICHBRIEF_AI_CONTEXT_SIZE must be between 2048 and 32768")
+		}
+		cfg.AIContextSize = contextSize
+	}
 
 	feedURL, err := url.Parse(cfg.FeedURL)
 	if err != nil || feedURL.Scheme != "https" || feedURL.Host == "" || feedURL.User != nil {
@@ -81,6 +119,13 @@ func Load() (Config, error) {
 	}
 	if !strings.Contains(cfg.UserAgent, repositoryURL) {
 		return Config{}, fmt.Errorf("MUNICHBRIEF_USER_AGENT must contain %s", repositoryURL)
+	}
+	ollamaURL, err := url.Parse(cfg.OllamaBaseURL)
+	if err != nil || (ollamaURL.Scheme != "http" && ollamaURL.Scheme != "https") || ollamaURL.Host == "" || ollamaURL.User != nil || ollamaURL.RawQuery != "" || ollamaURL.Fragment != "" {
+		return Config{}, fmt.Errorf("MUNICHBRIEF_OLLAMA_BASE_URL must be an absolute HTTP(S) URL without credentials, query, or fragment")
+	}
+	if strings.TrimSpace(cfg.OllamaModel) == "" {
+		return Config{}, fmt.Errorf("MUNICHBRIEF_OLLAMA_MODEL must not be empty")
 	}
 
 	return cfg, nil

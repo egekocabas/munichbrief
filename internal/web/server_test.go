@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/egekocabas/munichbrief/internal/domain"
+	"github.com/egekocabas/munichbrief/internal/processing"
 	"github.com/egekocabas/munichbrief/internal/source"
 	"github.com/egekocabas/munichbrief/internal/store"
 )
@@ -78,6 +79,18 @@ func TestTemplatesEscapeIncidentContent(t *testing.T) {
 	if err := database.UpsertDocuments(ctx, documents, time.Now()); err != nil {
 		t.Fatalf("UpsertDocuments() error = %v", err)
 	}
+	job, found, err := database.QueueAndClaimProcessingJob(ctx, "incident-presentation/hostile", time.Now())
+	if err != nil || !found {
+		t.Fatalf("QueueAndClaimProcessingJob() = found:%t err:%v", found, err)
+	}
+	if err := database.CompleteProcessingJob(ctx, job, store.AIPresentation{
+		TitleDE:   "<script>alert('title')</script>",
+		SummaryDE: "<img src=x onerror=alert('body')>",
+		TitleEN:   "<script>alert('english-title')</script>",
+		SummaryEN: "<img src=x onerror=alert('english-body')>",
+	}, "hostile-model", processing.PromptVersion, time.Now()); err != nil {
+		t.Fatalf("CompleteProcessingJob() error = %v", err)
+	}
 
 	recorder := httptest.NewRecorder()
 	testServer(t, database).Handler().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/", nil))
@@ -87,6 +100,51 @@ func TestTemplatesEscapeIncidentContent(t *testing.T) {
 	}
 	if !strings.Contains(body, "&lt;script&gt;") || !strings.Contains(body, "&lt;img") {
 		t.Error("timeline did not render escaped hostile content")
+	}
+	detail := httptest.NewRecorder()
+	testServer(t, database).Handler().ServeHTTP(detail, httptest.NewRequest(http.MethodGet, "/incidents/"+formatID(job.IncidentID), nil))
+	if strings.Contains(detail.Body.String(), "<script>") || strings.Contains(detail.Body.String(), "<img src=x") {
+		t.Fatalf("detail rendered unescaped hostile AI markup: %s", detail.Body.String())
+	}
+}
+
+func TestTimelineAndDetailRenderAIContentWithProvenance(t *testing.T) {
+	ctx := context.Background()
+	database := fixtureStore(t)
+	generatedAt := time.Date(2026, time.August, 23, 9, 0, 0, 0, time.UTC)
+	operation := "incident-presentation/" + processing.PromptVersion + "/qwen3.5:4b"
+	job, found, err := database.QueueAndClaimProcessingJob(ctx, operation, generatedAt)
+	if err != nil || !found {
+		t.Fatalf("QueueAndClaimProcessingJob() = found:%t err:%v", found, err)
+	}
+	presentation := store.AIPresentation{
+		TitleDE:   "Kurzer deutscher Titel",
+		SummaryDE: "Eine sachliche deutsche Zusammenfassung.",
+		TitleEN:   "Short English title",
+		SummaryEN: "A factual English summary.",
+	}
+	if err := database.CompleteProcessingJob(ctx, job, presentation, "qwen3.5:4b", processing.PromptVersion, generatedAt); err != nil {
+		t.Fatalf("CompleteProcessingJob() error = %v", err)
+	}
+
+	handler := testServer(t, database).Handler()
+	timeline := httptest.NewRecorder()
+	handler.ServeHTTP(timeline, httptest.NewRequest(http.MethodGet, "/", nil))
+	for _, expected := range []string{"AI-generated summary", presentation.TitleDE, presentation.SummaryDE} {
+		if !strings.Contains(timeline.Body.String(), expected) {
+			t.Errorf("timeline body does not contain %q", expected)
+		}
+	}
+
+	detail := httptest.NewRecorder()
+	handler.ServeHTTP(detail, httptest.NewRequest(http.MethodGet, "/incidents/"+formatID(job.IncidentID), nil))
+	for _, expected := range []string{
+		"Short summaries", "Deutsch", "English", presentation.TitleEN,
+		presentation.SummaryEN, "Generated with qwen3.5:4b", "Original extracted text",
+	} {
+		if !strings.Contains(detail.Body.String(), expected) {
+			t.Errorf("detail body does not contain %q", expected)
+		}
 	}
 }
 

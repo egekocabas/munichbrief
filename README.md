@@ -44,6 +44,17 @@ go run ./cmd/munichbrief
 
 Live mode polls immediately and then every 15 minutes. It makes low-rate automated requests to RSS-linked police articles under the source-access policy and risks documented below. Routine development and CI should continue to use fixture mode.
 
+To test AI processing safely against the synthetic fixtures, run:
+
+```bash
+MUNICHBRIEF_AI_ENABLED=true \
+MUNICHBRIEF_OLLAMA_BASE_URL=http://192.168.178.102:11434 \
+MUNICHBRIEF_OLLAMA_MODEL=qwen3.5:4b \
+go run ./cmd/munichbrief
+```
+
+The worker immediately queues existing incidents and creates a short German title and summary plus an aligned English title and summary. Processing stays outside browser requests, and the original fixture text remains visible for quality comparison.
+
 Useful configuration:
 
 | Variable | Default | Purpose |
@@ -58,6 +69,12 @@ Useful configuration:
 | `MUNICHBRIEF_SYNC_INTERVAL` | `15m` | Live feed polling interval; minimum one minute |
 | `MUNICHBRIEF_HTTP_TIMEOUT` | `10s` | Per-request live source timeout; minimum one second |
 | `MUNICHBRIEF_ARTICLE_REFRESH_INTERVAL` | `6h` | Maximum age before an unchanged article can be refreshed |
+| `MUNICHBRIEF_AI_ENABLED` | `false` | Enable asynchronous Ollama processing |
+| `MUNICHBRIEF_OLLAMA_BASE_URL` | `http://127.0.0.1:11434` | Ollama LAN or local base URL |
+| `MUNICHBRIEF_OLLAMA_MODEL` | `qwen3.5:4b` | Exact Ollama model tag recorded with generated content |
+| `MUNICHBRIEF_AI_INTERVAL` | `5s` | How often an idle worker checks for new jobs |
+| `MUNICHBRIEF_AI_TIMEOUT` | `5m` | Timeout for one model request |
+| `MUNICHBRIEF_AI_CONTEXT_SIZE` | `8192` | Ollama context size, from 2048 to 32768 |
 
 Run the test suite with:
 
@@ -306,26 +323,25 @@ Every incident view will display:
 
 The application must continue synchronizing and serving existing data when `pi8` is unavailable. AI processing will therefore be asynchronous and outside browser request paths.
 
-The application-facing processing interface has two operations:
+The first application-facing processing operation creates one aligned presentation:
 
 ```text
-Summarize(GermanIncident) -> GermanSummary
-Translate(GermanSummary, de, en) -> EnglishSummary
+Present(GermanIncident) -> GermanTitle + GermanSummary + EnglishTitle + EnglishSummary
 ```
 
 The planned processing sequence is:
 
-1. Generate a fact-constrained German summary from the German incident body.
-2. Validate the structured result and reject empty or malformed responses.
-3. Translate the accepted German summary to English, keeping both languages aligned.
+1. Generate a fact-constrained German title and summary from the German incident body.
+2. Generate aligned English translations in the same structured response.
+3. Validate all four fields and reject empty, malformed, or oversized responses.
 4. Record the source hash, model, prompt version, and processing time.
-5. Delete the stored full German body only after both required derivations succeed.
+5. Retain the stored German body during the quality-evaluation phase; deletion remains a later operator-reviewed step.
 
 The LAN base URL, timeouts, model names, and optional authorization token will be configurable. Secrets will not be committed. The `pi8` inference port should be restricted to `pi16` at the host firewall or equivalent network boundary.
 
 Transient failures will use bounded exponential backoff. Processing will be idempotent for the combination of incident source hash, operation, model, and prompt version.
 
-Exact model selection is deliberately deferred until the `pi8` inference service exists. The application interface above should remain stable when models change.
+The initial model is `qwen3.5:4b`. Model identity and prompt version are part of job and derivation identity, so changing either queues a fresh presentation without overwriting provenance.
 
 ## Retention
 
@@ -477,10 +493,9 @@ The application provides a consistent SQLite backup command and documented resto
 
 ### 6. pi8 summarization and translation
 
-- Finalize the shared LAN inference contract.
-- Add asynchronous German summarization and English translation.
-- Add output validation, provenance, retries, and quality evaluations.
-- Process existing stored bodies and delete them after successful derivation.
+- **Initial implementation complete.** Ollama-backed asynchronous German/English titles and summaries include structured validation, provenance, bounded retries, and restart-safe jobs.
+- Run quality evaluations across the installed pi8 models and refine the prompt.
+- Decide whether generated content is acceptable before deleting any stored source bodies.
 - Enforce the steady-state 365-day retention policy.
 
 ### 7. Public-readiness review

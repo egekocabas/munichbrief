@@ -32,8 +32,9 @@
                   <time datetime="{{.PublishedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime .PublishedAt}}</time>
                 </div>
                 {{if .HasIncident}}
-                  <h4><a href="/incidents/{{.ID}}" lang="de">{{.TitleDE}}</a></h4>
-                  <p lang="de">{{excerpt .BodyDE}}</p>
+                  {{if .HasAI}}<p class="ai-label">AI-generated summary</p>{{end}}
+                  <h4><a href="/incidents/{{.ID}}" lang="de">{{if .HasAI}}{{.AITitleDE}}{{else}}{{.TitleDE}}{{end}}</a></h4>
+                  <p lang="de">{{if .HasAI}}{{.AISummaryDE}}{{else}}{{excerpt .BodyDE}}{{end}}</p>
                   {{if eq .FetchStatus "error"}}<p class="status-note">The last source refresh failed; this stored copy remains available.</p>{{end}}
                 {{else}}
                   <h4 lang="de">{{.TitleDE}}</h4>

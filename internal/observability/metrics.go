@@ -23,6 +23,10 @@ type Metrics struct {
 	httpResponses        [6]atomic.Uint64
 	sourceFeedResponses  [6]atomic.Uint64
 	sourcePageResponses  [6]atomic.Uint64
+	processingAttempts   atomic.Uint64
+	processingSuccesses  atomic.Uint64
+	processingFailures   atomic.Uint64
+	processingQueueDepth atomic.Int64
 }
 
 func NewMetrics(version string, startedAt time.Time) *Metrics {
@@ -61,6 +65,22 @@ func (m *Metrics) ObserveSourceResponse(resource string, status int) {
 		target = &m.sourceFeedResponses
 	}
 	target[responseClass(status)].Add(1)
+}
+
+func (m *Metrics) RecordProcessingAttempt() {
+	m.processingAttempts.Add(1)
+}
+
+func (m *Metrics) RecordProcessingSuccess() {
+	m.processingSuccesses.Add(1)
+}
+
+func (m *Metrics) RecordProcessingFailure() {
+	m.processingFailures.Add(1)
+}
+
+func (m *Metrics) SetProcessingQueueDepth(depth int) {
+	m.processingQueueDepth.Store(int64(max(depth, 0)))
 }
 
 func (m *Metrics) Handler() http.Handler {
@@ -108,9 +128,12 @@ func (m *Metrics) write(writer io.Writer) {
 	writeResponseClasses(writer, "munichbrief_http_responses_total", "Reader HTTP responses by status class.", "", &m.httpResponses)
 	writeResponseClasses(writer, "munichbrief_source_http_responses_total", "Source HTTP responses by resource and status class.", "feed", &m.sourceFeedResponses)
 	writeResponseClasses(writer, "munichbrief_source_http_responses_total", "", "article", &m.sourcePageResponses)
+	writeCounter(writer, "munichbrief_processing_attempts_total", "AI presentation processing attempts.", m.processingAttempts.Load())
+	writeCounter(writer, "munichbrief_processing_successes_total", "AI presentations generated successfully.", m.processingSuccesses.Load())
+	writeCounter(writer, "munichbrief_processing_failures_total", "AI presentation processing failures.", m.processingFailures.Load())
 	fmt.Fprintln(writer, "# HELP munichbrief_processing_queue_depth Pending AI processing jobs.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_processing_queue_depth gauge")
-	fmt.Fprintln(writer, "munichbrief_processing_queue_depth 0")
+	fmt.Fprintf(writer, "munichbrief_processing_queue_depth %d\n", m.processingQueueDepth.Load())
 	fmt.Fprintln(writer, "# HELP munichbrief_processing_oldest_job_age_seconds Age of the oldest pending AI processing job.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_processing_oldest_job_age_seconds gauge")
 	fmt.Fprintln(writer, "munichbrief_processing_oldest_job_age_seconds 0")

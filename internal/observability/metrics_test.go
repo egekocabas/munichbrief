@@ -15,6 +15,10 @@ func TestMetricsExposeSynchronizationAndHTTPState(t *testing.T) {
 	metrics.RecordFeedSuccess(true, 2, 1, 3, 4, time.Unix(1234, 0))
 	metrics.ObserveSourceResponse("feed", http.StatusNotModified)
 	metrics.ObserveSourceResponse("article", 0)
+	metrics.RecordProcessingAttempt()
+	metrics.RecordProcessingSuccess()
+	metrics.RecordProcessingFailure()
+	metrics.SetProcessingQueueDepth(2)
 
 	wrapped := metrics.Wrap(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
 		http.Error(response, "unavailable", http.StatusServiceUnavailable)
@@ -39,7 +43,10 @@ func TestMetricsExposeSynchronizationAndHTTPState(t *testing.T) {
 		`munichbrief_http_responses_total{class="5xx"} 1`,
 		`munichbrief_source_http_responses_total{resource="feed",class="3xx"} 1`,
 		`munichbrief_source_http_responses_total{resource="article",class="error"} 1`,
-		"munichbrief_processing_queue_depth 0",
+		"munichbrief_processing_attempts_total 1",
+		"munichbrief_processing_successes_total 1",
+		"munichbrief_processing_failures_total 1",
+		"munichbrief_processing_queue_depth 2",
 		"munichbrief_retention_deletions_total 0",
 	} {
 		if !strings.Contains(recorder.Body.String(), expected) {

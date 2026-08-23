@@ -49,7 +49,7 @@ func (s *Store) ListTimelineEntries(ctx context.Context, limit, offset int, sour
 				d.published_at,
 				i.updated_at,
 				d.fetch_status,
-				COALESCE(d.error_message, '') AS error_message
+				COALESCE(d.error_message, '') AS error_message,`+incidentAIColumns+`
 			FROM incidents i
 			JOIN source_documents d ON d.id = i.source_document_id
 			WHERE `+statusCondition+`
@@ -71,7 +71,14 @@ func (s *Store) ListTimelineEntries(ctx context.Context, limit, offset int, sour
 				d.published_at,
 				d.last_seen_at AS updated_at,
 				d.fetch_status,
-				COALESCE(d.error_message, '') AS error_message
+				COALESCE(d.error_message, '') AS error_message,
+				'' AS ai_title_de,
+				'' AS ai_summary_de,
+				'' AS ai_title_en,
+				'' AS ai_summary_en,
+				'' AS ai_model,
+				'' AS ai_prompt_version,
+				'' AS ai_generated_at
 			FROM source_documents d
 			WHERE `+statusCondition+` AND NOT EXISTS (
 				SELECT 1 FROM incidents i WHERE i.source_document_id = d.id

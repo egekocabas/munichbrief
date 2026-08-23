@@ -15,3 +15,9 @@ data:
   MUNICHBRIEF_SYNC_INTERVAL: {{ .Values.application.syncInterval | quote }}
   MUNICHBRIEF_HTTP_TIMEOUT: {{ .Values.application.httpTimeout | quote }}
   MUNICHBRIEF_ARTICLE_REFRESH_INTERVAL: {{ .Values.application.articleRefreshInterval | quote }}
+  MUNICHBRIEF_AI_ENABLED: {{ .Values.application.aiEnabled | quote }}
+  MUNICHBRIEF_OLLAMA_BASE_URL: {{ .Values.application.ollamaBaseURL | quote }}
+  MUNICHBRIEF_OLLAMA_MODEL: {{ .Values.application.ollamaModel | quote }}
+  MUNICHBRIEF_AI_INTERVAL: {{ .Values.application.aiInterval | quote }}
+  MUNICHBRIEF_AI_TIMEOUT: {{ .Values.application.aiTimeout | quote }}
+  MUNICHBRIEF_AI_CONTEXT_SIZE: {{ .Values.application.aiContextSize | quote }}

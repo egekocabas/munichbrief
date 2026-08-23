@@ -1,4 +1,4 @@
-{{define "title"}}{{.Incident.TitleDE}}{{end}}
+{{define "title"}}{{if .Incident.HasAI}}{{.Incident.AITitleDE}}{{else}}{{.Incident.TitleDE}}{{end}}{{end}}
 
 {{define "content"}}
 <nav class="back-link" aria-label="Breadcrumb">
@@ -11,21 +11,50 @@
       {{if .Incident.Number}}<span>Report {{.Incident.Number}}</span>{{end}}
       <time datetime="{{.Incident.PublishedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime .Incident.PublishedAt}}</time>
     </div>
-    <h1 lang="de">{{.Incident.TitleDE}}</h1>
+    {{if .Incident.HasAI}}<p class="ai-label">AI-generated presentation</p>{{end}}
+    <h1 lang="de">{{if .Incident.HasAI}}{{.Incident.AITitleDE}}{{else}}{{.Incident.TitleDE}}{{end}}</h1>
     <p class="source-name">Published within: {{.Incident.SourceTitle}}</p>
-	<p class="source-name">Last processed: <time datetime="{{.Incident.UpdatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime .Incident.UpdatedAt}}</time></p>
+    <p class="source-name">Last processed: <time datetime="{{.Incident.UpdatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime .Incident.UpdatedAt}}</time></p>
   </header>
 
-  <div class="incident-body" lang="de">{{.Incident.BodyDE}}</div>
+  {{if .Incident.HasAI}}
+    <section class="ai-presentations" aria-labelledby="ai-summary-heading">
+      <div class="ai-heading">
+        <div>
+          <p class="eyebrow">Machine-generated</p>
+          <h2 id="ai-summary-heading">Short summaries</h2>
+        </div>
+        <p>Generated with {{.Incident.AIModel}}. Verify important details against the official source.</p>
+      </div>
+      <div class="language-grid">
+        <section lang="de" aria-labelledby="german-summary-heading">
+          <p class="language-label">Deutsch</p>
+          <h3 id="german-summary-heading">{{.Incident.AITitleDE}}</h3>
+          <p>{{.Incident.AISummaryDE}}</p>
+        </section>
+        <section lang="en" aria-labelledby="english-summary-heading">
+          <p class="language-label">English</p>
+          <h3 id="english-summary-heading">{{.Incident.AITitleEN}}</h3>
+          <p>{{.Incident.AISummaryEN}}</p>
+        </section>
+      </div>
+    </section>
+  {{end}}
+
+  <section class="original-report" aria-labelledby="original-report-heading">
+    <p class="eyebrow">Original extracted text</p>
+    <h2 id="original-report-heading" lang="de">{{.Incident.TitleDE}}</h2>
+    <div class="incident-body" lang="de">{{.Incident.BodyDE}}</div>
+  </section>
 
   <footer class="source-panel">
     <div>
       <p class="eyebrow">Authoritative source</p>
-	  {{if .Fixture}}
-	    <p>This page uses synthetic fixture content. Live releases always link back to the original Bavarian Police page.</p>
-	  {{else}}
-	    <p>This is an unofficial rendering of the official release. The original Bavarian Police report remains authoritative.</p>
-	  {{end}}
+      {{if .Fixture}}
+        <p>This page uses synthetic fixture content. Live releases always link back to the original Bavarian Police page.</p>
+      {{else}}
+        <p>This is an unofficial rendering of the official release. The original Bavarian Police report remains authoritative.</p>
+      {{end}}
     </div>
     <a class="source-button" href="{{.Incident.SourceURL}}" rel="noopener noreferrer">Open source <span aria-hidden="true">↗</span></a>
   </footer>

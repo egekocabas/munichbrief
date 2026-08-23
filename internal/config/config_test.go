@@ -13,6 +13,12 @@ func TestLoadDefaults(t *testing.T) {
 	t.Setenv("MUNICHBRIEF_SYNC_INTERVAL", "")
 	t.Setenv("MUNICHBRIEF_HTTP_TIMEOUT", "")
 	t.Setenv("MUNICHBRIEF_ARTICLE_REFRESH_INTERVAL", "")
+	t.Setenv("MUNICHBRIEF_AI_ENABLED", "")
+	t.Setenv("MUNICHBRIEF_OLLAMA_BASE_URL", "")
+	t.Setenv("MUNICHBRIEF_OLLAMA_MODEL", "")
+	t.Setenv("MUNICHBRIEF_AI_INTERVAL", "")
+	t.Setenv("MUNICHBRIEF_AI_TIMEOUT", "")
+	t.Setenv("MUNICHBRIEF_AI_CONTEXT_SIZE", "")
 
 	cfg, err := Load()
 	if err != nil {
@@ -33,6 +39,35 @@ func TestLoadDefaults(t *testing.T) {
 	}
 	if cfg.PageSize != defaultPageSize {
 		t.Errorf("PageSize = %d, want %d", cfg.PageSize, defaultPageSize)
+	}
+	if cfg.AIEnabled || cfg.OllamaModel != defaultOllamaModel || cfg.AIContextSize != defaultAIContext {
+		t.Errorf("AI defaults = enabled:%t model:%q context:%d", cfg.AIEnabled, cfg.OllamaModel, cfg.AIContextSize)
+	}
+}
+
+func TestLoadAcceptsRemoteOllamaConfiguration(t *testing.T) {
+	t.Setenv("MUNICHBRIEF_AI_ENABLED", "true")
+	t.Setenv("MUNICHBRIEF_OLLAMA_BASE_URL", "http://192.168.178.102:11434")
+	t.Setenv("MUNICHBRIEF_OLLAMA_MODEL", "qwen3.5:4b")
+	t.Setenv("MUNICHBRIEF_AI_CONTEXT_SIZE", "8192")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if !cfg.AIEnabled || cfg.OllamaBaseURL != "http://192.168.178.102:11434" {
+		t.Fatalf("AI configuration = %#v", cfg)
+	}
+}
+
+func TestLoadRejectsInvalidOllamaConfiguration(t *testing.T) {
+	for _, baseURL := range []string{"192.168.178.102:11434", "ftp://pi8/model", "http://user:password@pi8:11434"} {
+		t.Run(baseURL, func(t *testing.T) {
+			t.Setenv("MUNICHBRIEF_OLLAMA_BASE_URL", baseURL)
+			if _, err := Load(); err == nil {
+				t.Fatal("Load() error = nil, want invalid Ollama URL error")
+			}
+		})
 	}
 }
 

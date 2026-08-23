@@ -16,6 +16,7 @@ import (
 	"github.com/egekocabas/munichbrief/internal/config"
 	"github.com/egekocabas/munichbrief/internal/ingest"
 	"github.com/egekocabas/munichbrief/internal/observability"
+	"github.com/egekocabas/munichbrief/internal/processing"
 	"github.com/egekocabas/munichbrief/internal/source"
 	"github.com/egekocabas/munichbrief/internal/store"
 	"github.com/egekocabas/munichbrief/internal/web"
@@ -84,6 +85,23 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 			return err
 		}
 	}
+	var aiWorker *processing.Worker
+	if cfg.AIEnabled {
+		ollamaClient, err := processing.NewOllamaClient(
+			cfg.OllamaBaseURL,
+			cfg.OllamaModel,
+			cfg.AITimeout,
+			cfg.AIContextSize,
+			nil,
+		)
+		if err != nil {
+			return err
+		}
+		aiWorker, err = processing.NewWorker(database, ollamaClient, metrics, logger, cfg.AIInterval, time.Now)
+		if err != nil {
+			return err
+		}
+	}
 
 	webServer, err := web.New(database, logger, cfg.PageSize, cfg.SourceMode)
 	if err != nil {
@@ -97,6 +115,10 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 	go serve(metricsServer, "metrics", cfg.MetricsAddress, cfg.SourceMode, logger, serveErrors)
 	if liveSyncer != nil {
 		go runLiveSyncLoop(ctx, cfg.SyncInterval, liveSyncer, metrics, logger)
+	}
+	if aiWorker != nil {
+		logger.Info("AI processing worker started", "base_url", cfg.OllamaBaseURL, "model", cfg.OllamaModel)
+		go aiWorker.Run(ctx)
 	}
 
 	select {
