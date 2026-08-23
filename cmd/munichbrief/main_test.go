@@ -4,13 +4,17 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/egekocabas/munichbrief/internal/config"
 	"github.com/egekocabas/munichbrief/internal/domain"
+	"github.com/egekocabas/munichbrief/internal/observability"
 	"github.com/egekocabas/munichbrief/internal/processing"
 	"github.com/egekocabas/munichbrief/internal/store"
 )
@@ -71,6 +75,29 @@ func TestRunAIRetryRequiresExactlyOneSelector(t *testing.T) {
 	}
 }
 
+func TestRestoreFeedSuccessMetricUsesPersistedState(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "metrics.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	succeededAt := time.Unix(1234, 0)
+	if err := database.RecordSyncSuccess(ctx, "etag", "modified", succeededAt, "ok"); err != nil {
+		t.Fatal(err)
+	}
+
+	metrics := observability.NewMetrics("test", time.Now())
+	if err := restoreFeedSuccessMetric(ctx, database, metrics); err != nil {
+		t.Fatal(err)
+	}
+	recorder := httptest.NewRecorder()
+	metrics.Handler().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	if !strings.Contains(recorder.Body.String(), "munichbrief_last_feed_success_timestamp_seconds 1234") {
+		t.Fatal("metrics did not expose the persisted feed success timestamp")
+	}
+}
+
 func TestRandomizedLiveSyncDelayStaysAroundSixHours(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -85,6 +112,26 @@ func TestRandomizedLiveSyncDelayStaysAroundSixHours(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			if got := randomizedLiveSyncDelay(test.offset); got != test.want {
 				t.Fatalf("randomizedLiveSyncDelay() = %s, want %s", got, test.want)
+			}
+		})
+	}
+}
+
+func TestLiveSyncRetryDelayUsesBoundedBackoff(t *testing.T) {
+	tests := []struct {
+		failedAttempts int
+		want           time.Duration
+	}{
+		{failedAttempts: 1, want: time.Minute},
+		{failedAttempts: 2, want: 2 * time.Minute},
+		{failedAttempts: 5, want: 16 * time.Minute},
+		{failedAttempts: 6, want: 30 * time.Minute},
+		{failedAttempts: 20, want: 30 * time.Minute},
+	}
+	for _, test := range tests {
+		t.Run(strconv.Itoa(test.failedAttempts), func(t *testing.T) {
+			if got := liveSyncRetryDelay(test.failedAttempts); got != test.want {
+				t.Fatalf("liveSyncRetryDelay(%d) = %s, want %s", test.failedAttempts, got, test.want)
 			}
 		})
 	}

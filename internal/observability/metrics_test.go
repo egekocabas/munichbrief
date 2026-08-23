@@ -90,3 +90,14 @@ func TestMetricsEndpointRejectsOtherMethodsAndPaths(t *testing.T) {
 		}
 	}
 }
+
+func TestSetLastFeedSuccessRestoresPersistedTimestamp(t *testing.T) {
+	metrics := NewMetrics("test", time.Now())
+	metrics.SetLastFeedSuccess(time.Unix(1234, 0))
+
+	recorder := httptest.NewRecorder()
+	metrics.Handler().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	if !strings.Contains(recorder.Body.String(), "munichbrief_last_feed_success_timestamp_seconds 1234") {
+		t.Fatal("metrics did not expose the restored feed success timestamp")
+	}
+}
