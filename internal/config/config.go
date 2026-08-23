@@ -17,7 +17,6 @@ const (
 	defaultPageSize     = 20
 	defaultFeedURL      = "https://www.polizei.bayern.de/rss/polizeiprasidium-munchen.xml"
 	defaultUserAgent    = "MunichBrief/dev (+https://github.com/egekocabas/munichbrief)"
-	defaultSyncInterval = 15 * time.Minute
 	defaultHTTPTimeout  = 10 * time.Second
 	defaultRefreshAfter = 6 * time.Hour
 	defaultAIEnabled    = false
@@ -39,7 +38,6 @@ type Config struct {
 	PageSize         int
 	FeedURL          string
 	UserAgent        string
-	SyncInterval     time.Duration
 	HTTPTimeout      time.Duration
 	RefreshAfter     time.Duration
 	AIEnabled        bool
@@ -62,7 +60,6 @@ func Load() (Config, error) {
 		PageSize:       defaultPageSize,
 		FeedURL:        envOrDefault("MUNICHBRIEF_FEED_URL", defaultFeedURL),
 		UserAgent:      envOrDefault("MUNICHBRIEF_USER_AGENT", defaultUserAgent),
-		SyncInterval:   defaultSyncInterval,
 		HTTPTimeout:    defaultHTTPTimeout,
 		RefreshAfter:   defaultRefreshAfter,
 		AIEnabled:      defaultAIEnabled,
@@ -109,9 +106,6 @@ func Load() (Config, error) {
 	}
 
 	var err error
-	if cfg.SyncInterval, err = durationFromEnv("MUNICHBRIEF_SYNC_INTERVAL", cfg.SyncInterval, time.Minute); err != nil {
-		return Config{}, err
-	}
 	if cfg.HTTPTimeout, err = durationFromEnv("MUNICHBRIEF_HTTP_TIMEOUT", cfg.HTTPTimeout, time.Second); err != nil {
 		return Config{}, err
 	}

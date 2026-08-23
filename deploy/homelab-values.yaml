@@ -18,7 +18,6 @@ application:
   pageSize: 20
   feedURL: https://www.polizei.bayern.de/rss/polizeiprasidium-munchen.xml
   userAgent: MunichBrief/0.1.0 (+https://github.com/egekocabas/munichbrief)
-  syncInterval: 15m
   httpTimeout: 10s
   articleRefreshInterval: 6h
   aiEnabled: true

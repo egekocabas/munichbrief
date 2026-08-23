@@ -13,7 +13,6 @@ func TestLoadDefaults(t *testing.T) {
 	t.Setenv("MUNICHBRIEF_PAGE_SIZE", "")
 	t.Setenv("MUNICHBRIEF_FEED_URL", "")
 	t.Setenv("MUNICHBRIEF_USER_AGENT", "")
-	t.Setenv("MUNICHBRIEF_SYNC_INTERVAL", "")
 	t.Setenv("MUNICHBRIEF_HTTP_TIMEOUT", "")
 	t.Setenv("MUNICHBRIEF_ARTICLE_REFRESH_INTERVAL", "")
 	t.Setenv("MUNICHBRIEF_AI_ENABLED", "")
@@ -93,7 +92,6 @@ func TestLoadRejectsUnsupportedSourceMode(t *testing.T) {
 func TestLoadAcceptsLiveMode(t *testing.T) {
 	t.Setenv("MUNICHBRIEF_SOURCE_MODE", "live")
 	t.Setenv("MUNICHBRIEF_PRESENTATION_MODE", "")
-	t.Setenv("MUNICHBRIEF_SYNC_INTERVAL", "2m")
 
 	cfg, err := Load()
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math/rand/v2"
 	"net/http"
 	"os"
 	"os/signal"
@@ -24,6 +25,11 @@ import (
 )
 
 var version = "dev"
+
+const (
+	liveSyncWindowStart = 2 * time.Hour
+	liveSyncWindow      = 3 * time.Hour
+)
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
@@ -80,6 +86,7 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 
 	metrics := observability.NewMetrics(version, time.Now())
 	var liveSyncer *ingest.Syncer
+	var liveSyncLocation *time.Location
 	if cfg.SourceMode == "fixture" {
 		documents, err := source.NewFixtureProvider().Load(ctx)
 		if err != nil {
@@ -89,6 +96,10 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 			return err
 		}
 	} else {
+		liveSyncLocation, err = time.LoadLocation("Europe/Berlin")
+		if err != nil {
+			return fmt.Errorf("load Europe/Berlin timezone: %w", err)
+		}
 		liveSyncer, err = newLiveSyncer(database, cfg, metrics.ObserveSourceResponse, logger)
 		if err != nil {
 			return err
@@ -126,7 +137,7 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 	go serve(httpServer, "reader", cfg.Address, cfg.SourceMode, logger, serveErrors)
 	go serve(metricsServer, "metrics", cfg.MetricsAddress, cfg.SourceMode, logger, serveErrors)
 	if liveSyncer != nil {
-		go runLiveSyncLoop(ctx, cfg.SyncInterval, liveSyncer, metrics, logger)
+		go runLiveSyncLoop(ctx, liveSyncLocation, liveSyncer, metrics, logger)
 	}
 	if aiWorker != nil {
 		logger.Info("AI processing worker started", "base_url", cfg.OllamaBaseURL, "model", cfg.OllamaModel)
@@ -302,7 +313,7 @@ func shutdownServers(ctx context.Context, logger *slog.Logger, servers ...*http.
 	return shutdownError
 }
 
-func runLiveSyncLoop(ctx context.Context, interval time.Duration, syncer *ingest.Syncer, metrics *observability.Metrics, logger *slog.Logger) {
+func runLiveSyncLoop(ctx context.Context, location *time.Location, syncer *ingest.Syncer, metrics *observability.Metrics, logger *slog.Logger) {
 	synchronize := func() {
 		metrics.RecordFeedAttempt()
 		result, err := syncer.Sync(ctx)
@@ -325,16 +336,30 @@ func runLiveSyncLoop(ctx context.Context, interval time.Duration, syncer *ingest
 	}
 
 	synchronize()
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
 	for {
+		nextRun := nextDailySyncTime(time.Now().In(location), time.Duration(rand.Int64N(int64(liveSyncWindow))))
+		logger.Info("next live synchronization scheduled", "scheduled_at", nextRun)
+		timer := time.NewTimer(time.Until(nextRun))
 		select {
 		case <-ctx.Done():
+			timer.Stop()
 			return
-		case <-ticker.C:
+		case <-timer.C:
 			synchronize()
 		}
 	}
+}
+
+func nextDailySyncTime(now time.Time, offset time.Duration) time.Time {
+	nextDay := now.AddDate(0, 0, 1)
+	wallClockOffset := liveSyncWindowStart + offset
+	hour := int(wallClockOffset / time.Hour)
+	wallClockOffset %= time.Hour
+	minute := int(wallClockOffset / time.Minute)
+	wallClockOffset %= time.Minute
+	second := int(wallClockOffset / time.Second)
+	nanosecond := int(wallClockOffset % time.Second)
+	return time.Date(nextDay.Year(), nextDay.Month(), nextDay.Day(), hour, minute, second, nanosecond, nextDay.Location())
 }
 
 func printUsage(writer io.Writer) {
