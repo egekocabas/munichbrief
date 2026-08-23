@@ -299,6 +299,9 @@ func TestLanguagePreferenceCookieAndBrowserFallback(t *testing.T) {
 	if browserResponse.Header().Get("Content-Language") != "en" || !strings.Contains(browserResponse.Body.String(), "Recent incidents") {
 		t.Fatalf("browser language response is not English")
 	}
+	if strings.Contains(browserResponse.Body.String(), "onchange=") || !strings.Contains(browserResponse.Body.String(), `<button type="submit">Change language</button>`) {
+		t.Fatal("language form must use a visible submit button without inline JavaScript")
+	}
 
 	form := strings.NewReader("language=de&return_to=%2Fabout")
 	selection := httptest.NewRequest(http.MethodPost, "/language", form)
