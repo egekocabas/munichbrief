@@ -76,7 +76,7 @@ Useful configuration:
 | `MUNICHBRIEF_OLLAMA_BASE_URL` | `http://127.0.0.1:11434` | Ollama LAN or local base URL |
 | `MUNICHBRIEF_OLLAMA_MODEL` | `qwen3.5:4b` | Exact Ollama model tag recorded with generated content |
 | `MUNICHBRIEF_AI_INTERVAL` | `5s` | How often an idle worker checks for new jobs |
-| `MUNICHBRIEF_AI_TIMEOUT` | `5m` | Timeout for one model request |
+| `MUNICHBRIEF_AI_TIMEOUT` | `10m` | Timeout for one model request; processing remains sequential |
 | `MUNICHBRIEF_AI_CONTEXT_SIZE` | `8192` | Ollama context size, from 2048 to 32768 |
 
 Run the test suite with:
@@ -325,6 +325,8 @@ Every incident view will display:
 ## AI processing on pi8
 
 The application must continue synchronizing and serving existing data when `pi8` is unavailable. AI processing will therefore be asynchronous and outside browser request paths.
+
+On startup, the worker creates current processing jobs for every stored incident that has a German body but no job for the active source hash, model, and prompt version. This includes historical incidents and incidents whose only AI output is stale. Ready work is processed from the newest publication to the oldest; a request already in progress is allowed to finish before a newly synchronized release is selected.
 
 The application-facing processing operation creates one aligned presentation and privacy assessment:
 

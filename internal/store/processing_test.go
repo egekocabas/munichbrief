@@ -75,6 +75,47 @@ func TestCompleteProcessingJobRequiresSafePrivacyStatus(t *testing.T) {
 	}
 }
 
+func TestQueueClaimsExistingIncidentsNewestPublicationFirst(t *testing.T) {
+	ctx := context.Background()
+	database, err := Open(ctx, filepath.Join(t.TempDir(), "newest-first.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+
+	now := time.Date(2026, time.August, 23, 12, 0, 0, 0, time.UTC)
+	documents := []domain.SourceDocument{
+		{
+			ExternalID: "older", SourceURL: "https://fixture.invalid/older", Title: "Older release",
+			PublishedAt: now.Add(-24 * time.Hour), FeedFingerprint: "older-feed", SourceHash: "older-source",
+			Incidents: []domain.Incident{{Number: "1", Position: 0, TitleDE: "Older incident", BodyDE: "Older body", ContentHash: "older-content"}},
+		},
+		{
+			ExternalID: "newer", SourceURL: "https://fixture.invalid/newer", Title: "Newer release",
+			PublishedAt: now, FeedFingerprint: "newer-feed", SourceHash: "newer-source",
+			Incidents: []domain.Incident{{Number: "2", Position: 0, TitleDE: "Newer incident", BodyDE: "Newer body", ContentHash: "newer-content"}},
+		},
+	}
+	if err := database.UpsertDocuments(ctx, documents, now); err != nil {
+		t.Fatal(err)
+	}
+
+	job, found, err := database.QueueAndClaimProcessingJob(ctx, "new-operation", now)
+	if err != nil || !found {
+		t.Fatalf("claim existing job = %t/%v", found, err)
+	}
+	if job.TitleDE != "Newer incident" {
+		t.Fatalf("first existing job = %q, want newest incident", job.TitleDE)
+	}
+	stats, err := database.ProcessingQueueStats(ctx, "new-operation", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.Running != 1 || stats.Queued != 1 {
+		t.Fatalf("existing backlog stats = %#v", stats)
+	}
+}
+
 func TestRetryProcessingJobsResetsCurrentReviewJob(t *testing.T) {
 	ctx := context.Background()
 	database := oneProcessingIncident(t, ctx)

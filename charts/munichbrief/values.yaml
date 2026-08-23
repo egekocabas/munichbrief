@@ -24,7 +24,7 @@ application:
   ollamaBaseURL: http://192.168.178.102:11434
   ollamaModel: qwen3.5:4b
   aiInterval: 5s
-  aiTimeout: 5m
+  aiTimeout: 10m
   aiContextSize: 8192
   existingSecret: ""
 

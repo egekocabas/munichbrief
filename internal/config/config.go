@@ -24,7 +24,7 @@ const (
 	defaultOllamaURL    = "http://127.0.0.1:11434"
 	defaultOllamaModel  = "qwen3.5:4b"
 	defaultAIInterval   = 5 * time.Second
-	defaultAITimeout    = 5 * time.Minute
+	defaultAITimeout    = 10 * time.Minute
 	defaultAIContext    = 8192
 	defaultSecureCookie = false
 	repositoryURL       = "https://github.com/egekocabas/munichbrief"

@@ -38,6 +38,11 @@ The reader listens on `127.0.0.1:8080` and metrics listen separately on
 `127.0.0.1:9090`. The reader provides `/healthz` and `/readyz`; only the
 metrics listener provides `/metrics`.
 
+The AI worker discovers both existing and newly synchronized incidents with
+stored German text. It processes ready incidents newest-first, one at a time.
+The five-second AI interval is an idle queue check, while the ten-minute AI
+timeout bounds a single Ollama request.
+
 `review` presentation mode displays stored German source text and processing
 states and must remain behind access control. `public` mode fails closed: it
 lists only incidents with a privacy-safe presentation from the active source

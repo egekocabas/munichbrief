@@ -1,6 +1,9 @@
 package config
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestLoadDefaults(t *testing.T) {
 	t.Setenv("MUNICHBRIEF_ADDR", "")
@@ -44,6 +47,9 @@ func TestLoadDefaults(t *testing.T) {
 	}
 	if cfg.AIEnabled || cfg.OllamaModel != defaultOllamaModel || cfg.AIContextSize != defaultAIContext {
 		t.Errorf("AI defaults = enabled:%t model:%q context:%d", cfg.AIEnabled, cfg.OllamaModel, cfg.AIContextSize)
+	}
+	if cfg.AITimeout != 10*time.Minute {
+		t.Errorf("AITimeout = %s, want 10m", cfg.AITimeout)
 	}
 	if cfg.PresentationMode != "review" || cfg.SecureCookies {
 		t.Errorf("presentation defaults = %q/secure:%t", cfg.PresentationMode, cfg.SecureCookies)

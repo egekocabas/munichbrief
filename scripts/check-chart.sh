@@ -21,6 +21,7 @@ required_patterns=(
   'MUNICHBRIEF_PRESENTATION_MODE: "review"'
   'MUNICHBRIEF_SECURE_COOKIES: "true"'
   'MUNICHBRIEF_AI_ENABLED: "true"'
+  'MUNICHBRIEF_AI_TIMEOUT: "10m"'
   'cidr: 192.168.178.102/32'
   'port: 11434'
 )

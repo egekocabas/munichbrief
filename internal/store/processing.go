@@ -48,8 +48,9 @@ func (s *Store) RecoverProcessingJobs(ctx context.Context, operation string, rec
 	return nil
 }
 
-// QueueAndClaimProcessingJob creates jobs for new incident content and claims
-// the oldest ready job. The transaction keeps the single-worker claim durable.
+// QueueAndClaimProcessingJob creates jobs for all unprocessed incident content
+// and claims the newest published ready incident. The transaction keeps the
+// single-worker claim durable.
 func (s *Store) QueueAndClaimProcessingJob(ctx context.Context, operation string, now time.Time) (ProcessingJob, bool, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -78,9 +79,10 @@ func (s *Store) QueueAndClaimProcessingJob(ctx context.Context, operation string
 		SELECT j.id, j.incident_id, j.source_hash, i.title_de, i.body_de, j.attempt_count
 		FROM processing_jobs j
 		JOIN incidents i ON i.id = j.incident_id
+		JOIN source_documents d ON d.id = i.source_document_id
 		WHERE j.operation = ? AND j.status = 'pending'
 			AND (j.next_retry_at IS NULL OR j.next_retry_at <= ?)
-		ORDER BY j.created_at, j.id
+		ORDER BY d.published_at DESC, i.position ASC, j.id ASC
 		LIMIT 1`, operation, formattedNow).Scan(
 		&job.ID, &job.IncidentID, &job.SourceHash, &job.TitleDE, &job.BodyDE, &job.AttemptCount,
 	)
