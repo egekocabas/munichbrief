@@ -16,15 +16,6 @@ other = "Hauptnavigation"
 [SkipToContent]
 other = "Zum Inhalt springen"
 
-[FixtureMode]
-other = "Testdaten"
-
-[LiveSource]
-other = "Live-Quelle"
-
-[ReviewMode]
-other = "Prüfmodus"
-
 [NoticeLabel]
 other = "Wichtiger Hinweis"
 
@@ -214,4 +205,3 @@ other = "Es gibt keine Konten, Analyse oder Werbung. Ein technisch notwendiges S
 
 [LegalCopy]
 other = "Technische Schutzmaßnahmen ersetzen keine rechtliche Prüfung. Vor einer öffentlichen Bereitstellung müssen Rechtsgrundlage, Daten zu Straftaten, journalistische Ausnahmen und Aufbewahrung geprüft werden."
-

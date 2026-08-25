@@ -18,11 +18,11 @@ published through the browser route.
 The default NetworkPolicy allows DNS, public HTTPS, same-namespace access,
 Traefik access to the reader port, and observability access to the metrics port.
 The application's own URL validator still limits HTTP article requests to the
-official police host. The checked-in private deployment enables AI and limits
-pi8 egress to `192.168.178.102/32:11434`. It also selects `review` presentation
-mode, which exposes original source text for QA and must remain access-restricted.
-Use `public` mode only after legal review and encrypted Ollama transport; that
-mode serves only current privacy-safe AI output and never renders originals.
+official police host. The checked-in private deployment enables AI, limits pi8
+egress to `192.168.178.102/32:11434`, and selects `public` presentation mode.
+The reader therefore serves only current privacy-safe AI output and never
+renders originals. Original source text remains available through the protected
+admin incident lists and through explicit local `review` mode.
 
 Both ingresses are disabled by default. `ingress.lan` can expose the complete
 reader, while `ingress.public` renders only an explicit reader path allowlist.
@@ -31,4 +31,6 @@ enforces public presentation scope for each domain. Every
 `ingress.public.hosts` entry must appear there. To enable the operations dashboard, set
 `admin.enabled=true` together with the LAN ingress and exactly one of
 `admin.basicAuthSecret` or `admin.basicAuthMiddleware`. The chart never creates
-credentials; a Secret-backed option creates only the Traefik Middleware.
+credentials; a Secret-backed option creates only the Traefik Middleware. The
+admin dashboard contains retained original incident text and must remain absent
+from the public ingress.

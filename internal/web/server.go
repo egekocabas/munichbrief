@@ -46,6 +46,7 @@ var htmxScript []byte
 type incidentStore interface {
 	ListPresentationEntries(context.Context, int, int, string, store.PresentationScope) ([]store.IncidentRecord, int, error)
 	GetPresentationIncident(context.Context, int64, store.PresentationScope) (store.IncidentRecord, error)
+	ListAdminIncidents(context.Context, int, int, string, store.PresentationScope, store.AdminIncidentFilter) ([]store.IncidentRecord, int, error)
 	Ready(context.Context) error
 	ProcessingQueueStats(context.Context, string, time.Time) (store.ProcessingStats, error)
 	RetryProcessingJobs(context.Context, string, *int64, time.Time) (int64, error)
@@ -83,7 +84,6 @@ type basePage struct {
 	AlternateLanguageLabel string
 	Fixture                bool
 	Review                 bool
-	ModeLabel              string
 }
 
 type incidentView struct {
@@ -127,6 +127,25 @@ type adminPage struct {
 	OldestPending   string
 	Notice          string
 	NoticeIsWarning bool
+	Unprocessed     adminIncidentList
+	AllIncidents    adminIncidentList
+}
+
+type adminIncidentList struct {
+	Incidents   []adminIncidentView
+	Total       int
+	Page        int
+	TotalPages  int
+	PreviousURL string
+	NextURL     string
+	HasPrevious bool
+	HasNext     bool
+}
+
+type adminIncidentView struct {
+	Record          store.IncidentRecord
+	ProcessingState string
+	ProcessingLabel string
 }
 
 func New(database incidentStore, logger *slog.Logger, pageSize int, sourceMode string) (*Server, error) {
@@ -187,7 +206,7 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 	if err != nil {
 		return nil, fmt.Errorf("parse about template: %w", err)
 	}
-	admin, err := template.New("admin").Parse(adminTemplate)
+	admin, err := template.New("admin").Funcs(functions).Parse(adminTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("parse admin template: %w", err)
 	}
@@ -248,13 +267,6 @@ func (s *Server) redirectLegacyIncident(response http.ResponseWriter, request *h
 }
 
 func (s *Server) base(request *http.Request, language string) basePage {
-	modeLabel := s.localization.Text(language, "FixtureMode")
-	if s.options.SourceMode == "live" {
-		modeLabel = s.localization.Text(language, "LiveSource")
-	}
-	if s.options.PresentationMode == "review" && !s.isPublicRequest(request) {
-		modeLabel += " · " + s.localization.Text(language, "ReviewMode")
-	}
 	alternate := "en"
 	alternateLabel := s.localization.Text(language, "SwitchToEnglish")
 	if language == "en" {
@@ -264,7 +276,7 @@ func (s *Server) base(request *http.Request, language string) basePage {
 	return basePage{
 		Lang: language, HomeURL: "/" + language, AboutURL: "/" + language + "/about",
 		AlternateLanguage: alternate, AlternateLanguageURL: alternateLanguageURL(request.URL, language, alternate), AlternateLanguageLabel: alternateLabel,
-		Fixture: s.options.SourceMode == "fixture", Review: s.options.PresentationMode == "review" && !s.isPublicRequest(request), ModeLabel: modeLabel,
+		Fixture: s.options.SourceMode == "fixture", Review: s.options.PresentationMode == "review" && !s.isPublicRequest(request),
 	}
 }
 
@@ -361,12 +373,54 @@ func (s *Server) about(response http.ResponseWriter, request *http.Request) {
 }
 
 func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
+	unprocessedPage, err := requestedPageParameter(request, "unprocessed_page")
+	if err != nil {
+		http.Error(response, "invalid unprocessed_page", http.StatusBadRequest)
+		return
+	}
+	allPage, err := requestedPageParameter(request, "all_page")
+	if err != nil {
+		http.Error(response, "invalid all_page", http.StatusBadRequest)
+		return
+	}
 	stats, err := s.store.ProcessingQueueStats(request.Context(), processing.Operation(s.options.ModelIdentity), time.Now())
 	if err != nil {
 		s.internalError(response, request, "read admin processing statistics", err)
 		return
 	}
-	data := adminPage{Stats: stats}
+	scope := store.PresentationScope{
+		Operation: processing.Operation(s.options.ModelIdentity), ModelIdentity: s.options.ModelIdentity,
+		PromptVersion: s.options.PromptVersion,
+	}
+	unprocessed, unprocessedTotal, err := s.store.ListAdminIncidents(
+		request.Context(), s.options.PageSize, (unprocessedPage-1)*s.options.PageSize,
+		s.options.SourceMode, scope, store.AdminIncidentsUnprocessed,
+	)
+	if err != nil {
+		s.internalError(response, request, "list unprocessed admin incidents", err)
+		return
+	}
+	allIncidents, allTotal, err := s.store.ListAdminIncidents(
+		request.Context(), s.options.PageSize, (allPage-1)*s.options.PageSize,
+		s.options.SourceMode, scope, store.AdminIncidentsAll,
+	)
+	if err != nil {
+		s.internalError(response, request, "list all admin incidents", err)
+		return
+	}
+	unprocessedPages := max(1, (unprocessedTotal+s.options.PageSize-1)/s.options.PageSize)
+	allPages := max(1, (allTotal+s.options.PageSize-1)/s.options.PageSize)
+	if unprocessedPage > unprocessedPages || allPage > allPages {
+		http.NotFound(response, request)
+		return
+	}
+	data := adminPage{
+		Stats: stats,
+		Unprocessed: s.adminList(unprocessed, unprocessedTotal, unprocessedPage, unprocessedPages,
+			adminPaginationURL(unprocessedPage-1, allPage), adminPaginationURL(unprocessedPage+1, allPage)),
+		AllIncidents: s.adminList(allIncidents, allTotal, allPage, allPages,
+			adminPaginationURL(unprocessedPage, allPage-1), adminPaginationURL(unprocessedPage, allPage+1)),
+	}
 	if stats.OldestPendingAge > 0 {
 		data.OldestPending = stats.OldestPendingAge.Round(time.Second).String()
 	} else {
@@ -389,6 +443,47 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 	if err := s.adminTemplate.ExecuteTemplate(response, "admin", data); err != nil {
 		s.logger.ErrorContext(request.Context(), "render admin page", "error", err)
 	}
+}
+
+func (s *Server) adminList(records []store.IncidentRecord, total, page, totalPages int, previousURL, nextURL string) adminIncidentList {
+	incidents := make([]adminIncidentView, 0, len(records))
+	for _, record := range records {
+		state := record.ProcessingState()
+		incidents = append(incidents, adminIncidentView{
+			Record: record, ProcessingState: strings.ReplaceAll(state, "_", "-"),
+			ProcessingLabel: adminProcessingLabel(state),
+		})
+	}
+	return adminIncidentList{
+		Incidents: incidents, Total: total, Page: page, TotalPages: totalPages,
+		PreviousURL: previousURL, NextURL: nextURL, HasPrevious: page > 1, HasNext: page < totalPages,
+	}
+}
+
+func adminProcessingLabel(state string) string {
+	switch state {
+	case "ready":
+		return "Summarized and translated"
+	case "queued":
+		return "Queued"
+	case "running":
+		return "Processing"
+	case "retrying":
+		return "Retrying"
+	case "needs_review":
+		return "Needs review"
+	case "failed":
+		return "Failed"
+	default:
+		return "Not processed"
+	}
+}
+
+func adminPaginationURL(unprocessedPage, allPage int) string {
+	query := url.Values{}
+	query.Set("unprocessed_page", strconv.Itoa(max(unprocessedPage, 1)))
+	query.Set("all_page", strconv.Itoa(max(allPage, 1)))
+	return "/admin?" + query.Encode()
 }
 
 func (s *Server) retryIncident(response http.ResponseWriter, request *http.Request) {
@@ -749,7 +844,10 @@ func randomIdentifier() string {
 	return hex.EncodeToString(bytes[:])
 }
 func requestedPage(request *http.Request) (int, error) {
-	raw := request.URL.Query().Get("page")
+	return requestedPageParameter(request, "page")
+}
+func requestedPageParameter(request *http.Request, parameter string) (int, error) {
+	raw := request.URL.Query().Get(parameter)
 	if raw == "" {
 		return 1, nil
 	}

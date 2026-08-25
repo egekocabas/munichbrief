@@ -16,15 +16,6 @@ other = "Primary navigation"
 [SkipToContent]
 other = "Skip to content"
 
-[FixtureMode]
-other = "Fixture data"
-
-[LiveSource]
-other = "Live source"
-
-[ReviewMode]
-other = "Review mode"
-
 [NoticeLabel]
 other = "Important notice"
 

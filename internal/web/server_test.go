@@ -35,7 +35,6 @@ func TestTimelineAndDetailRenderFixtureData(t *testing.T) {
 		"Synthetic reports",
 		"Fahrradunfall; eine Person leicht verletzt",
 		"Größerer Polizeieinsatz",
-		"Fixture data · Review mode",
 		"Not yet summarized or translated",
 		"28 reports",
 		"Page 1 of 2",
@@ -44,6 +43,9 @@ func TestTimelineAndDetailRenderFixtureData(t *testing.T) {
 		if !strings.Contains(timeline.Body.String(), expected) {
 			t.Errorf("timeline body does not contain %q", expected)
 		}
+	}
+	if strings.Contains(timeline.Body.String(), "Fixture data · Review mode") {
+		t.Error("timeline retained the presentation mode badge")
 	}
 
 	olderTimeline := httptest.NewRecorder()
@@ -124,6 +126,14 @@ func TestTemplatesEscapeIncidentContent(t *testing.T) {
 	testServer(t, database).Handler().ServeHTTP(detail, englishRequest(http.MethodGet, "/en/incidents/"+formatID(job.IncidentID), nil))
 	if strings.Contains(detail.Body.String(), "<script>") || strings.Contains(detail.Body.String(), "<img src=x") {
 		t.Fatalf("detail rendered unescaped hostile AI markup: %s", detail.Body.String())
+	}
+	admin := httptest.NewRecorder()
+	adminTestServer(t, database, nil).Handler().ServeHTTP(admin, httptest.NewRequest(http.MethodGet, "/admin", nil))
+	if strings.Contains(admin.Body.String(), "<script>") || strings.Contains(admin.Body.String(), "<img src=x") {
+		t.Fatalf("admin rendered unescaped hostile incident markup: %s", admin.Body.String())
+	}
+	if !strings.Contains(admin.Body.String(), "&lt;script&gt;") || !strings.Contains(admin.Body.String(), "&lt;img") {
+		t.Error("admin did not render escaped hostile content")
 	}
 }
 
@@ -221,10 +231,13 @@ func TestLiveTimelineFallbackAndIncidentAttribution(t *testing.T) {
 	}
 	timeline := httptest.NewRecorder()
 	server.Handler().ServeHTTP(timeline, englishRequest(http.MethodGet, "/en", nil))
-	for _, expected := range []string{"Live source", "Live incident", "Live metadata fallback", "Open official source"} {
+	for _, expected := range []string{"Live incident", "Live metadata fallback", "Open official source"} {
 		if !strings.Contains(timeline.Body.String(), expected) {
 			t.Errorf("live timeline does not contain %q", expected)
 		}
+	}
+	if strings.Contains(timeline.Body.String(), "Live source · Review mode") {
+		t.Error("live timeline retained the presentation mode badge")
 	}
 
 	incidents, _, err := database.ListTimelineEntries(ctx, 20, 0, "live")
@@ -409,6 +422,89 @@ func TestAdminRendersStatsAndQueuesRetries(t *testing.T) {
 	stats, err := database.ProcessingQueueStats(ctx, operation, time.Now())
 	if err != nil || stats.NeedsReview != 0 || stats.Queued != initialStats.Queued+2 {
 		t.Fatalf("retried stats = %#v/%v", stats, err)
+	}
+}
+
+func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
+	ctx := context.Background()
+	database := fixtureStore(t)
+	job, found, err := database.QueueAndClaimProcessingJob(ctx, processing.Operation("qwen3.5:4b"), time.Now())
+	if err != nil || !found {
+		t.Fatalf("claim admin presentation job = %t/%v", found, err)
+	}
+	presentation := store.AIPresentation{
+		TitleDE: "Deutscher Admin-Titel", SummaryDE: "Deutsche Admin-Zusammenfassung.",
+		TitleEN: "English admin title", SummaryEN: "English admin summary.", PrivacyStatus: "safe",
+	}
+	if err := database.CompleteProcessingJob(ctx, job, presentation, "qwen3.5:4b", processing.PromptVersion, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
+	server, err := NewWithOptions(database, logger, Options{
+		PageSize: 2, SourceMode: "fixture", PresentationMode: "public",
+		ModelIdentity: "qwen3.5:4b", PromptVersion: processing.PromptVersion, AdminEnabled: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := server.Handler()
+
+	first := httptest.NewRecorder()
+	handler.ServeHTTP(first, httptest.NewRequest(http.MethodGet, "/admin", nil))
+	if first.Code != http.StatusOK {
+		t.Fatalf("admin review page status = %d", first.Code)
+	}
+	for _, expected := range []string{
+		"Unprocessed incidents", "27 incidents", "All incidents", "28 incidents",
+		presentation.TitleDE, presentation.SummaryDE, presentation.TitleEN, presentation.SummaryEN,
+		job.TitleDE, job.BodyDE, "Original German text", "Summarized and translated",
+		"all_page=1&amp;unprocessed_page=2", "all_page=2&amp;unprocessed_page=1",
+	} {
+		if !strings.Contains(first.Body.String(), expected) {
+			t.Errorf("admin review page does not contain %q", expected)
+		}
+	}
+
+	expectedUnprocessed, _, err := database.ListAdminIncidents(ctx, 2, 2, "fixture", store.PresentationScope{
+		Operation: processing.Operation("qwen3.5:4b"), ModelIdentity: "qwen3.5:4b", PromptVersion: processing.PromptVersion,
+	}, store.AdminIncidentsUnprocessed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedAll, _, err := database.ListAdminIncidents(ctx, 2, 4, "fixture", store.PresentationScope{
+		Operation: processing.Operation("qwen3.5:4b"), ModelIdentity: "qwen3.5:4b", PromptVersion: processing.PromptVersion,
+	}, store.AdminIncidentsAll)
+	if err != nil {
+		t.Fatal(err)
+	}
+	paginated := httptest.NewRecorder()
+	handler.ServeHTTP(paginated, httptest.NewRequest(http.MethodGet, "/admin?unprocessed_page=2&all_page=3", nil))
+	if paginated.Code != http.StatusOK {
+		t.Fatalf("paginated admin status = %d", paginated.Code)
+	}
+	for _, expected := range []string{
+		expectedUnprocessed[0].TitleDE, expectedAll[0].TitleDE,
+		"all_page=3&amp;unprocessed_page=1", "all_page=3&amp;unprocessed_page=3",
+		"all_page=2&amp;unprocessed_page=2", "all_page=4&amp;unprocessed_page=2",
+	} {
+		if !strings.Contains(paginated.Body.String(), expected) {
+			t.Errorf("paginated admin page does not contain %q", expected)
+		}
+	}
+
+	for _, test := range []struct {
+		target string
+		status int
+	}{
+		{target: "/admin?unprocessed_page=zero", status: http.StatusBadRequest},
+		{target: "/admin?all_page=0", status: http.StatusBadRequest},
+		{target: "/admin?all_page=99", status: http.StatusNotFound},
+	} {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, test.target, nil))
+		if response.Code != test.status {
+			t.Errorf("GET %s status = %d, want %d", test.target, response.Code, test.status)
+		}
 	}
 }
 
@@ -708,6 +804,11 @@ func TestPublicModeHidesUnprocessedStaleAndOriginalContent(t *testing.T) {
 		if strings.Contains(ready.Body.String(), original) {
 			t.Fatalf("public detail exposed original content %q", original)
 		}
+	}
+	readyTimeline := httptest.NewRecorder()
+	publicServer.Handler().ServeHTTP(readyTimeline, englishRequest(http.MethodGet, "/en", nil))
+	if !strings.Contains(readyTimeline.Body.String(), presentation.SummaryEN) || strings.Contains(readyTimeline.Body.String(), processedRecord.BodyDE) {
+		t.Fatalf("public timeline did not isolate the safe presentation: %q", readyTimeline.Body.String())
 	}
 }
 
