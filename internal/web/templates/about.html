@@ -1,9 +1,24 @@
-{{define "title"}}{{.T.About}}{{end}}
+{{define "title"}}{{t .Lang "About"}}{{end}}
 {{define "content"}}
-<article class="about-page">
-  <header class="hero compact-hero"><p class="eyebrow">{{.T.Methodology}}</p><h1>{{.T.AboutTitle}}</h1><p class="hero-copy">{{.T.AboutIntro}}</p></header>
-  <section><h2>{{.T.SourcePolicy}}</h2><p>{{.T.SourcePolicyCopy}}</p><p>{{.T.SourceAuthorityCopy}}</p></section>
-  <section><h2>{{.T.ProcessingRetention}}</h2><p>{{.T.ProcessingCopy}}</p><p>{{.T.AICopy}}</p><p>{{.T.VisibilityCopy}}</p></section>
-  <section><h2>{{.T.PrivacyIndependence}}</h2><p>{{.T.PrivacyCopy}}</p><p>{{.T.LegalCopy}}</p></section>
+<article class="mx-auto max-w-4xl py-9 sm:py-12">
+  <header class="border-b border-rule pb-8">
+    <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-alert">{{t .Lang "Methodology"}}</p>
+    <h1 class="mt-2 max-w-3xl font-serif text-4xl font-bold leading-[1.06] tracking-[-0.035em] sm:text-5xl">{{t .Lang "AboutTitle"}}</h1>
+    <p class="mt-5 max-w-3xl text-lg leading-relaxed text-muted">{{t .Lang "AboutIntro"}}</p>
+  </header>
+  <div class="divide-y divide-rule">
+    <section class="grid gap-4 py-8 md:grid-cols-[12rem_minmax(0,1fr)] md:gap-10">
+      <h2 class="font-serif text-2xl font-bold">{{t .Lang "SourcePolicy"}}</h2>
+      <div class="prose-copy leading-7 text-muted"><p>{{t .Lang "SourcePolicyCopy"}}</p><p>{{t .Lang "SourceAuthorityCopy"}}</p></div>
+    </section>
+    <section class="grid gap-4 py-8 md:grid-cols-[12rem_minmax(0,1fr)] md:gap-10">
+      <h2 class="font-serif text-2xl font-bold">{{t .Lang "ProcessingRetention"}}</h2>
+      <div class="prose-copy leading-7 text-muted"><p>{{t .Lang "ProcessingCopy"}}</p><p>{{t .Lang "AICopy"}}</p><p>{{t .Lang "VisibilityCopy"}}</p></div>
+    </section>
+    <section class="grid gap-4 py-8 md:grid-cols-[12rem_minmax(0,1fr)] md:gap-10">
+      <h2 class="font-serif text-2xl font-bold">{{t .Lang "PrivacyIndependence"}}</h2>
+      <div class="prose-copy leading-7 text-muted"><p>{{t .Lang "PrivacyCopy"}}</p><p>{{t .Lang "LegalCopy"}}</p></div>
+    </section>
+  </div>
 </article>
 {{end}}

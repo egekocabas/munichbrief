@@ -4,43 +4,43 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="{{.T.SiteDescription}}">
+  <meta name="description" content="{{t .Lang "SiteDescription"}}">
+  <meta name="htmx-config" content='{"allowEval":false,"selfRequestsOnly":true}'>
   <title>{{template "title" .}} · MunichBrief</title>
   <link rel="stylesheet" href="/static/app.css">
+  <script defer src="/static/htmx.min.js"></script>
 </head>
-<body>
-  <header class="site-header">
-    <div class="shell header-inner">
-      <a class="brand" href="/" aria-label="MunichBrief">
-        <span class="brand-mark" aria-hidden="true">M</span>
-        <span><strong>MunichBrief</strong><small>{{.T.BrandTagline}}</small></span>
+<body hx-boost="true" hx-indicator="#navigation-progress" class="flex min-h-screen flex-col text-ink antialiased">
+  <div id="navigation-progress" class="htmx-progress fixed inset-x-0 top-0 z-50 h-0.5 bg-civic" aria-hidden="true"></div>
+  <a class="sr-only z-50 rounded-sm bg-paper px-4 py-2 font-bold text-civic focus:not-sr-only focus:fixed focus:left-4 focus:top-4" href="#content">{{t .Lang "SkipToContent"}}</a>
+  <header class="border-b border-rule/90 bg-paper/95">
+    <div class="page-shell flex min-h-16 items-center justify-between gap-2 py-3 sm:min-h-18 sm:gap-6">
+      <a class="group inline-flex min-w-0 items-center gap-2 text-ink no-underline sm:gap-3" href="{{.HomeURL}}" aria-label="MunichBrief">
+        <span class="grid size-9 shrink-0 place-items-center rounded-[0.6rem_0.6rem_0.6rem_0.18rem] bg-civic font-serif text-lg font-bold text-white transition-colors group-hover:bg-civic-dark sm:size-10 sm:text-xl" aria-hidden="true">M</span>
+        <span class="min-w-0 leading-tight"><strong class="block font-serif text-base tracking-tight sm:text-lg">MunichBrief</strong><small class="hidden text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted sm:block">{{t .Lang "BrandTagline"}}</small></span>
       </a>
-      <nav class="site-nav" aria-label="{{.T.PrimaryNavigation}}">
-        <a href="/">{{.T.Timeline}}</a>
-        <a href="/about">{{.T.About}}</a>
-        <form class="language-form" method="post" action="/language">
-          <input type="hidden" name="return_to" value="{{.ReturnTo}}">
-          <label for="language-select">{{.T.Language}}</label>
-          <select id="language-select" name="language" aria-label="{{.T.ChangeLanguage}}">
-            <option value="de"{{if eq .Lang "de"}} selected{{end}}>{{.T.German}}</option>
-            <option value="en"{{if eq .Lang "en"}} selected{{end}}>{{.T.English}}</option>
-          </select>
-          <button type="submit">{{.T.ChangeLanguage}}</button>
-        </form>
-        <span class="environment-badge">{{.ModeLabel}}</span>
-      </nav>
+      <div class="flex shrink-0 items-center justify-end gap-1 sm:gap-4">
+        <nav class="flex items-center gap-1 text-sm font-bold" aria-label="{{t .Lang "PrimaryNavigation"}}">
+          <a class="hidden rounded-md px-3 py-2 text-ink no-underline hover:bg-newsprint hover:text-civic sm:inline-flex" href="{{.HomeURL}}">{{t .Lang "Timeline"}}</a>
+          <a class="rounded-md px-2 py-2 text-ink no-underline hover:bg-newsprint hover:text-civic sm:px-3" href="{{.AboutURL}}">{{t .Lang "About"}}</a>
+        </nav>
+        <a class="inline-flex min-h-9 items-center rounded-md border border-rule bg-white px-2.5 text-xs font-extrabold uppercase tracking-[0.08em] text-civic no-underline hover:border-civic/40 hover:bg-newsprint" href="{{.AlternateLanguageURL}}" lang="{{.AlternateLanguage}}" hreflang="{{.AlternateLanguage}}" aria-label="{{.AlternateLanguageLabel}}">{{.AlternateLanguage}}</a>
+        <span class="hidden rounded-full border border-alert/25 bg-alert-soft px-2.5 py-1 text-[0.65rem] font-extrabold uppercase tracking-[0.08em] text-alert sm:inline-flex">{{.ModeLabel}}</span>
+      </div>
     </div>
   </header>
-  <main class="shell">
-    <aside class="notice" aria-label="{{.T.NoticeLabel}}">
-      <strong>{{.T.NoticeLead}}</strong>
-      {{if .Fixture}}{{.T.FixtureNotice}}{{else}}{{.T.LiveNotice}}{{end}}
-      {{.T.AuthorityNotice}}
-      {{if .Review}}<span class="review-warning">{{.T.ReviewNotice}}</span>{{end}}
+  <main id="content" class="page-shell flex-1">
+    <aside class="mt-4 border-l-3 border-alert bg-paper px-4 py-3 text-sm leading-relaxed text-muted" aria-label="{{t .Lang "NoticeLabel"}}">
+      <strong class="text-ink">{{t .Lang "NoticeLead"}}</strong>
+      {{if .Fixture}}{{t .Lang "FixtureNotice"}}{{else}}{{t .Lang "LiveNotice"}}{{end}}
+      {{t .Lang "AuthorityNotice"}}
+      {{if .Review}}<span class="mt-1 block font-bold text-alert">{{t .Lang "ReviewNotice"}}</span>{{end}}
     </aside>
     {{template "content" .}}
   </main>
-  <footer class="site-footer"><div class="shell"><p>{{.T.Footer}}</p></div></footer>
+  <footer class="mt-12 border-t border-rule bg-paper">
+    <div class="page-shell py-6 text-xs leading-relaxed text-muted"><p>{{t .Lang "Footer"}}</p></div>
+  </footer>
 </body>
 </html>
 {{end}}

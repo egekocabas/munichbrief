@@ -1,0 +1,18 @@
+{
+  "name": "munichbrief-frontend",
+  "private": true,
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "npm run build:css && npm run build:vendor",
+    "build:css": "tailwindcss -i internal/web/assets/app.css -o internal/web/static/app.css --minify",
+    "build:vendor": "cp node_modules/htmx.org/dist/htmx.min.js internal/web/static/htmx.min.js",
+    "watch:css": "tailwindcss -i internal/web/assets/app.css -o internal/web/static/app.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "4.3.3",
+    "htmx.org": "2.0.10",
+    "tailwindcss": "4.3.3"
+  }
+}

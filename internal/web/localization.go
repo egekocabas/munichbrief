@@ -1,86 +1,108 @@
 package web
 
-var localizedText = map[string]map[string]string{
-	"de": {
-		"SiteDescription": "Ein lokaler Leser für Pressemitteilungen der Münchner Polizei.",
-		"BrandTagline":    "Polizeimeldungen, klar strukturiert",
-		"Timeline":        "Zeitleiste", "About": "Über MunichBrief", "PrimaryNavigation": "Hauptnavigation",
-		"FixtureMode": "Testdaten", "LiveSource": "Live-Quelle", "ReviewMode": "Prüfmodus",
-		"NoticeLabel": "Wichtiger Hinweis", "NoticeLead": "Unabhängiger, inoffizieller Dienst.",
-		"FixtureNotice": "Die Testinhalte sind synthetisch.", "LiveNotice": "Die Inhalte stammen aus offiziellen Meldungen.",
-		"AuthorityNotice": "Maßgeblich bleibt die offizielle Polizeimeldung; die Unschuldsvermutung gilt.",
-		"ReviewNotice":    "Prüfmodus: Noch nicht anonymisierte Originaltexte können sichtbar sein. Nicht öffentlich bereitstellen.",
-		"Footer":          "MunichBrief ist unabhängig von der Bayerischen Polizei. Keine Analyse, Konten oder Werbung.",
-		"Language":        "Sprache", "German": "Deutsch", "English": "English", "ChangeLanguage": "Sprache wechseln",
-		"HeroEyebrowFixture": "Lokaler Prototyp", "HeroEyebrowLive": "Münchner Polizeimeldungen",
-		"HeroTitle":        "Aktuelle Meldungen der Münchner Polizei",
-		"HeroCopy":         "Sammelmeldungen und einzelne Berichte in einer übersichtlichen Zeitleiste mit Link zur maßgeblichen Quelle.",
-		"FixtureIncidents": "Synthetische Meldungen", "LatestIncidents": "Neueste Meldungen", "Reports": "Meldungen",
-		"Report": "Meldung", "SourceMetadata": "Quellendaten", "ReadIncident": "Meldung lesen",
-		"OpenOfficialSource": "Offizielle Quelle öffnen", "Newer": "Neuer", "Older": "Älter", "Page": "Seite", "Of": "von",
-		"NoIncidents": "Noch keine Meldungen", "NoFixtureCopy": "Führe den Testdaten-Import aus, um die Zeitleiste zu füllen.",
-		"NoLiveCopy":          "Die Synchronisierung hat noch keine Meldung im aktuellen Zeitraum gefunden.",
-		"BodyUnavailable":     "Der Text ist noch nicht verfügbar. MunichBrief versucht es erneut; nutze solange die offizielle Quelle.",
-		"SourceRefreshFailed": "Die letzte Aktualisierung ist fehlgeschlagen; diese gespeicherte Fassung bleibt verfügbar.",
-		"Back":                "Zurück zur Zeitleiste", "Breadcrumb": "Brotkrümelnavigation", "PublishedWithin": "Veröffentlicht in",
-		"LastProcessed": "Zuletzt verarbeitet", "MachineGenerated": "Maschinell erstellt", "AISummary": "KI-generierte Zusammenfassung",
-		"VerifySource":   "Wichtige Angaben bitte anhand der offiziellen Quelle prüfen.",
-		"OriginalGerman": "Deutscher Originaltext", "OriginalQACopy": "Nur für die Qualitätsprüfung im eingeschränkten Prüfmodus.",
-		"AuthoritativeSource": "Maßgebliche Quelle", "FixtureSourceCopy": "Diese Seite verwendet synthetische Testdaten.",
-		"LiveSourceCopy": "Dies ist eine inoffizielle Darstellung. Maßgeblich bleibt die Meldung der Bayerischen Polizei.",
-		"NotProcessed":   "Noch nicht zusammengefasst oder übersetzt", "Queued": "KI-Zusammenfassung und Übersetzung vorgemerkt",
-		"Running": "KI-Zusammenfassung und Übersetzung läuft", "Retrying": "KI vorübergehend nicht verfügbar; erneuter Versuch geplant",
-		"NeedsReview":   "KI-Ausgabe muss geprüft werden",
-		"OriginalShown": "Deutscher Originalbericht wird angezeigt.",
-		"AboutTitle":    "Was MunichBrief tut – und was nicht", "Methodology": "Methodik",
-		"AboutIntro":   "MunichBrief ordnet offizielle Pressemitteilungen der Münchner Polizei als lesbare Ereigniskarten. Der Dienst ist unabhängig und inoffiziell.",
-		"SourcePolicy": "Quellenregeln", "SourcePolicyCopy": "Neue Dokumente werden ausschließlich über den RSS-Feed der Münchner Polizei gefunden. Sammelmeldungen werden an ihren offiziellen Nummern getrennt; einzeln veröffentlichte Berichte bleiben einzeln.",
-		"SourceAuthorityCopy": "Die verlinkte Polizeimeldung ist maßgeblich, kann später geändert werden und stellt keine Schuld fest. Die Unschuldsvermutung gilt.",
-		"ProcessingRetention": "Verarbeitung und Aufbewahrung", "ProcessingCopy": "Extrahierter deutscher Text wird derzeit ohne automatische Löschfrist lokal gespeichert. Eine spätere Aufbewahrungsregel bleibt ausdrücklich vorbehalten.",
-		"AICopy":              "Ein lokales KI-Modell erstellt in einer Anfrage eine datensparsame deutsche und englische Darstellung. Nur Ausgaben der aktuellen Modell- und Prompt-Version werden veröffentlicht.",
-		"VisibilityCopy":      "Im eingeschränkten Prüfmodus sind Originaltexte und Verarbeitungszustände zur Qualitätskontrolle sichtbar. Der öffentliche Modus zeigt ausschließlich freigegebene KI-Texte und nie gespeicherte Originaltexte.",
-		"PrivacyIndependence": "Datenschutz und Unabhängigkeit", "PrivacyCopy": "Es gibt keine Konten, Analyse oder Werbung. Ein technisch notwendiges Sprachpräferenz-Cookie speichert ausschließlich Deutsch oder Englisch für ein Jahr.",
-		"LegalCopy": "Technische Schutzmaßnahmen ersetzen keine rechtliche Prüfung. Vor einer öffentlichen Bereitstellung müssen Rechtsgrundlage, Daten zu Straftaten, journalistische Ausnahmen und Aufbewahrung geprüft werden.",
-	},
-	"en": {
-		"SiteDescription": "A local-first reader for Munich Police press releases.",
-		"BrandTagline":    "Police releases, clearly structured",
-		"Timeline":        "Timeline", "About": "About", "PrimaryNavigation": "Primary navigation",
-		"FixtureMode": "Fixture mode", "LiveSource": "Live source", "ReviewMode": "Review mode",
-		"NoticeLabel": "Important notice", "NoticeLead": "Independent, unofficial service.",
-		"FixtureNotice": "Fixture content is synthetic.", "LiveNotice": "Content is derived from official releases.",
-		"AuthorityNotice": "The official police release remains authoritative, and the presumption of innocence applies.",
-		"ReviewNotice":    "Review mode: original text that has not been anonymised may be visible. Do not expose publicly.",
-		"Footer":          "MunichBrief is independent from the Bavarian Police. No analytics, accounts, or advertising.",
-		"Language":        "Language", "German": "Deutsch", "English": "English", "ChangeLanguage": "Change language",
-		"HeroEyebrowFixture": "Local prototype", "HeroEyebrowLive": "Munich Police feed",
-		"HeroTitle":        "Recent incidents from Munich Police releases",
-		"HeroCopy":         "Combined daily releases and standalone reports in one readable timeline with a link to every authoritative source.",
-		"FixtureIncidents": "Fixture incidents", "LatestIncidents": "Latest incidents", "Reports": "reports",
-		"Report": "Report", "SourceMetadata": "Source metadata", "ReadIncident": "Read incident",
-		"OpenOfficialSource": "Open official source", "Newer": "Newer", "Older": "Older", "Page": "Page", "Of": "of",
-		"NoIncidents": "No incidents yet", "NoFixtureCopy": "Run fixture ingestion to populate the local timeline.",
-		"NoLiveCopy":          "The synchronizer has not discovered an in-window release yet.",
-		"BodyUnavailable":     "The release body is not available yet. MunichBrief is retrying; use the official source in the meantime.",
-		"SourceRefreshFailed": "The last source refresh failed; this stored copy remains available.",
-		"Back":                "Back to timeline", "Breadcrumb": "Breadcrumb", "PublishedWithin": "Published within",
-		"LastProcessed": "Last processed", "MachineGenerated": "Machine-generated", "AISummary": "AI-generated summary",
-		"VerifySource":   "Verify important details against the official source.",
-		"OriginalGerman": "Original German text", "OriginalQACopy": "Visible only for quality review in restricted review mode.",
-		"AuthoritativeSource": "Authoritative source", "FixtureSourceCopy": "This page uses synthetic fixture content.",
-		"LiveSourceCopy": "This is an unofficial presentation. The Bavarian Police release remains authoritative.",
-		"NotProcessed":   "Not yet summarized or translated", "Queued": "AI summary and translation queued",
-		"Running": "AI summary and translation in progress", "Retrying": "AI temporarily unavailable; retry scheduled",
-		"NeedsReview":   "AI output requires review",
-		"OriginalShown": "The original German report is shown.",
-		"AboutTitle":    "What MunichBrief does—and what it does not", "Methodology": "Methodology",
-		"AboutIntro":   "MunichBrief reorganizes official Munich Police press releases into readable incident cards. It is an independent, unofficial service.",
-		"SourcePolicy": "Source policy", "SourcePolicyCopy": "New documents are discovered only through the Munich Police RSS feed. Combined reports are split at their official numbers; separately published reports remain separate.",
-		"SourceAuthorityCopy": "The linked police release is authoritative, may later be amended, and does not establish guilt. The presumption of innocence applies.",
-		"ProcessingRetention": "Processing and retention", "ProcessingCopy": "Extracted German text is currently stored locally without an automated deletion deadline. A later retention policy is explicitly reserved.",
-		"AICopy":              "One local-model request creates a data-minimised German and English presentation. Only output from the active model and prompt version is publishable.",
-		"VisibilityCopy":      "Restricted review mode exposes originals and processing states for quality control. Public mode shows only approved AI text and never renders stored originals.",
-		"PrivacyIndependence": "Privacy and independence", "PrivacyCopy": "There are no accounts, analytics, or advertising. One necessary language-preference cookie stores only German or English for one year.",
-		"LegalCopy": "Engineering safeguards do not replace legal review. Lawful basis, offence-related data, journalistic exceptions, and retention must be reviewed before public launch.",
-	},
+import (
+	"embed"
+	"fmt"
+	"io/fs"
+	"sort"
+
+	"github.com/BurntSushi/toml"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"golang.org/x/text/language"
+)
+
+//go:embed locales/*.toml
+var localeFiles embed.FS
+
+type localization struct {
+	bundle *i18n.Bundle
+}
+
+func newLocalization() (*localization, error) {
+	if err := validateCatalogParity(localeFiles, "locales/active.de.toml", "locales/active.en.toml"); err != nil {
+		return nil, err
+	}
+	bundle := i18n.NewBundle(language.German)
+	bundle.RegisterUnmarshalFunc("toml", toml.Unmarshal)
+	for _, name := range []string{"locales/active.de.toml", "locales/active.en.toml"} {
+		if _, err := bundle.LoadMessageFileFS(localeFiles, name); err != nil {
+			return nil, fmt.Errorf("load translation catalog %s: %w", name, err)
+		}
+	}
+	return &localization{bundle: bundle}, nil
+}
+
+func (l *localization) Text(locale, messageID string) string {
+	value, err := i18n.NewLocalizer(l.bundle, locale).Localize(&i18n.LocalizeConfig{MessageID: messageID})
+	if err != nil {
+		return "[" + messageID + "]"
+	}
+	return value
+}
+
+func (l *localization) Count(locale, messageID string, count int) string {
+	value, err := i18n.NewLocalizer(l.bundle, locale).Localize(&i18n.LocalizeConfig{
+		MessageID: messageID,
+		TemplateData: map[string]any{
+			"Count": count,
+		},
+		PluralCount: count,
+	})
+	if err != nil {
+		return "[" + messageID + "]"
+	}
+	return value
+}
+
+func validateCatalogParity(files fs.FS, names ...string) error {
+	if len(names) < 2 {
+		return fmt.Errorf("at least two translation catalogs are required")
+	}
+	base, err := catalogMessageIDs(files, names[0])
+	if err != nil {
+		return err
+	}
+	for _, name := range names[1:] {
+		candidate, err := catalogMessageIDs(files, name)
+		if err != nil {
+			return err
+		}
+		if missing := messageIDDifference(base, candidate); len(missing) > 0 {
+			return fmt.Errorf("translation catalog %s is missing messages: %v", name, missing)
+		}
+		if extra := messageIDDifference(candidate, base); len(extra) > 0 {
+			return fmt.Errorf("translation catalog %s has unexpected messages: %v", name, extra)
+		}
+	}
+	return nil
+}
+
+func catalogMessageIDs(files fs.FS, name string) (map[string]struct{}, error) {
+	contents, err := fs.ReadFile(files, name)
+	if err != nil {
+		return nil, fmt.Errorf("read translation catalog %s: %w", name, err)
+	}
+	var messages map[string]map[string]any
+	if err := toml.Unmarshal(contents, &messages); err != nil {
+		return nil, fmt.Errorf("parse translation catalog %s: %w", name, err)
+	}
+	ids := make(map[string]struct{}, len(messages))
+	for id, message := range messages {
+		if len(message) == 0 {
+			return nil, fmt.Errorf("translation catalog %s has empty message %s", name, id)
+		}
+		ids[id] = struct{}{}
+	}
+	return ids, nil
+}
+
+func messageIDDifference(left, right map[string]struct{}) []string {
+	difference := make([]string, 0)
+	for id := range left {
+		if _, ok := right[id]; !ok {
+			difference = append(difference, id)
+		}
+	}
+	sort.Strings(difference)
+	return difference
 }

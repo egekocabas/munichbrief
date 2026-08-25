@@ -1,0 +1,217 @@
+[SiteDescription]
+other = "Ein lokaler Leser für Pressemitteilungen der Münchner Polizei."
+
+[BrandTagline]
+other = "München im Überblick"
+
+[Timeline]
+other = "Aktuelles"
+
+[About]
+other = "Über MunichBrief"
+
+[PrimaryNavigation]
+other = "Hauptnavigation"
+
+[SkipToContent]
+other = "Zum Inhalt springen"
+
+[FixtureMode]
+other = "Testdaten"
+
+[LiveSource]
+other = "Live-Quelle"
+
+[ReviewMode]
+other = "Prüfmodus"
+
+[NoticeLabel]
+other = "Wichtiger Hinweis"
+
+[NoticeLead]
+other = "Unabhängig und inoffiziell."
+
+[FixtureNotice]
+other = "Diese Ansicht enthält ausschließlich synthetische Testdaten."
+
+[LiveNotice]
+other = "Die Inhalte stammen aus offiziellen Meldungen."
+
+[AuthorityNotice]
+other = "Maßgeblich bleibt die offizielle Polizeimeldung; die Unschuldsvermutung gilt."
+
+[ReviewNotice]
+other = "Prüfmodus: Noch nicht anonymisierte Originaltexte können sichtbar sein. Nicht öffentlich bereitstellen."
+
+[Footer]
+other = "MunichBrief ist unabhängig von der Bayerischen Polizei. Keine Analyse, Konten oder Werbung."
+
+[Language]
+other = "Sprache"
+
+[German]
+other = "Deutsch"
+
+[English]
+other = "English"
+
+[SwitchToGerman]
+other = "Zur deutschen Version wechseln"
+
+[SwitchToEnglish]
+other = "Zur englischen Version wechseln"
+
+[HeroEyebrowFixture]
+other = "Lokaler Prototyp"
+
+[HeroEyebrowLive]
+other = "Münchner Polizeimeldungen"
+
+[HeroTitle]
+other = "Aktuelle Meldungen aus München"
+
+[HeroCopy]
+other = "Offizielle Polizeimeldungen, aufgeteilt in einzelne Vorfälle und klar mit der maßgeblichen Quelle verknüpft."
+
+[FixtureIncidents]
+other = "Synthetische Meldungen"
+
+[LatestIncidents]
+other = "Neueste Meldungen"
+
+[Reports]
+one = "{{.Count}} Meldung"
+other = "{{.Count}} Meldungen"
+
+[Report]
+other = "Meldung"
+
+[SourceMetadata]
+other = "Quellendaten"
+
+[ReadIncident]
+other = "Meldung lesen"
+
+[OpenOfficialSource]
+other = "Offizielle Quelle öffnen"
+
+[Newer]
+other = "Neuer"
+
+[Older]
+other = "Älter"
+
+[Page]
+other = "Seite"
+
+[Of]
+other = "von"
+
+[NoIncidents]
+other = "Noch keine Meldungen"
+
+[NoFixtureCopy]
+other = "Führe den Testdaten-Import aus, um die Ansicht zu füllen."
+
+[NoLiveCopy]
+other = "Die Synchronisierung hat noch keine Meldung im aktuellen Zeitraum gefunden."
+
+[BodyUnavailable]
+other = "Der Text ist noch nicht verfügbar. MunichBrief versucht es erneut; nutze solange die offizielle Quelle."
+
+[SourceRefreshFailed]
+other = "Die letzte Aktualisierung ist fehlgeschlagen; diese gespeicherte Fassung bleibt verfügbar."
+
+[Back]
+other = "Zurück zu Aktuelles"
+
+[Breadcrumb]
+other = "Brotkrümelnavigation"
+
+[PublishedWithin]
+other = "Veröffentlicht in"
+
+[LastProcessed]
+other = "Zuletzt verarbeitet"
+
+[MachineGenerated]
+other = "Maschinell erstellt"
+
+[AISummary]
+other = "KI-generierte Zusammenfassung"
+
+[VerifySource]
+other = "Wichtige Angaben bitte anhand der offiziellen Quelle prüfen."
+
+[OriginalGerman]
+other = "Deutscher Originaltext"
+
+[OriginalQACopy]
+other = "Nur für die Qualitätsprüfung im eingeschränkten Prüfmodus."
+
+[AuthoritativeSource]
+other = "Maßgebliche Quelle"
+
+[FixtureSourceCopy]
+other = "Diese Seite verwendet synthetische Testdaten."
+
+[LiveSourceCopy]
+other = "Dies ist eine inoffizielle Darstellung. Maßgeblich bleibt die Meldung der Bayerischen Polizei."
+
+[NotProcessed]
+other = "Noch nicht zusammengefasst oder übersetzt"
+
+[Queued]
+other = "KI-Zusammenfassung und Übersetzung vorgemerkt"
+
+[Running]
+other = "KI-Zusammenfassung und Übersetzung läuft"
+
+[Retrying]
+other = "KI vorübergehend nicht verfügbar; erneuter Versuch geplant"
+
+[NeedsReview]
+other = "KI-Ausgabe muss geprüft werden"
+
+[OriginalShown]
+other = "Deutscher Originalbericht wird angezeigt."
+
+[AboutTitle]
+other = "Was MunichBrief tut – und was nicht"
+
+[Methodology]
+other = "Methodik"
+
+[AboutIntro]
+other = "MunichBrief ordnet offizielle Pressemitteilungen der Münchner Polizei als lesbare Ereigniskarten. Der Dienst ist unabhängig und inoffiziell."
+
+[SourcePolicy]
+other = "Quellenregeln"
+
+[SourcePolicyCopy]
+other = "Neue Dokumente werden ausschließlich über den RSS-Feed der Münchner Polizei gefunden. Sammelmeldungen werden an ihren offiziellen Nummern getrennt; einzeln veröffentlichte Berichte bleiben einzeln."
+
+[SourceAuthorityCopy]
+other = "Die verlinkte Polizeimeldung ist maßgeblich, kann später geändert werden und stellt keine Schuld fest. Die Unschuldsvermutung gilt."
+
+[ProcessingRetention]
+other = "Verarbeitung und Aufbewahrung"
+
+[ProcessingCopy]
+other = "Extrahierter deutscher Text wird derzeit ohne automatische Löschfrist lokal gespeichert. Eine spätere Aufbewahrungsregel bleibt ausdrücklich vorbehalten."
+
+[AICopy]
+other = "Ein lokales KI-Modell erstellt in einer Anfrage eine datensparsame deutsche und englische Darstellung. Nur Ausgaben der aktuellen Modell- und Prompt-Version werden veröffentlicht."
+
+[VisibilityCopy]
+other = "Im eingeschränkten Prüfmodus sind Originaltexte und Verarbeitungszustände zur Qualitätskontrolle sichtbar. Der öffentliche Modus zeigt ausschließlich freigegebene KI-Texte und nie gespeicherte Originaltexte."
+
+[PrivacyIndependence]
+other = "Datenschutz und Unabhängigkeit"
+
+[PrivacyCopy]
+other = "Es gibt keine Konten, Analyse oder Werbung. Ein technisch notwendiges Sprachpräferenz-Cookie speichert ausschließlich Deutsch oder Englisch für ein Jahr."
+
+[LegalCopy]
+other = "Technische Schutzmaßnahmen ersetzen keine rechtliche Prüfung. Vor einer öffentlichen Bereitstellung müssen Rechtsgrundlage, Daten zu Straftaten, journalistische Ausnahmen und Aufbewahrung geprüft werden."
+

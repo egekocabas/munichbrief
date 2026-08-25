@@ -21,6 +21,18 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Verify generated frontend assets
+        run: |
+          npm ci
+          npm run build
+          git diff --exit-code -- internal/web/static
+
       - name: Set up Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
