@@ -1,0 +1,216 @@
+[SiteDescription]
+other = "A local-first reader for Munich Police press releases."
+
+[BrandTagline]
+other = "Munich at a glance"
+
+[Timeline]
+other = "Latest"
+
+[About]
+other = "About MunichBrief"
+
+[PrimaryNavigation]
+other = "Primary navigation"
+
+[SkipToContent]
+other = "Skip to content"
+
+[FixtureMode]
+other = "Fixture data"
+
+[LiveSource]
+other = "Live source"
+
+[ReviewMode]
+other = "Review mode"
+
+[NoticeLabel]
+other = "Important notice"
+
+[NoticeLead]
+other = "Independent and unofficial."
+
+[FixtureNotice]
+other = "This view contains synthetic fixture data only."
+
+[LiveNotice]
+other = "Content is derived from official releases."
+
+[AuthorityNotice]
+other = "The official police release remains authoritative, and the presumption of innocence applies."
+
+[ReviewNotice]
+other = "Review mode: original text that has not been anonymised may be visible. Do not expose publicly."
+
+[Footer]
+other = "MunichBrief is independent from the Bavarian Police. No analytics, accounts, or advertising."
+
+[Language]
+other = "Language"
+
+[German]
+other = "Deutsch"
+
+[English]
+other = "English"
+
+[SwitchToGerman]
+other = "Switch to the German version"
+
+[SwitchToEnglish]
+other = "Switch to the English version"
+
+[HeroEyebrowFixture]
+other = "Local prototype"
+
+[HeroEyebrowLive]
+other = "Munich Police releases"
+
+[HeroTitle]
+other = "Latest reports from Munich"
+
+[HeroCopy]
+other = "Official police releases split into individual incidents and clearly linked to the authoritative source."
+
+[FixtureIncidents]
+other = "Synthetic reports"
+
+[LatestIncidents]
+other = "Latest reports"
+
+[Reports]
+one = "{{.Count}} report"
+other = "{{.Count}} reports"
+
+[Report]
+other = "Report"
+
+[SourceMetadata]
+other = "Source metadata"
+
+[ReadIncident]
+other = "Read report"
+
+[OpenOfficialSource]
+other = "Open official source"
+
+[Newer]
+other = "Newer"
+
+[Older]
+other = "Older"
+
+[Page]
+other = "Page"
+
+[Of]
+other = "of"
+
+[NoIncidents]
+other = "No reports yet"
+
+[NoFixtureCopy]
+other = "Run fixture ingestion to populate this view."
+
+[NoLiveCopy]
+other = "The synchronizer has not discovered an in-window release yet."
+
+[BodyUnavailable]
+other = "The release body is not available yet. MunichBrief is retrying; use the official source in the meantime."
+
+[SourceRefreshFailed]
+other = "The last source refresh failed; this stored copy remains available."
+
+[Back]
+other = "Back to latest"
+
+[Breadcrumb]
+other = "Breadcrumb"
+
+[PublishedWithin]
+other = "Published within"
+
+[LastProcessed]
+other = "Last processed"
+
+[MachineGenerated]
+other = "Machine-generated"
+
+[AISummary]
+other = "AI-generated summary"
+
+[VerifySource]
+other = "Verify important details against the official source."
+
+[OriginalGerman]
+other = "Original German text"
+
+[OriginalQACopy]
+other = "Visible only for quality review in restricted review mode."
+
+[AuthoritativeSource]
+other = "Authoritative source"
+
+[FixtureSourceCopy]
+other = "This page uses synthetic fixture content."
+
+[LiveSourceCopy]
+other = "This is an unofficial presentation. The Bavarian Police release remains authoritative."
+
+[NotProcessed]
+other = "Not yet summarized or translated"
+
+[Queued]
+other = "AI summary and translation queued"
+
+[Running]
+other = "AI summary and translation in progress"
+
+[Retrying]
+other = "AI temporarily unavailable; retry scheduled"
+
+[NeedsReview]
+other = "AI output requires review"
+
+[OriginalShown]
+other = "The original German report is shown."
+
+[AboutTitle]
+other = "What MunichBrief does—and what it does not"
+
+[Methodology]
+other = "Methodology"
+
+[AboutIntro]
+other = "MunichBrief reorganizes official Munich Police press releases into readable incident cards. It is an independent, unofficial service."
+
+[SourcePolicy]
+other = "Source policy"
+
+[SourcePolicyCopy]
+other = "New documents are discovered only through the Munich Police RSS feed. Combined reports are split at their official numbers; separately published reports remain separate."
+
+[SourceAuthorityCopy]
+other = "The linked police release is authoritative, may later be amended, and does not establish guilt. The presumption of innocence applies."
+
+[ProcessingRetention]
+other = "Processing and retention"
+
+[ProcessingCopy]
+other = "Extracted German text is currently stored locally without an automated deletion deadline. A later retention policy is explicitly reserved."
+
+[AICopy]
+other = "One local-model request creates a data-minimised German and English presentation. Only output from the active model and prompt version is publishable."
+
+[VisibilityCopy]
+other = "Restricted review mode exposes originals and processing states for quality control. Public mode shows only approved AI text and never renders stored originals."
+
+[PrivacyIndependence]
+other = "Privacy and independence"
+
+[PrivacyCopy]
+other = "There are no accounts, analytics, or advertising. One necessary language-preference cookie stores only German or English for one year."
+
+[LegalCopy]
+other = "Engineering safeguards do not replace legal review. Lawful basis, offence-related data, journalistic exceptions, and retention must be reviewed before public launch."

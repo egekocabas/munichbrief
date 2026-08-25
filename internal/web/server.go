@@ -36,6 +36,9 @@ var aboutTemplate string
 //go:embed static/app.css
 var stylesheet []byte
 
+//go:embed static/htmx.min.js
+var htmxScript []byte
+
 type incidentStore interface {
 	ListPresentationEntries(context.Context, int, int, string, store.PresentationScope) ([]store.IncidentRecord, int, error)
 	GetPresentationIncident(context.Context, int64, store.PresentationScope) (store.IncidentRecord, error)
@@ -56,18 +59,22 @@ type Server struct {
 	logger           *slog.Logger
 	options          Options
 	location         *time.Location
+	localization     *localization
 	timelineTemplate *template.Template
 	detailTemplate   *template.Template
 	aboutTemplate    *template.Template
 }
 
 type basePage struct {
-	Lang      string
-	T         map[string]string
-	ReturnTo  string
-	Fixture   bool
-	Review    bool
-	ModeLabel string
+	Lang                   string
+	HomeURL                string
+	AboutURL               string
+	AlternateLanguage      string
+	AlternateLanguageURL   string
+	AlternateLanguageLabel string
+	Fixture                bool
+	Review                 bool
+	ModeLabel              string
 }
 
 type incidentView struct {
@@ -75,6 +82,7 @@ type incidentView struct {
 	Title               string
 	Summary             string
 	ContentLanguage     string
+	ProcessingState     string
 	ProcessingLabel     string
 	ShowOriginalMessage bool
 }
@@ -135,9 +143,16 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 	if err != nil {
 		return nil, fmt.Errorf("load Europe/Berlin timezone: %w", err)
 	}
+	translations, err := newLocalization()
+	if err != nil {
+		return nil, fmt.Errorf("initialize localization: %w", err)
+	}
 	functions := template.FuncMap{
 		"excerpt":        func(value string) string { return excerpt(value, 190) },
 		"formatDateTime": func(language string, value time.Time) string { return formatDateTime(language, value.In(location)) },
+		"incidentURL":    func(language string, id int64) string { return fmt.Sprintf("/%s/incidents/%d", language, id) },
+		"t":              translations.Text,
+		"tc":             translations.Count,
 	}
 	timeline, err := template.New("layout").Funcs(functions).Parse(layoutTemplate + timelineTemplate)
 	if err != nil {
@@ -151,18 +166,23 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 	if err != nil {
 		return nil, fmt.Errorf("parse about template: %w", err)
 	}
-	return &Server{store: database, logger: logger, options: options, location: location, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about}, nil
+	return &Server{store: database, logger: logger, options: options, location: location, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about}, nil
 }
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /", s.timeline)
-	mux.HandleFunc("GET /incidents/{id}", s.detail)
-	mux.HandleFunc("GET /about", s.about)
-	mux.HandleFunc("POST /language", s.language)
+	mux.HandleFunc("GET /", s.redirectRoot)
+	mux.HandleFunc("GET /about", s.redirectLegacyAbout)
+	mux.HandleFunc("GET /incidents/{id}", s.redirectLegacyIncident)
+	for _, language := range []string{"de", "en"} {
+		mux.HandleFunc("GET /"+language, s.timeline)
+		mux.HandleFunc("GET /"+language+"/incidents/{id}", s.detail)
+		mux.HandleFunc("GET /"+language+"/about", s.about)
+	}
 	mux.HandleFunc("GET /healthz", s.health)
 	mux.HandleFunc("GET /readyz", s.ready)
 	mux.HandleFunc("GET /static/app.css", s.css)
+	mux.HandleFunc("GET /static/htmx.min.js", s.javascript)
 	return s.requestLogger(mux)
 }
 
@@ -173,17 +193,47 @@ func (s *Server) scope() store.PresentationScope {
 	}
 }
 
-func (s *Server) base(request *http.Request) basePage {
-	language := requestedLanguage(request)
-	modeLabel := localizedText[language]["FixtureMode"]
+func (s *Server) redirectRoot(response http.ResponseWriter, request *http.Request) {
+	if request.URL.Path != "/" {
+		http.NotFound(response, request)
+		return
+	}
+	target := &url.URL{Path: "/" + preferredLanguage(request), RawQuery: request.URL.RawQuery}
+	http.Redirect(response, request, target.RequestURI(), http.StatusFound)
+}
+
+func (s *Server) redirectLegacyAbout(response http.ResponseWriter, request *http.Request) {
+	target := &url.URL{Path: "/" + preferredLanguage(request) + "/about", RawQuery: request.URL.RawQuery}
+	http.Redirect(response, request, target.RequestURI(), http.StatusFound)
+}
+
+func (s *Server) redirectLegacyIncident(response http.ResponseWriter, request *http.Request) {
+	id, err := strconv.ParseInt(request.PathValue("id"), 10, 64)
+	if err != nil || id < 1 {
+		http.NotFound(response, request)
+		return
+	}
+	target := &url.URL{Path: fmt.Sprintf("/%s/incidents/%d", preferredLanguage(request), id), RawQuery: request.URL.RawQuery}
+	http.Redirect(response, request, target.RequestURI(), http.StatusFound)
+}
+
+func (s *Server) base(request *http.Request, language string) basePage {
+	modeLabel := s.localization.Text(language, "FixtureMode")
 	if s.options.SourceMode == "live" {
-		modeLabel = localizedText[language]["LiveSource"]
+		modeLabel = s.localization.Text(language, "LiveSource")
 	}
 	if s.options.PresentationMode == "review" {
-		modeLabel += " · " + localizedText[language]["ReviewMode"]
+		modeLabel += " · " + s.localization.Text(language, "ReviewMode")
+	}
+	alternate := "en"
+	alternateLabel := s.localization.Text(language, "SwitchToEnglish")
+	if language == "en" {
+		alternate = "de"
+		alternateLabel = s.localization.Text(language, "SwitchToGerman")
 	}
 	return basePage{
-		Lang: language, T: localizedText[language], ReturnTo: safeReturnPath(request.URL.RequestURI()),
+		Lang: language, HomeURL: "/" + language, AboutURL: "/" + language + "/about",
+		AlternateLanguage: alternate, AlternateLanguageURL: alternateLanguageURL(request.URL, language, alternate), AlternateLanguageLabel: alternateLabel,
 		Fixture: s.options.SourceMode == "fixture", Review: s.options.PresentationMode == "review", ModeLabel: modeLabel,
 	}
 }
@@ -200,10 +250,12 @@ func prepareHTML(response http.ResponseWriter, language string, review bool) {
 }
 
 func (s *Server) timeline(response http.ResponseWriter, request *http.Request) {
-	if request.URL.Path != "/" {
+	language, ok := routeLanguage(request)
+	if !ok {
 		http.NotFound(response, request)
 		return
 	}
+	s.setLanguagePreference(response, language)
 	page, err := requestedPage(request)
 	if err != nil {
 		http.Error(response, "invalid page", http.StatusBadRequest)
@@ -219,7 +271,7 @@ func (s *Server) timeline(response http.ResponseWriter, request *http.Request) {
 		http.NotFound(response, request)
 		return
 	}
-	base := s.base(request)
+	base := s.base(request, language)
 	data := timelinePage{
 		basePage: base, Groups: s.groupByDay(incidents, base.Lang), Page: page, TotalPages: totalPages, Total: total,
 		Previous: page - 1, Next: page + 1, HasPrevious: page > 1, HasNext: page < totalPages,
@@ -231,6 +283,12 @@ func (s *Server) timeline(response http.ResponseWriter, request *http.Request) {
 }
 
 func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
+	language, ok := routeLanguage(request)
+	if !ok {
+		http.NotFound(response, request)
+		return
+	}
+	s.setLanguagePreference(response, language)
 	id, err := strconv.ParseInt(request.PathValue("id"), 10, 64)
 	if err != nil || id < 1 {
 		http.NotFound(response, request)
@@ -249,8 +307,8 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 		http.NotFound(response, request)
 		return
 	}
-	base := s.base(request)
-	view := incidentForLanguage(incident, base.Lang, base.T)
+	base := s.base(request, language)
+	view := s.incidentForLanguage(incident, base.Lang)
 	data := detailPage{basePage: base, Incident: view, ShowOriginalSection: base.Review && incident.HasAI}
 	prepareHTML(response, base.Lang, base.Review)
 	if err := s.detailTemplate.ExecuteTemplate(response, "layout", data); err != nil {
@@ -259,33 +317,28 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 }
 
 func (s *Server) about(response http.ResponseWriter, request *http.Request) {
-	base := s.base(request)
+	language, ok := routeLanguage(request)
+	if !ok {
+		http.NotFound(response, request)
+		return
+	}
+	s.setLanguagePreference(response, language)
+	base := s.base(request, language)
 	prepareHTML(response, base.Lang, base.Review)
 	if err := s.aboutTemplate.ExecuteTemplate(response, "layout", aboutPage{basePage: base}); err != nil {
 		s.logger.ErrorContext(request.Context(), "render about page", "error", err)
 	}
 }
 
-func (s *Server) language(response http.ResponseWriter, request *http.Request) {
-	request.Body = http.MaxBytesReader(response, request.Body, 4096)
-	if err := request.ParseForm(); err != nil {
-		http.Error(response, "invalid language selection", http.StatusBadRequest)
-		return
-	}
-	language := request.PostForm.Get("language")
-	if language != "de" && language != "en" {
-		http.Error(response, "invalid language selection", http.StatusBadRequest)
-		return
-	}
+func (s *Server) setLanguagePreference(response http.ResponseWriter, language string) {
 	http.SetCookie(response, &http.Cookie{
 		Name: "munichbrief_language", Value: language, Path: "/", MaxAge: 365 * 24 * 60 * 60,
 		Expires: time.Now().Add(365 * 24 * time.Hour), HttpOnly: true,
 		Secure: s.options.SecureCookies, SameSite: http.SameSiteLaxMode,
 	})
-	http.Redirect(response, request, safeReturnPath(request.PostForm.Get("return_to")), http.StatusSeeOther)
 }
 
-func requestedLanguage(request *http.Request) string {
+func preferredLanguage(request *http.Request) string {
 	if cookie, err := request.Cookie("munichbrief_language"); err == nil && (cookie.Value == "de" || cookie.Value == "en") {
 		return cookie.Value
 	}
@@ -322,19 +375,28 @@ func requestedLanguage(request *http.Request) string {
 	return "de"
 }
 
-func safeReturnPath(raw string) string {
-	parsed, err := url.Parse(raw)
-	if err != nil || parsed.IsAbs() || parsed.Host != "" || !strings.HasPrefix(parsed.Path, "/") || strings.HasPrefix(parsed.Path, "//") {
-		return "/"
-	}
-	if parsed.Path != "/" && parsed.Path != "/about" && !strings.HasPrefix(parsed.Path, "/incidents/") {
-		return "/"
-	}
-	return parsed.RequestURI()
+func routeLanguage(request *http.Request) (string, bool) {
+	language := strings.SplitN(strings.TrimPrefix(request.URL.Path, "/"), "/", 2)[0]
+	return language, language == "de" || language == "en"
 }
 
-func incidentForLanguage(record store.IncidentRecord, language string, text map[string]string) incidentView {
-	view := incidentView{Record: record, ContentLanguage: "de", ProcessingLabel: processingLabel(record.ProcessingState(), text)}
+func alternateLanguageURL(value *url.URL, current, alternate string) string {
+	currentPrefix := "/" + current
+	alternatePrefix := "/" + alternate
+	path := value.Path
+	if path == currentPrefix {
+		path = alternatePrefix
+	} else if strings.HasPrefix(path, currentPrefix+"/") {
+		path = alternatePrefix + strings.TrimPrefix(path, currentPrefix)
+	} else {
+		path = alternatePrefix
+	}
+	return (&url.URL{Path: path, RawQuery: value.RawQuery}).RequestURI()
+}
+
+func (s *Server) incidentForLanguage(record store.IncidentRecord, language string) incidentView {
+	state := record.ProcessingState()
+	view := incidentView{Record: record, ContentLanguage: "de", ProcessingState: strings.ReplaceAll(state, "_", "-"), ProcessingLabel: s.processingLabel(state, language)}
 	if record.HasAI {
 		view.ContentLanguage = language
 		if language == "en" {
@@ -349,22 +411,22 @@ func incidentForLanguage(record store.IncidentRecord, language string, text map[
 	return view
 }
 
-func processingLabel(state string, text map[string]string) string {
+func (s *Server) processingLabel(state, language string) string {
 	switch state {
 	case "ready":
-		return text["AISummary"]
+		return s.localization.Text(language, "AISummary")
 	case "queued":
-		return text["Queued"]
+		return s.localization.Text(language, "Queued")
 	case "running":
-		return text["Running"]
+		return s.localization.Text(language, "Running")
 	case "retrying":
-		return text["Retrying"]
+		return s.localization.Text(language, "Retrying")
 	case "needs_review":
-		return text["NeedsReview"]
+		return s.localization.Text(language, "NeedsReview")
 	case "failed":
-		return text["NeedsReview"]
+		return s.localization.Text(language, "NeedsReview")
 	default:
-		return text["NotProcessed"]
+		return s.localization.Text(language, "NotProcessed")
 	}
 }
 
@@ -378,7 +440,7 @@ func (s *Server) groupByDay(incidents []store.IncidentRecord, language string) [
 			groups = append(groups, dayGroup{ID: date, Label: formatDay(language, localTime)})
 			currentDate = date
 		}
-		groups[len(groups)-1].Incidents = append(groups[len(groups)-1].Incidents, incidentForLanguage(incident, language, localizedText[language]))
+		groups[len(groups)-1].Incidents = append(groups[len(groups)-1].Incidents, s.incidentForLanguage(incident, language))
 	}
 	return groups
 }
@@ -421,6 +483,12 @@ func (s *Server) css(response http.ResponseWriter, _ *http.Request) {
 	response.Header().Set("X-Content-Type-Options", "nosniff")
 	_, _ = response.Write(stylesheet)
 }
+func (s *Server) javascript(response http.ResponseWriter, _ *http.Request) {
+	response.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+	response.Header().Set("Cache-Control", "public, max-age=3600")
+	response.Header().Set("X-Content-Type-Options", "nosniff")
+	_, _ = response.Write(htmxScript)
+}
 func (s *Server) internalError(response http.ResponseWriter, request *http.Request, message string, err error) {
 	s.logger.ErrorContext(request.Context(), message, "error", err)
 	http.Error(response, "internal server error", http.StatusInternalServerError)
@@ -439,7 +507,7 @@ func (s *Server) requestLogger(next http.Handler) http.Handler {
 		}
 		response.Header().Set("X-Request-ID", requestID)
 		response.Header().Set("X-Correlation-ID", correlationID)
-		response.Header().Set("Content-Security-Policy", "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
+		response.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
 		response.Header().Set("Referrer-Policy", "no-referrer")
 		response.Header().Set("X-Frame-Options", "DENY")
 		recorder := &statusRecorder{ResponseWriter: response, status: http.StatusOK}
