@@ -271,6 +271,9 @@ func TestAboutHealthReadinessAndRequestHeaders(t *testing.T) {
 	if about.Header().Get("Content-Security-Policy") == "" {
 		t.Error("about response has no Content-Security-Policy")
 	}
+	if about.Header().Get("Referrer-Policy") != "same-origin" {
+		t.Errorf("referrer policy = %q, want same-origin", about.Header().Get("Referrer-Policy"))
+	}
 	for _, expected := range []string{`script-src 'self'`, `style-src 'self'`} {
 		if !strings.Contains(about.Header().Get("Content-Security-Policy"), expected) {
 			t.Errorf("content security policy does not contain %q", expected)
@@ -366,6 +369,7 @@ func TestAdminRendersStatsAndQueuesRetries(t *testing.T) {
 	}{
 		{name: "fetch metadata", fetchSite: "cross-site", origin: ""},
 		{name: "origin", fetchSite: "same-site", origin: "https://attacker.example"},
+		{name: "opaque origin without same-origin metadata", fetchSite: "same-site", origin: "null"},
 	} {
 		crossSite := formRequest(http.MethodPost, "/api/admin/ai/retry", "incident_id="+formatID(failedIDs[0]))
 		crossSite.Header.Set("Sec-Fetch-Site", attack.fetchSite)
@@ -375,6 +379,15 @@ func TestAdminRendersStatsAndQueuesRetries(t *testing.T) {
 		if crossSiteResponse.Code != http.StatusForbidden {
 			t.Errorf("%s cross-site retry status = %d, want 403", attack.name, crossSiteResponse.Code)
 		}
+	}
+
+	opaqueSameOrigin := formRequest(http.MethodPost, "/api/admin/ai/retry", "incident_id=9223372036854775807")
+	opaqueSameOrigin.Header.Set("Sec-Fetch-Site", "same-origin")
+	opaqueSameOrigin.Header.Set("Origin", "null")
+	opaqueSameOriginResponse := httptest.NewRecorder()
+	handler.ServeHTTP(opaqueSameOriginResponse, opaqueSameOrigin)
+	if opaqueSameOriginResponse.Code != http.StatusSeeOther || opaqueSameOriginResponse.Header().Get("Location") != "/admin?retried=0" {
+		t.Fatalf("opaque same-origin retry = %d/%q, want 303 with no affected jobs", opaqueSameOriginResponse.Code, opaqueSameOriginResponse.Header().Get("Location"))
 	}
 
 	invalid := httptest.NewRecorder()

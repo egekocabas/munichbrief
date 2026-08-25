@@ -436,12 +436,19 @@ func (s *Server) retryAll(response http.ResponseWriter, request *http.Request) {
 }
 
 func validAdminMutation(request *http.Request) bool {
-	if request.Header.Get("Sec-Fetch-Site") == "cross-site" {
+	fetchSite := strings.ToLower(strings.TrimSpace(request.Header.Get("Sec-Fetch-Site")))
+	if fetchSite == "cross-site" {
 		return false
 	}
-	origin := request.Header.Get("Origin")
+	origin := strings.TrimSpace(request.Header.Get("Origin"))
 	if origin == "" {
 		return true
+	}
+	if strings.EqualFold(origin, "null") {
+		// A no-referrer navigation can serialize a legitimate form origin as
+		// opaque. Only browser-controlled same-origin Fetch Metadata may vouch
+		// for that otherwise unverifiable value.
+		return fetchSite == "same-origin"
 	}
 	parsed, err := url.Parse(origin)
 	return err == nil && parsed.Scheme != "" && parsed.Hostname() != "" && strings.EqualFold(parsed.Hostname(), requestHostname(request))
@@ -693,7 +700,7 @@ func (s *Server) requestLogger(next http.Handler) http.Handler {
 		response.Header().Set("X-Request-ID", requestID)
 		response.Header().Set("X-Correlation-ID", correlationID)
 		response.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
-		response.Header().Set("Referrer-Policy", "no-referrer")
+		response.Header().Set("Referrer-Policy", "same-origin")
 		response.Header().Set("X-Frame-Options", "DENY")
 		recorder := &statusRecorder{ResponseWriter: response, status: http.StatusOK}
 		next.ServeHTTP(recorder, request)
