@@ -9,7 +9,7 @@ data:
   MUNICHBRIEF_METRICS_ADDR: ":9090"
   MUNICHBRIEF_DATABASE_PATH: "/data/munichbrief.db"
   MUNICHBRIEF_SOURCE_MODE: {{ .Values.application.sourceMode | quote }}
-  MUNICHBRIEF_PUBLIC_HOST: {{ .Values.application.publicHost | quote }}
+  MUNICHBRIEF_PUBLIC_HOSTS: {{ join "," .Values.application.publicHosts | quote }}
   MUNICHBRIEF_ADMIN_ENABLED: {{ .Values.admin.enabled | quote }}
   MUNICHBRIEF_PRESENTATION_MODE: {{ .Values.application.presentationMode | quote }}
   MUNICHBRIEF_SECURE_COOKIES: {{ .Values.application.secureCookies | quote }}

@@ -59,7 +59,7 @@ type Options struct {
 	PromptVersion    string
 	SecureCookies    bool
 	AdminEnabled     bool
-	PublicHost       string
+	PublicHosts      []string
 }
 
 type Server struct {
@@ -155,13 +155,11 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 	if strings.TrimSpace(options.ModelIdentity) == "" || strings.TrimSpace(options.PromptVersion) == "" {
 		return nil, errors.New("presentation model and prompt version are required")
 	}
-	options.PublicHost = strings.ToLower(strings.TrimSpace(options.PublicHost))
-	if options.PublicHost != "" {
-		parsed, err := url.Parse("//" + options.PublicHost)
-		if err != nil || parsed.Hostname() != options.PublicHost || parsed.Port() != "" || strings.ContainsAny(options.PublicHost, "/@") {
-			return nil, errors.New("public host must be a hostname without scheme, credentials, path, or port")
-		}
+	publicHosts, err := normalizePublicHosts(options.PublicHosts)
+	if err != nil {
+		return nil, err
 	}
+	options.PublicHosts = publicHosts
 	location, err := time.LoadLocation("Europe/Berlin")
 	if err != nil {
 		return nil, fmt.Errorf("load Europe/Berlin timezone: %w", err)
@@ -470,7 +468,31 @@ func (s *Server) accessBoundary(next http.Handler) http.Handler {
 }
 
 func (s *Server) isPublicRequest(request *http.Request) bool {
-	return s.options.PublicHost != "" && strings.EqualFold(requestHostname(request), s.options.PublicHost)
+	host := requestHostname(request)
+	for _, publicHost := range s.options.PublicHosts {
+		if strings.EqualFold(host, publicHost) {
+			return true
+		}
+	}
+	return false
+}
+
+func normalizePublicHosts(values []string) ([]string, error) {
+	hosts := make([]string, 0, len(values))
+	seen := make(map[string]struct{})
+	for _, value := range values {
+		host := strings.ToLower(strings.TrimSpace(value))
+		parsed, err := url.Parse("//" + host)
+		if host == "" || err != nil || parsed.Hostname() != host || parsed.Port() != "" || strings.ContainsAny(host, "/@") {
+			return nil, errors.New("public hosts must contain only hostnames without schemes, credentials, paths, or ports")
+		}
+		if _, exists := seen[host]; exists {
+			continue
+		}
+		seen[host] = struct{}{}
+		hosts = append(hosts, host)
+	}
+	return hosts, nil
 }
 
 func requestHostname(request *http.Request) string {

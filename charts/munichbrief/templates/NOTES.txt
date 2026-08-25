@@ -5,7 +5,10 @@ MunichBrief is available through:
   kubectl -n {{ .Release.Namespace }} port-forward service/{{ include "munichbrief.fullname" . }} 8080:{{ .Values.service.webPort }}
 {{- end }}
 {{- if .Values.ingress.public.enabled }}
-Public reader: https://{{ .Values.ingress.public.host }}
+Public readers:
+{{- range .Values.ingress.public.hosts }}
+  https://{{ . }}
+{{- end }}
 {{- end }}
 
 SQLite uses one replica, Recreate rollout strategy, and a retained PersistentVolumeClaim.

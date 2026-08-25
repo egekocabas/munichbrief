@@ -7,6 +7,14 @@
 {{- if and .Values.admin.enabled (not (or .Values.admin.basicAuthMiddleware .Values.admin.basicAuthSecret)) }}
 {{- fail "admin.basicAuthMiddleware or admin.basicAuthSecret is required when admin is enabled" }}
 {{- end }}
+{{- if and .Values.ingress.public.enabled (eq (len .Values.ingress.public.hosts) 0) }}
+{{- fail "ingress.public.hosts must contain at least one hostname when public ingress is enabled" }}
+{{- end }}
+{{- range .Values.ingress.public.hosts }}
+{{- if not (has . $.Values.application.publicHosts) }}
+{{- fail (printf "public ingress host %s must also appear in application.publicHosts" .) }}
+{{- end }}
+{{- end }}
 {{- if .Values.ingress.lan.enabled }}
 {{- if .Values.admin.enabled }}
 apiVersion: networking.k8s.io/v1
@@ -88,37 +96,12 @@ metadata:
 spec:
   ingressClassName: {{ .Values.ingress.public.className }}
   rules:
-    - host: {{ .Values.ingress.public.host | quote }}
+    {{- range .Values.ingress.public.hosts }}
+    - host: {{ . | quote }}
       http:
         paths:
-          - path: /
-            pathType: Exact
-            backend: &publicBackend
-              service:
-                name: {{ include "munichbrief.fullname" . }}
-                port:
-                  name: http
-          - path: /about
-            pathType: Exact
-            backend: *publicBackend
-          - path: /de
-            pathType: Prefix
-            backend: *publicBackend
-          - path: /en
-            pathType: Prefix
-            backend: *publicBackend
-          - path: /incidents
-            pathType: Prefix
-            backend: *publicBackend
-          - path: /static
-            pathType: Prefix
-            backend: *publicBackend
-          - path: /healthz
-            pathType: Exact
-            backend: *publicBackend
-          - path: /readyz
-            pathType: Exact
-            backend: *publicBackend
+          {{- include "munichbrief.publicPaths" $ | nindent 10 }}
+    {{- end }}
   {{- with .Values.ingress.public.tls }}
   tls:
     {{- toYaml . | nindent 4 }}

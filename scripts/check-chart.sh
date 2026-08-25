@@ -19,7 +19,7 @@ required_patterns=(
   'path: /readyz'
   'kind: NetworkPolicy'
   'MUNICHBRIEF_PRESENTATION_MODE: "review"'
-  'MUNICHBRIEF_PUBLIC_HOST: "munichbrief.egekocabas.com"'
+  'MUNICHBRIEF_PUBLIC_HOSTS: "munichbrief.egekocabas.com,munichbrief.de"'
   'MUNICHBRIEF_ADMIN_ENABLED: "true"'
   'MUNICHBRIEF_SECURE_COOKIES: "true"'
   'MUNICHBRIEF_AI_ENABLED: "true"'
@@ -34,6 +34,8 @@ required_patterns=(
   'path: /api/admin'
   'name: munichbrief-admin-auth'
   'secret: munichbrief-admin-basic-auth'
+  'host: "munichbrief.egekocabas.com"'
+  'host: "munichbrief.de"'
 )
 
 for pattern in "${required_patterns[@]}"; do
@@ -43,8 +45,8 @@ for pattern in "${required_patterns[@]}"; do
   }
 done
 
-public_root_count="$(grep -A1 -F -- 'path: /' "$rendered_chart" | grep -c -F -- 'pathType: Exact')"
-[[ "$public_root_count" -ge 1 ]] || {
+public_root_count="$(awk 'NF >= 2 && $(NF - 1) == "path:" && $NF == "/" { getline; if ($1 == "pathType:" && $2 == "Exact") count++ } END { print count + 0 }' "$rendered_chart")"
+[[ "$public_root_count" -ge 2 ]] || {
   printf 'Rendered chart does not constrain the public root path to Exact\n' >&2
   exit 1
 }

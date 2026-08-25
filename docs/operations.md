@@ -61,8 +61,8 @@ cookie used by the root and legacy-route redirects. Enable secure cookies
 behind TLS.
 
 The production reader keeps review mode on the LAN while
-`MUNICHBRIEF_PUBLIC_HOST` forces the Cloudflare hostname into public mode for
-every request. The optional `/admin` dashboard shows processing queue state and
+`MUNICHBRIEF_PUBLIC_HOSTS` forces each comma-separated Cloudflare hostname into
+public mode for every request. The optional `/admin` dashboard shows processing queue state and
 can requeue one incident or all current failed/review-required jobs. Those
 actions are asynchronous and still obey the worker's processing window. The
 application does not authenticate users itself: enable the dashboard only when

@@ -343,7 +343,7 @@ func TestAdminRendersStatsAndQueuesRetries(t *testing.T) {
 		}
 		failedIDs = append(failedIDs, job.IncidentID)
 	}
-	server := adminTestServer(t, database, "")
+	server := adminTestServer(t, database, nil)
 	handler := server.Handler()
 	initialStats, err := database.ProcessingQueueStats(ctx, operation, time.Now())
 	if err != nil {
@@ -443,7 +443,8 @@ func TestPublicHostUsesFailClosedPresentationAndRejectsAdmin(t *testing.T) {
 	if err := database.CompleteProcessingJob(ctx, job, presentation, "qwen3.5:4b", processing.PromptVersion, time.Now()); err != nil {
 		t.Fatal(err)
 	}
-	server := adminTestServer(t, database, "munichbrief.egekocabas.com")
+	publicHosts := []string{"munichbrief.egekocabas.com", "munichbrief.de"}
+	server := adminTestServer(t, database, publicHosts)
 	handler := server.Handler()
 	path := "/en/incidents/" + formatID(job.IncidentID)
 
@@ -455,27 +456,31 @@ func TestPublicHostUsesFailClosedPresentationAndRejectsAdmin(t *testing.T) {
 		t.Fatalf("LAN detail did not retain review mode: %d", lan.Code)
 	}
 
-	public := httptest.NewRecorder()
-	publicRequest := englishRequest(http.MethodGet, path, nil)
-	publicRequest.Host = "munichbrief.egekocabas.com"
-	handler.ServeHTTP(public, publicRequest)
-	if public.Code != http.StatusOK || !strings.Contains(public.Body.String(), presentation.SummaryEN) {
-		t.Fatalf("public detail = %d/%q", public.Code, public.Body.String())
-	}
-	for _, forbidden := range []string{"Original German text", "Review mode", job.BodyDE} {
-		if strings.Contains(public.Body.String(), forbidden) {
-			t.Errorf("public detail exposed %q", forbidden)
-		}
-	}
+	for _, publicHost := range publicHosts {
+		t.Run(publicHost, func(t *testing.T) {
+			public := httptest.NewRecorder()
+			publicRequest := englishRequest(http.MethodGet, path, nil)
+			publicRequest.Host = publicHost
+			handler.ServeHTTP(public, publicRequest)
+			if public.Code != http.StatusOK || !strings.Contains(public.Body.String(), presentation.SummaryEN) {
+				t.Fatalf("public detail = %d/%q", public.Code, public.Body.String())
+			}
+			for _, forbidden := range []string{"Original German text", "Review mode", job.BodyDE} {
+				if strings.Contains(public.Body.String(), forbidden) {
+					t.Errorf("public detail exposed %q", forbidden)
+				}
+			}
 
-	for _, path := range []string{"/admin", "/api/admin/ai/retry-all", "/private"} {
-		response := httptest.NewRecorder()
-		request := httptest.NewRequest(http.MethodGet, path, nil)
-		request.Host = "munichbrief.egekocabas.com"
-		handler.ServeHTTP(response, request)
-		if response.Code != http.StatusNotFound {
-			t.Errorf("public %s status = %d, want 404", path, response.Code)
-		}
+			for _, path := range []string{"/admin", "/api/admin/ai/retry-all", "/private"} {
+				response := httptest.NewRecorder()
+				request := httptest.NewRequest(http.MethodGet, path, nil)
+				request.Host = publicHost
+				handler.ServeHTTP(response, request)
+				if response.Code != http.StatusNotFound {
+					t.Errorf("public %s status = %d, want 404", path, response.Code)
+				}
+			}
+		})
 	}
 }
 
@@ -764,13 +769,13 @@ func testServer(t *testing.T, database *store.Store) *Server {
 	return server
 }
 
-func adminTestServer(t *testing.T, database *store.Store, publicHost string) *Server {
+func adminTestServer(t *testing.T, database *store.Store, publicHosts []string) *Server {
 	t.Helper()
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	server, err := NewWithOptions(database, logger, Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
 		ModelIdentity: "qwen3.5:4b", PromptVersion: processing.PromptVersion,
-		SecureCookies: true, AdminEnabled: true, PublicHost: publicHost,
+		SecureCookies: true, AdminEnabled: true, PublicHosts: publicHosts,
 	})
 	if err != nil {
 		t.Fatalf("NewWithOptions() error = %v", err)

@@ -54,7 +54,7 @@ type Config struct {
 	PresentationMode string
 	SecureCookies    bool
 	AdminEnabled     bool
-	PublicHost       string
+	PublicHosts      []string
 }
 
 // Load reads configuration from the environment and applies local-safe defaults.
@@ -77,7 +77,10 @@ func Load() (Config, error) {
 		AIContextSize:  defaultAIContext,
 		AIImmediate:    defaultAIImmediate,
 		SecureCookies:  defaultSecureCookie,
-		PublicHost:     strings.ToLower(strings.TrimSpace(os.Getenv("MUNICHBRIEF_PUBLIC_HOST"))),
+	}
+	var err error
+	if cfg.PublicHosts, err = publicHostsFromEnv("MUNICHBRIEF_PUBLIC_HOSTS"); err != nil {
+		return Config{}, err
 	}
 	defaultPresentationMode := "review"
 	if cfg.SourceMode == "live" {
@@ -127,14 +130,7 @@ func Load() (Config, error) {
 	if cfg.PresentationMode != "review" && cfg.PresentationMode != "public" {
 		return Config{}, fmt.Errorf("unsupported MUNICHBRIEF_PRESENTATION_MODE %q: use review or public", cfg.PresentationMode)
 	}
-	if cfg.PublicHost != "" {
-		publicHostURL, err := url.Parse("//" + cfg.PublicHost)
-		if err != nil || publicHostURL.Hostname() != cfg.PublicHost || publicHostURL.Port() != "" || strings.ContainsAny(cfg.PublicHost, "/@") {
-			return Config{}, fmt.Errorf("MUNICHBRIEF_PUBLIC_HOST must be a hostname without scheme, credentials, path, or port")
-		}
-	}
 
-	var err error
 	if cfg.HTTPTimeout, err = durationFromEnv("MUNICHBRIEF_HTTP_TIMEOUT", cfg.HTTPTimeout, time.Second); err != nil {
 		return Config{}, err
 	}
@@ -175,6 +171,28 @@ func Load() (Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func publicHostsFromEnv(key string) ([]string, error) {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return nil, nil
+	}
+	hosts := make([]string, 0, strings.Count(raw, ",")+1)
+	seen := make(map[string]struct{})
+	for _, value := range strings.Split(raw, ",") {
+		host := strings.ToLower(strings.TrimSpace(value))
+		parsed, err := url.Parse("//" + host)
+		if host == "" || err != nil || parsed.Hostname() != host || parsed.Port() != "" || strings.ContainsAny(host, "/@") {
+			return nil, fmt.Errorf("%s must be a comma-separated list of hostnames without schemes, credentials, paths, or ports", key)
+		}
+		if _, exists := seen[host]; exists {
+			continue
+		}
+		seen[host] = struct{}{}
+		hosts = append(hosts, host)
+	}
+	return hosts, nil
 }
 
 func dailyWindowFromEnv(key, fallback string) (time.Duration, time.Duration, error) {

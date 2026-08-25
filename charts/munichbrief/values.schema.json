@@ -21,9 +21,13 @@
     },
     "application": {
       "type": "object",
-      "required": ["publicHost", "sourceMode", "presentationMode", "secureCookies", "pageSize", "feedURL", "userAgent", "httpTimeout", "articleRefreshInterval", "aiEnabled", "aiImmediate", "aiWindow", "ollamaBaseURL", "ollamaModel", "aiInterval", "aiTimeout", "aiContextSize"],
+      "required": ["publicHosts", "sourceMode", "presentationMode", "secureCookies", "pageSize", "feedURL", "userAgent", "httpTimeout", "articleRefreshInterval", "aiEnabled", "aiImmediate", "aiWindow", "ollamaBaseURL", "ollamaModel", "aiInterval", "aiTimeout", "aiContextSize"],
       "properties": {
-        "publicHost": {"type": "string", "pattern": "^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$"},
+        "publicHosts": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$"}
+        },
         "sourceMode": {"enum": ["fixture", "live"]},
         "presentationMode": {"enum": ["review", "public"]},
         "secureCookies": {"type": "boolean"},
@@ -48,8 +52,8 @@
       "type": "object",
       "required": ["lan", "public"],
       "properties": {
-        "lan": {"$ref": "#/$defs/ingress"},
-        "public": {"$ref": "#/$defs/ingress"}
+        "lan": {"$ref": "#/$defs/lanIngress"},
+        "public": {"$ref": "#/$defs/publicIngress"}
       },
       "additionalProperties": false
     },
@@ -82,7 +86,7 @@
     }
   },
   "$defs": {
-    "ingress": {
+    "lanIngress": {
       "type": "object",
       "required": ["enabled", "className", "annotations", "host", "tls"],
       "properties": {
@@ -90,6 +94,22 @@
         "className": {"type": "string", "minLength": 1},
         "annotations": {"type": "object"},
         "host": {"type": "string", "pattern": "^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$"},
+        "tls": {"type": "array"}
+      },
+      "additionalProperties": false
+    },
+    "publicIngress": {
+      "type": "object",
+      "required": ["enabled", "className", "annotations", "hosts", "tls"],
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "className": {"type": "string", "minLength": 1},
+        "annotations": {"type": "object"},
+        "hosts": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$"}
+        },
         "tls": {"type": "array"}
       },
       "additionalProperties": false
