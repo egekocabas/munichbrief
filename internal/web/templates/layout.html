@@ -14,15 +14,15 @@
   <div id="navigation-progress" class="htmx-progress fixed inset-x-0 top-0 z-50 h-0.5 bg-civic" aria-hidden="true"></div>
   <a class="sr-only z-50 rounded-sm bg-paper px-4 py-2 font-bold text-civic focus:not-sr-only focus:fixed focus:left-4 focus:top-4" href="#content">{{t .Lang "SkipToContent"}}</a>
   <header class="border-b border-rule/90 bg-paper/95">
-    <div class="page-shell flex min-h-18 flex-wrap items-center justify-between gap-x-6 gap-y-3 py-3">
-      <a class="group inline-flex items-center gap-3 text-ink no-underline" href="{{.HomeURL}}" aria-label="MunichBrief">
-        <span class="grid size-10 place-items-center rounded-[0.6rem_0.6rem_0.6rem_0.18rem] bg-civic font-serif text-xl font-bold text-white transition-colors group-hover:bg-civic-dark" aria-hidden="true">M</span>
-        <span class="leading-tight"><strong class="block font-serif text-lg tracking-tight">MunichBrief</strong><small class="block text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted">{{t .Lang "BrandTagline"}}</small></span>
+    <div class="page-shell flex min-h-16 items-center justify-between gap-2 py-3 sm:min-h-18 sm:gap-6">
+      <a class="group inline-flex min-w-0 items-center gap-2 text-ink no-underline sm:gap-3" href="{{.HomeURL}}" aria-label="MunichBrief">
+        <span class="grid size-9 shrink-0 place-items-center rounded-[0.6rem_0.6rem_0.6rem_0.18rem] bg-civic font-serif text-lg font-bold text-white transition-colors group-hover:bg-civic-dark sm:size-10 sm:text-xl" aria-hidden="true">M</span>
+        <span class="min-w-0 leading-tight"><strong class="block font-serif text-base tracking-tight sm:text-lg">MunichBrief</strong><small class="hidden text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted sm:block">{{t .Lang "BrandTagline"}}</small></span>
       </a>
-      <div class="flex flex-wrap items-center justify-end gap-2 sm:gap-4">
+      <div class="flex shrink-0 items-center justify-end gap-1 sm:gap-4">
         <nav class="flex items-center gap-1 text-sm font-bold" aria-label="{{t .Lang "PrimaryNavigation"}}">
-          <a class="rounded-md px-3 py-2 text-ink no-underline hover:bg-newsprint hover:text-civic" href="{{.HomeURL}}">{{t .Lang "Timeline"}}</a>
-          <a class="rounded-md px-3 py-2 text-ink no-underline hover:bg-newsprint hover:text-civic" href="{{.AboutURL}}">{{t .Lang "About"}}</a>
+          <a class="hidden rounded-md px-3 py-2 text-ink no-underline hover:bg-newsprint hover:text-civic sm:inline-flex" href="{{.HomeURL}}">{{t .Lang "Timeline"}}</a>
+          <a class="rounded-md px-2 py-2 text-ink no-underline hover:bg-newsprint hover:text-civic sm:px-3" href="{{.AboutURL}}">{{t .Lang "About"}}</a>
         </nav>
         <a class="inline-flex min-h-9 items-center rounded-md border border-rule bg-white px-2.5 text-xs font-extrabold uppercase tracking-[0.08em] text-civic no-underline hover:border-civic/40 hover:bg-newsprint" href="{{.AlternateLanguageURL}}" lang="{{.AlternateLanguage}}" hreflang="{{.AlternateLanguage}}" aria-label="{{.AlternateLanguageLabel}}">{{.AlternateLanguage}}</a>
         <span class="hidden rounded-full border border-alert/25 bg-alert-soft px-2.5 py-1 text-[0.65rem] font-extrabold uppercase tracking-[0.08em] text-alert sm:inline-flex">{{.ModeLabel}}</span>
