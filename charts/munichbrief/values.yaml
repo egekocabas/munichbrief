@@ -11,6 +11,8 @@ nameOverride: ""
 fullnameOverride: ""
 
 application:
+  # Used for host-aware public presentation and path restrictions.
+  publicHost: munichbrief.example.com
   sourceMode: live
   presentationMode: review
   secureCookies: true
@@ -35,13 +37,26 @@ service:
   metricsPort: 9090
 
 ingress:
-  enabled: true
-  className: traefik
-  annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: websecure
-    traefik.ingress.kubernetes.io/router.tls: "true"
-  host: munichbrief.home.egekocabas.com
-  tls: []
+  lan:
+    enabled: false
+    className: traefik
+    annotations:
+      traefik.ingress.kubernetes.io/router.entrypoints: websecure
+      traefik.ingress.kubernetes.io/router.tls: "true"
+    host: munichbrief.home.example.com
+    tls: []
+  public:
+    enabled: false
+    className: traefik
+    annotations: {}
+    host: munichbrief.example.com
+    tls: []
+
+admin:
+  enabled: false
+  # Set exactly one auth reference when enabling the admin and LAN ingress.
+  basicAuthMiddleware: ""
+  basicAuthSecret: ""
 
 persistence:
   enabled: true

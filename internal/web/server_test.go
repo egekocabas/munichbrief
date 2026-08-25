@@ -3,6 +3,7 @@ package web
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -311,6 +312,173 @@ func TestAboutHealthReadinessAndRequestHeaders(t *testing.T) {
 	}
 }
 
+func TestAdminIsDisabledByDefault(t *testing.T) {
+	handler := testServer(t, fixtureStore(t)).Handler()
+	for _, test := range []struct {
+		method, path string
+	}{
+		{method: http.MethodGet, path: "/admin"},
+		{method: http.MethodPost, path: "/api/admin/ai/retry-all"},
+	} {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(test.method, test.path, nil))
+		if response.Code != http.StatusNotFound {
+			t.Errorf("%s %s status = %d, want 404", test.method, test.path, response.Code)
+		}
+	}
+}
+
+func TestAdminRendersStatsAndQueuesRetries(t *testing.T) {
+	ctx := context.Background()
+	database := fixtureStore(t)
+	operation := processing.Operation("qwen3.5:4b")
+	failedIDs := make([]int64, 0, 2)
+	for range 2 {
+		job, found, err := database.QueueAndClaimProcessingJob(ctx, operation, time.Now())
+		if err != nil || !found {
+			t.Fatalf("claim admin fixture job = %t/%v", found, err)
+		}
+		if err := database.FailProcessingJob(ctx, job, "needs_review", "privacy", nil, time.Now(), context.Canceled); err != nil {
+			t.Fatal(err)
+		}
+		failedIDs = append(failedIDs, job.IncidentID)
+	}
+	server := adminTestServer(t, database, "")
+	handler := server.Handler()
+	initialStats, err := database.ProcessingQueueStats(ctx, operation, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	page := httptest.NewRecorder()
+	handler.ServeHTTP(page, httptest.NewRequest(http.MethodGet, "/admin", nil))
+	if page.Code != http.StatusOK || page.Header().Get("Cache-Control") != "private, no-store" {
+		t.Fatalf("admin page = %d/%q", page.Code, page.Header().Get("Cache-Control"))
+	}
+	for _, expected := range []string{"AI processing", "Needs review", ">2<", "/api/admin/ai/retry", "/api/admin/ai/retry-all"} {
+		if !strings.Contains(page.Body.String(), expected) {
+			t.Errorf("admin page does not contain %q", expected)
+		}
+	}
+
+	for _, attack := range []struct {
+		name, fetchSite, origin string
+	}{
+		{name: "fetch metadata", fetchSite: "cross-site", origin: ""},
+		{name: "origin", fetchSite: "same-site", origin: "https://attacker.example"},
+	} {
+		crossSite := formRequest(http.MethodPost, "/api/admin/ai/retry", "incident_id="+formatID(failedIDs[0]))
+		crossSite.Header.Set("Sec-Fetch-Site", attack.fetchSite)
+		crossSite.Header.Set("Origin", attack.origin)
+		crossSiteResponse := httptest.NewRecorder()
+		handler.ServeHTTP(crossSiteResponse, crossSite)
+		if crossSiteResponse.Code != http.StatusForbidden {
+			t.Errorf("%s cross-site retry status = %d, want 403", attack.name, crossSiteResponse.Code)
+		}
+	}
+
+	invalid := httptest.NewRecorder()
+	handler.ServeHTTP(invalid, formRequest(http.MethodPost, "/api/admin/ai/retry", "incident_id=zero"))
+	if invalid.Code != http.StatusBadRequest {
+		t.Fatalf("invalid retry status = %d, want 400", invalid.Code)
+	}
+
+	retryOne := httptest.NewRecorder()
+	handler.ServeHTTP(retryOne, formRequest(http.MethodPost, "/api/admin/ai/retry", "incident_id="+formatID(failedIDs[0])))
+	if retryOne.Code != http.StatusSeeOther || retryOne.Header().Get("Location") != "/admin?retried=1" {
+		t.Fatalf("retry one = %d/%q", retryOne.Code, retryOne.Header().Get("Location"))
+	}
+	retryAll := httptest.NewRecorder()
+	handler.ServeHTTP(retryAll, formRequest(http.MethodPost, "/api/admin/ai/retry-all", ""))
+	if retryAll.Code != http.StatusSeeOther || retryAll.Header().Get("Location") != "/admin?retried=1" {
+		t.Fatalf("retry all = %d/%q", retryAll.Code, retryAll.Header().Get("Location"))
+	}
+	stats, err := database.ProcessingQueueStats(ctx, operation, time.Now())
+	if err != nil || stats.NeedsReview != 0 || stats.Queued != initialStats.Queued+2 {
+		t.Fatalf("retried stats = %#v/%v", stats, err)
+	}
+}
+
+func TestAdminReportsStoreErrors(t *testing.T) {
+	database := fixtureStore(t)
+	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
+	statsServer, err := NewWithOptions(failingAdminStore{Store: database, statsError: errors.New("stats unavailable")}, logger, Options{
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "review", ModelIdentity: "qwen3.5:4b",
+		PromptVersion: processing.PromptVersion, AdminEnabled: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	statsResponse := httptest.NewRecorder()
+	statsServer.Handler().ServeHTTP(statsResponse, httptest.NewRequest(http.MethodGet, "/admin", nil))
+	if statsResponse.Code != http.StatusInternalServerError {
+		t.Fatalf("admin stats error status = %d, want 500", statsResponse.Code)
+	}
+
+	retryServer, err := NewWithOptions(failingAdminStore{Store: database, retryError: errors.New("retry unavailable")}, logger, Options{
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "review", ModelIdentity: "qwen3.5:4b",
+		PromptVersion: processing.PromptVersion, AdminEnabled: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	retryResponse := httptest.NewRecorder()
+	retryServer.Handler().ServeHTTP(retryResponse, formRequest(http.MethodPost, "/api/admin/ai/retry-all", ""))
+	if retryResponse.Code != http.StatusInternalServerError {
+		t.Fatalf("admin retry error status = %d, want 500", retryResponse.Code)
+	}
+}
+
+func TestPublicHostUsesFailClosedPresentationAndRejectsAdmin(t *testing.T) {
+	ctx := context.Background()
+	database := fixtureStore(t)
+	job, found, err := database.QueueAndClaimProcessingJob(ctx, processing.Operation("qwen3.5:4b"), time.Now())
+	if err != nil || !found {
+		t.Fatalf("claim public fixture job = %t/%v", found, err)
+	}
+	presentation := store.AIPresentation{
+		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
+		TitleEN: "Safe title", SummaryEN: "Safe summary.", PrivacyStatus: "safe",
+	}
+	if err := database.CompleteProcessingJob(ctx, job, presentation, "qwen3.5:4b", processing.PromptVersion, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	server := adminTestServer(t, database, "munichbrief.egekocabas.com")
+	handler := server.Handler()
+	path := "/en/incidents/" + formatID(job.IncidentID)
+
+	lan := httptest.NewRecorder()
+	lanRequest := englishRequest(http.MethodGet, path, nil)
+	lanRequest.Host = "munichbrief.home.egekocabas.com"
+	handler.ServeHTTP(lan, lanRequest)
+	if lan.Code != http.StatusOK || !strings.Contains(lan.Body.String(), "Original German text") {
+		t.Fatalf("LAN detail did not retain review mode: %d", lan.Code)
+	}
+
+	public := httptest.NewRecorder()
+	publicRequest := englishRequest(http.MethodGet, path, nil)
+	publicRequest.Host = "munichbrief.egekocabas.com"
+	handler.ServeHTTP(public, publicRequest)
+	if public.Code != http.StatusOK || !strings.Contains(public.Body.String(), presentation.SummaryEN) {
+		t.Fatalf("public detail = %d/%q", public.Code, public.Body.String())
+	}
+	for _, forbidden := range []string{"Original German text", "Review mode", job.BodyDE} {
+		if strings.Contains(public.Body.String(), forbidden) {
+			t.Errorf("public detail exposed %q", forbidden)
+		}
+	}
+
+	for _, path := range []string{"/admin", "/api/admin/ai/retry-all", "/private"} {
+		response := httptest.NewRecorder()
+		request := httptest.NewRequest(http.MethodGet, path, nil)
+		request.Host = "munichbrief.egekocabas.com"
+		handler.ServeHTTP(response, request)
+		if response.Code != http.StatusNotFound {
+			t.Errorf("public %s status = %d, want 404", path, response.Code)
+		}
+	}
+}
+
 func TestReadinessFailsOnlyWhenDatabaseIsUnavailable(t *testing.T) {
 	database := fixtureStore(t)
 	handler := testServer(t, database).Handler()
@@ -566,12 +734,46 @@ func fixtureStore(t *testing.T) *store.Store {
 	return database
 }
 
+type failingAdminStore struct {
+	*store.Store
+	statsError error
+	retryError error
+}
+
+func (s failingAdminStore) ProcessingQueueStats(ctx context.Context, operation string, now time.Time) (store.ProcessingStats, error) {
+	if s.statsError != nil {
+		return store.ProcessingStats{}, s.statsError
+	}
+	return s.Store.ProcessingQueueStats(ctx, operation, now)
+}
+
+func (s failingAdminStore) RetryProcessingJobs(ctx context.Context, operation string, incidentID *int64, now time.Time) (int64, error) {
+	if s.retryError != nil {
+		return 0, s.retryError
+	}
+	return s.Store.RetryProcessingJobs(ctx, operation, incidentID, now)
+}
+
 func testServer(t *testing.T, database *store.Store) *Server {
 	t.Helper()
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	server, err := New(database, logger, 20, "fixture")
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
+	}
+	return server
+}
+
+func adminTestServer(t *testing.T, database *store.Store, publicHost string) *Server {
+	t.Helper()
+	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
+	server, err := NewWithOptions(database, logger, Options{
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
+		ModelIdentity: "qwen3.5:4b", PromptVersion: processing.PromptVersion,
+		SecureCookies: true, AdminEnabled: true, PublicHost: publicHost,
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
 	}
 	return server
 }
@@ -583,5 +785,12 @@ func formatID(id int64) string {
 func englishRequest(method, target string, body io.Reader) *http.Request {
 	request := httptest.NewRequest(method, target, body)
 	request.Header.Set("Accept-Language", "en")
+	return request
+}
+
+func formRequest(method, target, body string) *http.Request {
+	request := httptest.NewRequest(method, target, strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Set("Origin", "https://example.com")
 	return request
 }

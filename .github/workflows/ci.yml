@@ -59,7 +59,16 @@ jobs:
       - name: Validate Helm chart
         run: |
           helm lint --strict charts/munichbrief
-          helm template munichbrief charts/munichbrief --namespace munichbrief > /tmp/munichbrief-rendered.yaml
+          helm lint --strict charts/munichbrief --values deploy/homelab-values.yaml
+          if helm template munichbrief charts/munichbrief --namespace munichbrief --set admin.enabled=true --set ingress.lan.enabled=true >/dev/null 2>&1; then
+            echo "admin rendered without a Basic Auth reference" >&2
+            exit 1
+          fi
+          if helm template munichbrief charts/munichbrief --namespace munichbrief --values deploy/homelab-values.yaml --set admin.basicAuthMiddleware=munichbrief-munichbrief-admin-auth@kubernetescrd >/dev/null 2>&1; then
+            echo "admin rendered with both Basic Auth reference forms" >&2
+            exit 1
+          fi
+          helm template munichbrief charts/munichbrief --namespace munichbrief --values deploy/homelab-values.yaml > /tmp/munichbrief-rendered.yaml
           ./scripts/check-chart.sh /tmp/munichbrief-rendered.yaml
 
   container:

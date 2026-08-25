@@ -19,6 +19,8 @@ required_patterns=(
   'path: /readyz'
   'kind: NetworkPolicy'
   'MUNICHBRIEF_PRESENTATION_MODE: "review"'
+  'MUNICHBRIEF_PUBLIC_HOST: "munichbrief.egekocabas.com"'
+  'MUNICHBRIEF_ADMIN_ENABLED: "true"'
   'MUNICHBRIEF_SECURE_COOKIES: "true"'
   'MUNICHBRIEF_AI_ENABLED: "true"'
   'MUNICHBRIEF_AI_IMMEDIATE: "false"'
@@ -26,6 +28,12 @@ required_patterns=(
   'MUNICHBRIEF_AI_TIMEOUT: "10m"'
   'cidr: 192.168.178.102/32'
   'port: 11434'
+  'name: munichbrief-lan-admin'
+  'traefik.ingress.kubernetes.io/router.priority: "100"'
+  'path: /admin'
+  'path: /api/admin'
+  'name: munichbrief-admin-auth'
+  'secret: munichbrief-admin-basic-auth'
 )
 
 for pattern in "${required_patterns[@]}"; do
@@ -34,6 +42,12 @@ for pattern in "${required_patterns[@]}"; do
     exit 1
   }
 done
+
+public_root_count="$(grep -A1 -F -- 'path: /' "$rendered_chart" | grep -c -F -- 'pathType: Exact')"
+[[ "$public_root_count" -ge 1 ]] || {
+  printf 'Rendered chart does not constrain the public root path to Exact\n' >&2
+  exit 1
+}
 
 if grep -F -- 'kind: PodDisruptionBudget' "$rendered_chart" >/dev/null; then
   printf 'Single-replica SQLite deployment must not render a PodDisruptionBudget\n' >&2

@@ -60,6 +60,15 @@ before deploying a migration. German and English pages use explicit `/de` and
 cookie used by the root and legacy-route redirects. Enable secure cookies
 behind TLS.
 
+The production reader keeps review mode on the LAN while
+`MUNICHBRIEF_PUBLIC_HOST` forces the Cloudflare hostname into public mode for
+every request. The optional `/admin` dashboard shows processing queue state and
+can requeue one incident or all current failed/review-required jobs. Those
+actions are asynchronous and still obey the worker's processing window. The
+application does not authenticate users itself: enable the dashboard only when
+Traefik protects `/admin*` and `/api/admin*`, and keep both prefixes absent from
+the public ingress allowlist.
+
 The configured pi8 endpoint currently uses unencrypted HTTP on a restricted
 LAN. Limit egress to `192.168.178.102/32:11434` and do not enable public mode
 until this hop is protected by HTTPS or an encrypted tunnel and the legal

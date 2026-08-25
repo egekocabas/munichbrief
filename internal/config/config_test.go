@@ -25,6 +25,8 @@ func TestLoadDefaults(t *testing.T) {
 	t.Setenv("MUNICHBRIEF_AI_WINDOW", "")
 	t.Setenv("MUNICHBRIEF_PRESENTATION_MODE", "")
 	t.Setenv("MUNICHBRIEF_SECURE_COOKIES", "")
+	t.Setenv("MUNICHBRIEF_ADMIN_ENABLED", "")
+	t.Setenv("MUNICHBRIEF_PUBLIC_HOST", "")
 
 	cfg, err := Load()
 	if err != nil {
@@ -57,6 +59,9 @@ func TestLoadDefaults(t *testing.T) {
 	}
 	if cfg.PresentationMode != "review" || cfg.SecureCookies {
 		t.Errorf("presentation defaults = %q/secure:%t", cfg.PresentationMode, cfg.SecureCookies)
+	}
+	if cfg.AdminEnabled || cfg.PublicHost != "" {
+		t.Errorf("admin defaults = enabled:%t public-host:%q", cfg.AdminEnabled, cfg.PublicHost)
 	}
 }
 
@@ -145,6 +150,37 @@ func TestLoadAcceptsExplicitReviewAndSecureCookies(t *testing.T) {
 	}
 	if cfg.PresentationMode != "review" || !cfg.SecureCookies {
 		t.Fatalf("presentation config = %q/secure:%t", cfg.PresentationMode, cfg.SecureCookies)
+	}
+}
+
+func TestLoadAcceptsAdminAndPublicHost(t *testing.T) {
+	t.Setenv("MUNICHBRIEF_ADMIN_ENABLED", "true")
+	t.Setenv("MUNICHBRIEF_PUBLIC_HOST", "MUNICHBRIEF.EGEKOCABAS.COM")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.AdminEnabled || cfg.PublicHost != "munichbrief.egekocabas.com" {
+		t.Fatalf("admin config = enabled:%t public-host:%q", cfg.AdminEnabled, cfg.PublicHost)
+	}
+}
+
+func TestLoadRejectsInvalidAdminConfiguration(t *testing.T) {
+	for _, test := range []struct {
+		name, enabled, host string
+	}{
+		{name: "enabled", enabled: "sometimes"},
+		{name: "scheme", host: "https://munichbrief.egekocabas.com"},
+		{name: "port", host: "munichbrief.egekocabas.com:443"},
+		{name: "path", host: "munichbrief.egekocabas.com/admin"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv("MUNICHBRIEF_ADMIN_ENABLED", test.enabled)
+			t.Setenv("MUNICHBRIEF_PUBLIC_HOST", test.host)
+			if _, err := Load(); err == nil {
+				t.Fatal("Load() error = nil, want invalid admin configuration error")
+			}
+		})
 	}
 }
 

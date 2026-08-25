@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"html/template"
 	"log/slog"
+	"mime"
 	"net/http"
 	"net/url"
 	"sort"
@@ -33,6 +34,9 @@ var detailTemplate string
 //go:embed templates/about.html
 var aboutTemplate string
 
+//go:embed templates/admin.html
+var adminTemplate string
+
 //go:embed static/app.css
 var stylesheet []byte
 
@@ -43,6 +47,8 @@ type incidentStore interface {
 	ListPresentationEntries(context.Context, int, int, string, store.PresentationScope) ([]store.IncidentRecord, int, error)
 	GetPresentationIncident(context.Context, int64, store.PresentationScope) (store.IncidentRecord, error)
 	Ready(context.Context) error
+	ProcessingQueueStats(context.Context, string, time.Time) (store.ProcessingStats, error)
+	RetryProcessingJobs(context.Context, string, *int64, time.Time) (int64, error)
 }
 
 type Options struct {
@@ -52,6 +58,8 @@ type Options struct {
 	ModelIdentity    string
 	PromptVersion    string
 	SecureCookies    bool
+	AdminEnabled     bool
+	PublicHost       string
 }
 
 type Server struct {
@@ -63,6 +71,7 @@ type Server struct {
 	timelineTemplate *template.Template
 	detailTemplate   *template.Template
 	aboutTemplate    *template.Template
+	adminTemplate    *template.Template
 }
 
 type basePage struct {
@@ -113,6 +122,13 @@ type detailPage struct {
 
 type aboutPage struct{ basePage }
 
+type adminPage struct {
+	Stats           store.ProcessingStats
+	OldestPending   string
+	Notice          string
+	NoticeIsWarning bool
+}
+
 func New(database incidentStore, logger *slog.Logger, pageSize int, sourceMode string) (*Server, error) {
 	return NewWithOptions(database, logger, Options{
 		PageSize: pageSize, SourceMode: sourceMode, PresentationMode: "review",
@@ -138,6 +154,13 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 	}
 	if strings.TrimSpace(options.ModelIdentity) == "" || strings.TrimSpace(options.PromptVersion) == "" {
 		return nil, errors.New("presentation model and prompt version are required")
+	}
+	options.PublicHost = strings.ToLower(strings.TrimSpace(options.PublicHost))
+	if options.PublicHost != "" {
+		parsed, err := url.Parse("//" + options.PublicHost)
+		if err != nil || parsed.Hostname() != options.PublicHost || parsed.Port() != "" || strings.ContainsAny(options.PublicHost, "/@") {
+			return nil, errors.New("public host must be a hostname without scheme, credentials, path, or port")
+		}
 	}
 	location, err := time.LoadLocation("Europe/Berlin")
 	if err != nil {
@@ -166,7 +189,11 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 	if err != nil {
 		return nil, fmt.Errorf("parse about template: %w", err)
 	}
-	return &Server{store: database, logger: logger, options: options, location: location, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about}, nil
+	admin, err := template.New("admin").Parse(adminTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("parse admin template: %w", err)
+	}
+	return &Server{store: database, logger: logger, options: options, location: location, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, adminTemplate: admin}, nil
 }
 
 func (s *Server) Handler() http.Handler {
@@ -183,13 +210,18 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /readyz", s.ready)
 	mux.HandleFunc("GET /static/app.css", s.css)
 	mux.HandleFunc("GET /static/htmx.min.js", s.javascript)
-	return s.requestLogger(mux)
+	if s.options.AdminEnabled {
+		mux.HandleFunc("GET /admin", s.admin)
+		mux.HandleFunc("POST /api/admin/ai/retry", s.retryIncident)
+		mux.HandleFunc("POST /api/admin/ai/retry-all", s.retryAll)
+	}
+	return s.requestLogger(s.accessBoundary(mux))
 }
 
-func (s *Server) scope() store.PresentationScope {
+func (s *Server) scope(request *http.Request) store.PresentationScope {
 	return store.PresentationScope{
 		Operation: processing.Operation(s.options.ModelIdentity), ModelIdentity: s.options.ModelIdentity,
-		PromptVersion: s.options.PromptVersion, PublicOnly: s.options.PresentationMode == "public",
+		PromptVersion: s.options.PromptVersion, PublicOnly: s.options.PresentationMode == "public" || s.isPublicRequest(request),
 	}
 }
 
@@ -222,7 +254,7 @@ func (s *Server) base(request *http.Request, language string) basePage {
 	if s.options.SourceMode == "live" {
 		modeLabel = s.localization.Text(language, "LiveSource")
 	}
-	if s.options.PresentationMode == "review" {
+	if s.options.PresentationMode == "review" && !s.isPublicRequest(request) {
 		modeLabel += " · " + s.localization.Text(language, "ReviewMode")
 	}
 	alternate := "en"
@@ -234,7 +266,7 @@ func (s *Server) base(request *http.Request, language string) basePage {
 	return basePage{
 		Lang: language, HomeURL: "/" + language, AboutURL: "/" + language + "/about",
 		AlternateLanguage: alternate, AlternateLanguageURL: alternateLanguageURL(request.URL, language, alternate), AlternateLanguageLabel: alternateLabel,
-		Fixture: s.options.SourceMode == "fixture", Review: s.options.PresentationMode == "review", ModeLabel: modeLabel,
+		Fixture: s.options.SourceMode == "fixture", Review: s.options.PresentationMode == "review" && !s.isPublicRequest(request), ModeLabel: modeLabel,
 	}
 }
 
@@ -261,7 +293,7 @@ func (s *Server) timeline(response http.ResponseWriter, request *http.Request) {
 		http.Error(response, "invalid page", http.StatusBadRequest)
 		return
 	}
-	incidents, total, err := s.store.ListPresentationEntries(request.Context(), s.options.PageSize, (page-1)*s.options.PageSize, s.options.SourceMode, s.scope())
+	incidents, total, err := s.store.ListPresentationEntries(request.Context(), s.options.PageSize, (page-1)*s.options.PageSize, s.options.SourceMode, s.scope(request))
 	if err != nil {
 		s.internalError(response, request, "list incidents", err)
 		return
@@ -294,7 +326,7 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 		http.NotFound(response, request)
 		return
 	}
-	incident, err := s.store.GetPresentationIncident(request.Context(), id, s.scope())
+	incident, err := s.store.GetPresentationIncident(request.Context(), id, s.scope(request))
 	if errors.Is(err, store.ErrNotFound) {
 		http.NotFound(response, request)
 		return
@@ -328,6 +360,137 @@ func (s *Server) about(response http.ResponseWriter, request *http.Request) {
 	if err := s.aboutTemplate.ExecuteTemplate(response, "layout", aboutPage{basePage: base}); err != nil {
 		s.logger.ErrorContext(request.Context(), "render about page", "error", err)
 	}
+}
+
+func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
+	stats, err := s.store.ProcessingQueueStats(request.Context(), processing.Operation(s.options.ModelIdentity), time.Now())
+	if err != nil {
+		s.internalError(response, request, "read admin processing statistics", err)
+		return
+	}
+	data := adminPage{Stats: stats}
+	if stats.OldestPendingAge > 0 {
+		data.OldestPending = stats.OldestPendingAge.Round(time.Second).String()
+	} else {
+		data.OldestPending = "None"
+	}
+	if raw := request.URL.Query().Get("retried"); raw != "" {
+		count, err := strconv.ParseInt(raw, 10, 64)
+		if err == nil && count >= 0 {
+			if count == 0 {
+				data.Notice = "No current failed or review-required AI jobs matched the request."
+				data.NoticeIsWarning = true
+			} else {
+				data.Notice = fmt.Sprintf("Queued %d AI processing job(s) for retry.", count)
+			}
+		}
+	}
+	response.Header().Set("Content-Type", "text/html; charset=utf-8")
+	response.Header().Set("Cache-Control", "private, no-store")
+	response.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive")
+	if err := s.adminTemplate.ExecuteTemplate(response, "admin", data); err != nil {
+		s.logger.ErrorContext(request.Context(), "render admin page", "error", err)
+	}
+}
+
+func (s *Server) retryIncident(response http.ResponseWriter, request *http.Request) {
+	if !validAdminMutation(request) {
+		http.Error(response, "cross-site request blocked", http.StatusForbidden)
+		return
+	}
+	if !isFormPost(request) {
+		http.Error(response, "form content type required", http.StatusUnsupportedMediaType)
+		return
+	}
+	request.Body = http.MaxBytesReader(response, request.Body, 4096)
+	if err := request.ParseForm(); err != nil {
+		http.Error(response, "invalid form", http.StatusBadRequest)
+		return
+	}
+	incidentID, err := strconv.ParseInt(request.PostForm.Get("incident_id"), 10, 64)
+	if err != nil || incidentID < 1 {
+		http.Error(response, "incident_id must be a positive integer", http.StatusBadRequest)
+		return
+	}
+	count, err := s.store.RetryProcessingJobs(request.Context(), processing.Operation(s.options.ModelIdentity), &incidentID, time.Now())
+	if err != nil {
+		s.internalError(response, request, "retry incident AI processing", err)
+		return
+	}
+	http.Redirect(response, request, fmt.Sprintf("/admin?retried=%d", count), http.StatusSeeOther)
+}
+
+func (s *Server) retryAll(response http.ResponseWriter, request *http.Request) {
+	if !validAdminMutation(request) {
+		http.Error(response, "cross-site request blocked", http.StatusForbidden)
+		return
+	}
+	if !isFormPost(request) {
+		http.Error(response, "form content type required", http.StatusUnsupportedMediaType)
+		return
+	}
+	count, err := s.store.RetryProcessingJobs(request.Context(), processing.Operation(s.options.ModelIdentity), nil, time.Now())
+	if err != nil {
+		s.internalError(response, request, "retry all AI processing", err)
+		return
+	}
+	http.Redirect(response, request, fmt.Sprintf("/admin?retried=%d", count), http.StatusSeeOther)
+}
+
+func validAdminMutation(request *http.Request) bool {
+	if request.Header.Get("Sec-Fetch-Site") == "cross-site" {
+		return false
+	}
+	origin := request.Header.Get("Origin")
+	if origin == "" {
+		return true
+	}
+	parsed, err := url.Parse(origin)
+	return err == nil && parsed.Scheme != "" && parsed.Hostname() != "" && strings.EqualFold(parsed.Hostname(), requestHostname(request))
+}
+
+func isFormPost(request *http.Request) bool {
+	mediaType, _, err := mime.ParseMediaType(request.Header.Get("Content-Type"))
+	return err == nil && mediaType == "application/x-www-form-urlencoded"
+}
+
+func (s *Server) accessBoundary(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		adminPath := request.URL.Path == "/admin" || strings.HasPrefix(request.URL.Path, "/admin/") || request.URL.Path == "/api/admin" || strings.HasPrefix(request.URL.Path, "/api/admin/")
+		if adminPath && (!s.options.AdminEnabled || s.isPublicRequest(request)) {
+			http.NotFound(response, request)
+			return
+		}
+		if s.isPublicRequest(request) && !isPublicPath(request.URL.Path) {
+			http.NotFound(response, request)
+			return
+		}
+		next.ServeHTTP(response, request)
+	})
+}
+
+func (s *Server) isPublicRequest(request *http.Request) bool {
+	return s.options.PublicHost != "" && strings.EqualFold(requestHostname(request), s.options.PublicHost)
+}
+
+func requestHostname(request *http.Request) string {
+	host := request.Host
+	if parsed, err := url.Parse("//" + host); err == nil && parsed.Hostname() != "" {
+		return strings.ToLower(parsed.Hostname())
+	}
+	return strings.ToLower(host)
+}
+
+func isPublicPath(path string) bool {
+	if path == "/" || path == "/about" || path == "/healthz" || path == "/readyz" {
+		return true
+	}
+	for _, prefix := range []string{"/de", "/en", "/incidents", "/static"} {
+		if path == prefix || strings.HasPrefix(path, prefix+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Server) setLanguagePreference(response http.ResponseWriter, language string) {

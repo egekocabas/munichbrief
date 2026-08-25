@@ -53,6 +53,8 @@ type Config struct {
 	AIWindowEnd      time.Duration
 	PresentationMode string
 	SecureCookies    bool
+	AdminEnabled     bool
+	PublicHost       string
 }
 
 // Load reads configuration from the environment and applies local-safe defaults.
@@ -75,6 +77,7 @@ func Load() (Config, error) {
 		AIContextSize:  defaultAIContext,
 		AIImmediate:    defaultAIImmediate,
 		SecureCookies:  defaultSecureCookie,
+		PublicHost:     strings.ToLower(strings.TrimSpace(os.Getenv("MUNICHBRIEF_PUBLIC_HOST"))),
 	}
 	defaultPresentationMode := "review"
 	if cfg.SourceMode == "live" {
@@ -102,6 +105,13 @@ func Load() (Config, error) {
 		}
 		cfg.SecureCookies = value
 	}
+	if raw := os.Getenv("MUNICHBRIEF_ADMIN_ENABLED"); raw != "" {
+		value, err := strconv.ParseBool(raw)
+		if err != nil {
+			return Config{}, fmt.Errorf("MUNICHBRIEF_ADMIN_ENABLED must be true or false")
+		}
+		cfg.AdminEnabled = value
+	}
 
 	if raw := os.Getenv("MUNICHBRIEF_PAGE_SIZE"); raw != "" {
 		pageSize, err := strconv.Atoi(raw)
@@ -116,6 +126,12 @@ func Load() (Config, error) {
 	}
 	if cfg.PresentationMode != "review" && cfg.PresentationMode != "public" {
 		return Config{}, fmt.Errorf("unsupported MUNICHBRIEF_PRESENTATION_MODE %q: use review or public", cfg.PresentationMode)
+	}
+	if cfg.PublicHost != "" {
+		publicHostURL, err := url.Parse("//" + cfg.PublicHost)
+		if err != nil || publicHostURL.Hostname() != cfg.PublicHost || publicHostURL.Port() != "" || strings.ContainsAny(cfg.PublicHost, "/@") {
+			return Config{}, fmt.Errorf("MUNICHBRIEF_PUBLIC_HOST must be a hostname without scheme, credentials, path, or port")
+		}
 	}
 
 	var err error

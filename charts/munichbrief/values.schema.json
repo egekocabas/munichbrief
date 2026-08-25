@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
-  "required": ["replicaCount", "image", "application", "persistence"],
+  "required": ["replicaCount", "image", "application", "ingress", "admin", "persistence"],
   "properties": {
     "replicaCount": {
       "type": "integer",
@@ -21,8 +21,9 @@
     },
     "application": {
       "type": "object",
-      "required": ["sourceMode", "presentationMode", "secureCookies", "pageSize", "feedURL", "userAgent", "httpTimeout", "articleRefreshInterval", "aiEnabled", "aiImmediate", "aiWindow", "ollamaBaseURL", "ollamaModel", "aiInterval", "aiTimeout", "aiContextSize"],
+      "required": ["publicHost", "sourceMode", "presentationMode", "secureCookies", "pageSize", "feedURL", "userAgent", "httpTimeout", "articleRefreshInterval", "aiEnabled", "aiImmediate", "aiWindow", "ollamaBaseURL", "ollamaModel", "aiInterval", "aiTimeout", "aiContextSize"],
       "properties": {
+        "publicHost": {"type": "string", "pattern": "^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$"},
         "sourceMode": {"enum": ["fixture", "live"]},
         "presentationMode": {"enum": ["review", "public"]},
         "secureCookies": {"type": "boolean"},
@@ -43,6 +44,31 @@
       },
       "additionalProperties": false
     },
+    "ingress": {
+      "type": "object",
+      "required": ["lan", "public"],
+      "properties": {
+        "lan": {"$ref": "#/$defs/ingress"},
+        "public": {"$ref": "#/$defs/ingress"}
+      },
+      "additionalProperties": false
+    },
+    "admin": {
+      "type": "object",
+      "required": ["enabled", "basicAuthMiddleware", "basicAuthSecret"],
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "basicAuthMiddleware": {
+          "type": "string",
+          "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?-[a-z0-9]([-a-z0-9]*[a-z0-9])?@kubernetescrd$"
+        },
+        "basicAuthSecret": {
+          "type": "string",
+          "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+        }
+      },
+      "additionalProperties": false
+    },
     "persistence": {
       "type": "object",
       "required": ["enabled", "accessMode", "size"],
@@ -53,6 +79,20 @@
         "size": {"type": "string", "minLength": 2},
         "annotations": {"type": "object"}
       }
+    }
+  },
+  "$defs": {
+    "ingress": {
+      "type": "object",
+      "required": ["enabled", "className", "annotations", "host", "tls"],
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "className": {"type": "string", "minLength": 1},
+        "annotations": {"type": "object"},
+        "host": {"type": "string", "pattern": "^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$"},
+        "tls": {"type": "array"}
+      },
+      "additionalProperties": false
     }
   }
 }

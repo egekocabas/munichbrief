@@ -1,20 +1,62 @@
-{{- if .Values.ingress.enabled }}
+{{- if and .Values.admin.enabled (not .Values.ingress.lan.enabled) }}
+{{- fail "admin.enabled requires ingress.lan.enabled" }}
+{{- end }}
+{{- if and .Values.admin.enabled .Values.admin.basicAuthMiddleware .Values.admin.basicAuthSecret }}
+{{- fail "set only one of admin.basicAuthMiddleware or admin.basicAuthSecret" }}
+{{- end }}
+{{- if and .Values.admin.enabled (not (or .Values.admin.basicAuthMiddleware .Values.admin.basicAuthSecret)) }}
+{{- fail "admin.basicAuthMiddleware or admin.basicAuthSecret is required when admin is enabled" }}
+{{- end }}
+{{- if .Values.ingress.lan.enabled }}
+{{- if .Values.admin.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "munichbrief.fullname" . }}
+  name: {{ include "munichbrief.fullname" . }}-lan-admin
   labels:
     {{- include "munichbrief.labels" . | nindent 4 }}
-  {{- with .Values.ingress.annotations }}
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: {{ include "munichbrief.adminMiddleware" . | quote }}
+    traefik.ingress.kubernetes.io/router.priority: "100"
+    {{- with .Values.ingress.lan.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.lan.className }}
+  rules:
+    - host: {{ .Values.ingress.lan.host | quote }}
+      http:
+        paths:
+          - path: /admin
+            pathType: Prefix
+            backend: &lanBackend
+              service:
+                name: {{ include "munichbrief.fullname" . }}
+                port:
+                  name: http
+          - path: /api/admin
+            pathType: Prefix
+            backend: *lanBackend
+  {{- with .Values.ingress.lan.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+---
+{{- end }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "munichbrief.fullname" . }}-lan
+  labels:
+    {{- include "munichbrief.labels" . | nindent 4 }}
+  {{- with .Values.ingress.lan.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  {{- with .Values.ingress.className }}
-  ingressClassName: {{ . }}
-  {{- end }}
+  ingressClassName: {{ .Values.ingress.lan.className }}
   rules:
-    - host: {{ .Values.ingress.host | quote }}
+    - host: {{ .Values.ingress.lan.host | quote }}
       http:
         paths:
           - path: /
@@ -24,7 +66,60 @@ spec:
                 name: {{ include "munichbrief.fullname" . }}
                 port:
                   name: http
-  {{- with .Values.ingress.tls }}
+  {{- with .Values.ingress.lan.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- if and .Values.ingress.lan.enabled .Values.ingress.public.enabled }}
+---
+{{- end }}
+{{- if .Values.ingress.public.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "munichbrief.fullname" . }}-public
+  labels:
+    {{- include "munichbrief.labels" . | nindent 4 }}
+  {{- with .Values.ingress.public.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.public.className }}
+  rules:
+    - host: {{ .Values.ingress.public.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Exact
+            backend: &publicBackend
+              service:
+                name: {{ include "munichbrief.fullname" . }}
+                port:
+                  name: http
+          - path: /about
+            pathType: Exact
+            backend: *publicBackend
+          - path: /de
+            pathType: Prefix
+            backend: *publicBackend
+          - path: /en
+            pathType: Prefix
+            backend: *publicBackend
+          - path: /incidents
+            pathType: Prefix
+            backend: *publicBackend
+          - path: /static
+            pathType: Prefix
+            backend: *publicBackend
+          - path: /healthz
+            pathType: Exact
+            backend: *publicBackend
+          - path: /readyz
+            pathType: Exact
+            backend: *publicBackend
+  {{- with .Values.ingress.public.tls }}
   tls:
     {{- toYaml . | nindent 4 }}
   {{- end }}

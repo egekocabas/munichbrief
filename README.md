@@ -67,6 +67,8 @@ Useful configuration:
 | `MUNICHBRIEF_SOURCE_MODE` | `fixture` | Source provider: `fixture` or explicit `live` mode |
 | `MUNICHBRIEF_PRESENTATION_MODE` | `review` for fixtures, `public` for live | `review` exposes original QA text and states; `public` serves only current privacy-safe AI output |
 | `MUNICHBRIEF_SECURE_COOKIES` | `false` | Set the language preference cookie's `Secure` attribute; enabled by the TLS Helm deployment |
+| `MUNICHBRIEF_ADMIN_ENABLED` | `false` | Register the LAN-only `/admin` page and `/api/admin/*` actions; production must protect both prefixes at the ingress |
+| `MUNICHBRIEF_PUBLIC_HOST` | empty | Host that always receives fail-closed public presentation and path restrictions |
 | `MUNICHBRIEF_PAGE_SIZE` | `20` | Timeline incidents per page, from 1 to 100 |
 | `MUNICHBRIEF_FEED_URL` | Official Munich RSS URL | Live discovery feed; must be HTTPS |
 | `MUNICHBRIEF_USER_AGENT` | Repository-identifying development agent | Identifies outbound source requests; must retain the repository URL |

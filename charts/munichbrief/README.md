@@ -23,3 +23,11 @@ pi8 egress to `192.168.178.102/32:11434`. It also selects `review` presentation
 mode, which exposes original source text for QA and must remain access-restricted.
 Use `public` mode only after legal review and encrypted Ollama transport; that
 mode serves only current privacy-safe AI output and never renders originals.
+
+Both ingresses are disabled by default. `ingress.lan` can expose the complete
+reader, while `ingress.public` renders only an explicit reader path allowlist.
+Set `application.publicHost` to the public hostname so the application also
+enforces public presentation scope. To enable the operations dashboard, set
+`admin.enabled=true` together with the LAN ingress and exactly one of
+`admin.basicAuthSecret` or `admin.basicAuthMiddleware`. The chart never creates
+credentials; a Secret-backed option creates only the Traefik Middleware.
