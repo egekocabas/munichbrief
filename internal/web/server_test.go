@@ -395,7 +395,7 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	if page.Code != http.StatusOK || page.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("admin page = %d/%q", page.Code, page.Header().Get("Cache-Control"))
 	}
-	for _, expected := range []string{"AI processing", "Needs review", ">2<", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "Confirm AI request", "/static/admin.js"} {
+	for _, expected := range []string{"AI processing", "Preferred model", "qwen3.5:4b", "This model exists in the Ollama model list", "name=\"model\"", "Needs review", ">2<", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/preferred-model", "Confirm AI request", "/static/admin.js"} {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("admin page does not contain %q", expected)
 		}
@@ -408,7 +408,7 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 		{name: "origin", fetchSite: "same-site", origin: "https://attacker.example"},
 		{name: "opaque origin without same-origin metadata", fetchSite: "same-site", origin: "null"},
 	} {
-		crossSite := formRequest(http.MethodPost, "/api/admin/ai/process-now", "confirmed=true&incident_id="+formatID(failedIDs[0]))
+		crossSite := formRequest(http.MethodPost, "/api/admin/ai/process-now", "confirmed=true&model=qwen3.5%3A4b&incident_id="+formatID(failedIDs[0]))
 		crossSite.Header.Set("Sec-Fetch-Site", attack.fetchSite)
 		crossSite.Header.Set("Origin", attack.origin)
 		crossSiteResponse := httptest.NewRecorder()
@@ -418,7 +418,7 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 		}
 	}
 
-	opaqueSameOrigin := formRequest(http.MethodPost, "/api/admin/ai/process-now", "confirmed=true&incident_id="+formatID(failedIDs[0]))
+	opaqueSameOrigin := formRequest(http.MethodPost, "/api/admin/ai/process-now", "confirmed=true&model=qwen3.5%3A4b&incident_id="+formatID(failedIDs[0]))
 	opaqueSameOrigin.Header.Set("Sec-Fetch-Site", "same-origin")
 	opaqueSameOrigin.Header.Set("Origin", "null")
 	opaqueSameOriginResponse := httptest.NewRecorder()
@@ -428,7 +428,7 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	}
 
 	invalid := httptest.NewRecorder()
-	handler.ServeHTTP(invalid, formRequest(http.MethodPost, "/api/admin/ai/process-now", "confirmed=true&incident_id=zero"))
+	handler.ServeHTTP(invalid, formRequest(http.MethodPost, "/api/admin/ai/process-now", "confirmed=true&model=qwen3.5%3A4b&incident_id=zero"))
 	if invalid.Code != http.StatusBadRequest {
 		t.Fatalf("invalid process status = %d, want 400", invalid.Code)
 	}
@@ -439,25 +439,35 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 		t.Fatalf("unconfirmed processing status = %d, want 400", unconfirmed.Code)
 	}
 	processAll := httptest.NewRecorder()
-	handler.ServeHTTP(processAll, formRequest(http.MethodPost, "/api/admin/ai/process-all-now", "confirmed=true&unprocessed_page=1&all_page=1"))
+	handler.ServeHTTP(processAll, formRequest(http.MethodPost, "/api/admin/ai/process-all-now", "confirmed=true&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
 	if processAll.Code != http.StatusSeeOther || !strings.Contains(processAll.Header().Get("Location"), "requested=28") || !strings.Contains(processAll.Header().Get("Location"), "all_page=1") || !strings.Contains(processAll.Header().Get("Location"), "unprocessed_page=1") {
 		t.Fatalf("process all = %d/%q", processAll.Code, processAll.Header().Get("Location"))
 	}
 	notice := httptest.NewRecorder()
 	handler.ServeHTTP(notice, httptest.NewRequest(http.MethodGet, processAll.Header().Get("Location"), nil))
-	if !strings.Contains(notice.Body.String(), "Requested immediate processing for 28 incident(s)") || !strings.Contains(notice.Body.String(), "AI work continues asynchronously") {
+	if !strings.Contains(notice.Body.String(), "Requested immediate processing with qwen3.5:4b for 28 incident(s)") || !strings.Contains(notice.Body.String(), "AI work continues asynchronously") {
 		t.Fatalf("processing redirect notice = %q", notice.Body.String())
 	}
 	stats, err := database.ProcessingQueueStats(ctx, operation, time.Now())
 	if err != nil || stats.NeedsReview != 0 || stats.Queued != 28 || initialStats.NeedsReview != 2 {
 		t.Fatalf("processed stats = %#v initial=%#v err=%v", stats, initialStats, err)
 	}
+
+	preference := httptest.NewRecorder()
+	handler.ServeHTTP(preference, formRequest(http.MethodPost, "/api/admin/ai/preferred-model", "model=granite4%3A3b&unprocessed_page=1&all_page=1"))
+	if preference.Code != http.StatusSeeOther || !strings.Contains(preference.Header().Get("Location"), "preferred_model=granite4%3A3b") {
+		t.Fatalf("preferred model update = %d/%q", preference.Code, preference.Header().Get("Location"))
+	}
+	preferred, err := database.PreferredModel(ctx)
+	if err != nil || preferred != "granite4:3b" {
+		t.Fatalf("stored preferred model = %q/%v", preferred, err)
+	}
 }
 
 func TestAdminProcessingReturnsUnavailableWhenAIIsDisabled(t *testing.T) {
 	database := fixtureStore(t)
 	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
-		PageSize: 20, SourceMode: "fixture", PresentationMode: "review", ModelIdentity: "qwen3.5:4b",
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
 		PromptVersion: processing.PromptVersion, AdminEnabled: true,
 	})
 	if err != nil {
@@ -467,6 +477,32 @@ func TestAdminProcessingReturnsUnavailableWhenAIIsDisabled(t *testing.T) {
 	server.Handler().ServeHTTP(response, formRequest(http.MethodPost, "/api/admin/ai/process-all-now", "confirmed=true"))
 	if response.Code != http.StatusServiceUnavailable {
 		t.Fatalf("AI-disabled processing status = %d, want 503", response.Code)
+	}
+}
+
+func TestAdminDistinguishesUnavailableAndMissingPreferredModels(t *testing.T) {
+	for _, test := range []struct {
+		name, expected string
+		status         processing.ModelStatus
+	}{
+		{name: "unavailable", expected: "Ollama model list is unavailable", status: processing.ModelStatus{Preferred: "qwen3.5:4b", CatalogError: "connection refused"}},
+		{name: "missing", expected: "does not exist in the Ollama model list", status: processing.ModelStatus{Preferred: "qwen3.5:4b", Models: []string{"granite4:3b"}, CatalogAvailable: true}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			database := fixtureStore(t)
+			server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
+				PageSize: 20, SourceMode: "fixture", PresentationMode: "review", PromptVersion: processing.PromptVersion,
+				AdminEnabled: true, Processor: fakeProcessingRequester{database: database, status: &test.status},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			response := httptest.NewRecorder()
+			server.Handler().ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/admin", nil))
+			if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), test.expected) {
+				t.Fatalf("admin model status = %d/%q", response.Code, response.Body.String())
+			}
+		})
 	}
 }
 
@@ -487,7 +523,7 @@ func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	server, err := NewWithOptions(database, logger, Options{
 		PageSize: 2, SourceMode: "fixture", PresentationMode: "public",
-		ModelIdentity: "qwen3.5:4b", PromptVersion: processing.PromptVersion, AdminEnabled: true,
+		PromptVersion: processing.PromptVersion, AdminEnabled: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -557,7 +593,7 @@ func TestAdminReportsStoreErrors(t *testing.T) {
 	database := fixtureStore(t)
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	statsServer, err := NewWithOptions(failingAdminStore{Store: database, statsError: errors.New("stats unavailable")}, logger, Options{
-		PageSize: 20, SourceMode: "fixture", PresentationMode: "review", ModelIdentity: "qwen3.5:4b",
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
 		PromptVersion: processing.PromptVersion, AdminEnabled: true,
 	})
 	if err != nil {
@@ -570,14 +606,14 @@ func TestAdminReportsStoreErrors(t *testing.T) {
 	}
 
 	retryServer, err := NewWithOptions(database, logger, Options{
-		PageSize: 20, SourceMode: "fixture", PresentationMode: "review", ModelIdentity: "qwen3.5:4b",
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
 		PromptVersion: processing.PromptVersion, AdminEnabled: true, Processor: fakeProcessingRequester{err: errors.New("processing unavailable")},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	retryResponse := httptest.NewRecorder()
-	retryServer.Handler().ServeHTTP(retryResponse, formRequest(http.MethodPost, "/api/admin/ai/process-all-now", "confirmed=true"))
+	retryServer.Handler().ServeHTTP(retryResponse, formRequest(http.MethodPost, "/api/admin/ai/process-all-now", "confirmed=true&model=qwen3.5%3A4b"))
 	if retryResponse.Code != http.StatusInternalServerError {
 		t.Fatalf("admin process error status = %d, want 500", retryResponse.Code)
 	}
@@ -739,7 +775,7 @@ func TestLocalizedRoutesAndLanguagePreference(t *testing.T) {
 	}
 
 	secureServer, err := NewWithOptions(fixtureStore(t), slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), Options{
-		PageSize: 20, SourceMode: "fixture", PresentationMode: "review", ModelIdentity: "qwen3.5:4b",
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
 		PromptVersion: processing.PromptVersion, SecureCookies: true,
 	})
 	if err != nil {
@@ -818,7 +854,7 @@ func TestPublicModeHidesUnprocessedStaleAndOriginalContent(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	publicServer, err := NewWithOptions(database, logger, Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "public",
-		ModelIdentity: "qwen3.5:4b", PromptVersion: processing.PromptVersion,
+		PromptVersion: processing.PromptVersion,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -881,7 +917,7 @@ func TestPublicModeRejectsStalePromptDerivations(t *testing.T) {
 		t.Fatal(err)
 	}
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
-	server, err := NewWithOptions(database, logger, Options{PageSize: 20, SourceMode: "fixture", PresentationMode: "public", ModelIdentity: "qwen3.5:4b", PromptVersion: processing.PromptVersion})
+	server, err := NewWithOptions(database, logger, Options{PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PromptVersion: processing.PromptVersion})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -915,27 +951,49 @@ type failingAdminStore struct {
 	statsError error
 }
 
-func (s failingAdminStore) ProcessingQueueStats(ctx context.Context, operation string, now time.Time) (store.ProcessingStats, error) {
+func (s failingAdminStore) ProcessingQueueStatsForPrompt(ctx context.Context, promptVersion string, now time.Time) (store.ProcessingStats, error) {
 	if s.statsError != nil {
 		return store.ProcessingStats{}, s.statsError
 	}
-	return s.Store.ProcessingQueueStats(ctx, operation, now)
+	return s.Store.ProcessingQueueStatsForPrompt(ctx, promptVersion, now)
 }
 
 type fakeProcessingRequester struct {
 	database *store.Store
 	err      error
+	status   *processing.ModelStatus
 }
 
-func (p fakeProcessingRequester) RequestNow(ctx context.Context, sourceMode string, incidentID *int64) (store.ProcessingRequestResult, error) {
+func (p fakeProcessingRequester) RequestNow(ctx context.Context, sourceMode, model string, incidentID *int64) (store.ProcessingRequestResult, error) {
 	if p.err != nil {
 		return store.ProcessingRequestResult{}, p.err
 	}
 	return p.database.RequestProcessingJobs(ctx, sourceMode, store.PresentationScope{
-		Operation:     processing.Operation("qwen3.5:4b"),
-		ModelIdentity: "qwen3.5:4b",
+		Operation:     processing.Operation(model),
+		ModelIdentity: model,
 		PromptVersion: processing.PromptVersion,
 	}, incidentID, time.Now())
+}
+
+func (p fakeProcessingRequester) ModelStatus(ctx context.Context) (processing.ModelStatus, error) {
+	if p.status != nil {
+		return *p.status, nil
+	}
+	preferred, err := p.database.InitializePreferredModel(ctx, "qwen3.5:4b", time.Now())
+	if err != nil {
+		return processing.ModelStatus{}, err
+	}
+	return processing.ModelStatus{
+		Preferred: preferred, Models: []string{"granite4:3b", "qwen3.5:4b"},
+		CatalogAvailable: true, PreferredAvailable: preferred == "qwen3.5:4b" || preferred == "granite4:3b",
+	}, nil
+}
+
+func (p fakeProcessingRequester) SetPreferredModel(ctx context.Context, model string) error {
+	if model != "qwen3.5:4b" && model != "granite4:3b" {
+		return processing.ErrModelUnavailable
+	}
+	return p.database.SetPreferredModel(ctx, model, processing.OperationPrefix(), processing.Operation(model), time.Now())
 }
 
 func testServer(t *testing.T, database *store.Store) *Server {
@@ -953,7 +1011,7 @@ func adminTestServer(t *testing.T, database *store.Store, publicHosts []string) 
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	server, err := NewWithOptions(database, logger, Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
-		ModelIdentity: "qwen3.5:4b", PromptVersion: processing.PromptVersion,
+		PromptVersion: processing.PromptVersion,
 		SecureCookies: true, AdminEnabled: true, PublicHosts: publicHosts,
 		Processor: fakeProcessingRequester{database: database},
 	})

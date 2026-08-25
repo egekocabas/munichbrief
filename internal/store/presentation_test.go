@@ -41,6 +41,24 @@ func TestListAdminIncidentsScopesAndFiltersPresentations(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	alternateScope := PresentationScope{
+		Operation: "incident-presentation/incident-presentation-v2/granite4:3b", ModelIdentity: "granite4:3b", PromptVersion: prompt,
+	}
+	if result, err := database.RequestProcessingJobs(ctx, "fixture", alternateScope, &currentJob.IncidentID, now.Add(2*time.Minute)); err != nil || result.Requested != 1 {
+		t.Fatalf("alternate model request = %#v/%v", result, err)
+	}
+	alternateJob, found, err := database.ClaimManualProcessingJob(ctx, alternateScope.Operation, now.Add(2*time.Minute))
+	if err != nil || !found {
+		t.Fatalf("claim alternate job = %t/%v", found, err)
+	}
+	alternate := AIPresentation{
+		TitleDE: "Neuer Granite-Titel", SummaryDE: "Neueste deutsche Zusammenfassung.",
+		TitleEN: "New Granite title", SummaryEN: "Newest English summary.", PrivacyStatus: "safe",
+	}
+	if err := database.CompleteProcessingJob(ctx, alternateJob, alternate, alternateScope.ModelIdentity, prompt, now.Add(3*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+
 	all, allTotal, err := database.ListAdminIncidents(ctx, 50, 0, "fixture", scope, AdminIncidentsAll)
 	if err != nil {
 		t.Fatal(err)
@@ -52,7 +70,7 @@ func TestListAdminIncidentsScopesAndFiltersPresentations(t *testing.T) {
 	for _, record := range all {
 		switch record.ID {
 		case currentJob.IncidentID:
-			currentFound = record.HasAI && record.AISummaryEN == current.SummaryEN
+			currentFound = record.HasAI && record.AISummaryEN == alternate.SummaryEN && record.AIModel == alternateScope.ModelIdentity
 		case staleJob.IncidentID:
 			staleFound = !record.HasAI && record.AISummaryEN == ""
 		}

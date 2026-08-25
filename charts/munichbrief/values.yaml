@@ -25,6 +25,7 @@ application:
   aiImmediate: false
   aiWindow: "03:00-08:00"
   ollamaBaseURL: http://192.168.178.102:11434
+  # Seeds the database once; protected-admin changes persist afterward.
   ollamaModel: qwen3.5:4b
   aiInterval: 5s
   aiTimeout: 10m

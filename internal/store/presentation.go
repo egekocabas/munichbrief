@@ -22,36 +22,39 @@ const (
 	AdminIncidentsUnprocessed AdminIncidentFilter = "unprocessed"
 )
 
+const latestPresentationModel = `(SELECT x.model_identity
+	FROM derivations x
+	WHERE x.incident_id = i.id AND x.source_hash = i.content_hash AND x.prompt_version = @prompt
+	GROUP BY x.model_identity
+	HAVING COUNT(DISTINCT CASE WHEN x.kind IN ('title_de', 'summary_de', 'title_en', 'summary_en') THEN x.kind END) = 4
+	ORDER BY MAX(x.generated_at) DESC, x.model_identity ASC
+	LIMIT 1)`
+
 const scopedAIColumns = `
-			COALESCE((SELECT value FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND model_identity = @model AND prompt_version = @prompt AND kind = 'title_de' ORDER BY generated_at DESC LIMIT 1), ''),
-			COALESCE((SELECT value FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND model_identity = @model AND prompt_version = @prompt AND kind = 'summary_de' ORDER BY generated_at DESC LIMIT 1), ''),
-			COALESCE((SELECT value FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND model_identity = @model AND prompt_version = @prompt AND kind = 'title_en' ORDER BY generated_at DESC LIMIT 1), ''),
-			COALESCE((SELECT value FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND model_identity = @model AND prompt_version = @prompt AND kind = 'summary_en' ORDER BY generated_at DESC LIMIT 1), ''),
-			COALESCE((SELECT model_identity FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND model_identity = @model AND prompt_version = @prompt AND kind = 'summary_de' ORDER BY generated_at DESC LIMIT 1), ''),
-			COALESCE((SELECT prompt_version FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND model_identity = @model AND prompt_version = @prompt AND kind = 'summary_de' ORDER BY generated_at DESC LIMIT 1), ''),
-			COALESCE((SELECT generated_at FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND model_identity = @model AND prompt_version = @prompt AND kind = 'summary_de' ORDER BY generated_at DESC LIMIT 1), ''),
-			COALESCE((SELECT status FROM processing_jobs WHERE incident_id = i.id AND source_hash = i.content_hash AND operation = @operation ORDER BY id DESC LIMIT 1), ''),
-			COALESCE((SELECT attempt_count FROM processing_jobs WHERE incident_id = i.id AND source_hash = i.content_hash AND operation = @operation ORDER BY id DESC LIMIT 1), 0),
-			COALESCE((SELECT next_retry_at FROM processing_jobs WHERE incident_id = i.id AND source_hash = i.content_hash AND operation = @operation ORDER BY id DESC LIMIT 1), ''),
-			COALESCE((SELECT failure_kind FROM processing_jobs WHERE incident_id = i.id AND source_hash = i.content_hash AND operation = @operation ORDER BY id DESC LIMIT 1), '')`
+				COALESCE((SELECT value FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND model_identity = ` + latestPresentationModel + ` AND prompt_version = @prompt AND kind = 'title_de' LIMIT 1), ''),
+				COALESCE((SELECT value FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND model_identity = ` + latestPresentationModel + ` AND prompt_version = @prompt AND kind = 'summary_de' LIMIT 1), ''),
+				COALESCE((SELECT value FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND model_identity = ` + latestPresentationModel + ` AND prompt_version = @prompt AND kind = 'title_en' LIMIT 1), ''),
+				COALESCE((SELECT value FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND model_identity = ` + latestPresentationModel + ` AND prompt_version = @prompt AND kind = 'summary_en' LIMIT 1), ''),
+				COALESCE(` + latestPresentationModel + `, ''),
+				CASE WHEN ` + latestPresentationModel + ` IS NULL THEN '' ELSE @prompt END,
+				COALESCE((SELECT MAX(generated_at) FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND model_identity = ` + latestPresentationModel + ` AND prompt_version = @prompt), ''),
+				COALESCE((SELECT status FROM processing_jobs WHERE incident_id = i.id AND source_hash = i.content_hash AND operation LIKE @operation_prefix || '%' ORDER BY updated_at DESC, id DESC LIMIT 1), ''),
+				COALESCE((SELECT attempt_count FROM processing_jobs WHERE incident_id = i.id AND source_hash = i.content_hash AND operation LIKE @operation_prefix || '%' ORDER BY updated_at DESC, id DESC LIMIT 1), 0),
+				COALESCE((SELECT next_retry_at FROM processing_jobs WHERE incident_id = i.id AND source_hash = i.content_hash AND operation LIKE @operation_prefix || '%' ORDER BY updated_at DESC, id DESC LIMIT 1), ''),
+				COALESCE((SELECT failure_kind FROM processing_jobs WHERE incident_id = i.id AND source_hash = i.content_hash AND operation LIKE @operation_prefix || '%' ORDER BY updated_at DESC, id DESC LIMIT 1), '')`
 
 const publicReadyCondition = `EXISTS (
-	SELECT 1 FROM processing_jobs j
-	WHERE j.incident_id = i.id AND j.source_hash = i.content_hash
-		AND j.operation = @operation AND j.status = 'succeeded'
-) AND EXISTS (
-	SELECT 1 FROM derivations x
-	WHERE x.incident_id = i.id AND x.source_hash = i.content_hash
-		AND x.model_identity = @model AND x.prompt_version = @prompt
-	GROUP BY x.incident_id
-	HAVING COUNT(DISTINCT CASE WHEN x.kind IN ('title_de', 'summary_de', 'title_en', 'summary_en') THEN x.kind END) = 4
+		SELECT 1 FROM derivations x
+		WHERE x.incident_id = i.id AND x.source_hash = i.content_hash
+			AND x.prompt_version = @prompt
+		GROUP BY x.incident_id, x.model_identity
+		HAVING COUNT(DISTINCT CASE WHEN x.kind IN ('title_de', 'summary_de', 'title_en', 'summary_en') THEN x.kind END) = 4
 )`
 
 func presentationArgs(scope PresentationScope) []any {
 	return []any{
-		sql.Named("operation", scope.Operation),
-		sql.Named("model", scope.ModelIdentity),
 		sql.Named("prompt", scope.PromptVersion),
+		sql.Named("operation_prefix", "incident-presentation/"+scope.PromptVersion+"/"),
 	}
 }
 
@@ -141,8 +144,9 @@ func (s *Store) ListPresentationEntries(ctx context.Context, limit, offset int, 
 }
 
 // ListAdminIncidents returns parsed incidents for protected review views. AI
-// output is scoped to the active source content, model, and prompt so stale or
-// incomplete presentations remain visible as unprocessed work.
+// output is scoped to the active source content and prompt. Any model may
+// provide the newest complete presentation, while stale or incomplete output
+// remains visible as unprocessed work.
 func (s *Store) ListAdminIncidents(ctx context.Context, limit, offset int, sourceMode string, scope PresentationScope, filter AdminIncidentFilter) ([]IncidentRecord, int, error) {
 	if limit < 1 {
 		return nil, 0, errors.New("limit must be positive")
@@ -259,6 +263,6 @@ func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 		}
 		record.ProcessingNextRetryAt = &next
 	}
-	record.HasAI = record.ProcessingStatus == "succeeded" && record.AITitleDE != "" && record.AISummaryDE != "" && record.AITitleEN != "" && record.AISummaryEN != ""
+	record.HasAI = record.AITitleDE != "" && record.AISummaryDE != "" && record.AITitleEN != "" && record.AISummaryEN != ""
 	return record, nil
 }

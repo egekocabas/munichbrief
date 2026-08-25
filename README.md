@@ -78,7 +78,7 @@ Useful configuration:
 | `MUNICHBRIEF_AI_IMMEDIATE` | `false` | Process AI jobs at any time, ignoring the configured window; useful for local development |
 | `MUNICHBRIEF_AI_WINDOW` | `03:00-08:00` | Europe/Berlin wall-clock window in which new Ollama requests may start when immediate mode is off |
 | `MUNICHBRIEF_OLLAMA_BASE_URL` | `http://127.0.0.1:11434` | Ollama LAN or local base URL |
-| `MUNICHBRIEF_OLLAMA_MODEL` | `qwen3.5:4b` | Exact Ollama model tag recorded with generated content |
+| `MUNICHBRIEF_OLLAMA_MODEL` | `qwen3.5:4b` | Initial preferred Ollama model; seeds an empty database once, after which the protected admin override wins |
 | `MUNICHBRIEF_AI_INTERVAL` | `5s` | How often an idle worker checks for new jobs |
 | `MUNICHBRIEF_AI_TIMEOUT` | `10m` | Timeout for one model request; processing remains sequential |
 | `MUNICHBRIEF_AI_CONTEXT_SIZE` | `8192` | Ollama context size, from 2048 to 32768 |
@@ -305,10 +305,16 @@ Represents durable asynchronous work for `pi8`.
 
 - incident and source hash;
 - requested operation;
+- selected model identity;
 - status and attempt count;
 - next retry time;
 - persisted manual processing request time;
 - sanitized last error.
+
+#### `ai_settings`
+
+Stores the administrator-controlled preferred model. The configured Ollama
+model seeds this singleton setting only when it does not yet exist.
 
 #### `sync_state`
 
@@ -333,6 +339,7 @@ Database constraints will enforce source and incident identity so repeated polls
 | Protected `GET /admin` | Processing operations plus paginated unprocessed and complete incident review lists |
 | Protected `POST /api/admin/ai/process-now` | Create or reset current work and request immediate processing for one incident |
 | Protected `POST /api/admin/ai/process-all-now` | Request immediate sequential processing for every unprocessed incident |
+| Protected `POST /api/admin/ai/preferred-model` | Change the preferred model used for future automatic processing |
 | `GET /healthz` | Process liveness |
 | `GET /readyz` | Database and migration readiness |
 | Internal listener: `GET /metrics` | Prometheus metrics; absent from the reader listener and ingress |
@@ -353,13 +360,15 @@ Every incident view will display:
 
 The application must continue synchronizing and serving existing data when `pi8` is unavailable. AI processing will therefore be asynchronous and outside browser request paths.
 
-During the configured `03:00-08:00` Europe/Berlin processing window, the worker creates current processing jobs for every stored incident that has a German body but no job for the active source hash, model, and prompt version. This includes historical incidents and incidents whose only AI output is stale. Ready work is processed from the newest publication to the oldest; a request already in progress may finish after the window closes, but no new request starts outside the window. Immediate mode bypasses the window for local development.
+During the configured `03:00-08:00` Europe/Berlin processing window, the worker creates current processing jobs for every stored incident that has a German body but no complete presentation for the active source hash and prompt version from any model. Ready work uses the database-preferred model and is processed from the newest publication to the oldest; a request already in progress may finish after the window closes, but no new request starts outside the window. Immediate mode bypasses the window for local development.
 
-The protected admin dashboard can explicitly request one incident or all
-unprocessed incidents at any time. Manual intent is stored in SQLite, creates a
-job when none has ever existed, survives restarts, and wakes the running worker.
-Only the time window is bypassed: work remains sequential and continues to use
-privacy validation, circuit breaking, and the normal failure retry schedule.
+The worker checks Ollama's `/api/tags` catalog at startup and every 30 seconds.
+Automatic work pauses when the preferred model is absent. The protected admin
+dashboard reports installed, missing, and unavailable states separately and can
+select any installed model for one incident or all unprocessed incidents.
+Manual intent is stored in SQLite, survives restarts, and wakes the worker. Only
+the time window is bypassed: work remains sequential and retains normal privacy
+validation, circuit breaking, and retry behavior.
 
 The application-facing processing operation creates one aligned presentation and privacy assessment:
 
@@ -379,7 +388,12 @@ The LAN base URL, timeouts, model names, and optional authorization token will b
 
 Transient endpoint failures use capped backoff and a circuit breaker. Release-specific malformed or privacy-uncertain output yields to the next release and becomes `needs_review` after three attempts. Processing is idempotent for the combination of incident source hash, operation, model, and prompt version.
 
-The initial model is `qwen3.5:4b`. Model identity and prompt version are part of job and derivation identity, so changing either queues a fresh presentation without overwriting provenance.
+The initial model is `qwen3.5:4b`. The ConfigMap value seeds a new database once;
+later admin changes persist across restarts. Changing the preference affects
+future automatic work and pending non-manual jobs, but does not invalidate or
+backfill complete presentations. A successful manual alternate-model run becomes
+that incident's newest displayed presentation without deleting older provenance.
+Prompt-version changes continue to invalidate older output.
 
 ## Retention
 
@@ -611,7 +625,7 @@ The local MVP is complete when a clean start can:
 - Public mode never renders stored originals and publishes only current privacy-safe AI output.
 - English output is a translation of the accepted German summary.
 - Local-first access, Go, SQLite, server rendering, one replica, and GitOps-only K3s deployment are fixed decisions.
-- `qwen3.5:4b` is the initial model; model and prompt changes create fresh processing identities.
+- `qwen3.5:4b` is the initial preferred model; model choices retain distinct provenance, while only prompt changes invalidate complete presentations globally.
 
 ## References
 
