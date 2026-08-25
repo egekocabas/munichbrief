@@ -371,31 +371,19 @@ func TestAdminIsDisabledByDefault(t *testing.T) {
 func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	ctx := context.Background()
 	database := fixtureStore(t)
-	operation := processing.Operation("qwen3.5:4b")
-	failedIDs := make([]int64, 0, 2)
-	for range 2 {
-		job, found, err := database.QueueAndClaimProcessingJob(ctx, operation, time.Now())
-		if err != nil || !found {
-			t.Fatalf("claim admin fixture job = %t/%v", found, err)
-		}
-		if err := database.FailProcessingJob(ctx, job, "needs_review", "privacy", nil, time.Now(), context.Canceled); err != nil {
-			t.Fatal(err)
-		}
-		failedIDs = append(failedIDs, job.IncidentID)
-	}
-	server := adminTestServer(t, database, nil)
-	handler := server.Handler()
-	initialStats, err := database.ProcessingQueueStats(ctx, operation, time.Now())
+	records, _, err := database.ListIncidents(ctx, 1, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
+	server := adminTestServer(t, database, nil)
+	handler := server.Handler()
 
 	page := httptest.NewRecorder()
 	handler.ServeHTTP(page, httptest.NewRequest(http.MethodGet, "/admin", nil))
 	if page.Code != http.StatusOK || page.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("admin page = %d/%q", page.Code, page.Header().Get("Cache-Control"))
 	}
-	for _, expected := range []string{"AI processing", "Preferred model", "qwen3.5:4b", "This model exists in the Ollama model list", "name=\"model\"", "Needs review", ">2<", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/preferred-model", "Confirm AI request", "/static/admin.js"} {
+	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", "Installed and ready", "name=\"model_german_analysis\"", "name=\"model_english_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/status", "Confirm AI request", "/static/admin.js"} {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("admin page does not contain %q", expected)
 		}
@@ -408,7 +396,7 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 		{name: "origin", fetchSite: "same-site", origin: "https://attacker.example"},
 		{name: "opaque origin without same-origin metadata", fetchSite: "same-site", origin: "null"},
 	} {
-		crossSite := formRequest(http.MethodPost, "/api/admin/ai/process-now", "confirmed=true&model=qwen3.5%3A4b&incident_id="+formatID(failedIDs[0]))
+		crossSite := formRequest(http.MethodPost, "/api/admin/ai/process-now", stagedModelForm("confirmed=true&incident_id="+formatID(records[0].ID)))
 		crossSite.Header.Set("Sec-Fetch-Site", attack.fetchSite)
 		crossSite.Header.Set("Origin", attack.origin)
 		crossSiteResponse := httptest.NewRecorder()
@@ -418,7 +406,7 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 		}
 	}
 
-	opaqueSameOrigin := formRequest(http.MethodPost, "/api/admin/ai/process-now", "confirmed=true&model=qwen3.5%3A4b&incident_id="+formatID(failedIDs[0]))
+	opaqueSameOrigin := formRequest(http.MethodPost, "/api/admin/ai/process-now", stagedModelForm("confirmed=true&incident_id="+formatID(records[0].ID)))
 	opaqueSameOrigin.Header.Set("Sec-Fetch-Site", "same-origin")
 	opaqueSameOrigin.Header.Set("Origin", "null")
 	opaqueSameOriginResponse := httptest.NewRecorder()
@@ -428,38 +416,49 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	}
 
 	invalid := httptest.NewRecorder()
-	handler.ServeHTTP(invalid, formRequest(http.MethodPost, "/api/admin/ai/process-now", "confirmed=true&model=qwen3.5%3A4b&incident_id=zero"))
+	handler.ServeHTTP(invalid, formRequest(http.MethodPost, "/api/admin/ai/process-now", stagedModelForm("confirmed=true&incident_id=zero")))
 	if invalid.Code != http.StatusBadRequest {
 		t.Fatalf("invalid process status = %d, want 400", invalid.Code)
 	}
 
 	unconfirmed := httptest.NewRecorder()
-	handler.ServeHTTP(unconfirmed, formRequest(http.MethodPost, "/api/admin/ai/process-now", "incident_id="+formatID(failedIDs[0])))
+	handler.ServeHTTP(unconfirmed, formRequest(http.MethodPost, "/api/admin/ai/process-now", stagedModelForm("incident_id="+formatID(records[0].ID))))
 	if unconfirmed.Code != http.StatusBadRequest {
 		t.Fatalf("unconfirmed processing status = %d, want 400", unconfirmed.Code)
 	}
 	processAll := httptest.NewRecorder()
-	handler.ServeHTTP(processAll, formRequest(http.MethodPost, "/api/admin/ai/process-all-now", "confirmed=true&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
+	handler.ServeHTTP(processAll, formRequest(http.MethodPost, "/api/admin/ai/process-all-now", stagedModelForm("confirmed=true&unprocessed_page=1&all_page=1")))
 	if processAll.Code != http.StatusSeeOther || !strings.Contains(processAll.Header().Get("Location"), "requested=28") || !strings.Contains(processAll.Header().Get("Location"), "all_page=1") || !strings.Contains(processAll.Header().Get("Location"), "unprocessed_page=1") {
 		t.Fatalf("process all = %d/%q", processAll.Code, processAll.Header().Get("Location"))
 	}
 	notice := httptest.NewRecorder()
 	handler.ServeHTTP(notice, httptest.NewRequest(http.MethodGet, processAll.Header().Get("Location"), nil))
-	if !strings.Contains(notice.Body.String(), "Requested immediate processing with qwen3.5:4b for 28 incident(s)") || !strings.Contains(notice.Body.String(), "AI work continues asynchronously") {
+	if !strings.Contains(notice.Body.String(), "Queued priority pipeline cycle") || !strings.Contains(notice.Body.String(), "28 incident(s)") {
 		t.Fatalf("processing redirect notice = %q", notice.Body.String())
 	}
-	stats, err := database.ProcessingQueueStats(ctx, operation, time.Now())
-	if err != nil || stats.NeedsReview != 0 || stats.Queued != 28 || initialStats.NeedsReview != 2 {
-		t.Fatalf("processed stats = %#v initial=%#v err=%v", stats, initialStats, err)
+	reprocess := httptest.NewRecorder()
+	handler.ServeHTTP(reprocess, formRequest(http.MethodPost, "/api/admin/ai/reprocess-all", stagedModelForm("confirmed=true&unprocessed_page=1&all_page=1")))
+	if reprocess.Code != http.StatusSeeOther || !strings.Contains(reprocess.Header().Get("Location"), "current=28") {
+		t.Fatalf("duplicate full reprocessing request = %d/%q", reprocess.Code, reprocess.Header().Get("Location"))
+	}
+	status := httptest.NewRecorder()
+	handler.ServeHTTP(status, httptest.NewRequest(http.MethodGet, "/api/admin/ai/status", nil))
+	if status.Code != http.StatusOK || status.Header().Get("Cache-Control") != "private, no-store" || !strings.Contains(status.Body.String(), `"manual_cycles"`) || !strings.Contains(status.Body.String(), `"recent_events"`) {
+		t.Fatalf("pipeline status = %d/%q/%q", status.Code, status.Header().Get("Cache-Control"), status.Body.String())
+	}
+	for _, forbidden := range []string{"incident_body", "system_prompt", "title_de", "summary_de", "title_en", "summary_en"} {
+		if strings.Contains(status.Body.String(), forbidden) {
+			t.Fatalf("pipeline status exposed %q: %s", forbidden, status.Body.String())
+		}
 	}
 
 	preference := httptest.NewRecorder()
-	handler.ServeHTTP(preference, formRequest(http.MethodPost, "/api/admin/ai/preferred-model", "model=granite4%3A3b&unprocessed_page=1&all_page=1"))
-	if preference.Code != http.StatusSeeOther || !strings.Contains(preference.Header().Get("Location"), "preferred_model=granite4%3A3b") {
+	handler.ServeHTTP(preference, formRequest(http.MethodPost, "/api/admin/ai/step-model", "step=german_analysis&model=granite4%3A3b&unprocessed_page=1&all_page=1"))
+	if preference.Code != http.StatusSeeOther || !strings.Contains(preference.Header().Get("Location"), "step_model=german_analysis") {
 		t.Fatalf("preferred model update = %d/%q", preference.Code, preference.Header().Get("Location"))
 	}
-	preferred, err := database.PreferredModel(ctx)
-	if err != nil || preferred != "granite4:3b" {
+	preferred, err := database.PreferredPipelineModels(ctx, []string{processing.GermanAnalysisStep})
+	if err != nil || preferred[processing.GermanAnalysisStep] != "granite4:3b" {
 		t.Fatalf("stored preferred model = %q/%v", preferred, err)
 	}
 }
@@ -483,10 +482,10 @@ func TestAdminProcessingReturnsUnavailableWhenAIIsDisabled(t *testing.T) {
 func TestAdminDistinguishesUnavailableAndMissingPreferredModels(t *testing.T) {
 	for _, test := range []struct {
 		name, expected string
-		status         processing.ModelStatus
+		status         processing.PipelineModelStatus
 	}{
-		{name: "unavailable", expected: "Ollama model list is unavailable", status: processing.ModelStatus{Preferred: "qwen3.5:4b", CatalogError: "connection refused"}},
-		{name: "missing", expected: "does not exist in the Ollama model list", status: processing.ModelStatus{Preferred: "qwen3.5:4b", Models: []string{"granite4:3b"}, CatalogAvailable: true}},
+		{name: "unavailable", expected: "Ollama catalog is unavailable", status: processing.PipelineModelStatus{CatalogError: "connection refused"}},
+		{name: "missing", expected: "Select an installed model", status: processing.PipelineModelStatus{Models: []string{"granite4:3b"}, CatalogAvailable: true, Steps: defaultTestStepStatus("")}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			database := fixtureStore(t)
@@ -592,19 +591,6 @@ func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
 func TestAdminReportsStoreErrors(t *testing.T) {
 	database := fixtureStore(t)
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
-	statsServer, err := NewWithOptions(failingAdminStore{Store: database, statsError: errors.New("stats unavailable")}, logger, Options{
-		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
-		PromptVersion: processing.PromptVersion, AdminEnabled: true,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	statsResponse := httptest.NewRecorder()
-	statsServer.Handler().ServeHTTP(statsResponse, httptest.NewRequest(http.MethodGet, "/admin", nil))
-	if statsResponse.Code != http.StatusInternalServerError {
-		t.Fatalf("admin stats error status = %d, want 500", statsResponse.Code)
-	}
-
 	retryServer, err := NewWithOptions(database, logger, Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
 		PromptVersion: processing.PromptVersion, AdminEnabled: true, Processor: fakeProcessingRequester{err: errors.New("processing unavailable")},
@@ -613,7 +599,7 @@ func TestAdminReportsStoreErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 	retryResponse := httptest.NewRecorder()
-	retryServer.Handler().ServeHTTP(retryResponse, formRequest(http.MethodPost, "/api/admin/ai/process-all-now", "confirmed=true&model=qwen3.5%3A4b"))
+	retryServer.Handler().ServeHTTP(retryResponse, formRequest(http.MethodPost, "/api/admin/ai/process-all-now", stagedModelForm("confirmed=true")))
 	if retryResponse.Code != http.StatusInternalServerError {
 		t.Fatalf("admin process error status = %d, want 500", retryResponse.Code)
 	}
@@ -961,39 +947,52 @@ func (s failingAdminStore) ProcessingQueueStatsForPrompt(ctx context.Context, pr
 type fakeProcessingRequester struct {
 	database *store.Store
 	err      error
-	status   *processing.ModelStatus
+	status   *processing.PipelineModelStatus
 }
 
-func (p fakeProcessingRequester) RequestNow(ctx context.Context, sourceMode, model string, incidentID *int64) (store.ProcessingRequestResult, error) {
+func (p fakeProcessingRequester) RequestNow(ctx context.Context, sourceMode string, models map[string]string, incidentID *int64, reprocessAll bool) (store.PipelineRequestResult, error) {
 	if p.err != nil {
-		return store.ProcessingRequestResult{}, p.err
+		return store.PipelineRequestResult{}, p.err
 	}
-	return p.database.RequestProcessingJobs(ctx, sourceMode, store.PresentationScope{
-		Operation:     processing.Operation(model),
-		ModelIdentity: model,
-		PromptVersion: processing.PromptVersion,
-	}, incidentID, time.Now())
+	plans, err := processing.StepPlans(models)
+	if err != nil {
+		return store.PipelineRequestResult{}, err
+	}
+	return p.database.CreateManualPipelineCycle(ctx, sourceMode, plans, incidentID, reprocessAll, time.Now())
 }
 
-func (p fakeProcessingRequester) ModelStatus(ctx context.Context) (processing.ModelStatus, error) {
+func (p fakeProcessingRequester) ModelStatus(ctx context.Context) (processing.PipelineModelStatus, error) {
 	if p.status != nil {
 		return *p.status, nil
 	}
-	preferred, err := p.database.InitializePreferredModel(ctx, "qwen3.5:4b", time.Now())
-	if err != nil {
-		return processing.ModelStatus{}, err
-	}
-	return processing.ModelStatus{
-		Preferred: preferred, Models: []string{"granite4:3b", "qwen3.5:4b"},
-		CatalogAvailable: true, PreferredAvailable: preferred == "qwen3.5:4b" || preferred == "granite4:3b",
-	}, nil
+	return processing.PipelineModelStatus{Steps: defaultTestStepStatus("qwen3.5:4b"), Models: []string{"granite4:3b", "qwen3.5:4b"}, CatalogAvailable: true, Ready: true}, nil
 }
 
-func (p fakeProcessingRequester) SetPreferredModel(ctx context.Context, model string) error {
+func (p fakeProcessingRequester) SetPreferredStepModel(ctx context.Context, step, model string) error {
 	if model != "qwen3.5:4b" && model != "granite4:3b" {
 		return processing.ErrModelUnavailable
 	}
-	return p.database.SetPreferredModel(ctx, model, processing.OperationPrefix(), processing.Operation(model), time.Now())
+	if err := p.database.EnsurePipelineSteps(ctx, processing.StepKeys(), time.Now()); err != nil {
+		return err
+	}
+	return p.database.SetPipelineStepModel(ctx, step, model, time.Now())
+}
+
+func (p fakeProcessingRequester) Status(ctx context.Context) (processing.PipelineRuntimeStatus, error) {
+	models, err := p.ModelStatus(ctx)
+	if err != nil {
+		return processing.PipelineRuntimeStatus{}, err
+	}
+	queue, err := p.database.PipelineSnapshot(ctx, "fixture", processing.StepKeys(), time.Now())
+	return processing.PipelineRuntimeStatus{GeneratedAt: time.Now(), WindowOpen: true, ScheduledReady: models.Ready, ProcessorAvailable: true, Models: models, Queue: queue}, err
+}
+
+func defaultTestStepStatus(model string) []processing.StepModelStatus {
+	steps := make([]processing.StepModelStatus, 0, len(processing.RegisteredSteps()))
+	for _, step := range processing.RegisteredSteps() {
+		steps = append(steps, processing.StepModelStatus{Key: step.Key, DisplayName: step.DisplayName, PromptVersion: step.PromptVersion, Preferred: model, PreferredAvailable: model != ""})
+	}
+	return steps
 }
 
 func testServer(t *testing.T, database *store.Store) *Server {
@@ -1036,4 +1035,8 @@ func formRequest(method, target, body string) *http.Request {
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Set("Origin", "https://example.com")
 	return request
+}
+
+func stagedModelForm(body string) string {
+	return body + "&model_german_analysis=qwen3.5%3A4b&model_english_translation=qwen3.5%3A4b"
 }

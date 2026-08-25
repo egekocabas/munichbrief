@@ -21,7 +21,7 @@
     },
     "application": {
       "type": "object",
-      "required": ["publicHosts", "sourceMode", "presentationMode", "secureCookies", "pageSize", "feedURL", "userAgent", "httpTimeout", "articleRefreshInterval", "aiEnabled", "aiImmediate", "aiWindow", "ollamaBaseURL", "ollamaModel", "aiInterval", "aiTimeout", "aiContextSize"],
+      "required": ["publicHosts", "sourceMode", "presentationMode", "secureCookies", "pageSize", "feedURL", "userAgent", "httpTimeout", "articleRefreshInterval", "aiEnabled", "aiImmediate", "aiWindow", "ollamaBaseURL", "aiInterval", "aiTimeout", "aiContextSize"],
       "properties": {
         "publicHosts": {
           "type": "array",
@@ -40,7 +40,6 @@
         "aiImmediate": {"type": "boolean"},
         "aiWindow": {"type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]-([01][0-9]|2[0-3]):[0-5][0-9]$"},
         "ollamaBaseURL": {"type": "string", "pattern": "^https?://"},
-        "ollamaModel": {"type": "string", "minLength": 1},
         "aiInterval": {"type": "string", "minLength": 2},
         "aiTimeout": {"type": "string", "minLength": 2},
         "aiContextSize": {"type": "integer", "minimum": 2048, "maximum": 32768},

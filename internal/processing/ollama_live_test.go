@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func TestLiveOllamaPrivacySafeBilingualPresentation(t *testing.T) {
+func TestLiveOllamaPrivacySafeStagedPresentation(t *testing.T) {
 	if os.Getenv("MUNICHBRIEF_OLLAMA_LIVE_TEST") != "1" {
 		t.Skip("set MUNICHBRIEF_OLLAMA_LIVE_TEST=1 for the explicit pi8 smoke test")
 	}
@@ -16,14 +16,24 @@ func TestLiveOllamaPrivacySafeBilingualPresentation(t *testing.T) {
 	if baseURL == "" {
 		baseURL = "http://192.168.178.102:11434"
 	}
-	model := os.Getenv("MUNICHBRIEF_OLLAMA_MODEL")
-	if model == "" {
-		model = "qwen3.5:4b"
+	germanModel := os.Getenv("MUNICHBRIEF_OLLAMA_GERMAN_MODEL")
+	if germanModel == "" {
+		germanModel = "qwen3.5:4b"
 	}
-	client, err := NewOllamaClient(baseURL, model, 5*time.Minute, 8192, nil)
+	translationModel := os.Getenv("MUNICHBRIEF_OLLAMA_TRANSLATION_MODEL")
+	if translationModel == "" {
+		translationModel = "translategemma:4b"
+	}
+	germanClient, err := NewOllamaClient(baseURL, germanModel, 5*time.Minute, 8192, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+	translationClient, err := NewOllamaClient(baseURL, translationModel, 5*time.Minute, 8192, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	germanStep, _ := StepByKey(GermanAnalysisStep)
+	translationStep, _ := StepByKey(EnglishTranslationStep)
 
 	fixtures := []struct {
 		name      string
@@ -54,20 +64,24 @@ func TestLiveOllamaPrivacySafeBilingualPresentation(t *testing.T) {
 		t.Run(fixture.name, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 			defer cancel()
-			presentation, returnedModel, err := client.Generate(ctx, fixture.title, fixture.body)
+			analysis, returnedGermanModel, err := germanClient.GenerateStep(ctx, germanStep, StepInput{OriginalTitle: fixture.title, IncidentBody: fixture.body})
 			if err != nil {
 				t.Fatal(err)
 			}
-			if returnedModel == "" || presentation.PrivacyStatus != "safe" {
-				t.Fatalf("model/privacy = %q/%q", returnedModel, presentation.PrivacyStatus)
+			if returnedGermanModel == "" || analysis.PrivacyStatus != "safe" {
+				t.Fatalf("German model/privacy = %q/%q", returnedGermanModel, analysis.PrivacyStatus)
 			}
-			publicText := strings.ToLower(strings.Join([]string{presentation.TitleDE, presentation.SummaryDE, presentation.TitleEN, presentation.SummaryEN}, "\n"))
+			translation, returnedTranslationModel, err := translationClient.GenerateStep(ctx, translationStep, StepInput{TitleDE: analysis.TitleDE, SummaryDE: analysis.SummaryDE})
+			if err != nil {
+				t.Fatal(err)
+			}
+			publicText := strings.ToLower(strings.Join([]string{analysis.TitleDE, analysis.SummaryDE, translation.TitleEN, translation.SummaryEN}, "\n"))
 			for _, forbidden := range fixture.forbidden {
 				if strings.Contains(publicText, strings.ToLower(forbidden)) {
 					t.Errorf("publishable output leaked synthetic identifier %q", forbidden)
 				}
 			}
-			t.Logf("model=%s flags=%v de=%q / %q en=%q / %q", returnedModel, presentation.PrivacyFlags, presentation.TitleDE, presentation.SummaryDE, presentation.TitleEN, presentation.SummaryEN)
+			t.Logf("models=%s/%s category=%s area=%v flags=%v de=%q / %q en=%q / %q", returnedGermanModel, returnedTranslationModel, analysis.Category, analysis.AreaName, analysis.PrivacyFlags, analysis.TitleDE, analysis.SummaryDE, translation.TitleEN, translation.SummaryEN)
 		})
 	}
 }

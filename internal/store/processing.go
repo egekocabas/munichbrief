@@ -247,6 +247,34 @@ func (s *Store) CompleteProcessingJob(
 			return fmt.Errorf("store %s derivation: %w", derivation.kind, err)
 		}
 	}
+	legacyVersion := "legacy/" + promptVersion + "/" + modelIdentity
+	var presentationRunID int64
+	err = tx.QueryRowContext(ctx, `
+		SELECT id FROM presentation_runs
+		WHERE incident_id = ? AND source_hash = ? AND pipeline_version = ? AND legacy = 1
+		ORDER BY id DESC LIMIT 1`, job.IncidentID, job.SourceHash, legacyVersion).Scan(&presentationRunID)
+	if errors.Is(err, sql.ErrNoRows) {
+		result, insertErr := tx.ExecContext(ctx, `
+			INSERT INTO presentation_runs(incident_id, source_hash, pipeline_version, status, legacy, created_at, completed_at)
+			VALUES (?, ?, ?, 'complete', 1, ?, ?)`, job.IncidentID, job.SourceHash, legacyVersion, formattedTime, formattedTime)
+		if insertErr != nil {
+			return fmt.Errorf("create legacy presentation run: %w", insertErr)
+		}
+		presentationRunID, _ = result.LastInsertId()
+	} else if err != nil {
+		return fmt.Errorf("find legacy presentation run: %w", err)
+	}
+	for _, derivation := range values {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO presentation_values(presentation_run_id, kind, value, model_identity, prompt_version, generated_at)
+			VALUES (?, ?, ?, ?, ?, ?)
+			ON CONFLICT(presentation_run_id, kind) DO UPDATE SET
+				value = excluded.value, model_identity = excluded.model_identity,
+				prompt_version = excluded.prompt_version, generated_at = excluded.generated_at`,
+			presentationRunID, derivation.kind, derivation.value, modelIdentity, promptVersion, formattedTime); err != nil {
+			return fmt.Errorf("store legacy %s presentation value: %w", derivation.kind, err)
+		}
+	}
 
 	result, err := tx.ExecContext(ctx, `
 		UPDATE processing_jobs

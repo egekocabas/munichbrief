@@ -23,89 +23,102 @@
     <div class="max-w-3xl">
       <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Operations</p>
       <h1 class="mt-1 font-serif text-4xl font-bold tracking-tight">AI processing</h1>
-      <p class="mt-3 text-muted">Manual requests retain their selected model and are processed asynchronously, even outside the configured processing window.</p>
+      <p class="mt-3 text-muted">Registered LLM steps run in durable, model-grouped cycles. Priority admin cycles start after the active healthy cycle finishes.</p>
     </div>
 
     {{if .Notice}}<div class="mt-6 rounded-md border px-4 py-3 font-semibold {{if .NoticeIsWarning}}border-alert/30 bg-alert-soft text-alert{{else}}border-civic/25 bg-paper text-civic{{end}}" role="status">{{.Notice}}</div>{{end}}
 
-    <section class="mt-8 rounded-lg border border-rule bg-paper p-5" aria-labelledby="model-heading">
-      <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Ollama configuration</p>
-          <h2 id="model-heading" class="mt-1 font-serif text-xl font-bold">Preferred model</h2>
-          {{if not .ProcessingEnabled}}
-            <p class="mt-2 font-mono text-lg font-bold">{{if .Models.Preferred}}{{.Models.Preferred}}{{else}}Not initialized{{end}}</p>
-            <p class="mt-1 text-sm font-semibold text-alert">AI processing is disabled in this application instance.</p>
-          {{else}}
-            <p class="mt-2 font-mono text-lg font-bold">{{.Models.Preferred}}</p>
-            {{if not .Models.CatalogAvailable}}
-              <p class="mt-1 text-sm font-bold text-amber-700" aria-label="Ollama unavailable">! Ollama model list is unavailable. Automatic and manual processing are paused.</p>
-            {{else if .Models.PreferredAvailable}}
-              <p class="mt-1 text-sm font-bold text-emerald-700" aria-label="Preferred model installed">✓ This model exists in the Ollama model list.</p>
-            {{else}}
-              <p class="mt-1 text-sm font-bold text-alert" aria-label="Preferred model missing">✕ This model does not exist in the Ollama model list. Automatic processing is paused.</p>
-            {{end}}
+    <section class="mt-8" aria-labelledby="model-heading">
+      <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Ollama configuration</p>
+      <h2 id="model-heading" class="mt-1 font-serif text-2xl font-bold">Registered pipeline steps</h2>
+      {{if not .Models.CatalogAvailable}}<p class="mt-3 font-bold text-alert">The Ollama catalog is unavailable. No LLM calls will start.</p>{{end}}
+      <div class="mt-4 grid gap-4 lg:grid-cols-2">
+        {{range .Models.Steps}}
+        {{$step := .}}
+        <article class="rounded-lg border border-rule bg-paper p-5" data-step-card="{{.Key}}">
+          <p class="text-xs font-bold uppercase tracking-wider text-muted">Step {{if eq .Key "german_analysis"}}1{{else}}2{{end}}</p>
+          <h3 class="mt-1 font-serif text-xl font-bold">{{.DisplayName}}</h3>
+          <p class="mt-1 font-mono text-xs text-muted">{{.PromptVersion}}</p>
+          <p class="mt-3 font-mono font-bold" data-step-model>{{if .Preferred}}{{.Preferred}}{{else}}Not configured{{end}}</p>
+          {{if .PreferredAvailable}}<p class="mt-1 text-sm font-bold text-emerald-700" data-step-availability>✓ Installed and ready</p>{{else}}<p class="mt-1 text-sm font-bold text-alert" data-step-availability>✕ Select an installed model before scheduled processing can start</p>{{end}}
+          {{if $.ProcessingEnabled}}
+          <form class="mt-4 flex flex-col gap-2" method="post" action="/api/admin/ai/step-model">
+            <input name="step" type="hidden" value="{{.Key}}">
+            <input name="unprocessed_page" type="hidden" value="{{$.UnprocessedPage}}">
+            <input name="all_page" type="hidden" value="{{$.AllPage}}">
+            <label class="text-sm font-bold" for="preferred-{{.Key}}">Preferred model</label>
+            <select class="rounded-md border border-rule bg-white px-3 py-2" id="preferred-{{.Key}}" name="model" required {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>
+              {{if not .PreferredAvailable}}<option value="" selected disabled>Choose an installed model</option>{{end}}
+              {{range $.Models.Models}}<option value="{{.}}" {{if eq . $step.Preferred}}selected{{end}}>{{.}}</option>{{end}}
+            </select>
+            <button class="rounded-md bg-civic px-4 py-2 font-bold text-white hover:bg-civic-dark" type="submit" {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>Save step model</button>
+          </form>
           {{end}}
-        </div>
-        {{if .ProcessingEnabled}}
-        <form class="flex min-w-0 flex-col gap-2 sm:min-w-64" method="post" action="/api/admin/ai/preferred-model">
-          <input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}">
-          <input name="all_page" type="hidden" value="{{.AllPage}}">
-          <label class="text-sm font-bold" for="preferred-model">Change preferred model</label>
-          <select class="rounded-md border border-rule bg-white px-3 py-2" id="preferred-model" name="model" required {{if or (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>
-            {{if not .Models.PreferredAvailable}}<option value="" selected disabled>Choose an installed model</option>{{end}}
-            {{range .Models.Models}}<option value="{{.}}" {{if eq . $.Models.Preferred}}selected{{end}}>{{.}}</option>{{end}}
-          </select>
-          <button class="rounded-md bg-civic px-4 py-2 font-bold text-white hover:bg-civic-dark" type="submit" {{if or (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>Save preferred model</button>
-        </form>
+        </article>
         {{end}}
       </div>
     </section>
 
-    <section class="mt-8" aria-labelledby="queue-heading">
-      <h2 id="queue-heading" class="font-serif text-2xl font-bold">Current queue</h2>
-      <dl class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <div class="rounded-lg border border-rule bg-paper p-4"><dt class="text-xs font-bold uppercase tracking-wider text-muted">Queued</dt><dd class="mt-1 text-3xl font-bold">{{.Stats.Queued}}</dd></div>
-        <div class="rounded-lg border border-rule bg-paper p-4"><dt class="text-xs font-bold uppercase tracking-wider text-muted">Running</dt><dd class="mt-1 text-3xl font-bold">{{.Stats.Running}}</dd></div>
-        <div class="rounded-lg border border-rule bg-paper p-4"><dt class="text-xs font-bold uppercase tracking-wider text-muted">Retrying</dt><dd class="mt-1 text-3xl font-bold">{{.Stats.Retrying}}</dd></div>
-        <div class="rounded-lg border border-rule bg-paper p-4"><dt class="text-xs font-bold uppercase tracking-wider text-muted">Needs review</dt><dd class="mt-1 text-3xl font-bold text-alert">{{.Stats.NeedsReview}}</dd></div>
-        <div class="rounded-lg border border-rule bg-paper p-4"><dt class="text-xs font-bold uppercase tracking-wider text-muted">Failed</dt><dd class="mt-1 text-3xl font-bold text-alert">{{.Stats.Failed}}</dd></div>
-        <div class="rounded-lg border border-rule bg-paper p-4"><dt class="text-xs font-bold uppercase tracking-wider text-muted">Oldest pending</dt><dd class="mt-2 text-lg font-bold">{{.OldestPending}}</dd></div>
+    <section class="mt-8 rounded-lg border border-rule bg-paper p-5" aria-labelledby="queue-heading" data-pipeline-status data-status-url="/api/admin/ai/status">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div><p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Live operations</p><h2 id="queue-heading" class="mt-1 font-serif text-2xl font-bold">Current cycle</h2></div>
+        <p class="rounded-full border border-rule bg-white px-3 py-1 text-sm font-bold" data-live-connection>Connecting…</p>
+      </div>
+      <p class="mt-4 text-lg font-bold" data-worker-state>{{if .Runtime.Queue.ActiveCycle}}Cycle #{{.Runtime.Queue.ActiveCycle.ID}} · {{.Runtime.Queue.ActiveCycle.Kind}}{{else}}Idle{{end}}</p>
+      <p class="mt-1 text-sm text-muted" data-active-step>{{if .Runtime.Queue.ActiveStepKey}}{{.Runtime.Queue.ActiveStepKey}} · {{.Runtime.Queue.ActiveModel}}{{else}}No active model{{end}}</p>
+      <p class="mt-1 text-sm text-muted" data-cycle-elapsed>{{if .Runtime.Queue.ActiveCycle}}Elapsed time updates live{{else}}No active cycle{{end}}</p>
+      <div class="mt-4 h-2 overflow-hidden rounded-full bg-newsprint"><div class="h-full bg-civic transition-all" data-cycle-progress style="width:0%"></div></div>
+      <dl class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div><dt class="text-xs font-bold uppercase text-muted">Progress</dt><dd class="mt-1 text-xl font-bold" data-progress-text>{{.Runtime.Queue.CycleCompleted}} / {{.Runtime.Queue.CycleTotal}}</dd></div>
+        <div><dt class="text-xs font-bold uppercase text-muted">Priority cycles</dt><dd class="mt-1 text-xl font-bold" data-manual-cycles>{{.Runtime.Queue.ManualCycles}}</dd></div>
+        <div><dt class="text-xs font-bold uppercase text-muted">Continuations</dt><dd class="mt-1 text-xl font-bold" data-continuations>{{.Runtime.Queue.ContinuationCycles}}</dd></div>
+        <div><dt class="text-xs font-bold uppercase text-muted">New candidates</dt><dd class="mt-1 text-xl font-bold" data-candidates>{{.Runtime.Queue.ScheduledCandidates}}</dd></div>
       </dl>
+      <div class="mt-5 grid gap-3 lg:grid-cols-2" data-step-stats>
+        {{range .Runtime.Queue.Steps}}<div class="rounded-md border border-rule bg-white p-3" data-step-stat="{{.StepKey}}"><p class="font-mono text-sm font-bold">{{.StepKey}}</p><p class="mt-1 text-sm text-muted">Queued {{.Queued}} · Running {{.Running}} · Retrying {{.Retrying}} · Review {{.NeedsReview}} · Failed {{.Failed}} · Succeeded {{.Succeeded}} · Avg {{.AverageDuration}}</p></div>{{end}}
+      </div>
+      <div class="mt-5 border-t border-rule pt-4">
+        <h3 class="text-xs font-extrabold uppercase tracking-wider text-muted">Recent safe events</h3>
+        <ol class="mt-2 grid gap-1 text-sm text-muted" data-recent-events>{{range .Runtime.Queue.RecentEvents}}<li>Cycle #{{.CycleID}} · incident #{{.IncidentID}} · {{.StepKey}} · {{.Status}}{{if .FailureKind}} ({{.FailureKind}}){{end}}</li>{{else}}<li>No pipeline events yet.</li>{{end}}</ol>
+      </div>
+      <p class="mt-4 text-sm font-semibold {{if .Runtime.WindowOpen}}text-emerald-700{{else}}text-muted{{end}}" data-window-state>{{if .Runtime.WindowOpen}}Processing window open{{else}}Processing window closed{{end}}</p>
     </section>
 
-    <section class="mt-10 grid gap-6 lg:grid-cols-2" aria-labelledby="process-heading">
+    <section class="mt-10 grid gap-6 lg:grid-cols-3" aria-labelledby="process-heading">
       <div class="rounded-lg border border-rule bg-paper p-5">
         <h2 id="process-heading" class="font-serif text-xl font-bold">Process one incident now</h2>
-        <p class="mt-2 text-sm text-muted">Create or reset the current AI job and wake the worker immediately.</p>
+        <p class="mt-2 text-sm text-muted">Queue a complete two-stage rerun for one incident.</p>
         <form class="mt-4 flex flex-col gap-3" method="post" action="/api/admin/ai/process-now" data-confirm-processing data-confirm-description="Create or reset the current AI job for the entered incident." data-incident-input="incident-id">
           <input name="confirmed" type="hidden" value="false">
           <input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}">
           <input name="all_page" type="hidden" value="{{.AllPage}}">
           <label class="text-sm font-bold" for="incident-id">Incident ID</label>
           <input class="rounded-md border border-rule bg-white px-3 py-2" id="incident-id" name="incident_id" type="number" min="1" step="1" required inputmode="numeric">
-          <label class="text-sm font-bold" for="incident-model">Ollama model</label>
-          <select class="rounded-md border border-rule bg-white px-3 py-2" id="incident-model" name="model" required {{if or (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>
-            {{if not .Models.PreferredAvailable}}<option value="" selected disabled>Choose an installed model</option>{{end}}
-            {{range .Models.Models}}<option value="{{.}}" {{if eq . $.Models.Preferred}}selected{{end}}>{{.}}</option>{{end}}
-          </select>
+          {{range .Models.Steps}}{{$step := .}}<label class="text-sm font-bold" for="incident-model-{{.Key}}">{{.DisplayName}} model</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="incident-model-{{.Key}}" name="model_{{.Key}}" required {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>{{if not .PreferredAvailable}}<option value="" selected disabled>Choose an installed model</option>{{end}}{{range $.Models.Models}}<option value="{{.}}" {{if eq . $step.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>{{end}}
           <button class="rounded-md bg-civic px-4 py-2 font-bold text-white hover:bg-civic-dark" type="submit" {{if or (not .ProcessingEnabled) (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>Process incident now</button>
           {{if not .ProcessingEnabled}}<p class="text-sm font-semibold text-alert">AI processing is disabled in this application instance.</p>{{end}}
         </form>
       </div>
       <div class="rounded-lg border border-alert/25 bg-paper p-5">
         <h2 class="font-serif text-xl font-bold">Process all unprocessed incidents</h2>
-        <p class="mt-2 text-sm text-muted">Create or reset every incomplete current job and process them sequentially.</p>
+        <p class="mt-2 text-sm text-muted">Queue every incident that has no complete current staged presentation.</p>
         <form class="mt-4 flex flex-col gap-3" method="post" action="/api/admin/ai/process-all-now" data-confirm-processing data-confirm-description="Request immediate processing for all {{.Unprocessed.Total}} currently unprocessed incidents.">
           <input name="confirmed" type="hidden" value="false">
           <input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}">
           <input name="all_page" type="hidden" value="{{.AllPage}}">
-          <label class="text-sm font-bold" for="bulk-model">Ollama model</label>
-          <select class="rounded-md border border-rule bg-white px-3 py-2" id="bulk-model" name="model" required {{if or (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>
-            {{if not .Models.PreferredAvailable}}<option value="" selected disabled>Choose an installed model</option>{{end}}
-            {{range .Models.Models}}<option value="{{.}}" {{if eq . $.Models.Preferred}}selected{{end}}>{{.}}</option>{{end}}
-          </select>
+          {{range .Models.Steps}}{{$step := .}}<label class="text-sm font-bold" for="bulk-model-{{.Key}}">{{.DisplayName}} model</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="bulk-model-{{.Key}}" name="model_{{.Key}}" required {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>{{if not .PreferredAvailable}}<option value="" selected disabled>Choose an installed model</option>{{end}}{{range $.Models.Models}}<option value="{{.}}" {{if eq . $step.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>{{end}}
           <button class="w-full rounded-md border border-alert bg-white px-4 py-2 font-bold text-alert hover:bg-alert-soft" type="submit" {{if or (not .ProcessingEnabled) (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>Process all now</button>
+        </form>
+      </div>
+      <div class="rounded-lg border border-alert bg-alert-soft/30 p-5">
+        <h2 class="font-serif text-xl font-bold">Reprocess everything</h2>
+        <p class="mt-2 text-sm text-muted">Freeze every current incident and rerun the full pipeline from German analysis. Older queued automatic work for these revisions is superseded.</p>
+        <form class="mt-4 flex flex-col gap-3" method="post" action="/api/admin/ai/reprocess-all" data-confirm-processing data-confirm-description="Reprocess every current incident from the first pipeline step. Older queued scheduled and continuation work for these source revisions will be superseded.">
+          <input name="confirmed" type="hidden" value="false">
+          <input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}">
+          <input name="all_page" type="hidden" value="{{.AllPage}}">
+          {{range .Models.Steps}}{{$step := .}}<label class="text-sm font-bold" for="reprocess-model-{{.Key}}">{{.DisplayName}} model</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="reprocess-model-{{.Key}}" name="model_{{.Key}}" required {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>{{if not .PreferredAvailable}}<option value="" selected disabled>Choose an installed model</option>{{end}}{{range $.Models.Models}}<option value="{{.}}" {{if eq . $step.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>{{end}}
+          <button class="w-full rounded-md bg-alert px-4 py-2 font-bold text-white hover:opacity-90" type="submit" {{if or (not .ProcessingEnabled) (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>Reprocess everything</button>
         </form>
       </div>
     </section>
@@ -160,7 +173,7 @@
 {{define "admin-incident-list"}}
   {{if .Incidents}}
   <div class="grid gap-3">
-    {{range .Incidents}}
+    {{range .Incidents}}{{$incident := .}}
     <details class="group overflow-hidden rounded-lg border border-rule bg-paper">
       <summary class="cursor-pointer px-4 py-4 marker:text-muted sm:px-5">
         <span class="inline-grid min-w-0 gap-1 align-middle">
@@ -168,6 +181,7 @@
             <span class="text-alert">Incident #{{.Record.ID}}{{if .Record.Number}} · Report {{.Record.Number}}{{end}}</span>
             <time datetime="{{.Record.PublishedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime "en" .Record.PublishedAt}}</time>
             <span class="text-civic data-[state=failed]:text-amber-700 data-[state=needs-review]:text-amber-700 data-[state=retrying]:text-amber-700 data-[state=running]:text-amber-700" data-state="{{.ProcessingState}}">{{.ProcessingLabel}}</span>
+            {{if .PresentationLabel}}<span class="rounded-full bg-newsprint px-2 py-0.5 text-civic">{{.PresentationLabel}}</span>{{end}}
           </span>
           <strong class="font-serif text-lg leading-tight text-ink" lang="de">{{.Record.TitleDE}}</strong>
           <span class="truncate text-sm text-muted">{{.Record.SourceTitle}}</span>
@@ -189,6 +203,8 @@
           </section>
         </div>
         <dl class="mt-5 grid gap-3 border-t border-rule/70 pt-4 text-xs text-muted sm:grid-cols-3">
+          {{if .Record.AICategory}}<div><dt class="font-bold text-ink">Category</dt><dd class="mt-0.5">{{.CategoryLabel}} · <span class="font-mono">{{.Record.AICategory}}</span></dd></div>{{end}}
+          {{if .Record.AIAreaName}}<div><dt class="font-bold text-ink">Area</dt><dd class="mt-0.5">{{.Record.AIAreaName}} · {{.Record.AIAreaType}}</dd></div>{{end}}
           <div><dt class="font-bold text-ink">Model</dt><dd class="mt-0.5">{{.Record.AIModel}}</dd></div>
           <div><dt class="font-bold text-ink">Prompt</dt><dd class="mt-0.5">{{.Record.AIPromptVersion}}</dd></div>
           {{if .Record.AIGeneratedAt}}<div><dt class="font-bold text-ink">Generated</dt><dd class="mt-0.5"><time datetime="{{.Record.AIGeneratedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime "en" .Record.AIGeneratedAt}}</time></dd></div>{{end}}
@@ -204,16 +220,12 @@
         {{if $.AllowProcessing}}
         <div class="mt-6 border-t border-rule/70 pt-4">
           {{if .CanProcess}}
-          <form class="flex flex-wrap items-center gap-2" method="post" action="/api/admin/ai/process-now" data-confirm-processing data-confirm-description="Create or reset the current AI job for incident #{{.Record.ID}}.">
+          <form class="grid gap-2 sm:grid-cols-[repeat(2,minmax(0,1fr))_auto] sm:items-end" method="post" action="/api/admin/ai/process-now" data-confirm-processing data-confirm-description="Rerun the complete pipeline for incident #{{.Record.ID}}.">
             <input name="confirmed" type="hidden" value="false">
             <input name="incident_id" type="hidden" value="{{.Record.ID}}">
             <input name="unprocessed_page" type="hidden" value="{{$.Page}}">
             <input name="all_page" type="hidden" value="{{$.OtherPage}}">
-            <label class="sr-only" for="incident-model-{{.Record.ID}}">Ollama model</label>
-            <select class="rounded-md border border-rule bg-white px-2 py-2 text-sm" id="incident-model-{{.Record.ID}}" name="model" required {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>
-              {{if not $.Models.PreferredAvailable}}<option value="" selected disabled>Choose model</option>{{end}}
-              {{range $.Models.Models}}<option value="{{.}}" {{if eq . $.Models.Preferred}}selected{{end}}>{{.}}</option>{{end}}
-            </select>
+            {{range $.Models.Steps}}{{$step := .}}<label class="grid gap-1 text-xs font-bold" for="incident-{{$incident.Record.ID}}-{{.Key}}"><span>{{.DisplayName}}</span><select class="rounded-md border border-rule bg-white px-2 py-2 text-sm" id="incident-{{$incident.Record.ID}}-{{.Key}}" name="model_{{.Key}}" required {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>{{if not .PreferredAvailable}}<option value="" selected disabled>Choose model</option>{{end}}{{range $.Models.Models}}<option value="{{.}}" {{if eq . $step.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select></label>{{end}}
             <button class="rounded-md bg-civic px-4 py-2 text-sm font-bold text-white hover:bg-civic-dark" type="submit" {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>Process now</button>
           </form>
           {{else}}

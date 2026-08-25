@@ -105,6 +105,10 @@ func (p *OllamaGeneratorProvider) Generator(model string) (Generator, error) {
 	return NewOllamaClient(p.baseURL, model, p.timeout, p.contextSize, p.baseClient)
 }
 
+func (p *OllamaGeneratorProvider) StepGenerator(model string) (StepGenerator, error) {
+	return NewOllamaClient(p.baseURL, model, p.timeout, p.contextSize, p.baseClient)
+}
+
 type OllamaClient struct {
 	endpoint    string
 	model       string
@@ -183,6 +187,80 @@ func NewOllamaClient(baseURL, model string, timeout time.Duration, contextSize i
 }
 
 func (c *OllamaClient) ModelIdentity() string { return c.model }
+
+func (c *OllamaClient) GenerateStep(ctx context.Context, step StepDefinition, input StepInput) (StepOutput, string, error) {
+	if step.Generator == nil {
+		return StepOutput{}, "", errorOf(ErrorConfiguration, "unknown pipeline step %q", step.Key)
+	}
+	requestInput, userContent, err := step.Generator(input)
+	if err != nil {
+		return StepOutput{}, "", err
+	}
+	content, modelIdentity, err := c.chat(ctx, step.SystemPrompt, userContent, step.Schema)
+	if err != nil {
+		return StepOutput{}, "", err
+	}
+	var output StepOutput
+	decoder := json.NewDecoder(strings.NewReader(content))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&output); err != nil {
+		return StepOutput{}, "", errorOf(ErrorOutput, "decode structured %s output: %v", step.Key, err)
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); err != io.EOF {
+		return StepOutput{}, "", errorOf(ErrorOutput, "structured model output contains trailing content")
+	}
+	if err := ValidateStepOutput(step, requestInput, &output); err != nil {
+		return StepOutput{}, "", err
+	}
+	return output, modelIdentity, nil
+}
+
+func (c *OllamaClient) chat(ctx context.Context, system, user string, schema json.RawMessage) (string, string, error) {
+	payload, err := json.Marshal(chatRequest{
+		Model:    c.model,
+		Messages: []chatMessage{{Role: "system", Content: system}, {Role: "user", Content: user}},
+		Stream:   false, Think: false, Format: schema,
+		Options: chatOptions{Temperature: 0, NumCtx: c.contextSize}, KeepAlive: "10m",
+	})
+	if err != nil {
+		return "", "", errorOf(ErrorOutput, "encode Ollama request: %v", err)
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint, bytes.NewReader(payload))
+	if err != nil {
+		return "", "", errorOf(ErrorConfiguration, "create Ollama request: %v", err)
+	}
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Accept", "application/json")
+	response, err := c.client.Do(request)
+	if err != nil {
+		return "", "", errorOf(ErrorTransient, "call Ollama: %v", err)
+	}
+	defer response.Body.Close()
+	bodyBytes, err := readBounded(response.Body, 1<<20)
+	if err != nil {
+		return "", "", errorOf(ErrorTransient, "read Ollama response: %v", err)
+	}
+	if response.StatusCode != http.StatusOK {
+		kind := ErrorConfiguration
+		if response.StatusCode == http.StatusRequestTimeout || response.StatusCode == http.StatusTooManyRequests || response.StatusCode >= 500 {
+			kind = ErrorTransient
+		}
+		return "", "", errorOf(kind, "Ollama returned HTTP %d", response.StatusCode)
+	}
+	var result chatResponse
+	if err := json.Unmarshal(bodyBytes, &result); err != nil {
+		return "", "", errorOf(ErrorOutput, "decode Ollama response: %v", err)
+	}
+	if !result.Done {
+		return "", "", errorOf(ErrorTransient, "Ollama response was incomplete")
+	}
+	modelIdentity := strings.TrimSpace(result.Model)
+	if modelIdentity == "" {
+		modelIdentity = c.model
+	}
+	return result.Message.Content, modelIdentity, nil
+}
 
 func (c *OllamaClient) Generate(ctx context.Context, originalTitle, body string) (store.AIPresentation, string, error) {
 	minimizedTitle, minimizedBody := minimizeIncidentSource(originalTitle, body)

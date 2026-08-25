@@ -22,7 +22,6 @@ data:
   MUNICHBRIEF_AI_IMMEDIATE: {{ .Values.application.aiImmediate | quote }}
   MUNICHBRIEF_AI_WINDOW: {{ .Values.application.aiWindow | quote }}
   MUNICHBRIEF_OLLAMA_BASE_URL: {{ .Values.application.ollamaBaseURL | quote }}
-  MUNICHBRIEF_OLLAMA_MODEL: {{ .Values.application.ollamaModel | quote }}
   MUNICHBRIEF_AI_INTERVAL: {{ .Values.application.aiInterval | quote }}
   MUNICHBRIEF_AI_TIMEOUT: {{ .Values.application.aiTimeout | quote }}
   MUNICHBRIEF_AI_CONTEXT_SIZE: {{ .Values.application.aiContextSize | quote }}
