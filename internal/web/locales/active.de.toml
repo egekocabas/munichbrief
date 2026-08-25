@@ -117,7 +117,7 @@ other = "Der Text ist noch nicht verfügbar. MunichBrief versucht es erneut; nut
 other = "Die letzte Aktualisierung ist fehlgeschlagen; diese gespeicherte Fassung bleibt verfügbar."
 
 [Back]
-other = "Zurück zu Aktuelles"
+other = "Zurück"
 
 [Breadcrumb]
 other = "Brotkrümelnavigation"
@@ -127,6 +127,12 @@ other = "Veröffentlicht in"
 
 [LastProcessed]
 other = "Zuletzt verarbeitet"
+
+[Model]
+other = "Modell"
+
+[PromptVersion]
+other = "Prompt-Version"
 
 [MachineGenerated]
 other = "Maschinell erstellt"

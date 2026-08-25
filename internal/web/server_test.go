@@ -53,7 +53,7 @@ func TestTimelineAndDetailRenderFixtureData(t *testing.T) {
 	if olderTimeline.Code != http.StatusOK {
 		t.Fatalf("older timeline status = %d, want 200", olderTimeline.Code)
 	}
-	for _, expected := range []string{"Page 2 of 2", "Beschädigte Eingangstür", "← Newer"} {
+	for _, expected := range []string{"Page 2 of 2", "Beschädigte Eingangstür", "← Newer", `?page=2"`} {
 		if !strings.Contains(olderTimeline.Body.String(), expected) {
 			t.Errorf("older timeline body does not contain %q", expected)
 		}
@@ -70,6 +70,17 @@ func TestTimelineAndDetailRenderFixtureData(t *testing.T) {
 	}
 	if !strings.Contains(detail.Body.String(), records[0].TitleDE) {
 		t.Errorf("detail body does not contain incident title %q", records[0].TitleDE)
+	}
+	for _, expected := range []string{`href="/en"`, `>←</span> Back</a>`, `target="_blank"`} {
+		if !strings.Contains(detail.Body.String(), expected) {
+			t.Errorf("direct detail body does not contain %q", expected)
+		}
+	}
+
+	pageTwoDetail := httptest.NewRecorder()
+	handler.ServeHTTP(pageTwoDetail, englishRequest(http.MethodGet, "/en/incidents/"+formatID(records[0].ID)+"?page=2", nil))
+	if pageTwoDetail.Code != http.StatusOK || !strings.Contains(pageTwoDetail.Body.String(), `href="/en?page=2"`) {
+		t.Fatalf("page-two detail did not preserve its timeline destination: %d/%q", pageTwoDetail.Code, pageTwoDetail.Body.String())
 	}
 }
 
@@ -171,6 +182,7 @@ func TestTimelineAndDetailRenderAIContentWithProvenance(t *testing.T) {
 	for _, expected := range []string{
 		"AI-generated summary", presentation.TitleEN, presentation.SummaryEN,
 		"Original German text", "Visible only for quality review",
+		"Model", "qwen3.5:4b", "Prompt version", ">v2</dd>",
 	} {
 		if !strings.Contains(detail.Body.String(), expected) {
 			t.Errorf("detail body does not contain %q", expected)

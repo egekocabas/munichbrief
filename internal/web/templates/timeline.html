@@ -35,7 +35,7 @@
           </div>
           {{if .Record.HasIncident}}
             {{if $.Review}}<p class="mt-3 text-[0.68rem] font-extrabold uppercase tracking-[0.1em] text-civic data-[state=failed]:text-amber-700 data-[state=needs-review]:text-amber-700 data-[state=retrying]:text-amber-700 data-[state=running]:text-amber-700" data-state="{{.ProcessingState}}">{{.ProcessingLabel}}</p>{{end}}
-            <h4 class="mt-1 font-serif text-xl font-bold leading-tight tracking-[-0.015em] sm:text-2xl"><a class="text-ink no-underline hover:text-civic" href="{{incidentURL $.Lang .Record.ID}}" lang="{{.ContentLanguage}}">{{.Title}}</a></h4>
+            <h4 class="mt-1 font-serif text-xl font-bold leading-tight tracking-[-0.015em] sm:text-2xl"><a class="text-ink no-underline hover:text-civic" href="{{incidentURL $.Lang .Record.ID $.Page}}" lang="{{.ContentLanguage}}">{{.Title}}</a></h4>
             <p class="mt-2 leading-relaxed text-muted" lang="{{.ContentLanguage}}">{{.Summary}}</p>
             {{if .ShowOriginalMessage}}<p class="mt-3 border-l-2 border-amber-600 pl-3 text-sm text-amber-800">{{t $.Lang "OriginalShown"}}</p>{{end}}
             {{if eq .Record.FetchStatus "error"}}<p class="mt-3 border-l-2 border-amber-600 pl-3 text-sm text-amber-800">{{t $.Lang "SourceRefreshFailed"}}</p>{{end}}
@@ -45,7 +45,7 @@
           {{end}}
           <footer class="mt-4 flex flex-col gap-3 border-t border-rule/70 pt-3 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
             <span class="min-w-0 truncate">{{.Record.SourceTitle}}</span>
-            {{if .Record.HasIncident}}<a class="shrink-0 font-extrabold text-civic no-underline hover:text-civic-dark" href="{{incidentURL $.Lang .Record.ID}}">{{t $.Lang "ReadIncident"}} <span aria-hidden="true">→</span></a>{{else}}<a class="shrink-0 font-extrabold text-civic no-underline hover:text-civic-dark" href="{{.Record.SourceURL}}" rel="noopener noreferrer">{{t $.Lang "OpenOfficialSource"}} <span aria-hidden="true">↗</span></a>{{end}}
+            {{if .Record.HasIncident}}<a class="shrink-0 font-extrabold text-civic no-underline hover:text-civic-dark" href="{{incidentURL $.Lang .Record.ID $.Page}}">{{t $.Lang "ReadIncident"}} <span aria-hidden="true">→</span></a>{{else}}<a class="shrink-0 font-extrabold text-civic no-underline hover:text-civic-dark" href="{{.Record.SourceURL}}" rel="noopener noreferrer">{{t $.Lang "OpenOfficialSource"}} <span aria-hidden="true">↗</span></a>{{end}}
           </footer>
         </article>
         {{end}}
