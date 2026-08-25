@@ -14,7 +14,7 @@ application:
   # Used for host-aware public presentation and path restrictions.
   publicHosts: []
   sourceMode: live
-  presentationMode: review
+  presentationMode: public
   secureCookies: true
   pageSize: 20
   feedURL: https://www.polizei.bayern.de/rss/polizeiprasidium-munchen.xml

@@ -57,7 +57,102 @@
         </form>
       </div>
     </section>
+
+    <section class="mt-12 border-t border-rule pt-8" aria-labelledby="unprocessed-heading">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-alert">Review queue</p>
+          <h2 id="unprocessed-heading" class="mt-1 font-serif text-2xl font-bold">Unprocessed incidents</h2>
+          <p class="mt-2 max-w-3xl text-sm text-muted">Incidents without a current, complete presentation for the active source content, model, and prompt.</p>
+        </div>
+        <p class="font-mono text-sm font-semibold tabular-nums text-muted">{{.Unprocessed.Total}} incidents</p>
+      </div>
+      <div class="mt-5">
+        {{template "admin-incident-list" .Unprocessed}}
+      </div>
+    </section>
+
+    <section class="mt-12 border-t border-rule pt-8" aria-labelledby="all-incidents-heading">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Complete review</p>
+          <h2 id="all-incidents-heading" class="mt-1 font-serif text-2xl font-bold">All incidents</h2>
+          <p class="mt-2 max-w-3xl text-sm text-muted">Processed and unprocessed incidents with the retained German source text available for comparison.</p>
+        </div>
+        <p class="font-mono text-sm font-semibold tabular-nums text-muted">{{.AllIncidents.Total}} incidents</p>
+      </div>
+      <div class="mt-5">
+        {{template "admin-incident-list" .AllIncidents}}
+      </div>
+    </section>
   </main>
 </body>
 </html>
+{{end}}
+
+{{define "admin-incident-list"}}
+  {{if .Incidents}}
+  <div class="grid gap-3">
+    {{range .Incidents}}
+    <details class="group overflow-hidden rounded-lg border border-rule bg-paper">
+      <summary class="cursor-pointer px-4 py-4 marker:text-muted sm:px-5">
+        <span class="inline-grid min-w-0 gap-1 align-middle">
+          <span class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.68rem] font-extrabold uppercase tracking-[0.09em] text-muted">
+            <span class="text-alert">Incident #{{.Record.ID}}{{if .Record.Number}} · Report {{.Record.Number}}{{end}}</span>
+            <time datetime="{{.Record.PublishedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime "en" .Record.PublishedAt}}</time>
+            <span class="text-civic data-[state=failed]:text-amber-700 data-[state=needs-review]:text-amber-700 data-[state=retrying]:text-amber-700 data-[state=running]:text-amber-700" data-state="{{.ProcessingState}}">{{.ProcessingLabel}}</span>
+          </span>
+          <strong class="font-serif text-lg leading-tight text-ink" lang="de">{{.Record.TitleDE}}</strong>
+          <span class="truncate text-sm text-muted">{{.Record.SourceTitle}}</span>
+        </span>
+      </summary>
+
+      <div class="border-t border-rule px-4 py-5 sm:px-5">
+        {{if .Record.HasAI}}
+        <div class="grid gap-5 lg:grid-cols-2">
+          <section lang="de" aria-label="German AI presentation">
+            <p class="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-civic">German summary</p>
+            <h3 class="mt-2 font-serif text-xl font-bold leading-tight">{{.Record.AITitleDE}}</h3>
+            <p class="mt-2 leading-relaxed text-muted">{{.Record.AISummaryDE}}</p>
+          </section>
+          <section lang="en" aria-label="English AI presentation">
+            <p class="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-civic">English translation</p>
+            <h3 class="mt-2 font-serif text-xl font-bold leading-tight">{{.Record.AITitleEN}}</h3>
+            <p class="mt-2 leading-relaxed text-muted">{{.Record.AISummaryEN}}</p>
+          </section>
+        </div>
+        <dl class="mt-5 grid gap-3 border-t border-rule/70 pt-4 text-xs text-muted sm:grid-cols-3">
+          <div><dt class="font-bold text-ink">Model</dt><dd class="mt-0.5">{{.Record.AIModel}}</dd></div>
+          <div><dt class="font-bold text-ink">Prompt</dt><dd class="mt-0.5">{{.Record.AIPromptVersion}}</dd></div>
+          {{if .Record.AIGeneratedAt}}<div><dt class="font-bold text-ink">Generated</dt><dd class="mt-0.5"><time datetime="{{.Record.AIGeneratedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime "en" .Record.AIGeneratedAt}}</time></dd></div>{{end}}
+        </dl>
+        {{end}}
+
+        <section class="mt-6 border-t border-rule pt-5" lang="de" aria-label="Original German incident text">
+          <p class="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-alert">Original German text</p>
+          <h3 class="mt-2 font-serif text-xl font-bold leading-tight">{{.Record.TitleDE}}</h3>
+          <div class="incident-body mt-3 leading-7 text-ink">{{.Record.BodyDE}}</div>
+        </section>
+
+        <footer class="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-rule/70 pt-4 text-sm text-muted">
+          <span>Incident ID {{.Record.ID}}</span>
+          <a class="font-bold text-civic no-underline hover:text-civic-dark" href="{{.Record.SourceURL}}" rel="noopener noreferrer">Open official source <span aria-hidden="true">↗</span></a>
+        </footer>
+      </div>
+    </details>
+    {{end}}
+  </div>
+  {{if or .HasPrevious .HasNext}}
+  <nav class="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-4 border-t border-rule pt-5 text-sm text-muted" aria-label="Incident pages">
+    {{if .HasPrevious}}<a class="font-bold text-civic no-underline hover:text-civic-dark" href="{{.PreviousURL}}">← Newer</a>{{else}}<span></span>{{end}}
+    <span>Page {{.Page}} of {{.TotalPages}}</span>
+    {{if .HasNext}}<a class="justify-self-end font-bold text-civic no-underline hover:text-civic-dark" href="{{.NextURL}}">Older →</a>{{end}}
+  </nav>
+  {{end}}
+  {{else}}
+  <div class="rounded-lg border border-dashed border-rule bg-paper px-6 py-10 text-center">
+    <h3 class="font-serif text-xl font-bold">No matching incidents</h3>
+    <p class="mt-2 text-sm text-muted">There is nothing to review in this list.</p>
+  </div>
+  {{end}}
 {{end}}

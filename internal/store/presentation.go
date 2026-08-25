@@ -15,6 +15,13 @@ type PresentationScope struct {
 	PublicOnly    bool
 }
 
+type AdminIncidentFilter string
+
+const (
+	AdminIncidentsAll         AdminIncidentFilter = "all"
+	AdminIncidentsUnprocessed AdminIncidentFilter = "unprocessed"
+)
+
 const scopedAIColumns = `
 			COALESCE((SELECT value FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND model_identity = @model AND prompt_version = @prompt AND kind = 'title_de' ORDER BY generated_at DESC LIMIT 1), ''),
 			COALESCE((SELECT value FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND model_identity = @model AND prompt_version = @prompt AND kind = 'summary_de' ORDER BY generated_at DESC LIMIT 1), ''),
@@ -129,6 +136,70 @@ func (s *Store) ListPresentationEntries(ctx context.Context, limit, offset int, 
 	}
 	if err := rows.Err(); err != nil {
 		return nil, 0, fmt.Errorf("iterate presentation entries: %w", err)
+	}
+	return records, total, nil
+}
+
+// ListAdminIncidents returns parsed incidents for protected review views. AI
+// output is scoped to the active source content, model, and prompt so stale or
+// incomplete presentations remain visible as unprocessed work.
+func (s *Store) ListAdminIncidents(ctx context.Context, limit, offset int, sourceMode string, scope PresentationScope, filter AdminIncidentFilter) ([]IncidentRecord, int, error) {
+	if limit < 1 {
+		return nil, 0, errors.New("limit must be positive")
+	}
+	if offset < 0 {
+		return nil, 0, errors.New("offset must not be negative")
+	}
+	if filter != AdminIncidentsAll && filter != AdminIncidentsUnprocessed {
+		return nil, 0, errors.New("admin incident filter must be all or unprocessed")
+	}
+	statusCondition, err := sourceStatusCondition(sourceMode)
+	if err != nil {
+		return nil, 0, err
+	}
+	filterCondition := ""
+	if filter == AdminIncidentsUnprocessed {
+		filterCondition = " AND NOT (" + publicReadyCondition + ")"
+	}
+	args := presentationArgs(scope)
+
+	var total int
+	countQuery := `
+		SELECT COUNT(*)
+		FROM incidents i
+		JOIN source_documents d ON d.id = i.source_document_id
+		WHERE ` + statusCondition + filterCondition
+	if err := s.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count admin incidents: %w", err)
+	}
+
+	query := `
+		SELECT
+			i.id, d.id, 1, i.incident_number, i.position, i.title_de, COALESCE(i.body_de, ''),
+			i.content_hash, d.title, d.source_url, d.external_id, d.published_at, i.updated_at,
+			d.fetch_status, COALESCE(d.error_message, ''),` + scopedAIColumns + `
+		FROM incidents i
+		JOIN source_documents d ON d.id = i.source_document_id
+		WHERE ` + statusCondition + filterCondition + `
+		ORDER BY d.published_at DESC, i.position ASC
+		LIMIT @limit OFFSET @offset`
+	args = append(args, sql.Named("limit", limit), sql.Named("offset", offset))
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list admin incidents: %w", err)
+	}
+	defer rows.Close()
+
+	records := make([]IncidentRecord, 0, min(limit, total))
+	for rows.Next() {
+		record, err := scanPresentationIncident(rows)
+		if err != nil {
+			return nil, 0, fmt.Errorf("scan admin incident: %w", err)
+		}
+		records = append(records, record)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("iterate admin incidents: %w", err)
 	}
 	return records, total, nil
 }

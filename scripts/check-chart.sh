@@ -18,7 +18,7 @@ required_patterns=(
   'path: /healthz'
   'path: /readyz'
   'kind: NetworkPolicy'
-  'MUNICHBRIEF_PRESENTATION_MODE: "review"'
+  'MUNICHBRIEF_PRESENTATION_MODE: "public"'
   'MUNICHBRIEF_PUBLIC_HOSTS: "munichbrief.egekocabas.com,munichbrief.de"'
   'MUNICHBRIEF_ADMIN_ENABLED: "true"'
   'MUNICHBRIEF_SECURE_COOKIES: "true"'
