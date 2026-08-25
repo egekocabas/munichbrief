@@ -19,7 +19,7 @@ The agreed direction is:
 - official RSS discovery followed by bounded fetching of RSS-linked articles;
 - retained extracted German incident text with no automated deletion deadline for now;
 - German summaries and aligned English translations produced in one request by `pi8`;
-- restricted review mode now and fail-closed public mode for a later legally reviewed launch;
+- a fail-closed deployed reader plus protected admin and local review views for retained source text;
 - deployment through the operational `homelab-infra` Argo CD path, with application CI limited to artifact publication.
 
 Public internet access is not part of the initial release.
@@ -65,9 +65,9 @@ Useful configuration:
 | `MUNICHBRIEF_METRICS_ADDR` | `127.0.0.1:9090` | Separate internal Prometheus listener |
 | `MUNICHBRIEF_DATABASE_PATH` | `.data/munichbrief.db` | SQLite database path |
 | `MUNICHBRIEF_SOURCE_MODE` | `fixture` | Source provider: `fixture` or explicit `live` mode |
-| `MUNICHBRIEF_PRESENTATION_MODE` | `review` for fixtures, `public` for live | `review` exposes original QA text and states; `public` serves only current privacy-safe AI output |
+| `MUNICHBRIEF_PRESENTATION_MODE` | `review` for fixtures, `public` for live | `review` exposes original QA text and states for local development; deployed readers use `public`, while protected admin lists retain review access |
 | `MUNICHBRIEF_SECURE_COOKIES` | `false` | Set the language preference cookie's `Secure` attribute; enabled by the TLS Helm deployment |
-| `MUNICHBRIEF_ADMIN_ENABLED` | `false` | Register the LAN-only `/admin` page and `/api/admin/*` actions; production must protect both prefixes at the ingress |
+| `MUNICHBRIEF_ADMIN_ENABLED` | `false` | Register the LAN-only processing dashboard, paginated incident review lists, and `/api/admin/*` actions; production must protect both prefixes at the ingress |
 | `MUNICHBRIEF_PUBLIC_HOSTS` | empty | Comma-separated hosts that always receive fail-closed public presentation and path restrictions |
 | `MUNICHBRIEF_PAGE_SIZE` | `20` | Timeline incidents per page, from 1 to 100 |
 | `MUNICHBRIEF_FEED_URL` | Official Munich RSS URL | Live discovery feed; must be HTTPS |
@@ -329,6 +329,8 @@ Database constraints will enforce source and incident identity so repeated polls
 | `GET /{lang}` | Paginated incident timeline grouped by publication date; `lang` is `de` or `en` |
 | `GET /{lang}/incidents/{id}` | Incident detail, attribution, and official source link |
 | `GET /{lang}/about` | Methodology, source policy, retention policy, and AI disclaimer |
+| Protected `GET /admin` | Processing operations plus paginated unprocessed and complete incident review lists |
+| Protected `POST /api/admin/ai/*` | Queue one or all eligible AI processing retries |
 | `GET /healthz` | Process liveness |
 | `GET /readyz` | Database and migration readiness |
 | Internal listener: `GET /metrics` | Prometheus metrics; absent from the reader listener and ingress |
@@ -597,7 +599,7 @@ The local MVP is complete when a clean start can:
 
 - “Three-day backfill” means today plus the preceding two calendar dates in `Europe/Berlin`.
 - Missing historical items will not trigger an archive crawl.
-- Full German bodies are retained indefinitely for now but are visible only in restricted review mode.
+- Full German bodies are retained indefinitely for now but are visible only in protected admin views or explicitly configured local review mode.
 - Public mode never renders stored originals and publishes only current privacy-safe AI output.
 - English output is a translation of the accepted German summary.
 - Local-first access, Go, SQLite, server rendering, one replica, and GitOps-only K3s deployment are fixed decisions.
