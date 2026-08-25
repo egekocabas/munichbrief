@@ -22,6 +22,8 @@
       const incidentInput = document.getElementById(incidentInputID);
       if (incidentInput instanceof HTMLInputElement) message += ` Incident ID: ${incidentInput.value}.`;
     }
+    const model = form.elements.namedItem("model");
+    if (model instanceof HTMLSelectElement && model.value) message += ` Model: ${model.value}.`;
     description.textContent = message;
     request.textContent = `${form.method.toUpperCase()} ${new URL(form.action).pathname}`;
     dialog.showModal();

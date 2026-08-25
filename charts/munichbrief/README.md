@@ -36,3 +36,9 @@ admin dashboard contains retained original incident text and must remain absent
 from the public ingress. Confirmed Process now actions persist and wake manual
 work outside the configured AI window without bypassing validation, sequential
 execution, circuit breaking, or retry delays.
+
+`application.ollamaModel` is a seed preference: it initializes a database that
+has no AI settings row, but it does not overwrite a later protected-admin
+selection. The application discovers installed models from Ollama and pauses AI
+work when the endpoint is unavailable; reader health and readiness remain
+independent.

@@ -51,18 +51,20 @@ type incidentStore interface {
 	GetPresentationIncident(context.Context, int64, store.PresentationScope) (store.IncidentRecord, error)
 	ListAdminIncidents(context.Context, int, int, string, store.PresentationScope, store.AdminIncidentFilter) ([]store.IncidentRecord, int, error)
 	Ready(context.Context) error
-	ProcessingQueueStats(context.Context, string, time.Time) (store.ProcessingStats, error)
+	ProcessingQueueStatsForPrompt(context.Context, string, time.Time) (store.ProcessingStats, error)
+	PreferredModel(context.Context) (string, error)
 }
 
 type ProcessingRequester interface {
-	RequestNow(context.Context, string, *int64) (store.ProcessingRequestResult, error)
+	RequestNow(context.Context, string, string, *int64) (store.ProcessingRequestResult, error)
+	ModelStatus(context.Context) (processing.ModelStatus, error)
+	SetPreferredModel(context.Context, string) error
 }
 
 type Options struct {
 	PageSize         int
 	SourceMode       string
 	PresentationMode string
-	ModelIdentity    string
 	PromptVersion    string
 	SecureCookies    bool
 	AdminEnabled     bool
@@ -142,6 +144,7 @@ type adminPage struct {
 	ProcessingEnabled bool
 	UnprocessedPage   int
 	AllPage           int
+	Models            processing.ModelStatus
 }
 
 type adminIncidentList struct {
@@ -156,6 +159,7 @@ type adminIncidentList struct {
 	HasNext         bool
 	AllowProcessing bool
 	OtherPage       int
+	Models          processing.ModelStatus
 }
 
 type adminIncidentView struct {
@@ -168,7 +172,7 @@ type adminIncidentView struct {
 func New(database incidentStore, logger *slog.Logger, pageSize int, sourceMode string) (*Server, error) {
 	return NewWithOptions(database, logger, Options{
 		PageSize: pageSize, SourceMode: sourceMode, PresentationMode: "review",
-		ModelIdentity: "qwen3.5:4b", PromptVersion: processing.PromptVersion,
+		PromptVersion: processing.PromptVersion,
 	})
 }
 
@@ -188,8 +192,8 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 	if options.PresentationMode != "review" && options.PresentationMode != "public" {
 		return nil, errors.New("presentation mode must be review or public")
 	}
-	if strings.TrimSpace(options.ModelIdentity) == "" || strings.TrimSpace(options.PromptVersion) == "" {
-		return nil, errors.New("presentation model and prompt version are required")
+	if strings.TrimSpace(options.PromptVersion) == "" {
+		return nil, errors.New("presentation prompt version is required")
 	}
 	publicHosts, err := normalizePublicHosts(options.PublicHosts)
 	if err != nil {
@@ -250,13 +254,13 @@ func (s *Server) Handler() http.Handler {
 		mux.HandleFunc("GET /admin", s.admin)
 		mux.HandleFunc("POST /api/admin/ai/process-now", s.processIncidentNow)
 		mux.HandleFunc("POST /api/admin/ai/process-all-now", s.processAllNow)
+		mux.HandleFunc("POST /api/admin/ai/preferred-model", s.updatePreferredModel)
 	}
 	return s.requestLogger(s.accessBoundary(mux))
 }
 
 func (s *Server) scope(request *http.Request) store.PresentationScope {
 	return store.PresentationScope{
-		Operation: processing.Operation(s.options.ModelIdentity), ModelIdentity: s.options.ModelIdentity,
 		PromptVersion: s.options.PromptVersion, PublicOnly: s.options.PresentationMode == "public" || s.isPublicRequest(request),
 	}
 }
@@ -408,14 +412,26 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 		http.Error(response, "invalid all_page", http.StatusBadRequest)
 		return
 	}
-	stats, err := s.store.ProcessingQueueStats(request.Context(), processing.Operation(s.options.ModelIdentity), time.Now())
+	stats, err := s.store.ProcessingQueueStatsForPrompt(request.Context(), s.options.PromptVersion, time.Now())
 	if err != nil {
 		s.internalError(response, request, "read admin processing statistics", err)
 		return
 	}
 	scope := store.PresentationScope{
-		Operation: processing.Operation(s.options.ModelIdentity), ModelIdentity: s.options.ModelIdentity,
 		PromptVersion: s.options.PromptVersion,
+	}
+	preferred, err := s.store.PreferredModel(request.Context())
+	if err != nil && !errors.Is(err, store.ErrSettingsNotInitialized) {
+		s.internalError(response, request, "read preferred AI model", err)
+		return
+	}
+	models := processing.ModelStatus{Preferred: preferred}
+	if s.options.Processor != nil {
+		models, err = s.options.Processor.ModelStatus(request.Context())
+		if err != nil {
+			s.internalError(response, request, "read AI model status", err)
+			return
+		}
 	}
 	unprocessed, unprocessedTotal, err := s.store.ListAdminIncidents(
 		request.Context(), s.options.PageSize, (unprocessedPage-1)*s.options.PageSize,
@@ -444,11 +460,14 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 		ProcessingEnabled: s.options.Processor != nil,
 		UnprocessedPage:   unprocessedPage,
 		AllPage:           allPage,
+		Models:            models,
 		Unprocessed: s.adminList(unprocessed, unprocessedTotal, unprocessedPage, unprocessedPages,
 			adminPaginationURL(unprocessedPage-1, allPage), adminPaginationURL(unprocessedPage+1, allPage), true, allPage),
 		AllIncidents: s.adminList(allIncidents, allTotal, allPage, allPages,
 			adminPaginationURL(unprocessedPage, allPage-1), adminPaginationURL(unprocessedPage, allPage+1), false, unprocessedPage),
 	}
+	data.Unprocessed.Models = models
+	data.AllIncidents.Models = models
 	if stats.OldestPendingAge > 0 {
 		data.OldestPending = stats.OldestPendingAge.Round(time.Second).String()
 	} else {
@@ -457,8 +476,12 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 	if requested, ok := nonNegativeQueryInt(request, "requested"); ok {
 		running, _ := nonNegativeQueryInt(request, "running")
 		current, _ := nonNegativeQueryInt(request, "current")
-		data.Notice = fmt.Sprintf("Requested immediate processing for %d incident(s). Already processing: %d. Already current: %d. AI work continues asynchronously.", requested, running, current)
+		model := request.URL.Query().Get("model")
+		data.Notice = fmt.Sprintf("Requested immediate processing with %s for %d incident(s). Already processing: %d. Already current: %d. AI work continues asynchronously.", model, requested, running, current)
 		data.NoticeIsWarning = requested == 0 && running == 0
+	}
+	if updated := request.URL.Query().Get("preferred_model"); updated != "" {
+		data.Notice = fmt.Sprintf("Preferred model updated to %s. Future automatic processing will use this model.", updated)
 	}
 	response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	response.Header().Set("Cache-Control", "private, no-store")
@@ -550,12 +573,21 @@ func (s *Server) processNow(response http.ResponseWriter, request *http.Request,
 		}
 		incidentID = &parsed
 	}
-	result, err := s.options.Processor.RequestNow(request.Context(), s.options.SourceMode, incidentID)
+	model := strings.TrimSpace(request.PostForm.Get("model"))
+	if model == "" {
+		http.Error(response, "model is required", http.StatusBadRequest)
+		return
+	}
+	result, err := s.options.Processor.RequestNow(request.Context(), s.options.SourceMode, model, incidentID)
 	if errors.Is(err, store.ErrNotFound) {
 		http.NotFound(response, request)
 		return
 	}
 	if err != nil {
+		if errors.Is(err, processing.ErrModelUnavailable) {
+			http.Error(response, "selected Ollama model is unavailable", http.StatusServiceUnavailable)
+			return
+		}
 		s.internalError(response, request, "request immediate AI processing", err)
 		return
 	}
@@ -566,6 +598,45 @@ func (s *Server) processNow(response http.ResponseWriter, request *http.Request,
 	query.Set("requested", strconv.Itoa(result.Requested))
 	query.Set("running", strconv.Itoa(result.AlreadyRunning))
 	query.Set("current", strconv.Itoa(result.AlreadyCurrent))
+	query.Set("model", model)
+	target.RawQuery = query.Encode()
+	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
+}
+
+func (s *Server) updatePreferredModel(response http.ResponseWriter, request *http.Request) {
+	if !validAdminMutation(request) {
+		http.Error(response, "cross-site request blocked", http.StatusForbidden)
+		return
+	}
+	if !isFormPost(request) {
+		http.Error(response, "form content type required", http.StatusUnsupportedMediaType)
+		return
+	}
+	request.Body = http.MaxBytesReader(response, request.Body, 4096)
+	if err := request.ParseForm(); err != nil {
+		http.Error(response, "invalid form", http.StatusBadRequest)
+		return
+	}
+	if s.options.Processor == nil {
+		http.Error(response, "AI processing is disabled", http.StatusServiceUnavailable)
+		return
+	}
+	model := strings.TrimSpace(request.PostForm.Get("model"))
+	if model == "" {
+		http.Error(response, "model is required", http.StatusBadRequest)
+		return
+	}
+	if err := s.options.Processor.SetPreferredModel(request.Context(), model); err != nil {
+		if errors.Is(err, processing.ErrModelUnavailable) {
+			http.Error(response, "selected Ollama model is unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		s.internalError(response, request, "update preferred AI model", err)
+		return
+	}
+	target, _ := url.Parse(adminPaginationURL(positiveFormInt(request.PostForm.Get("unprocessed_page")), positiveFormInt(request.PostForm.Get("all_page"))))
+	query := target.Query()
+	query.Set("preferred_model", model)
 	target.RawQuery = query.Encode()
 	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
 }

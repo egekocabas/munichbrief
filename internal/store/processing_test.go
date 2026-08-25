@@ -41,7 +41,7 @@ func TestProcessingPrivacyMigrationPreservesExistingJobs(t *testing.T) {
 	if _, err := raw.Exec(`INSERT INTO incidents (id, source_document_id, incident_number, position, title_de, body_de, content_hash, created_at, updated_at) VALUES (1, 1, '1', 0, 'Titel', 'Text', 'content', '2026-08-23T10:00:00Z', '2026-08-23T10:00:00Z')`); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := raw.Exec(`INSERT INTO processing_jobs (id, incident_id, operation, source_hash, status, attempt_count, created_at, updated_at) VALUES (1, 1, 'operation', 'content', 'failed', 5, '2026-08-23T10:00:00Z', '2026-08-23T10:00:00Z')`); err != nil {
+	if _, err := raw.Exec(`INSERT INTO processing_jobs (id, incident_id, operation, source_hash, status, attempt_count, created_at, updated_at) VALUES (1, 1, 'incident-presentation/incident-presentation-v2/qwen3.5:4b', 'content', 'failed', 5, '2026-08-23T10:00:00Z', '2026-08-23T10:00:00Z')`); err != nil {
 		t.Fatal(err)
 	}
 	if err := raw.Close(); err != nil {
@@ -66,6 +66,13 @@ func TestProcessingPrivacyMigrationPreservesExistingJobs(t *testing.T) {
 	}
 	if manualRequestedAt.Valid {
 		t.Fatalf("migrated legacy job unexpectedly has manual request time %q", manualRequestedAt.String)
+	}
+	var modelIdentity string
+	if err := database.db.QueryRowContext(ctx, `SELECT model_identity FROM processing_jobs WHERE id = 1`).Scan(&modelIdentity); err != nil {
+		t.Fatal(err)
+	}
+	if modelIdentity != "qwen3.5:4b" {
+		t.Fatalf("migrated model identity = %q", modelIdentity)
 	}
 }
 
@@ -150,6 +157,11 @@ func TestRequestProcessingJobsCreatesMissingJobAndReportsCurrentStates(t *testin
 	if err != nil || current != (ProcessingRequestResult{AlreadyCurrent: 1}) {
 		t.Fatalf("current request = %#v, err=%v", current, err)
 	}
+	alternate := PresentationScope{Operation: "alternate-operation", ModelIdentity: "alternate-model", PromptVersion: scope.PromptVersion}
+	bulk, err := database.RequestProcessingJobs(ctx, "fixture", alternate, nil, now.Add(4*time.Minute))
+	if err != nil || bulk != (ProcessingRequestResult{AlreadyCurrent: 1}) {
+		t.Fatalf("alternate-model bulk request = %#v, err=%v", bulk, err)
+	}
 }
 
 func TestRequestProcessingJobsResetsIncompleteAndPersistsManualIntent(t *testing.T) {
@@ -216,6 +228,35 @@ func TestRequestProcessingJobsRejectsUnknownIncident(t *testing.T) {
 	_, err := database.RequestProcessingJobs(ctx, "fixture", PresentationScope{Operation: "operation", ModelIdentity: "model", PromptVersion: "prompt"}, &unknown, time.Now())
 	if err != ErrNotFound {
 		t.Fatalf("unknown incident error = %v, want ErrNotFound", err)
+	}
+}
+
+func TestAutomaticQueueDropsWorkCompletedByManualAlternateModel(t *testing.T) {
+	ctx := context.Background()
+	database := oneProcessingIncident(t, ctx)
+	now := time.Date(2026, time.August, 25, 12, 0, 0, 0, time.UTC)
+	preferredOperation := "incident-presentation/incident-presentation-v2/qwen3.5:4b"
+	preferredJob, found, err := database.QueueAndClaimProcessingJob(ctx, preferredOperation, now)
+	if err != nil || !found {
+		t.Fatalf("preferred claim = %#v/%t/%v", preferredJob, found, err)
+	}
+	if _, err := database.db.ExecContext(ctx, `UPDATE processing_jobs SET status = 'pending' WHERE id = ?`, preferredJob.ID); err != nil {
+		t.Fatal(err)
+	}
+	alternateScope := PresentationScope{Operation: "incident-presentation/incident-presentation-v2/granite4:3b", ModelIdentity: "granite4:3b", PromptVersion: "incident-presentation-v2"}
+	if _, err := database.RequestProcessingJobs(ctx, "fixture", alternateScope, &preferredJob.IncidentID, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	alternateJob, found, err := database.ClaimManualProcessingJob(ctx, alternateScope.Operation, now.Add(time.Minute))
+	if err != nil || !found {
+		t.Fatalf("alternate claim = %#v/%t/%v", alternateJob, found, err)
+	}
+	presentation := AIPresentation{TitleDE: "Titel", SummaryDE: "Text", TitleEN: "Title", SummaryEN: "Text", PrivacyStatus: "safe"}
+	if err := database.CompleteProcessingJob(ctx, alternateJob, presentation, alternateScope.ModelIdentity, alternateScope.PromptVersion, now.Add(2*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if job, found, err := database.QueueAndClaimProcessingJob(ctx, preferredOperation, now.Add(3*time.Minute)); err != nil || found {
+		t.Fatalf("obsolete preferred job = %#v/%t/%v", job, found, err)
 	}
 }
 

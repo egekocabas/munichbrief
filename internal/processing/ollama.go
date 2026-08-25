@@ -81,6 +81,30 @@ type Generator interface {
 	ModelIdentity() string
 }
 
+type GeneratorProvider interface {
+	Generator(model string) (Generator, error)
+}
+
+type OllamaGeneratorProvider struct {
+	baseURL     string
+	timeout     time.Duration
+	contextSize int
+	baseClient  *http.Client
+}
+
+func NewOllamaGeneratorProvider(baseURL string, timeout time.Duration, contextSize int, baseClient *http.Client) (*OllamaGeneratorProvider, error) {
+	// Validate the shared connection settings once. Per-model clients retain the
+	// exact model identity selected for each durable job.
+	if _, err := NewOllamaClient(baseURL, "validation-model", timeout, contextSize, baseClient); err != nil {
+		return nil, err
+	}
+	return &OllamaGeneratorProvider{baseURL: baseURL, timeout: timeout, contextSize: contextSize, baseClient: baseClient}, nil
+}
+
+func (p *OllamaGeneratorProvider) Generator(model string) (Generator, error) {
+	return NewOllamaClient(p.baseURL, model, p.timeout, p.contextSize, p.baseClient)
+}
+
 type OllamaClient struct {
 	endpoint    string
 	model       string

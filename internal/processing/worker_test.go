@@ -3,6 +3,7 @@ package processing
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"path/filepath"
@@ -38,6 +39,45 @@ type notifyingGenerator struct {
 	called chan struct{}
 }
 
+type testGeneratorProvider map[string]Generator
+
+func (p testGeneratorProvider) Generator(model string) (Generator, error) {
+	generator, ok := p[model]
+	if !ok {
+		return nil, ErrModelUnavailable
+	}
+	return generator, nil
+}
+
+type testModelCatalog struct{ snapshot ModelCatalogSnapshot }
+
+func (c testModelCatalog) Snapshot() ModelCatalogSnapshot { return c.snapshot }
+
+type namedGenerator struct {
+	model string
+	calls int
+}
+
+func newFixedWorker(t *testing.T, database *store.Store, generator Generator, observer Observer, logger *slog.Logger, interval time.Duration, clock func() time.Time, schedule Schedule) (*Worker, error) {
+	t.Helper()
+	if _, err := database.InitializePreferredModel(context.Background(), generator.ModelIdentity(), time.Now()); err != nil {
+		return nil, err
+	}
+	return NewWorker(
+		database,
+		testGeneratorProvider{generator.ModelIdentity(): generator},
+		testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{generator.ModelIdentity()}, CheckedAt: time.Now()}},
+		observer, logger, interval, clock, schedule,
+	)
+}
+
+func (g *namedGenerator) ModelIdentity() string { return g.model }
+func (g *namedGenerator) Generate(context.Context, string, string) (store.AIPresentation, string, error) {
+	g.calls++
+	presentation, _, err := fakeGenerator{}.Generate(context.Background(), "", "")
+	return presentation, g.model, err
+}
+
 func (g notifyingGenerator) ModelIdentity() string { return "test-model" }
 func (g notifyingGenerator) Generate(context.Context, string, string) (store.AIPresentation, string, error) {
 	g.called <- struct{}{}
@@ -69,7 +109,7 @@ func TestWorkerProcessesExistingIncidentsAndPersistsPresentation(t *testing.T) {
 	}
 
 	var logs bytes.Buffer
-	worker, err := NewWorker(database, fakeGenerator{}, nil, slog.New(slog.NewTextHandler(&logs, nil)), time.Second, time.Now, Schedule{Immediate: true})
+	worker, err := newFixedWorker(t, database, fakeGenerator{}, nil, slog.New(slog.NewTextHandler(&logs, nil)), time.Second, time.Now, Schedule{Immediate: true})
 	if err != nil {
 		t.Fatalf("NewWorker() error = %v", err)
 	}
@@ -87,7 +127,7 @@ func TestWorkerProcessesExistingIncidentsAndPersistsPresentation(t *testing.T) {
 			t.Errorf("incident %d original body was removed before quality review", incident.ID)
 		}
 	}
-	depth, err := database.ProcessingQueueDepth(ctx, worker.operation)
+	depth, err := database.ProcessingQueueDepth(ctx, Operation("test-model"))
 	if err != nil || depth != 0 {
 		t.Errorf("queue depth = %d, err=%v; want 0", depth, err)
 	}
@@ -111,7 +151,7 @@ func TestReleaseSpecificFailureContinuesWithNextJobs(t *testing.T) {
 		}
 		return nil
 	}}
-	worker, err := NewWorker(database, generator, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, time.Now, Schedule{Immediate: true})
+	worker, err := newFixedWorker(t, database, generator, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, time.Now, Schedule{Immediate: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +159,7 @@ func TestReleaseSpecificFailureContinuesWithNextJobs(t *testing.T) {
 	if generator.calls != 28 {
 		t.Fatalf("generator calls = %d, want one failed and 27 successful jobs", generator.calls)
 	}
-	stats, err := database.ProcessingQueueStats(ctx, worker.operation, time.Now())
+	stats, err := database.ProcessingQueueStats(ctx, Operation("test-model"), time.Now())
 	if err != nil || stats.Retrying != 1 || stats.Running != 0 {
 		t.Fatalf("processing stats = %#v, err=%v", stats, err)
 	}
@@ -130,7 +170,7 @@ func TestEndpointFailureOpensCircuitAndStopsQueue(t *testing.T) {
 	database := fixtureProcessingStore(t, ctx)
 	now := time.Date(2026, time.August, 23, 12, 0, 0, 0, time.UTC)
 	generator := &sequenceGenerator{fail: func(int) error { return errorOf(ErrorTransient, "synthetic endpoint outage") }}
-	worker, err := NewWorker(database, generator, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true})
+	worker, err := newFixedWorker(t, database, generator, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +189,7 @@ func TestPrivacyFailureBecomesNeedsReviewAfterThreeAttempts(t *testing.T) {
 	database := singleIncidentProcessingStore(t, ctx)
 	now := time.Date(2026, time.August, 23, 12, 0, 0, 0, time.UTC)
 	generator := &sequenceGenerator{fail: func(int) error { return errorOf(ErrorPrivacy, "synthetic privacy uncertainty") }}
-	worker, err := NewWorker(database, generator, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true})
+	worker, err := newFixedWorker(t, database, generator, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,7 +198,7 @@ func TestPrivacyFailureBecomesNeedsReviewAfterThreeAttempts(t *testing.T) {
 	worker.processAvailable(ctx)
 	now = now.Add(11 * time.Minute)
 	worker.processAvailable(ctx)
-	stats, err := database.ProcessingQueueStats(ctx, worker.operation, now)
+	stats, err := database.ProcessingQueueStats(ctx, Operation("test-model"), now)
 	if err != nil || stats.NeedsReview != 1 || generator.calls != 3 {
 		t.Fatalf("processing stats/calls = %#v/%d, err=%v", stats, generator.calls, err)
 	}
@@ -188,7 +228,7 @@ func TestWorkerOnlyStartsJobsInsideProcessingWindow(t *testing.T) {
 	now := time.Date(2026, time.August, 23, 12, 0, 0, 0, location)
 	generator := &sequenceGenerator{fail: func(int) error { return nil }}
 	schedule := Schedule{Location: location, Start: 3 * time.Hour, End: 8 * time.Hour}
-	worker, err := NewWorker(database, generator, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, schedule)
+	worker, err := newFixedWorker(t, database, generator, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, schedule)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,7 +255,7 @@ func TestManualRequestWakesWorkerOutsideProcessingWindow(t *testing.T) {
 	}
 	now := time.Date(2026, time.August, 23, 12, 0, 0, 0, location)
 	called := make(chan struct{}, 1)
-	worker, err := NewWorker(database, notifyingGenerator{called: called}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Hour, func() time.Time { return now }, Schedule{
+	worker, err := newFixedWorker(t, database, notifyingGenerator{called: called}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Hour, func() time.Time { return now }, Schedule{
 		Location: location, Start: 3 * time.Hour, End: 8 * time.Hour,
 	})
 	if err != nil {
@@ -227,7 +267,7 @@ func TestManualRequestWakesWorkerOutsideProcessingWindow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, err := worker.RequestNow(ctx, "fixture", &records[0].ID)
+	result, err := worker.RequestNow(ctx, "fixture", "test-model", &records[0].ID)
 	if err != nil || result.Requested != 1 {
 		t.Fatalf("manual request = %#v, err=%v", result, err)
 	}
@@ -254,7 +294,7 @@ func TestPersistedManualRequestRunsAfterWorkerRestartOutsideWindow(t *testing.T)
 		t.Fatalf("persist manual request = %#v, err=%v", result, err)
 	}
 	generator := &sequenceGenerator{fail: func(int) error { return nil }}
-	worker, err := NewWorker(database, generator, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Hour, func() time.Time { return now }, Schedule{
+	worker, err := newFixedWorker(t, database, generator, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Hour, func() time.Time { return now }, Schedule{
 		Location: location, Start: 3 * time.Hour, End: 8 * time.Hour,
 	})
 	if err != nil {
@@ -263,6 +303,51 @@ func TestPersistedManualRequestRunsAfterWorkerRestartOutsideWindow(t *testing.T)
 	worker.processAvailable(ctx)
 	if generator.calls != 1 {
 		t.Fatalf("persisted manual processing calls = %d, want 1", generator.calls)
+	}
+}
+
+func TestDynamicWorkerPausesMissingPreferenceButRunsInstalledManualModel(t *testing.T) {
+	ctx := context.Background()
+	database := singleIncidentProcessingStore(t, ctx)
+	now := time.Date(2026, time.August, 25, 12, 0, 0, 0, time.UTC)
+	if _, err := database.InitializePreferredModel(ctx, "missing:latest", now); err != nil {
+		t.Fatal(err)
+	}
+	generator := &namedGenerator{model: "manual:latest"}
+	catalog := testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"manual:latest"}, CheckedAt: now}}
+	worker, err := NewWorker(database, testGeneratorProvider{"manual:latest": generator}, catalog, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Hour, func() time.Time { return now }, Schedule{Immediate: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	records, _, err := database.ListIncidents(ctx, 1, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	missingScope := store.PresentationScope{Operation: Operation("gone:latest"), ModelIdentity: "gone:latest", PromptVersion: PromptVersion}
+	if _, err := database.RequestProcessingJobs(ctx, "fixture", missingScope, &records[0].ID, now); err != nil {
+		t.Fatal(err)
+	}
+	worker.processAvailable(ctx)
+	if generator.calls != 0 {
+		t.Fatalf("missing preferred or queued model triggered %d generator calls", generator.calls)
+	}
+	missingStats, err := database.ProcessingQueueStats(ctx, missingScope.Operation, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if missingStats.Retrying != 1 || missingStats.Running != 0 {
+		t.Fatalf("deferred missing-model stats = %#v", missingStats)
+	}
+	if _, err := worker.RequestNow(ctx, "fixture", "missing:latest", &records[0].ID); !errors.Is(err, ErrModelUnavailable) {
+		t.Fatalf("missing manual model error = %v", err)
+	}
+	result, err := worker.RequestNow(ctx, "fixture", "manual:latest", &records[0].ID)
+	if err != nil || result.Requested != 1 {
+		t.Fatalf("installed manual request = %#v/%v", result, err)
+	}
+	worker.processAvailable(ctx)
+	if generator.calls != 1 {
+		t.Fatalf("installed manual model calls = %d, want 1", generator.calls)
 	}
 }
 

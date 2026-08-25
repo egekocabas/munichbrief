@@ -49,6 +49,14 @@ only this window. Processing remains sequential and retains privacy validation,
 the circuit breaker, and normal retry delays. A command-line request is picked
 up by the running server on its next idle worker check.
 
+`MUNICHBRIEF_OLLAMA_MODEL` seeds the preferred model only when the database has
+no AI settings row. The protected admin dashboard owns later overrides. The
+server refreshes Ollama's `/api/tags` every 30 seconds; automatic processing
+pauses when the preferred model is missing, while admins may explicitly queue
+any installed model. Catalog failure pauses all AI calls but does not affect
+reader readiness. The ten-minute generation timeout already accommodates model
+loading delays of roughly 30 seconds.
+
 Structured logs identify AI job and incident IDs, attempts, safe failure
 categories, RSS synchronization stages, and press-release document stages.
 Completed stages include both a human-readable `duration` and numeric
@@ -58,7 +66,8 @@ are deliberately excluded.
 `review` presentation mode displays stored German source text and processing
 states and is intended for local fixture development. `public` mode fails closed: it
 lists only incidents with a privacy-safe presentation from the active source
-hash, model, and prompt, and never renders stored originals. Back up SQLite
+hash and prompt from any model, and never renders stored originals. The newest
+complete model-specific presentation is displayed as one cohesive result. Back up SQLite
 before deploying a migration. German and English pages use explicit `/de` and
 `/en` paths; visiting either path refreshes one one-year, HTTP-only preference
 cookie used by the root and legacy-route redirects. Enable secure cookies
