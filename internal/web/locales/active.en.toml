@@ -117,7 +117,7 @@ other = "The release body is not available yet. MunichBrief is retrying; use the
 other = "The last source refresh failed; this stored copy remains available."
 
 [Back]
-other = "Back to latest"
+other = "Back"
 
 [Breadcrumb]
 other = "Breadcrumb"
@@ -127,6 +127,12 @@ other = "Published within"
 
 [LastProcessed]
 other = "Last processed"
+
+[Model]
+other = "Model"
+
+[PromptVersion]
+other = "Prompt version"
 
 [MachineGenerated]
 other = "Machine-generated"

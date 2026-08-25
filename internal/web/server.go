@@ -97,6 +97,7 @@ type incidentView struct {
 	Record              store.IncidentRecord
 	Title               string
 	Summary             string
+	PromptVersion       string
 	ContentLanguage     string
 	ProcessingState     string
 	ProcessingLabel     string
@@ -125,6 +126,7 @@ type dayGroup struct {
 type detailPage struct {
 	basePage
 	Incident            incidentView
+	BackURL             string
 	ShowOriginalSection bool
 }
 
@@ -205,7 +207,7 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 	functions := template.FuncMap{
 		"excerpt":        func(value string) string { return excerpt(value, 190) },
 		"formatDateTime": func(language string, value time.Time) string { return formatDateTime(language, value.In(location)) },
-		"incidentURL":    func(language string, id int64) string { return fmt.Sprintf("/%s/incidents/%d", language, id) },
+		"incidentURL":    incidentURL,
 		"t":              translations.Text,
 		"tc":             translations.Count,
 		"shownTotal":     translations.ShownTotal,
@@ -354,6 +356,11 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 		http.NotFound(response, request)
 		return
 	}
+	page, err := requestedPage(request)
+	if err != nil {
+		http.Error(response, "invalid page", http.StatusBadRequest)
+		return
+	}
 	incident, err := s.store.GetPresentationIncident(request.Context(), id, s.scope(request))
 	if errors.Is(err, store.ErrNotFound) {
 		http.NotFound(response, request)
@@ -369,7 +376,7 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 	}
 	base := s.base(request, language)
 	view := s.incidentForLanguage(incident, base.Lang)
-	data := detailPage{basePage: base, Incident: view, ShowOriginalSection: base.Review && incident.HasAI}
+	data := detailPage{basePage: base, Incident: view, BackURL: timelineURL(base.Lang, page), ShowOriginalSection: base.Review && incident.HasAI}
 	prepareHTML(response, base.Lang, base.Review)
 	if err := s.detailTemplate.ExecuteTemplate(response, "layout", data); err != nil {
 		s.logger.ErrorContext(request.Context(), "render incident detail", "incident_id", id, "error", err)
@@ -733,7 +740,10 @@ func alternateLanguageURL(value *url.URL, current, alternate string) string {
 
 func (s *Server) incidentForLanguage(record store.IncidentRecord, language string) incidentView {
 	state := record.ProcessingState()
-	view := incidentView{Record: record, ContentLanguage: "de", ProcessingState: strings.ReplaceAll(state, "_", "-"), ProcessingLabel: s.processingLabel(state, language)}
+	view := incidentView{
+		Record: record, PromptVersion: shortPromptVersion(record.AIPromptVersion), ContentLanguage: "de",
+		ProcessingState: strings.ReplaceAll(state, "_", "-"), ProcessingLabel: s.processingLabel(state, language),
+	}
 	if record.HasAI {
 		view.ContentLanguage = language
 		if language == "en" {
@@ -912,6 +922,23 @@ func requestedPageParameter(request *http.Request, parameter string) (int, error
 		return 0, errors.New("page must be a positive integer")
 	}
 	return page, nil
+}
+func incidentURL(language string, id int64, page int) string {
+	path := fmt.Sprintf("/%s/incidents/%d", language, id)
+	if page <= 1 {
+		return path
+	}
+	return (&url.URL{Path: path, RawQuery: url.Values{"page": {strconv.Itoa(page)}}.Encode()}).RequestURI()
+}
+func timelineURL(language string, page int) string {
+	path := "/" + language
+	if page <= 1 {
+		return path
+	}
+	return (&url.URL{Path: path, RawQuery: url.Values{"page": {strconv.Itoa(page)}}.Encode()}).RequestURI()
+}
+func shortPromptVersion(value string) string {
+	return strings.TrimPrefix(value, "incident-presentation-")
 }
 func excerpt(value string, limit int) string {
 	normalized := strings.Join(strings.Fields(value), " ")
