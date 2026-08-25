@@ -36,7 +36,7 @@ func TestTimelineAndDetailRenderFixtureData(t *testing.T) {
 		"Fahrradunfall; eine Person leicht verletzt",
 		"Größerer Polizeieinsatz",
 		"Not yet summarized or translated",
-		"28 reports",
+		"20 shown / 28 total",
 		"Page 1 of 2",
 		"/en?page=2",
 	} {
@@ -297,6 +297,17 @@ func TestAboutHealthReadinessAndRequestHeaders(t *testing.T) {
 			t.Errorf("about response does not contain %q", expected)
 		}
 	}
+	for _, expected := range []string{
+		`href="https://github.com/egekocabas/munichbrief"`, `target="_blank"`, `rel="noopener noreferrer"`,
+		`>About</a>`, `page-shell py-6 text-center`,
+	} {
+		if !strings.Contains(about.Body.String(), expected) {
+			t.Errorf("about response does not contain navigation/footer markup %q", expected)
+		}
+	}
+	if strings.Contains(about.Body.String(), `href="/en">Latest</a>`) {
+		t.Error("about response retained the redundant Latest navigation link")
+	}
 
 	for _, path := range []string{"/healthz", "/readyz"} {
 		recorder := httptest.NewRecorder()
@@ -319,6 +330,7 @@ func TestAboutHealthReadinessAndRequestHeaders(t *testing.T) {
 	}{
 		{path: "/static/app.css", contentType: "text/css; charset=utf-8", body: "--color-civic"},
 		{path: "/static/htmx.min.js", contentType: "text/javascript; charset=utf-8", body: "htmx"},
+		{path: "/static/admin.js", contentType: "text/javascript; charset=utf-8", body: "processing-confirmation"},
 	} {
 		response := httptest.NewRecorder()
 		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, asset.path, nil))
@@ -334,7 +346,7 @@ func TestAdminIsDisabledByDefault(t *testing.T) {
 		method, path string
 	}{
 		{method: http.MethodGet, path: "/admin"},
-		{method: http.MethodPost, path: "/api/admin/ai/retry-all"},
+		{method: http.MethodPost, path: "/api/admin/ai/process-all-now"},
 	} {
 		response := httptest.NewRecorder()
 		handler.ServeHTTP(response, httptest.NewRequest(test.method, test.path, nil))
@@ -344,7 +356,7 @@ func TestAdminIsDisabledByDefault(t *testing.T) {
 	}
 }
 
-func TestAdminRendersStatsAndQueuesRetries(t *testing.T) {
+func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	ctx := context.Background()
 	database := fixtureStore(t)
 	operation := processing.Operation("qwen3.5:4b")
@@ -371,7 +383,7 @@ func TestAdminRendersStatsAndQueuesRetries(t *testing.T) {
 	if page.Code != http.StatusOK || page.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("admin page = %d/%q", page.Code, page.Header().Get("Cache-Control"))
 	}
-	for _, expected := range []string{"AI processing", "Needs review", ">2<", "/api/admin/ai/retry", "/api/admin/ai/retry-all"} {
+	for _, expected := range []string{"AI processing", "Needs review", ">2<", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "Confirm AI request", "/static/admin.js"} {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("admin page does not contain %q", expected)
 		}
@@ -384,44 +396,65 @@ func TestAdminRendersStatsAndQueuesRetries(t *testing.T) {
 		{name: "origin", fetchSite: "same-site", origin: "https://attacker.example"},
 		{name: "opaque origin without same-origin metadata", fetchSite: "same-site", origin: "null"},
 	} {
-		crossSite := formRequest(http.MethodPost, "/api/admin/ai/retry", "incident_id="+formatID(failedIDs[0]))
+		crossSite := formRequest(http.MethodPost, "/api/admin/ai/process-now", "confirmed=true&incident_id="+formatID(failedIDs[0]))
 		crossSite.Header.Set("Sec-Fetch-Site", attack.fetchSite)
 		crossSite.Header.Set("Origin", attack.origin)
 		crossSiteResponse := httptest.NewRecorder()
 		handler.ServeHTTP(crossSiteResponse, crossSite)
 		if crossSiteResponse.Code != http.StatusForbidden {
-			t.Errorf("%s cross-site retry status = %d, want 403", attack.name, crossSiteResponse.Code)
+			t.Errorf("%s cross-site processing status = %d, want 403", attack.name, crossSiteResponse.Code)
 		}
 	}
 
-	opaqueSameOrigin := formRequest(http.MethodPost, "/api/admin/ai/retry", "incident_id=9223372036854775807")
+	opaqueSameOrigin := formRequest(http.MethodPost, "/api/admin/ai/process-now", "confirmed=true&incident_id="+formatID(failedIDs[0]))
 	opaqueSameOrigin.Header.Set("Sec-Fetch-Site", "same-origin")
 	opaqueSameOrigin.Header.Set("Origin", "null")
 	opaqueSameOriginResponse := httptest.NewRecorder()
 	handler.ServeHTTP(opaqueSameOriginResponse, opaqueSameOrigin)
-	if opaqueSameOriginResponse.Code != http.StatusSeeOther || opaqueSameOriginResponse.Header().Get("Location") != "/admin?retried=0" {
-		t.Fatalf("opaque same-origin retry = %d/%q, want 303 with no affected jobs", opaqueSameOriginResponse.Code, opaqueSameOriginResponse.Header().Get("Location"))
+	if opaqueSameOriginResponse.Code != http.StatusSeeOther || !strings.Contains(opaqueSameOriginResponse.Header().Get("Location"), "requested=1") {
+		t.Fatalf("opaque same-origin processing = %d/%q, want 303 with one requested job", opaqueSameOriginResponse.Code, opaqueSameOriginResponse.Header().Get("Location"))
 	}
 
 	invalid := httptest.NewRecorder()
-	handler.ServeHTTP(invalid, formRequest(http.MethodPost, "/api/admin/ai/retry", "incident_id=zero"))
+	handler.ServeHTTP(invalid, formRequest(http.MethodPost, "/api/admin/ai/process-now", "confirmed=true&incident_id=zero"))
 	if invalid.Code != http.StatusBadRequest {
-		t.Fatalf("invalid retry status = %d, want 400", invalid.Code)
+		t.Fatalf("invalid process status = %d, want 400", invalid.Code)
 	}
 
-	retryOne := httptest.NewRecorder()
-	handler.ServeHTTP(retryOne, formRequest(http.MethodPost, "/api/admin/ai/retry", "incident_id="+formatID(failedIDs[0])))
-	if retryOne.Code != http.StatusSeeOther || retryOne.Header().Get("Location") != "/admin?retried=1" {
-		t.Fatalf("retry one = %d/%q", retryOne.Code, retryOne.Header().Get("Location"))
+	unconfirmed := httptest.NewRecorder()
+	handler.ServeHTTP(unconfirmed, formRequest(http.MethodPost, "/api/admin/ai/process-now", "incident_id="+formatID(failedIDs[0])))
+	if unconfirmed.Code != http.StatusBadRequest {
+		t.Fatalf("unconfirmed processing status = %d, want 400", unconfirmed.Code)
 	}
-	retryAll := httptest.NewRecorder()
-	handler.ServeHTTP(retryAll, formRequest(http.MethodPost, "/api/admin/ai/retry-all", ""))
-	if retryAll.Code != http.StatusSeeOther || retryAll.Header().Get("Location") != "/admin?retried=1" {
-		t.Fatalf("retry all = %d/%q", retryAll.Code, retryAll.Header().Get("Location"))
+	processAll := httptest.NewRecorder()
+	handler.ServeHTTP(processAll, formRequest(http.MethodPost, "/api/admin/ai/process-all-now", "confirmed=true&unprocessed_page=1&all_page=1"))
+	if processAll.Code != http.StatusSeeOther || !strings.Contains(processAll.Header().Get("Location"), "requested=28") || !strings.Contains(processAll.Header().Get("Location"), "all_page=1") || !strings.Contains(processAll.Header().Get("Location"), "unprocessed_page=1") {
+		t.Fatalf("process all = %d/%q", processAll.Code, processAll.Header().Get("Location"))
+	}
+	notice := httptest.NewRecorder()
+	handler.ServeHTTP(notice, httptest.NewRequest(http.MethodGet, processAll.Header().Get("Location"), nil))
+	if !strings.Contains(notice.Body.String(), "Requested immediate processing for 28 incident(s)") || !strings.Contains(notice.Body.String(), "AI work continues asynchronously") {
+		t.Fatalf("processing redirect notice = %q", notice.Body.String())
 	}
 	stats, err := database.ProcessingQueueStats(ctx, operation, time.Now())
-	if err != nil || stats.NeedsReview != 0 || stats.Queued != initialStats.Queued+2 {
-		t.Fatalf("retried stats = %#v/%v", stats, err)
+	if err != nil || stats.NeedsReview != 0 || stats.Queued != 28 || initialStats.NeedsReview != 2 {
+		t.Fatalf("processed stats = %#v initial=%#v err=%v", stats, initialStats, err)
+	}
+}
+
+func TestAdminProcessingReturnsUnavailableWhenAIIsDisabled(t *testing.T) {
+	database := fixtureStore(t)
+	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "review", ModelIdentity: "qwen3.5:4b",
+		PromptVersion: processing.PromptVersion, AdminEnabled: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := httptest.NewRecorder()
+	server.Handler().ServeHTTP(response, formRequest(http.MethodPost, "/api/admin/ai/process-all-now", "confirmed=true"))
+	if response.Code != http.StatusServiceUnavailable {
+		t.Fatalf("AI-disabled processing status = %d, want 503", response.Code)
 	}
 }
 
@@ -455,7 +488,7 @@ func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
 		t.Fatalf("admin review page status = %d", first.Code)
 	}
 	for _, expected := range []string{
-		"Unprocessed incidents", "27 incidents", "All incidents", "28 incidents",
+		"Unprocessed incidents", "2 shown / 27 total", "All incidents", "2 shown / 28 total",
 		presentation.TitleDE, presentation.SummaryDE, presentation.TitleEN, presentation.SummaryEN,
 		job.TitleDE, job.BodyDE, "Original German text", "Summarized and translated",
 		"all_page=1&amp;unprocessed_page=2", "all_page=2&amp;unprocessed_page=1",
@@ -524,17 +557,17 @@ func TestAdminReportsStoreErrors(t *testing.T) {
 		t.Fatalf("admin stats error status = %d, want 500", statsResponse.Code)
 	}
 
-	retryServer, err := NewWithOptions(failingAdminStore{Store: database, retryError: errors.New("retry unavailable")}, logger, Options{
+	retryServer, err := NewWithOptions(database, logger, Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review", ModelIdentity: "qwen3.5:4b",
-		PromptVersion: processing.PromptVersion, AdminEnabled: true,
+		PromptVersion: processing.PromptVersion, AdminEnabled: true, Processor: fakeProcessingRequester{err: errors.New("processing unavailable")},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	retryResponse := httptest.NewRecorder()
-	retryServer.Handler().ServeHTTP(retryResponse, formRequest(http.MethodPost, "/api/admin/ai/retry-all", ""))
+	retryServer.Handler().ServeHTTP(retryResponse, formRequest(http.MethodPost, "/api/admin/ai/process-all-now", "confirmed=true"))
 	if retryResponse.Code != http.StatusInternalServerError {
-		t.Fatalf("admin retry error status = %d, want 500", retryResponse.Code)
+		t.Fatalf("admin process error status = %d, want 500", retryResponse.Code)
 	}
 }
 
@@ -580,7 +613,7 @@ func TestPublicHostUsesFailClosedPresentationAndRejectsAdmin(t *testing.T) {
 				}
 			}
 
-			for _, path := range []string{"/admin", "/api/admin/ai/retry-all", "/private"} {
+			for _, path := range []string{"/admin", "/api/admin/ai/process-all-now", "/private"} {
 				response := httptest.NewRecorder()
 				request := httptest.NewRequest(http.MethodGet, path, nil)
 				request.Host = publicHost
@@ -747,6 +780,12 @@ func TestTranslationCatalogsAreCompleteAndPluralized(t *testing.T) {
 			t.Errorf("Count(%q, %d) = %q, want %q", test.language, test.count, actual, test.expected)
 		}
 	}
+	if actual := translations.ShownTotal("en", 20, 28); actual != "20 shown / 28 total" {
+		t.Errorf("ShownTotal() = %q", actual)
+	}
+	if actual := translations.ShownTotal("de", 20, 28); actual != "20 angezeigt / 28 insgesamt" {
+		t.Errorf("ShownTotal() German = %q", actual)
+	}
 
 	broken := fstest.MapFS{
 		"de.toml": {Data: []byte("[OnlyGerman]\nother = 'Deutsch'\n")},
@@ -774,6 +813,9 @@ func TestPublicModeHidesUnprocessedStaleAndOriginalContent(t *testing.T) {
 	}
 	empty := httptest.NewRecorder()
 	publicServer.Handler().ServeHTTP(empty, englishRequest(http.MethodGet, "/en", nil))
+	if !strings.Contains(empty.Body.String(), "0 shown / 0 total") {
+		t.Fatalf("empty public timeline count = %q", empty.Body.String())
+	}
 	if strings.Contains(empty.Body.String(), records[0].TitleDE) {
 		t.Fatal("public timeline exposed an unprocessed original")
 	}
@@ -807,8 +849,11 @@ func TestPublicModeHidesUnprocessedStaleAndOriginalContent(t *testing.T) {
 	}
 	readyTimeline := httptest.NewRecorder()
 	publicServer.Handler().ServeHTTP(readyTimeline, englishRequest(http.MethodGet, "/en", nil))
-	if !strings.Contains(readyTimeline.Body.String(), presentation.SummaryEN) || strings.Contains(readyTimeline.Body.String(), processedRecord.BodyDE) {
+	if !strings.Contains(readyTimeline.Body.String(), presentation.SummaryEN) || !strings.Contains(readyTimeline.Body.String(), "1 shown / 1 total") || strings.Contains(readyTimeline.Body.String(), processedRecord.BodyDE) {
 		t.Fatalf("public timeline did not isolate the safe presentation: %q", readyTimeline.Body.String())
+	}
+	if strings.Contains(readyTimeline.Body.String(), "AI-generated summary") || strings.Contains(readyTimeline.Body.String(), "Not yet summarized or translated") {
+		t.Fatal("public timeline retained a redundant processing badge")
 	}
 }
 
@@ -856,7 +901,6 @@ func fixtureStore(t *testing.T) *store.Store {
 type failingAdminStore struct {
 	*store.Store
 	statsError error
-	retryError error
 }
 
 func (s failingAdminStore) ProcessingQueueStats(ctx context.Context, operation string, now time.Time) (store.ProcessingStats, error) {
@@ -866,11 +910,20 @@ func (s failingAdminStore) ProcessingQueueStats(ctx context.Context, operation s
 	return s.Store.ProcessingQueueStats(ctx, operation, now)
 }
 
-func (s failingAdminStore) RetryProcessingJobs(ctx context.Context, operation string, incidentID *int64, now time.Time) (int64, error) {
-	if s.retryError != nil {
-		return 0, s.retryError
+type fakeProcessingRequester struct {
+	database *store.Store
+	err      error
+}
+
+func (p fakeProcessingRequester) RequestNow(ctx context.Context, sourceMode string, incidentID *int64) (store.ProcessingRequestResult, error) {
+	if p.err != nil {
+		return store.ProcessingRequestResult{}, p.err
 	}
-	return s.Store.RetryProcessingJobs(ctx, operation, incidentID, now)
+	return p.database.RequestProcessingJobs(ctx, sourceMode, store.PresentationScope{
+		Operation:     processing.Operation("qwen3.5:4b"),
+		ModelIdentity: "qwen3.5:4b",
+		PromptVersion: processing.PromptVersion,
+	}, incidentID, time.Now())
 }
 
 func testServer(t *testing.T, database *store.Store) *Server {
@@ -890,6 +943,7 @@ func adminTestServer(t *testing.T, database *store.Store, publicHosts []string) 
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
 		ModelIdentity: "qwen3.5:4b", PromptVersion: processing.PromptVersion,
 		SecureCookies: true, AdminEnabled: true, PublicHosts: publicHosts,
+		Processor: fakeProcessingRequester{database: database},
 	})
 	if err != nil {
 		t.Fatalf("NewWithOptions() error = %v", err)

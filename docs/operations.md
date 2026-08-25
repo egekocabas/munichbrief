@@ -27,11 +27,11 @@ go run ./cmd/munichbrief sync
 
 MUNICHBRIEF_DATABASE_PATH=.data/munichbrief-live.db \
 MUNICHBRIEF_OLLAMA_MODEL=qwen3.5:4b \
-go run ./cmd/munichbrief ai-retry --incident 123
+go run ./cmd/munichbrief ai-process --incident 123
 
 MUNICHBRIEF_DATABASE_PATH=.data/munichbrief-live.db \
 MUNICHBRIEF_OLLAMA_MODEL=qwen3.5:4b \
-go run ./cmd/munichbrief ai-retry --all
+go run ./cmd/munichbrief ai-process --all
 ```
 
 The reader listens on `127.0.0.1:8080` and metrics listen separately on
@@ -44,6 +44,10 @@ The five-second AI interval is an idle queue check, while the ten-minute AI
 timeout bounds a single Ollama request. Unless immediate mode is enabled, new
 Ollama requests start only during the configured Europe/Berlin processing
 window; a request already running when the window closes is allowed to finish.
+An explicit admin or `ai-process` request persists manual intent and bypasses
+only this window. Processing remains sequential and retains privacy validation,
+the circuit breaker, and normal retry delays. A command-line request is picked
+up by the running server on its next idle worker check.
 
 Structured logs identify AI job and incident IDs, attempts, safe failure
 categories, RSS synchronization stages, and press-release document stages.
@@ -65,9 +69,10 @@ and public hosts. `MUNICHBRIEF_PUBLIC_HOSTS` additionally forces each listed
 hostname into public presentation and restricts it to reader-safe paths. The
 optional `/admin` dashboard shows processing queue state, independently
 paginated unprocessed and complete incident review lists, retained German
-originals, and both generated languages. It can also requeue one incident or
-all current failed/review-required jobs. Those actions are asynchronous and
-still obey the worker's processing window. The
+originals, and both generated languages. Its confirmed Process now actions can
+create a missing job or reset incomplete current work for one incident or every
+unprocessed incident. They wake the in-process worker and run asynchronously
+outside the normal window while retaining the standard safety controls. The
 application does not authenticate users itself: enable the dashboard only when
 Traefik protects `/admin*` and `/api/admin*`, and keep both prefixes absent from
 the public ingress allowlist.

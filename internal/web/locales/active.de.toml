@@ -8,7 +8,7 @@ other = "München im Überblick"
 other = "Aktuelles"
 
 [About]
-other = "Über MunichBrief"
+other = "Über"
 
 [PrimaryNavigation]
 other = "Hauptnavigation"
@@ -73,6 +73,9 @@ other = "Neueste Meldungen"
 [Reports]
 one = "{{.Count}} Meldung"
 other = "{{.Count}} Meldungen"
+
+[ShownTotal]
+other = "{{.Shown}} angezeigt / {{.Total}} insgesamt"
 
 [Report]
 other = "Meldung"

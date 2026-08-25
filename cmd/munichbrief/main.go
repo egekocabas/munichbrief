@@ -63,8 +63,8 @@ func run(ctx context.Context, logger *slog.Logger, arguments []string) error {
 		return runOneShotSync(ctx, logger, cfg)
 	case "backup":
 		return runBackup(ctx, cfg, arguments, os.Stdout)
-	case "ai-retry":
-		return runAIRetry(ctx, logger, cfg, arguments)
+	case "ai-process", "ai-retry":
+		return runAIProcess(ctx, logger, cfg, arguments)
 	case "help", "-h", "--help":
 		printUsage(os.Stdout)
 		return nil
@@ -139,7 +139,7 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 	webServer, err := web.NewWithOptions(database, logger, web.Options{
 		PageSize: cfg.PageSize, SourceMode: cfg.SourceMode, PresentationMode: cfg.PresentationMode,
 		ModelIdentity: cfg.OllamaModel, PromptVersion: processing.PromptVersion, SecureCookies: cfg.SecureCookies,
-		AdminEnabled: cfg.AdminEnabled, PublicHosts: cfg.PublicHosts,
+		AdminEnabled: cfg.AdminEnabled, PublicHosts: cfg.PublicHosts, Processor: aiWorker,
 	})
 	if err != nil {
 		return err
@@ -189,16 +189,16 @@ func restoreFeedSuccessMetric(ctx context.Context, database *store.Store, metric
 	return nil
 }
 
-func runAIRetry(ctx context.Context, logger *slog.Logger, cfg config.Config, arguments []string) error {
-	flags := flag.NewFlagSet("ai-retry", flag.ContinueOnError)
+func runAIProcess(ctx context.Context, logger *slog.Logger, cfg config.Config, arguments []string) error {
+	flags := flag.NewFlagSet("ai-process", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
-	incidentID := flags.Int64("incident", 0, "retry one incident ID")
-	all := flags.Bool("all", false, "retry all failed or review-required incidents")
+	incidentID := flags.Int64("incident", 0, "process one incident ID")
+	all := flags.Bool("all", false, "process all unprocessed incidents")
 	if err := flags.Parse(arguments); err != nil {
-		return fmt.Errorf("parse ai-retry arguments: %w", err)
+		return fmt.Errorf("parse ai-process arguments: %w", err)
 	}
 	if (*incidentID > 0) == *all {
-		return errors.New("ai-retry requires exactly one of --incident ID or --all")
+		return errors.New("ai-process requires exactly one of --incident ID or --all")
 	}
 	database, err := store.Open(ctx, cfg.DatabasePath)
 	if err != nil {
@@ -209,11 +209,20 @@ func runAIRetry(ctx context.Context, logger *slog.Logger, cfg config.Config, arg
 	if *incidentID > 0 {
 		selectedID = incidentID
 	}
-	count, err := database.RetryProcessingJobs(ctx, processing.Operation(cfg.OllamaModel), selectedID, time.Now())
+	result, err := database.RequestProcessingJobs(ctx, cfg.SourceMode, store.PresentationScope{
+		Operation:     processing.Operation(cfg.OllamaModel),
+		ModelIdentity: cfg.OllamaModel,
+		PromptVersion: processing.PromptVersion,
+	}, selectedID, time.Now())
 	if err != nil {
 		return err
 	}
-	logger.Info("AI processing jobs queued for retry", "count", count, "model", cfg.OllamaModel)
+	logger.Info("immediate AI processing requested",
+		"requested", result.Requested,
+		"already_running", result.AlreadyRunning,
+		"already_current", result.AlreadyCurrent,
+		"model", cfg.OllamaModel,
+	)
 	return nil
 }
 
@@ -418,6 +427,6 @@ func printUsage(writer io.Writer) {
 	fmt.Fprintln(writer, "  munichbrief sync                  Run one live synchronization")
 	fmt.Fprintln(writer, "  munichbrief backup --output PATH  Create a consistent SQLite backup")
 	fmt.Fprintln(writer, "  munichbrief backup --output -     Stream a consistent backup to stdout")
-	fmt.Fprintln(writer, "  munichbrief ai-retry --incident ID  Retry one failed or review-required AI job")
-	fmt.Fprintln(writer, "  munichbrief ai-retry --all          Retry all current failed or review-required AI jobs")
+	fmt.Fprintln(writer, "  munichbrief ai-process --incident ID  Request immediate processing for one incident")
+	fmt.Fprintln(writer, "  munichbrief ai-process --all          Request immediate processing for all unprocessed incidents")
 }

@@ -67,7 +67,7 @@ Useful configuration:
 | `MUNICHBRIEF_SOURCE_MODE` | `fixture` | Source provider: `fixture` or explicit `live` mode |
 | `MUNICHBRIEF_PRESENTATION_MODE` | `review` for fixtures, `public` for live | `review` exposes original QA text and states for local development; deployed readers use `public`, while protected admin lists retain review access |
 | `MUNICHBRIEF_SECURE_COOKIES` | `false` | Set the language preference cookie's `Secure` attribute; enabled by the TLS Helm deployment |
-| `MUNICHBRIEF_ADMIN_ENABLED` | `false` | Register the LAN-only processing dashboard, paginated incident review lists, and `/api/admin/*` actions; production must protect both prefixes at the ingress |
+| `MUNICHBRIEF_ADMIN_ENABLED` | `false` | Register the LAN-only processing dashboard, paginated incident review lists, and confirmed `/api/admin/*` processing actions; production must protect both prefixes at the ingress |
 | `MUNICHBRIEF_PUBLIC_HOSTS` | empty | Comma-separated hosts that always receive fail-closed public presentation and path restrictions |
 | `MUNICHBRIEF_PAGE_SIZE` | `20` | Timeline incidents per page, from 1 to 100 |
 | `MUNICHBRIEF_FEED_URL` | Official Munich RSS URL | Live discovery feed; must be HTTPS |
@@ -307,6 +307,7 @@ Represents durable asynchronous work for `pi8`.
 - requested operation;
 - status and attempt count;
 - next retry time;
+- persisted manual processing request time;
 - sanitized last error.
 
 #### `sync_state`
@@ -330,7 +331,8 @@ Database constraints will enforce source and incident identity so repeated polls
 | `GET /{lang}/incidents/{id}` | Incident detail, attribution, and official source link |
 | `GET /{lang}/about` | Methodology, source policy, retention policy, and AI disclaimer |
 | Protected `GET /admin` | Processing operations plus paginated unprocessed and complete incident review lists |
-| Protected `POST /api/admin/ai/*` | Queue one or all eligible AI processing retries |
+| Protected `POST /api/admin/ai/process-now` | Create or reset current work and request immediate processing for one incident |
+| Protected `POST /api/admin/ai/process-all-now` | Request immediate sequential processing for every unprocessed incident |
 | `GET /healthz` | Process liveness |
 | `GET /readyz` | Database and migration readiness |
 | Internal listener: `GET /metrics` | Prometheus metrics; absent from the reader listener and ingress |
@@ -352,6 +354,12 @@ Every incident view will display:
 The application must continue synchronizing and serving existing data when `pi8` is unavailable. AI processing will therefore be asynchronous and outside browser request paths.
 
 During the configured `03:00-08:00` Europe/Berlin processing window, the worker creates current processing jobs for every stored incident that has a German body but no job for the active source hash, model, and prompt version. This includes historical incidents and incidents whose only AI output is stale. Ready work is processed from the newest publication to the oldest; a request already in progress may finish after the window closes, but no new request starts outside the window. Immediate mode bypasses the window for local development.
+
+The protected admin dashboard can explicitly request one incident or all
+unprocessed incidents at any time. Manual intent is stored in SQLite, creates a
+job when none has ever existed, survives restarts, and wakes the running worker.
+Only the time window is bypassed: work remains sequential and continues to use
+privacy validation, circuit breaking, and the normal failure retry schedule.
 
 The application-facing processing operation creates one aligned presentation and privacy assessment:
 

@@ -34,6 +34,16 @@ type sequenceGenerator struct {
 	fail  func(int) error
 }
 
+type notifyingGenerator struct {
+	called chan struct{}
+}
+
+func (g notifyingGenerator) ModelIdentity() string { return "test-model" }
+func (g notifyingGenerator) Generate(context.Context, string, string) (store.AIPresentation, string, error) {
+	g.called <- struct{}{}
+	return fakeGenerator{}.Generate(context.Background(), "", "")
+}
+
 func (g *sequenceGenerator) ModelIdentity() string { return "test-model" }
 func (g *sequenceGenerator) Generate(context.Context, string, string) (store.AIPresentation, string, error) {
 	g.calls++
@@ -192,6 +202,67 @@ func TestWorkerOnlyStartsJobsInsideProcessingWindow(t *testing.T) {
 	worker.processAvailable(ctx)
 	if generator.calls != 1 {
 		t.Fatalf("overnight processing calls = %d, want 1", generator.calls)
+	}
+}
+
+func TestManualRequestWakesWorkerOutsideProcessingWindow(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	database := singleIncidentProcessingStore(t, ctx)
+	location, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, time.August, 23, 12, 0, 0, 0, location)
+	called := make(chan struct{}, 1)
+	worker, err := NewWorker(database, notifyingGenerator{called: called}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Hour, func() time.Time { return now }, Schedule{
+		Location: location, Start: 3 * time.Hour, End: 8 * time.Hour,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	go worker.Run(ctx)
+
+	records, _, err := database.ListIncidents(ctx, 1, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := worker.RequestNow(ctx, "fixture", &records[0].ID)
+	if err != nil || result.Requested != 1 {
+		t.Fatalf("manual request = %#v, err=%v", result, err)
+	}
+	select {
+	case <-called:
+	case <-time.After(2 * time.Second):
+		t.Fatal("worker did not wake for manual request outside processing window")
+	}
+}
+
+func TestPersistedManualRequestRunsAfterWorkerRestartOutsideWindow(t *testing.T) {
+	ctx := context.Background()
+	database := singleIncidentProcessingStore(t, ctx)
+	location, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, time.August, 23, 12, 0, 0, 0, location)
+	operation := Operation("test-model")
+	result, err := database.RequestProcessingJobs(ctx, "fixture", store.PresentationScope{
+		Operation: operation, ModelIdentity: "test-model", PromptVersion: PromptVersion,
+	}, nil, now)
+	if err != nil || result.Requested != 1 {
+		t.Fatalf("persist manual request = %#v, err=%v", result, err)
+	}
+	generator := &sequenceGenerator{fail: func(int) error { return nil }}
+	worker, err := NewWorker(database, generator, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Hour, func() time.Time { return now }, Schedule{
+		Location: location, Start: 3 * time.Hour, End: 8 * time.Hour,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker.processAvailable(ctx)
+	if generator.calls != 1 {
+		t.Fatalf("persisted manual processing calls = %d, want 1", generator.calls)
 	}
 }
 

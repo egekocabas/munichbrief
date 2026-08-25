@@ -33,4 +33,6 @@ enforces public presentation scope for each domain. Every
 `admin.basicAuthSecret` or `admin.basicAuthMiddleware`. The chart never creates
 credentials; a Secret-backed option creates only the Traefik Middleware. The
 admin dashboard contains retained original incident text and must remain absent
-from the public ingress.
+from the public ingress. Confirmed Process now actions persist and wake manual
+work outside the configured AI window without bypassing validation, sequential
+execution, circuit breaking, or retry delays.

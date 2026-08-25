@@ -7,6 +7,7 @@
   <meta name="robots" content="noindex,nofollow,noarchive">
   <title>Operations · MunichBrief Admin</title>
   <link rel="stylesheet" href="/static/app.css">
+  <script defer src="/static/admin.js"></script>
 </head>
 <body class="min-h-screen text-ink antialiased">
   <header class="border-b border-rule/90 bg-paper/95">
@@ -22,7 +23,7 @@
     <div class="max-w-3xl">
       <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Operations</p>
       <h1 class="mt-1 font-serif text-4xl font-bold tracking-tight">AI processing</h1>
-      <p class="mt-3 text-muted">Retries are queued for the active model and run asynchronously during the configured processing window.</p>
+      <p class="mt-3 text-muted">Manual requests are persisted for the active model and processed asynchronously, even outside the configured processing window.</p>
     </div>
 
     {{if .Notice}}<div class="mt-6 rounded-md border px-4 py-3 font-semibold {{if .NoticeIsWarning}}border-alert/30 bg-alert-soft text-alert{{else}}border-civic/25 bg-paper text-civic{{end}}" role="status">{{.Notice}}</div>{{end}}
@@ -39,21 +40,28 @@
       </dl>
     </section>
 
-    <section class="mt-10 grid gap-6 lg:grid-cols-2" aria-labelledby="retry-heading">
+    <section class="mt-10 grid gap-6 lg:grid-cols-2" aria-labelledby="process-heading">
       <div class="rounded-lg border border-rule bg-paper p-5">
-        <h2 id="retry-heading" class="font-serif text-xl font-bold">Retry one incident</h2>
-        <p class="mt-2 text-sm text-muted">Only a current failed or review-required job can be reset.</p>
-        <form class="mt-4 flex flex-col gap-3" method="post" action="/api/admin/ai/retry">
+        <h2 id="process-heading" class="font-serif text-xl font-bold">Process one incident now</h2>
+        <p class="mt-2 text-sm text-muted">Create or reset the current AI job and wake the worker immediately.</p>
+        <form class="mt-4 flex flex-col gap-3" method="post" action="/api/admin/ai/process-now" data-confirm-processing data-confirm-description="Create or reset the current AI job for the entered incident." data-incident-input="incident-id">
+          <input name="confirmed" type="hidden" value="false">
+          <input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}">
+          <input name="all_page" type="hidden" value="{{.AllPage}}">
           <label class="text-sm font-bold" for="incident-id">Incident ID</label>
           <input class="rounded-md border border-rule bg-white px-3 py-2" id="incident-id" name="incident_id" type="number" min="1" step="1" required inputmode="numeric">
-          <button class="rounded-md bg-civic px-4 py-2 font-bold text-white hover:bg-civic-dark" type="submit">Queue incident retry</button>
+          <button class="rounded-md bg-civic px-4 py-2 font-bold text-white hover:bg-civic-dark" type="submit" {{if not .ProcessingEnabled}}disabled aria-disabled="true"{{end}}>Process incident now</button>
+          {{if not .ProcessingEnabled}}<p class="text-sm font-semibold text-alert">AI processing is disabled in this application instance.</p>{{end}}
         </form>
       </div>
       <div class="rounded-lg border border-alert/25 bg-paper p-5">
-        <h2 class="font-serif text-xl font-bold">Retry all review jobs</h2>
-        <p class="mt-2 text-sm text-muted">Reset every current failed and review-required job for the active model.</p>
-        <form class="mt-4" method="post" action="/api/admin/ai/retry-all">
-          <button class="w-full rounded-md border border-alert bg-white px-4 py-2 font-bold text-alert hover:bg-alert-soft" type="submit">Queue all retries</button>
+        <h2 class="font-serif text-xl font-bold">Process all unprocessed incidents</h2>
+        <p class="mt-2 text-sm text-muted">Create or reset every incomplete current job and process them sequentially.</p>
+        <form class="mt-4" method="post" action="/api/admin/ai/process-all-now" data-confirm-processing data-confirm-description="Request immediate processing for all {{.Unprocessed.Total}} currently unprocessed incidents.">
+          <input name="confirmed" type="hidden" value="false">
+          <input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}">
+          <input name="all_page" type="hidden" value="{{.AllPage}}">
+          <button class="w-full rounded-md border border-alert bg-white px-4 py-2 font-bold text-alert hover:bg-alert-soft" type="submit" {{if not .ProcessingEnabled}}disabled aria-disabled="true"{{end}}>Process all now</button>
         </form>
       </div>
     </section>
@@ -65,7 +73,7 @@
           <h2 id="unprocessed-heading" class="mt-1 font-serif text-2xl font-bold">Unprocessed incidents</h2>
           <p class="mt-2 max-w-3xl text-sm text-muted">Incidents without a current, complete presentation for the active source content, model, and prompt.</p>
         </div>
-        <p class="font-mono text-sm font-semibold tabular-nums text-muted">{{.Unprocessed.Total}} incidents</p>
+        <p class="font-mono text-sm font-semibold tabular-nums text-muted">{{.Unprocessed.Shown}} shown / {{.Unprocessed.Total}} total</p>
       </div>
       <div class="mt-5">
         {{template "admin-incident-list" .Unprocessed}}
@@ -79,13 +87,28 @@
           <h2 id="all-incidents-heading" class="mt-1 font-serif text-2xl font-bold">All incidents</h2>
           <p class="mt-2 max-w-3xl text-sm text-muted">Processed and unprocessed incidents with the retained German source text available for comparison.</p>
         </div>
-        <p class="font-mono text-sm font-semibold tabular-nums text-muted">{{.AllIncidents.Total}} incidents</p>
+        <p class="font-mono text-sm font-semibold tabular-nums text-muted">{{.AllIncidents.Shown}} shown / {{.AllIncidents.Total}} total</p>
       </div>
       <div class="mt-5">
         {{template "admin-incident-list" .AllIncidents}}
       </div>
     </section>
   </main>
+  <dialog id="processing-confirmation" class="w-full max-w-xl rounded-lg border border-rule bg-paper p-0 text-ink" aria-labelledby="processing-confirmation-title" aria-describedby="processing-confirmation-description">
+    <form method="dialog" class="p-5 sm:p-6">
+      <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-alert">Confirm AI request</p>
+      <h2 id="processing-confirmation-title" class="mt-1 font-serif text-2xl font-bold">Process now?</h2>
+      <p id="processing-confirmation-description" class="mt-3 leading-relaxed text-muted"></p>
+      <dl class="mt-5 grid gap-3 rounded-md border border-rule bg-newsprint/60 p-4 text-sm">
+        <div><dt class="font-bold">Request</dt><dd id="processing-confirmation-request" class="mt-0.5 font-mono text-xs"></dd></div>
+        <div><dt class="font-bold">Behavior</dt><dd class="mt-0.5 text-muted">Bypasses the configured time window, wakes the worker, and runs asynchronously. Jobs remain sequential and keep normal privacy validation, circuit breaking, and retry delays.</dd></div>
+      </dl>
+      <div class="mt-6 flex justify-end gap-3">
+        <button class="rounded-md border border-rule bg-white px-4 py-2 font-bold text-ink hover:bg-newsprint" value="cancel">Cancel</button>
+        <button id="processing-confirmation-submit" class="rounded-md bg-civic px-4 py-2 font-bold text-white hover:bg-civic-dark" type="button">Confirm processing</button>
+      </div>
+    </form>
+  </dialog>
 </body>
 </html>
 {{end}}
@@ -133,6 +156,22 @@
           <h3 class="mt-2 font-serif text-xl font-bold leading-tight">{{.Record.TitleDE}}</h3>
           <div class="incident-body mt-3 leading-7 text-ink">{{.Record.BodyDE}}</div>
         </section>
+
+        {{if $.AllowProcessing}}
+        <div class="mt-6 border-t border-rule/70 pt-4">
+          {{if .CanProcess}}
+          <form method="post" action="/api/admin/ai/process-now" data-confirm-processing data-confirm-description="Create or reset the current AI job for incident #{{.Record.ID}}.">
+            <input name="confirmed" type="hidden" value="false">
+            <input name="incident_id" type="hidden" value="{{.Record.ID}}">
+            <input name="unprocessed_page" type="hidden" value="{{$.Page}}">
+            <input name="all_page" type="hidden" value="{{$.OtherPage}}">
+            <button class="rounded-md bg-civic px-4 py-2 text-sm font-bold text-white hover:bg-civic-dark" type="submit">Process now</button>
+          </form>
+          {{else}}
+          <button class="rounded-md border border-rule bg-newsprint px-4 py-2 text-sm font-bold text-muted" type="button" disabled aria-disabled="true">Processing in progress</button>
+          {{end}}
+        </div>
+        {{end}}
 
         <footer class="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-rule/70 pt-4 text-sm text-muted">
           <span>Incident ID {{.Record.ID}}</span>
