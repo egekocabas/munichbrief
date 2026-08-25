@@ -25,6 +25,8 @@ func TestLoadDefaults(t *testing.T) {
 	t.Setenv("MUNICHBRIEF_AI_WINDOW", "")
 	t.Setenv("MUNICHBRIEF_PRESENTATION_MODE", "")
 	t.Setenv("MUNICHBRIEF_SECURE_COOKIES", "")
+	t.Setenv("MUNICHBRIEF_ADMIN_ENABLED", "")
+	t.Setenv("MUNICHBRIEF_PUBLIC_HOSTS", "")
 
 	cfg, err := Load()
 	if err != nil {
@@ -57,6 +59,9 @@ func TestLoadDefaults(t *testing.T) {
 	}
 	if cfg.PresentationMode != "review" || cfg.SecureCookies {
 		t.Errorf("presentation defaults = %q/secure:%t", cfg.PresentationMode, cfg.SecureCookies)
+	}
+	if cfg.AdminEnabled || len(cfg.PublicHosts) != 0 {
+		t.Errorf("admin defaults = enabled:%t public-hosts:%q", cfg.AdminEnabled, cfg.PublicHosts)
 	}
 }
 
@@ -145,6 +150,39 @@ func TestLoadAcceptsExplicitReviewAndSecureCookies(t *testing.T) {
 	}
 	if cfg.PresentationMode != "review" || !cfg.SecureCookies {
 		t.Fatalf("presentation config = %q/secure:%t", cfg.PresentationMode, cfg.SecureCookies)
+	}
+}
+
+func TestLoadAcceptsAdminAndPublicHosts(t *testing.T) {
+	t.Setenv("MUNICHBRIEF_ADMIN_ENABLED", "true")
+	t.Setenv("MUNICHBRIEF_PUBLIC_HOSTS", " MUNICHBRIEF.EGEKOCABAS.COM,munichbrief.de,munichbrief.de ")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantHosts := []string{"munichbrief.egekocabas.com", "munichbrief.de"}
+	if !cfg.AdminEnabled || len(cfg.PublicHosts) != len(wantHosts) || cfg.PublicHosts[0] != wantHosts[0] || cfg.PublicHosts[1] != wantHosts[1] {
+		t.Fatalf("admin config = enabled:%t public-hosts:%q", cfg.AdminEnabled, cfg.PublicHosts)
+	}
+}
+
+func TestLoadRejectsInvalidAdminConfiguration(t *testing.T) {
+	for _, test := range []struct {
+		name, enabled, host string
+	}{
+		{name: "enabled", enabled: "sometimes"},
+		{name: "scheme", host: "https://munichbrief.egekocabas.com"},
+		{name: "port", host: "munichbrief.egekocabas.com:443"},
+		{name: "path", host: "munichbrief.egekocabas.com/admin"},
+		{name: "empty entry", host: "munichbrief.egekocabas.com,"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv("MUNICHBRIEF_ADMIN_ENABLED", test.enabled)
+			t.Setenv("MUNICHBRIEF_PUBLIC_HOSTS", test.host)
+			if _, err := Load(); err == nil {
+				t.Fatal("Load() error = nil, want invalid admin configuration error")
+			}
+		})
 	}
 }
 

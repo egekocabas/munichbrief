@@ -12,6 +12,9 @@ imagePullSecrets:
   - name: ghcr-munichbrief
 
 application:
+  publicHosts:
+    - munichbrief.egekocabas.com
+    - munichbrief.de
   sourceMode: live
   presentationMode: review
   secureCookies: true
@@ -31,8 +34,19 @@ application:
   existingSecret: ""
 
 ingress:
+  lan:
+    enabled: true
+    host: munichbrief.home.egekocabas.com
+  public:
+    enabled: true
+    hosts:
+      - munichbrief.egekocabas.com
+      - munichbrief.de
+
+admin:
   enabled: true
-  host: munichbrief.home.egekocabas.com
+  basicAuthMiddleware: ""
+  basicAuthSecret: munichbrief-admin-basic-auth
 
 persistence:
   enabled: true

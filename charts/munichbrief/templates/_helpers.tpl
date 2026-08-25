@@ -2,6 +2,65 @@
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
+{{- define "munichbrief.publicPaths" -}}
+- path: /
+  pathType: Exact
+  backend:
+    service:
+      name: {{ include "munichbrief.fullname" . }}
+      port:
+        name: http
+- path: /about
+  pathType: Exact
+  backend:
+    service:
+      name: {{ include "munichbrief.fullname" . }}
+      port:
+        name: http
+- path: /de
+  pathType: Prefix
+  backend:
+    service:
+      name: {{ include "munichbrief.fullname" . }}
+      port:
+        name: http
+- path: /en
+  pathType: Prefix
+  backend:
+    service:
+      name: {{ include "munichbrief.fullname" . }}
+      port:
+        name: http
+- path: /incidents
+  pathType: Prefix
+  backend:
+    service:
+      name: {{ include "munichbrief.fullname" . }}
+      port:
+        name: http
+- path: /static
+  pathType: Prefix
+  backend:
+    service:
+      name: {{ include "munichbrief.fullname" . }}
+      port:
+        name: http
+- path: /healthz
+  pathType: Exact
+  backend:
+    service:
+      name: {{ include "munichbrief.fullname" . }}
+      port:
+        name: http
+- path: /readyz
+  pathType: Exact
+  backend:
+    service:
+      name: {{ include "munichbrief.fullname" . }}
+      port:
+        name: http
+{{- end }}
+
 {{- define "munichbrief.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
@@ -32,5 +91,13 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{ printf "%s@%s" .Values.image.repository .Values.image.digest }}
 {{- else -}}
 {{ printf "%s:%s" .Values.image.repository .Values.image.tag }}
+{{- end -}}
+{{- end }}
+
+{{- define "munichbrief.adminMiddleware" -}}
+{{- if .Values.admin.basicAuthMiddleware -}}
+{{- .Values.admin.basicAuthMiddleware -}}
+{{- else -}}
+{{- printf "%s-%s-admin-auth@kubernetescrd" .Release.Namespace (include "munichbrief.fullname" .) -}}
 {{- end -}}
 {{- end }}

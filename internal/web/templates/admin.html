@@ -1,0 +1,63 @@
+{{define "admin"}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>Operations · MunichBrief Admin</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="min-h-screen text-ink antialiased">
+  <header class="border-b border-rule/90 bg-paper/95">
+    <div class="page-shell flex min-h-16 items-center justify-between gap-4 py-3">
+      <a class="inline-flex items-center gap-3 text-ink no-underline" href="/admin" aria-label="MunichBrief administration">
+        <span class="grid size-10 place-items-center rounded-[0.6rem_0.6rem_0.6rem_0.18rem] bg-civic font-serif text-xl font-bold text-white" aria-hidden="true">M</span>
+        <span><strong class="block font-serif text-lg tracking-tight">MunichBrief</strong><small class="block text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted">Administration</small></span>
+      </a>
+      <a class="rounded-md border border-rule bg-white px-3 py-2 text-sm font-bold text-civic no-underline hover:bg-newsprint" href="/en">Open reader</a>
+    </div>
+  </header>
+  <main class="page-shell py-8">
+    <div class="max-w-3xl">
+      <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Operations</p>
+      <h1 class="mt-1 font-serif text-4xl font-bold tracking-tight">AI processing</h1>
+      <p class="mt-3 text-muted">Retries are queued for the active model and run asynchronously during the configured processing window.</p>
+    </div>
+
+    {{if .Notice}}<div class="mt-6 rounded-md border px-4 py-3 font-semibold {{if .NoticeIsWarning}}border-alert/30 bg-alert-soft text-alert{{else}}border-civic/25 bg-paper text-civic{{end}}" role="status">{{.Notice}}</div>{{end}}
+
+    <section class="mt-8" aria-labelledby="queue-heading">
+      <h2 id="queue-heading" class="font-serif text-2xl font-bold">Current queue</h2>
+      <dl class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="rounded-lg border border-rule bg-paper p-4"><dt class="text-xs font-bold uppercase tracking-wider text-muted">Queued</dt><dd class="mt-1 text-3xl font-bold">{{.Stats.Queued}}</dd></div>
+        <div class="rounded-lg border border-rule bg-paper p-4"><dt class="text-xs font-bold uppercase tracking-wider text-muted">Running</dt><dd class="mt-1 text-3xl font-bold">{{.Stats.Running}}</dd></div>
+        <div class="rounded-lg border border-rule bg-paper p-4"><dt class="text-xs font-bold uppercase tracking-wider text-muted">Retrying</dt><dd class="mt-1 text-3xl font-bold">{{.Stats.Retrying}}</dd></div>
+        <div class="rounded-lg border border-rule bg-paper p-4"><dt class="text-xs font-bold uppercase tracking-wider text-muted">Needs review</dt><dd class="mt-1 text-3xl font-bold text-alert">{{.Stats.NeedsReview}}</dd></div>
+        <div class="rounded-lg border border-rule bg-paper p-4"><dt class="text-xs font-bold uppercase tracking-wider text-muted">Failed</dt><dd class="mt-1 text-3xl font-bold text-alert">{{.Stats.Failed}}</dd></div>
+        <div class="rounded-lg border border-rule bg-paper p-4"><dt class="text-xs font-bold uppercase tracking-wider text-muted">Oldest pending</dt><dd class="mt-2 text-lg font-bold">{{.OldestPending}}</dd></div>
+      </dl>
+    </section>
+
+    <section class="mt-10 grid gap-6 lg:grid-cols-2" aria-labelledby="retry-heading">
+      <div class="rounded-lg border border-rule bg-paper p-5">
+        <h2 id="retry-heading" class="font-serif text-xl font-bold">Retry one incident</h2>
+        <p class="mt-2 text-sm text-muted">Only a current failed or review-required job can be reset.</p>
+        <form class="mt-4 flex flex-col gap-3" method="post" action="/api/admin/ai/retry">
+          <label class="text-sm font-bold" for="incident-id">Incident ID</label>
+          <input class="rounded-md border border-rule bg-white px-3 py-2" id="incident-id" name="incident_id" type="number" min="1" step="1" required inputmode="numeric">
+          <button class="rounded-md bg-civic px-4 py-2 font-bold text-white hover:bg-civic-dark" type="submit">Queue incident retry</button>
+        </form>
+      </div>
+      <div class="rounded-lg border border-alert/25 bg-paper p-5">
+        <h2 class="font-serif text-xl font-bold">Retry all review jobs</h2>
+        <p class="mt-2 text-sm text-muted">Reset every current failed and review-required job for the active model.</p>
+        <form class="mt-4" method="post" action="/api/admin/ai/retry-all">
+          <button class="w-full rounded-md border border-alert bg-white px-4 py-2 font-bold text-alert hover:bg-alert-soft" type="submit">Queue all retries</button>
+        </form>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
+{{end}}

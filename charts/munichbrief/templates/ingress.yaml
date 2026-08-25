@@ -1,20 +1,70 @@
-{{- if .Values.ingress.enabled }}
+{{- if and .Values.admin.enabled (not .Values.ingress.lan.enabled) }}
+{{- fail "admin.enabled requires ingress.lan.enabled" }}
+{{- end }}
+{{- if and .Values.admin.enabled .Values.admin.basicAuthMiddleware .Values.admin.basicAuthSecret }}
+{{- fail "set only one of admin.basicAuthMiddleware or admin.basicAuthSecret" }}
+{{- end }}
+{{- if and .Values.admin.enabled (not (or .Values.admin.basicAuthMiddleware .Values.admin.basicAuthSecret)) }}
+{{- fail "admin.basicAuthMiddleware or admin.basicAuthSecret is required when admin is enabled" }}
+{{- end }}
+{{- if and .Values.ingress.public.enabled (eq (len .Values.ingress.public.hosts) 0) }}
+{{- fail "ingress.public.hosts must contain at least one hostname when public ingress is enabled" }}
+{{- end }}
+{{- range .Values.ingress.public.hosts }}
+{{- if not (has . $.Values.application.publicHosts) }}
+{{- fail (printf "public ingress host %s must also appear in application.publicHosts" .) }}
+{{- end }}
+{{- end }}
+{{- if .Values.ingress.lan.enabled }}
+{{- if .Values.admin.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "munichbrief.fullname" . }}
+  name: {{ include "munichbrief.fullname" . }}-lan-admin
   labels:
     {{- include "munichbrief.labels" . | nindent 4 }}
-  {{- with .Values.ingress.annotations }}
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: {{ include "munichbrief.adminMiddleware" . | quote }}
+    traefik.ingress.kubernetes.io/router.priority: "100"
+    {{- with .Values.ingress.lan.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.lan.className }}
+  rules:
+    - host: {{ .Values.ingress.lan.host | quote }}
+      http:
+        paths:
+          - path: /admin
+            pathType: Prefix
+            backend: &lanBackend
+              service:
+                name: {{ include "munichbrief.fullname" . }}
+                port:
+                  name: http
+          - path: /api/admin
+            pathType: Prefix
+            backend: *lanBackend
+  {{- with .Values.ingress.lan.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+---
+{{- end }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "munichbrief.fullname" . }}-lan
+  labels:
+    {{- include "munichbrief.labels" . | nindent 4 }}
+  {{- with .Values.ingress.lan.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  {{- with .Values.ingress.className }}
-  ingressClassName: {{ . }}
-  {{- end }}
+  ingressClassName: {{ .Values.ingress.lan.className }}
   rules:
-    - host: {{ .Values.ingress.host | quote }}
+    - host: {{ .Values.ingress.lan.host | quote }}
       http:
         paths:
           - path: /
@@ -24,7 +74,35 @@ spec:
                 name: {{ include "munichbrief.fullname" . }}
                 port:
                   name: http
-  {{- with .Values.ingress.tls }}
+  {{- with .Values.ingress.lan.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- if and .Values.ingress.lan.enabled .Values.ingress.public.enabled }}
+---
+{{- end }}
+{{- if .Values.ingress.public.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "munichbrief.fullname" . }}-public
+  labels:
+    {{- include "munichbrief.labels" . | nindent 4 }}
+  {{- with .Values.ingress.public.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.public.className }}
+  rules:
+    {{- range .Values.ingress.public.hosts }}
+    - host: {{ . | quote }}
+      http:
+        paths:
+          {{- include "munichbrief.publicPaths" $ | nindent 10 }}
+    {{- end }}
+  {{- with .Values.ingress.public.tls }}
   tls:
     {{- toYaml . | nindent 4 }}
   {{- end }}

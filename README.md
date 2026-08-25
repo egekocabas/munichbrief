@@ -67,6 +67,8 @@ Useful configuration:
 | `MUNICHBRIEF_SOURCE_MODE` | `fixture` | Source provider: `fixture` or explicit `live` mode |
 | `MUNICHBRIEF_PRESENTATION_MODE` | `review` for fixtures, `public` for live | `review` exposes original QA text and states; `public` serves only current privacy-safe AI output |
 | `MUNICHBRIEF_SECURE_COOKIES` | `false` | Set the language preference cookie's `Secure` attribute; enabled by the TLS Helm deployment |
+| `MUNICHBRIEF_ADMIN_ENABLED` | `false` | Register the LAN-only `/admin` page and `/api/admin/*` actions; production must protect both prefixes at the ingress |
+| `MUNICHBRIEF_PUBLIC_HOSTS` | empty | Comma-separated hosts that always receive fail-closed public presentation and path restrictions |
 | `MUNICHBRIEF_PAGE_SIZE` | `20` | Timeline incidents per page, from 1 to 100 |
 | `MUNICHBRIEF_FEED_URL` | Official Munich RSS URL | Live discovery feed; must be HTTPS |
 | `MUNICHBRIEF_USER_AGENT` | Repository-identifying development agent | Identifies outbound source requests; must retain the repository URL |
@@ -522,7 +524,7 @@ The application provides a consistent SQLite backup command and documented resto
 - Review personal-data handling, attribution, imprint, and privacy requirements.
 - Add appropriate Cloudflare controls, rate limiting, and browser security headers.
 - Confirm that metrics and administrative information are not publicly exposed.
-- Only then consider `munichbrief.egekocabas.com`.
+- Only then consider `munichbrief.egekocabas.com` and `munichbrief.de`.
 
 ### 8. Later product features
 

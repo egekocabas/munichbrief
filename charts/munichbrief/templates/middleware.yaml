@@ -1,0 +1,12 @@
+{{- if and .Values.admin.enabled .Values.ingress.lan.enabled .Values.admin.basicAuthSecret }}
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ include "munichbrief.fullname" . }}-admin-auth
+  labels:
+    {{- include "munichbrief.labels" . | nindent 4 }}
+spec:
+  basicAuth:
+    removeHeader: true
+    secret: {{ .Values.admin.basicAuthSecret }}
+{{- end }}
