@@ -87,6 +87,23 @@ Run the test suite with:
 go test ./...
 ```
 
+### Frontend development
+
+The production binary embeds committed CSS and JavaScript assets, so routine
+`go run` and container builds do not require Node.js. To change templates or
+frontend assets, use Node.js 24 through the checked-in `.nvmrc`:
+
+```bash
+nvm use
+npm ci
+npm run build
+```
+
+`npm run watch:css` rebuilds Tailwind CSS while templates are edited. HTMX is
+copied from the pinned npm dependency and served locally; no browser asset is
+loaded from a third party. Commit the generated files under
+`internal/web/static`. CI rebuilds them and rejects stale output.
+
 Parser regression fixtures are handcrafted, anonymized structural equivalents of official bundled and standalone pages; complete article copies are not committed. Two networked checks remain explicitly opt-in:
 
 ```bash
@@ -231,8 +248,8 @@ Future follow-up relationships may be added only when a release contains an expl
 ### Application
 
 - Go with the standard `net/http` server.
-- Server-rendered pages using `html/template`.
-- Minimal first-party JavaScript only where progressive enhancement materially improves the interface.
+- Server-rendered pages using `html/template` and embedded German/English `go-i18n` catalogs.
+- Tailwind CSS with locally served HTMX for progressively enhanced navigation; every route remains usable without JavaScript.
 - Responsive and accessible semantic HTML.
 - SQLite accessed through a pure-Go driver for simpler AMD64 and ARM64 builds.
 - Embedded, versioned database migrations.
@@ -306,9 +323,10 @@ Database constraints will enforce source and incident identity so repeated polls
 
 | Route | Purpose |
 | --- | --- |
-| `GET /` | Paginated incident timeline grouped by publication date |
-| `GET /incidents/{id}` | Incident detail, attribution, and official source link |
-| `GET /about` | Methodology, source policy, retention policy, and AI disclaimer |
+| `GET /` | Redirect to the preferred localized timeline |
+| `GET /{lang}` | Paginated incident timeline grouped by publication date; `lang` is `de` or `en` |
+| `GET /{lang}/incidents/{id}` | Incident detail, attribution, and official source link |
+| `GET /{lang}/about` | Methodology, source policy, retention policy, and AI disclaimer |
 | `GET /healthz` | Process liveness |
 | `GET /readyz` | Database and migration readiness |
 | Internal listener: `GET /metrics` | Prometheus metrics; absent from the reader listener and ingress |

@@ -55,8 +55,10 @@ are deliberately excluded.
 states and must remain behind access control. `public` mode fails closed: it
 lists only incidents with a privacy-safe presentation from the active source
 hash, model, and prompt, and never renders stored originals. Back up SQLite
-before deploying a migration. The language selector uses one one-year,
-HTTP-only preference cookie; enable secure cookies behind TLS.
+before deploying a migration. German and English pages use explicit `/de` and
+`/en` paths; visiting either path refreshes one one-year, HTTP-only preference
+cookie used by the root and legacy-route redirects. Enable secure cookies
+behind TLS.
 
 The configured pi8 endpoint currently uses unencrypted HTTP on a restricted
 LAN. Limit egress to `192.168.178.102/32:11434` and do not enable public mode
