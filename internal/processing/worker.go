@@ -18,6 +18,8 @@ func Operation(model string) string {
 type Repository interface {
 	RecoverProcessingJobs(context.Context, string, time.Time) error
 	QueueAndClaimProcessingJob(context.Context, string, time.Time) (store.ProcessingJob, bool, error)
+	ClaimManualProcessingJob(context.Context, string, time.Time) (store.ProcessingJob, bool, error)
+	RequestProcessingJobs(context.Context, string, store.PresentationScope, *int64, time.Time) (store.ProcessingRequestResult, error)
 	CompleteProcessingJob(context.Context, store.ProcessingJob, store.AIPresentation, string, string, time.Time) error
 	FailProcessingJob(context.Context, store.ProcessingJob, string, string, *time.Time, time.Time, error) error
 	ProcessingQueueStats(context.Context, string, time.Time) (store.ProcessingStats, error)
@@ -44,6 +46,7 @@ type Worker struct {
 	operation       string
 	circuitUntil    time.Time
 	circuitFailures int
+	wake            chan struct{}
 }
 
 type Schedule struct {
@@ -87,7 +90,28 @@ func NewWorker(repository Repository, generator Generator, observer Observer, lo
 		clock:      clock,
 		schedule:   schedule,
 		operation:  Operation(generator.ModelIdentity()),
+		wake:       make(chan struct{}, 1),
 	}, nil
+}
+
+// RequestNow persists explicit administrator intent and wakes the worker. The
+// request returns after durable queueing; generation remains asynchronous.
+func (w *Worker) RequestNow(ctx context.Context, sourceMode string, incidentID *int64) (store.ProcessingRequestResult, error) {
+	result, err := w.repository.RequestProcessingJobs(ctx, sourceMode, store.PresentationScope{
+		Operation:     w.operation,
+		ModelIdentity: w.generator.ModelIdentity(),
+		PromptVersion: PromptVersion,
+	}, incidentID, w.clock())
+	if err != nil {
+		return store.ProcessingRequestResult{}, err
+	}
+	if result.Requested > 0 {
+		select {
+		case w.wake <- struct{}{}:
+		default:
+		}
+	}
+	return result, nil
 }
 
 func (w *Worker) Run(ctx context.Context) {
@@ -104,6 +128,8 @@ func (w *Worker) Run(ctx context.Context) {
 			return
 		case <-ticker.C:
 			w.processAvailable(ctx)
+		case <-w.wake:
+			w.processAvailable(ctx)
 		}
 	}
 }
@@ -113,16 +139,30 @@ func (w *Worker) processAvailable(ctx context.Context) {
 	if w.observer != nil {
 		w.observer.SetProcessingWindowOpen(windowOpen)
 	}
-	if !windowOpen {
-		w.updateStats(ctx)
-		return
-	}
 	if w.clock().Before(w.circuitUntil) {
 		w.updateStats(ctx)
 		return
 	}
 	if w.observer != nil {
 		w.observer.SetProcessorAvailable(true)
+	}
+	for ctx.Err() == nil {
+		job, found, err := w.repository.ClaimManualProcessingJob(ctx, w.operation, w.clock())
+		if err != nil {
+			w.logger.Error("claim manually requested AI processing job", "error", err)
+			return
+		}
+		w.updateStats(ctx)
+		if !found {
+			break
+		}
+		if !w.process(ctx, job) {
+			return
+		}
+	}
+	if !windowOpen {
+		w.updateStats(ctx)
+		return
 	}
 	for ctx.Err() == nil {
 		windowOpen = w.schedule.Allows(w.clock())

@@ -7,7 +7,7 @@
       <h1 class="font-serif text-4xl font-bold leading-[1.04] tracking-[-0.035em] text-ink sm:text-5xl">{{t .Lang "HeroTitle"}}</h1>
       <p class="mt-4 max-w-2xl text-base leading-relaxed text-muted sm:text-lg">{{t .Lang "HeroCopy"}}</p>
     </div>
-    <p class="mb-1 font-mono text-sm font-semibold tabular-nums text-muted">{{tc .Lang "Reports" .Total}}</p>
+    <p class="mb-1 font-mono text-sm font-semibold tabular-nums text-muted">{{shownTotal .Lang .Shown .Total}}</p>
   </div>
 </section>
 
@@ -34,7 +34,7 @@
             <time datetime="{{.Record.PublishedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime $.Lang .Record.PublishedAt}}</time>
           </div>
           {{if .Record.HasIncident}}
-            <p class="mt-3 text-[0.68rem] font-extrabold uppercase tracking-[0.1em] text-civic data-[state=failed]:text-amber-700 data-[state=needs-review]:text-amber-700 data-[state=retrying]:text-amber-700 data-[state=running]:text-amber-700" data-state="{{.ProcessingState}}">{{.ProcessingLabel}}</p>
+            {{if $.Review}}<p class="mt-3 text-[0.68rem] font-extrabold uppercase tracking-[0.1em] text-civic data-[state=failed]:text-amber-700 data-[state=needs-review]:text-amber-700 data-[state=retrying]:text-amber-700 data-[state=running]:text-amber-700" data-state="{{.ProcessingState}}">{{.ProcessingLabel}}</p>{{end}}
             <h4 class="mt-1 font-serif text-xl font-bold leading-tight tracking-[-0.015em] sm:text-2xl"><a class="text-ink no-underline hover:text-civic" href="{{incidentURL $.Lang .Record.ID}}" lang="{{.ContentLanguage}}">{{.Title}}</a></h4>
             <p class="mt-2 leading-relaxed text-muted" lang="{{.ContentLanguage}}">{{.Summary}}</p>
             {{if .ShowOriginalMessage}}<p class="mt-3 border-l-2 border-amber-600 pl-3 text-sm text-amber-800">{{t $.Lang "OriginalShown"}}</p>{{end}}

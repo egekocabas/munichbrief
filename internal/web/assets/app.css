@@ -70,6 +70,16 @@
   .htmx-request.htmx-progress {
     transform: scaleX(0.72);
   }
+
+  dialog[open] {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+  }
+
+  dialog::backdrop {
+    background: rgb(20 32 43 / 45%);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -8,7 +8,7 @@ other = "Munich at a glance"
 other = "Latest"
 
 [About]
-other = "About MunichBrief"
+other = "About"
 
 [PrimaryNavigation]
 other = "Primary navigation"
@@ -73,6 +73,9 @@ other = "Latest reports"
 [Reports]
 one = "{{.Count}} report"
 other = "{{.Count}} reports"
+
+[ShownTotal]
+other = "{{.Shown}} shown / {{.Total}} total"
 
 [Report]
 other = "Report"

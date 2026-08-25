@@ -54,6 +54,20 @@ func (l *localization) Count(locale, messageID string, count int) string {
 	return value
 }
 
+func (l *localization) ShownTotal(locale string, shown, total int) string {
+	value, err := i18n.NewLocalizer(l.bundle, locale).Localize(&i18n.LocalizeConfig{
+		MessageID: "ShownTotal",
+		TemplateData: map[string]any{
+			"Shown": shown,
+			"Total": total,
+		},
+	})
+	if err != nil {
+		return "[ShownTotal]"
+	}
+	return value
+}
+
 func validateCatalogParity(files fs.FS, names ...string) error {
 	if len(names) < 2 {
 		return fmt.Errorf("at least two translation catalogs are required")

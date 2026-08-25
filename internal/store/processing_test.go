@@ -60,6 +60,13 @@ func TestProcessingPrivacyMigrationPreservesExistingJobs(t *testing.T) {
 	if status != "failed" || failureKind != "legacy" {
 		t.Fatalf("migrated job = %q/%q", status, failureKind)
 	}
+	var manualRequestedAt sql.NullString
+	if err := database.db.QueryRowContext(ctx, `SELECT manual_requested_at FROM processing_jobs WHERE id = 1`).Scan(&manualRequestedAt); err != nil {
+		t.Fatal(err)
+	}
+	if manualRequestedAt.Valid {
+		t.Fatalf("migrated legacy job unexpectedly has manual request time %q", manualRequestedAt.String)
+	}
 }
 
 func TestCompleteProcessingJobRequiresSafePrivacyStatus(t *testing.T) {
@@ -116,24 +123,99 @@ func TestQueueClaimsExistingIncidentsNewestPublicationFirst(t *testing.T) {
 	}
 }
 
-func TestRetryProcessingJobsResetsCurrentReviewJob(t *testing.T) {
+func TestRequestProcessingJobsCreatesMissingJobAndReportsCurrentStates(t *testing.T) {
 	ctx := context.Background()
 	database := oneProcessingIncident(t, ctx)
 	now := time.Date(2026, time.August, 23, 12, 0, 0, 0, time.UTC)
-	job, found, err := database.QueueAndClaimProcessingJob(ctx, "operation", now)
+	scope := PresentationScope{Operation: "operation", ModelIdentity: "model", PromptVersion: "prompt"}
+	incidentID := int64(1)
+
+	requested, err := database.RequestProcessingJobs(ctx, "fixture", scope, &incidentID, now)
+	if err != nil || requested != (ProcessingRequestResult{Requested: 1}) {
+		t.Fatalf("missing-job request = %#v, err=%v", requested, err)
+	}
+	job, found, err := database.ClaimManualProcessingJob(ctx, scope.Operation, now)
+	if err != nil || !found || job.IncidentID != incidentID {
+		t.Fatalf("manual claim = %#v/%t/%v", job, found, err)
+	}
+	running, err := database.RequestProcessingJobs(ctx, "fixture", scope, &incidentID, now.Add(time.Minute))
+	if err != nil || running != (ProcessingRequestResult{AlreadyRunning: 1}) {
+		t.Fatalf("running request = %#v, err=%v", running, err)
+	}
+	presentation := AIPresentation{TitleDE: "Titel", SummaryDE: "Text", TitleEN: "Title", SummaryEN: "Text", PrivacyStatus: "safe"}
+	if err := database.CompleteProcessingJob(ctx, job, presentation, scope.ModelIdentity, scope.PromptVersion, now.Add(2*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	current, err := database.RequestProcessingJobs(ctx, "fixture", scope, &incidentID, now.Add(3*time.Minute))
+	if err != nil || current != (ProcessingRequestResult{AlreadyCurrent: 1}) {
+		t.Fatalf("current request = %#v, err=%v", current, err)
+	}
+}
+
+func TestRequestProcessingJobsResetsIncompleteAndPersistsManualIntent(t *testing.T) {
+	ctx := context.Background()
+	database := oneProcessingIncident(t, ctx)
+	now := time.Date(2026, time.August, 23, 12, 0, 0, 0, time.UTC)
+	scope := PresentationScope{Operation: "operation", ModelIdentity: "model", PromptVersion: "prompt"}
+	job, found, err := database.QueueAndClaimProcessingJob(ctx, scope.Operation, now)
 	if err != nil || !found {
-		t.Fatalf("claim job = %t/%v", found, err)
+		t.Fatalf("initial claim = %t/%v", found, err)
 	}
 	if err := database.FailProcessingJob(ctx, job, "needs_review", "privacy", nil, now, context.Canceled); err != nil {
 		t.Fatal(err)
 	}
-	count, err := database.RetryProcessingJobs(ctx, "operation", &job.IncidentID, now.Add(time.Minute))
-	if err != nil || count != 1 {
-		t.Fatalf("retry count = %d, err=%v", count, err)
+	result, err := database.RequestProcessingJobs(ctx, "fixture", scope, nil, now.Add(time.Minute))
+	if err != nil || result.Requested != 1 {
+		t.Fatalf("bulk request = %#v, err=%v", result, err)
 	}
-	stats, err := database.ProcessingQueueStats(ctx, "operation", now.Add(time.Minute))
-	if err != nil || stats.Queued != 1 || stats.NeedsReview != 0 {
-		t.Fatalf("stats = %#v, err=%v", stats, err)
+	var status string
+	var attempts int
+	var manualRequestedAt sql.NullString
+	if err := database.db.QueryRowContext(ctx, `SELECT status, attempt_count, manual_requested_at FROM processing_jobs WHERE id = ?`, job.ID).Scan(&status, &attempts, &manualRequestedAt); err != nil {
+		t.Fatal(err)
+	}
+	if status != "pending" || attempts != 0 || !manualRequestedAt.Valid {
+		t.Fatalf("reset job = status:%q attempts:%d manual:%#v", status, attempts, manualRequestedAt)
+	}
+	claimed, found, err := database.ClaimManualProcessingJob(ctx, scope.Operation, now.Add(time.Minute))
+	if err != nil || !found || claimed.ID != job.ID {
+		t.Fatalf("persisted manual claim = %#v/%t/%v", claimed, found, err)
+	}
+}
+
+func TestRequestProcessingJobsRequeuesSucceededJobWithIncompleteDerivations(t *testing.T) {
+	ctx := context.Background()
+	database := oneProcessingIncident(t, ctx)
+	now := time.Date(2026, time.August, 23, 12, 0, 0, 0, time.UTC)
+	scope := PresentationScope{Operation: "operation", ModelIdentity: "model", PromptVersion: "prompt"}
+	job, found, err := database.QueueAndClaimProcessingJob(ctx, scope.Operation, now)
+	if err != nil || !found {
+		t.Fatalf("claim = %t/%v", found, err)
+	}
+	presentation := AIPresentation{TitleDE: "Titel", SummaryDE: "Text", TitleEN: "Title", SummaryEN: "Text", PrivacyStatus: "safe"}
+	if err := database.CompleteProcessingJob(ctx, job, presentation, scope.ModelIdentity, scope.PromptVersion, now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.db.ExecContext(ctx, `DELETE FROM derivations WHERE incident_id = ? AND kind = 'title_en'`, job.IncidentID); err != nil {
+		t.Fatal(err)
+	}
+	result, err := database.RequestProcessingJobs(ctx, "fixture", scope, &job.IncidentID, now.Add(time.Minute))
+	if err != nil || result.Requested != 1 || result.AlreadyCurrent != 0 {
+		t.Fatalf("incomplete presentation request = %#v, err=%v", result, err)
+	}
+	claimed, found, err := database.ClaimManualProcessingJob(ctx, scope.Operation, now.Add(time.Minute))
+	if err != nil || !found || claimed.ID != job.ID {
+		t.Fatalf("requeued incomplete job = %#v/%t/%v", claimed, found, err)
+	}
+}
+
+func TestRequestProcessingJobsRejectsUnknownIncident(t *testing.T) {
+	ctx := context.Background()
+	database := oneProcessingIncident(t, ctx)
+	unknown := int64(376)
+	_, err := database.RequestProcessingJobs(ctx, "fixture", PresentationScope{Operation: "operation", ModelIdentity: "model", PromptVersion: "prompt"}, &unknown, time.Now())
+	if err != ErrNotFound {
+		t.Fatalf("unknown incident error = %v, want ErrNotFound", err)
 	}
 }
 

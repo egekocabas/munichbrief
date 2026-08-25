@@ -8,7 +8,7 @@
       {{if .Incident.Record.Number}}<span class="text-alert">{{t .Lang "Report"}} {{.Incident.Record.Number}}</span>{{end}}
       <time datetime="{{.Incident.Record.PublishedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime .Lang .Incident.Record.PublishedAt}}</time>
     </div>
-    <p class="mt-4 text-[0.68rem] font-extrabold uppercase tracking-[0.1em] text-civic data-[state=failed]:text-amber-700 data-[state=needs-review]:text-amber-700 data-[state=retrying]:text-amber-700 data-[state=running]:text-amber-700" data-state="{{.Incident.ProcessingState}}">{{.Incident.ProcessingLabel}}</p>
+    {{if .Review}}<p class="mt-4 text-[0.68rem] font-extrabold uppercase tracking-[0.1em] text-civic data-[state=failed]:text-amber-700 data-[state=needs-review]:text-amber-700 data-[state=retrying]:text-amber-700 data-[state=running]:text-amber-700" data-state="{{.Incident.ProcessingState}}">{{.Incident.ProcessingLabel}}</p>{{end}}
     <h1 class="mt-2 max-w-3xl font-serif text-3xl font-bold leading-[1.08] tracking-[-0.03em] text-ink sm:text-5xl" lang="{{.Incident.ContentLanguage}}">{{.Incident.Title}}</h1>
     <dl class="mt-6 grid gap-3 border-t border-rule/70 pt-4 text-sm text-muted sm:grid-cols-2">
       <div><dt class="font-bold text-ink">{{t .Lang "PublishedWithin"}}</dt><dd class="mt-0.5">{{.Incident.Record.SourceTitle}}</dd></div>

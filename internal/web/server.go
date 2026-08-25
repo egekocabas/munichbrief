@@ -43,13 +43,19 @@ var stylesheet []byte
 //go:embed static/htmx.min.js
 var htmxScript []byte
 
+//go:embed static/admin.js
+var adminScript []byte
+
 type incidentStore interface {
 	ListPresentationEntries(context.Context, int, int, string, store.PresentationScope) ([]store.IncidentRecord, int, error)
 	GetPresentationIncident(context.Context, int64, store.PresentationScope) (store.IncidentRecord, error)
 	ListAdminIncidents(context.Context, int, int, string, store.PresentationScope, store.AdminIncidentFilter) ([]store.IncidentRecord, int, error)
 	Ready(context.Context) error
 	ProcessingQueueStats(context.Context, string, time.Time) (store.ProcessingStats, error)
-	RetryProcessingJobs(context.Context, string, *int64, time.Time) (int64, error)
+}
+
+type ProcessingRequester interface {
+	RequestNow(context.Context, string, *int64) (store.ProcessingRequestResult, error)
 }
 
 type Options struct {
@@ -61,6 +67,7 @@ type Options struct {
 	SecureCookies    bool
 	AdminEnabled     bool
 	PublicHosts      []string
+	Processor        ProcessingRequester
 }
 
 type Server struct {
@@ -99,6 +106,7 @@ type incidentView struct {
 type timelinePage struct {
 	basePage
 	Groups      []dayGroup
+	Shown       int
 	Page        int
 	TotalPages  int
 	Total       int
@@ -123,29 +131,36 @@ type detailPage struct {
 type aboutPage struct{ basePage }
 
 type adminPage struct {
-	Stats           store.ProcessingStats
-	OldestPending   string
-	Notice          string
-	NoticeIsWarning bool
-	Unprocessed     adminIncidentList
-	AllIncidents    adminIncidentList
+	Stats             store.ProcessingStats
+	OldestPending     string
+	Notice            string
+	NoticeIsWarning   bool
+	Unprocessed       adminIncidentList
+	AllIncidents      adminIncidentList
+	ProcessingEnabled bool
+	UnprocessedPage   int
+	AllPage           int
 }
 
 type adminIncidentList struct {
-	Incidents   []adminIncidentView
-	Total       int
-	Page        int
-	TotalPages  int
-	PreviousURL string
-	NextURL     string
-	HasPrevious bool
-	HasNext     bool
+	Incidents       []adminIncidentView
+	Shown           int
+	Total           int
+	Page            int
+	TotalPages      int
+	PreviousURL     string
+	NextURL         string
+	HasPrevious     bool
+	HasNext         bool
+	AllowProcessing bool
+	OtherPage       int
 }
 
 type adminIncidentView struct {
 	Record          store.IncidentRecord
 	ProcessingState string
 	ProcessingLabel string
+	CanProcess      bool
 }
 
 func New(database incidentStore, logger *slog.Logger, pageSize int, sourceMode string) (*Server, error) {
@@ -193,6 +208,7 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 		"incidentURL":    func(language string, id int64) string { return fmt.Sprintf("/%s/incidents/%d", language, id) },
 		"t":              translations.Text,
 		"tc":             translations.Count,
+		"shownTotal":     translations.ShownTotal,
 	}
 	timeline, err := template.New("layout").Funcs(functions).Parse(layoutTemplate + timelineTemplate)
 	if err != nil {
@@ -227,10 +243,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /readyz", s.ready)
 	mux.HandleFunc("GET /static/app.css", s.css)
 	mux.HandleFunc("GET /static/htmx.min.js", s.javascript)
+	mux.HandleFunc("GET /static/admin.js", s.adminJavascript)
 	if s.options.AdminEnabled {
 		mux.HandleFunc("GET /admin", s.admin)
-		mux.HandleFunc("POST /api/admin/ai/retry", s.retryIncident)
-		mux.HandleFunc("POST /api/admin/ai/retry-all", s.retryAll)
+		mux.HandleFunc("POST /api/admin/ai/process-now", s.processIncidentNow)
+		mux.HandleFunc("POST /api/admin/ai/process-all-now", s.processAllNow)
 	}
 	return s.requestLogger(s.accessBoundary(mux))
 }
@@ -316,6 +333,7 @@ func (s *Server) timeline(response http.ResponseWriter, request *http.Request) {
 	base := s.base(request, language)
 	data := timelinePage{
 		basePage: base, Groups: s.groupByDay(incidents, base.Lang), Page: page, TotalPages: totalPages, Total: total,
+		Shown:    len(incidents),
 		Previous: page - 1, Next: page + 1, HasPrevious: page > 1, HasNext: page < totalPages,
 	}
 	prepareHTML(response, base.Lang, base.Review)
@@ -415,27 +433,25 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 	data := adminPage{
-		Stats: stats,
+		Stats:             stats,
+		ProcessingEnabled: s.options.Processor != nil,
+		UnprocessedPage:   unprocessedPage,
+		AllPage:           allPage,
 		Unprocessed: s.adminList(unprocessed, unprocessedTotal, unprocessedPage, unprocessedPages,
-			adminPaginationURL(unprocessedPage-1, allPage), adminPaginationURL(unprocessedPage+1, allPage)),
+			adminPaginationURL(unprocessedPage-1, allPage), adminPaginationURL(unprocessedPage+1, allPage), true, allPage),
 		AllIncidents: s.adminList(allIncidents, allTotal, allPage, allPages,
-			adminPaginationURL(unprocessedPage, allPage-1), adminPaginationURL(unprocessedPage, allPage+1)),
+			adminPaginationURL(unprocessedPage, allPage-1), adminPaginationURL(unprocessedPage, allPage+1), false, unprocessedPage),
 	}
 	if stats.OldestPendingAge > 0 {
 		data.OldestPending = stats.OldestPendingAge.Round(time.Second).String()
 	} else {
 		data.OldestPending = "None"
 	}
-	if raw := request.URL.Query().Get("retried"); raw != "" {
-		count, err := strconv.ParseInt(raw, 10, 64)
-		if err == nil && count >= 0 {
-			if count == 0 {
-				data.Notice = "No current failed or review-required AI jobs matched the request."
-				data.NoticeIsWarning = true
-			} else {
-				data.Notice = fmt.Sprintf("Queued %d AI processing job(s) for retry.", count)
-			}
-		}
+	if requested, ok := nonNegativeQueryInt(request, "requested"); ok {
+		running, _ := nonNegativeQueryInt(request, "running")
+		current, _ := nonNegativeQueryInt(request, "current")
+		data.Notice = fmt.Sprintf("Requested immediate processing for %d incident(s). Already processing: %d. Already current: %d. AI work continues asynchronously.", requested, running, current)
+		data.NoticeIsWarning = requested == 0 && running == 0
 	}
 	response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	response.Header().Set("Cache-Control", "private, no-store")
@@ -445,18 +461,20 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 	}
 }
 
-func (s *Server) adminList(records []store.IncidentRecord, total, page, totalPages int, previousURL, nextURL string) adminIncidentList {
+func (s *Server) adminList(records []store.IncidentRecord, total, page, totalPages int, previousURL, nextURL string, allowProcessing bool, otherPage int) adminIncidentList {
 	incidents := make([]adminIncidentView, 0, len(records))
 	for _, record := range records {
 		state := record.ProcessingState()
 		incidents = append(incidents, adminIncidentView{
 			Record: record, ProcessingState: strings.ReplaceAll(state, "_", "-"),
-			ProcessingLabel: adminProcessingLabel(state),
+			ProcessingLabel: adminProcessingLabel(state), CanProcess: state != "running" && state != "ready",
 		})
 	}
 	return adminIncidentList{
-		Incidents: incidents, Total: total, Page: page, TotalPages: totalPages,
+		Incidents: incidents, Shown: len(incidents), Total: total, Page: page, TotalPages: totalPages,
 		PreviousURL: previousURL, NextURL: nextURL, HasPrevious: page > 1, HasNext: page < totalPages,
+		AllowProcessing: allowProcessing,
+		OtherPage:       otherPage,
 	}
 }
 
@@ -486,7 +504,15 @@ func adminPaginationURL(unprocessedPage, allPage int) string {
 	return "/admin?" + query.Encode()
 }
 
-func (s *Server) retryIncident(response http.ResponseWriter, request *http.Request) {
+func (s *Server) processIncidentNow(response http.ResponseWriter, request *http.Request) {
+	s.processNow(response, request, true)
+}
+
+func (s *Server) processAllNow(response http.ResponseWriter, request *http.Request) {
+	s.processNow(response, request, false)
+}
+
+func (s *Server) processNow(response http.ResponseWriter, request *http.Request, single bool) {
 	if !validAdminMutation(request) {
 		http.Error(response, "cross-site request blocked", http.StatusForbidden)
 		return
@@ -500,34 +526,58 @@ func (s *Server) retryIncident(response http.ResponseWriter, request *http.Reque
 		http.Error(response, "invalid form", http.StatusBadRequest)
 		return
 	}
-	incidentID, err := strconv.ParseInt(request.PostForm.Get("incident_id"), 10, 64)
-	if err != nil || incidentID < 1 {
-		http.Error(response, "incident_id must be a positive integer", http.StatusBadRequest)
+	if request.PostForm.Get("confirmed") != "true" {
+		http.Error(response, "processing confirmation is required", http.StatusBadRequest)
 		return
 	}
-	count, err := s.store.RetryProcessingJobs(request.Context(), processing.Operation(s.options.ModelIdentity), &incidentID, time.Now())
+	if s.options.Processor == nil {
+		http.Error(response, "AI processing is disabled", http.StatusServiceUnavailable)
+		return
+	}
+	var incidentID *int64
+	if single {
+		parsed, err := strconv.ParseInt(request.PostForm.Get("incident_id"), 10, 64)
+		if err != nil || parsed < 1 {
+			http.Error(response, "incident_id must be a positive integer", http.StatusBadRequest)
+			return
+		}
+		incidentID = &parsed
+	}
+	result, err := s.options.Processor.RequestNow(request.Context(), s.options.SourceMode, incidentID)
+	if errors.Is(err, store.ErrNotFound) {
+		http.NotFound(response, request)
+		return
+	}
 	if err != nil {
-		s.internalError(response, request, "retry incident AI processing", err)
+		s.internalError(response, request, "request immediate AI processing", err)
 		return
 	}
-	http.Redirect(response, request, fmt.Sprintf("/admin?retried=%d", count), http.StatusSeeOther)
+	unprocessedPage := positiveFormInt(request.PostForm.Get("unprocessed_page"))
+	allPage := positiveFormInt(request.PostForm.Get("all_page"))
+	target, _ := url.Parse(adminPaginationURL(unprocessedPage, allPage))
+	query := target.Query()
+	query.Set("requested", strconv.Itoa(result.Requested))
+	query.Set("running", strconv.Itoa(result.AlreadyRunning))
+	query.Set("current", strconv.Itoa(result.AlreadyCurrent))
+	target.RawQuery = query.Encode()
+	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
 }
 
-func (s *Server) retryAll(response http.ResponseWriter, request *http.Request) {
-	if !validAdminMutation(request) {
-		http.Error(response, "cross-site request blocked", http.StatusForbidden)
-		return
+func positiveFormInt(raw string) int {
+	value, err := strconv.Atoi(raw)
+	if err != nil || value < 1 {
+		return 1
 	}
-	if !isFormPost(request) {
-		http.Error(response, "form content type required", http.StatusUnsupportedMediaType)
-		return
+	return value
+}
+
+func nonNegativeQueryInt(request *http.Request, name string) (int, bool) {
+	raw := request.URL.Query().Get(name)
+	if raw == "" {
+		return 0, false
 	}
-	count, err := s.store.RetryProcessingJobs(request.Context(), processing.Operation(s.options.ModelIdentity), nil, time.Now())
-	if err != nil {
-		s.internalError(response, request, "retry all AI processing", err)
-		return
-	}
-	http.Redirect(response, request, fmt.Sprintf("/admin?retried=%d", count), http.StatusSeeOther)
+	value, err := strconv.Atoi(raw)
+	return value, err == nil && value >= 0
 }
 
 func validAdminMutation(request *http.Request) bool {
@@ -775,6 +825,12 @@ func (s *Server) javascript(response http.ResponseWriter, _ *http.Request) {
 	response.Header().Set("Cache-Control", "public, max-age=3600")
 	response.Header().Set("X-Content-Type-Options", "nosniff")
 	_, _ = response.Write(htmxScript)
+}
+func (s *Server) adminJavascript(response http.ResponseWriter, _ *http.Request) {
+	response.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+	response.Header().Set("Cache-Control", "public, max-age=3600")
+	response.Header().Set("X-Content-Type-Options", "nosniff")
+	_, _ = response.Write(adminScript)
 }
 func (s *Server) internalError(response http.ResponseWriter, request *http.Request, message string, err error) {
 	s.logger.ErrorContext(request.Context(), message, "error", err)
