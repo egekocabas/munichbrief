@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
 	"sync"
 	"time"
 
@@ -427,12 +426,4 @@ func (w *PipelineWorker) publishSnapshot(ctx context.Context) {
 		return
 	}
 	w.observer.SetPipelineSnapshot(snapshot)
-}
-
-func ModelsFromForm(values map[string]string) map[string]string {
-	models := make(map[string]string, len(registeredSteps))
-	for _, step := range registeredSteps {
-		models[step.Key] = strings.TrimSpace(values[step.Key])
-	}
-	return models
 }
