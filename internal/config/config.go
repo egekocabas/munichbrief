@@ -21,7 +21,6 @@ const (
 	defaultRefreshAfter = 6 * time.Hour
 	defaultAIEnabled    = false
 	defaultOllamaURL    = "http://127.0.0.1:11434"
-	defaultOllamaModel  = "qwen3.5:4b"
 	defaultAIInterval   = 5 * time.Second
 	defaultAITimeout    = 10 * time.Minute
 	defaultAIContext    = 8192
@@ -44,7 +43,6 @@ type Config struct {
 	RefreshAfter     time.Duration
 	AIEnabled        bool
 	OllamaBaseURL    string
-	OllamaModel      string
 	AIInterval       time.Duration
 	AITimeout        time.Duration
 	AIContextSize    int
@@ -71,7 +69,6 @@ func Load() (Config, error) {
 		RefreshAfter:   defaultRefreshAfter,
 		AIEnabled:      defaultAIEnabled,
 		OllamaBaseURL:  envOrDefault("MUNICHBRIEF_OLLAMA_BASE_URL", defaultOllamaURL),
-		OllamaModel:    envOrDefault("MUNICHBRIEF_OLLAMA_MODEL", defaultOllamaModel),
 		AIInterval:     defaultAIInterval,
 		AITimeout:      defaultAITimeout,
 		AIContextSize:  defaultAIContext,
@@ -166,10 +163,6 @@ func Load() (Config, error) {
 	if err != nil || (ollamaURL.Scheme != "http" && ollamaURL.Scheme != "https") || ollamaURL.Host == "" || ollamaURL.User != nil || ollamaURL.RawQuery != "" || ollamaURL.Fragment != "" {
 		return Config{}, fmt.Errorf("MUNICHBRIEF_OLLAMA_BASE_URL must be an absolute HTTP(S) URL without credentials, query, or fragment")
 	}
-	if strings.TrimSpace(cfg.OllamaModel) == "" {
-		return Config{}, fmt.Errorf("MUNICHBRIEF_OLLAMA_MODEL must not be empty")
-	}
-
 	return cfg, nil
 }
 

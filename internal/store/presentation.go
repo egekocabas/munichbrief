@@ -22,33 +22,39 @@ const (
 	AdminIncidentsUnprocessed AdminIncidentFilter = "unprocessed"
 )
 
-const latestPresentationModel = `(SELECT x.model_identity
-	FROM derivations x
-	WHERE x.incident_id = i.id AND x.source_hash = i.content_hash AND x.prompt_version = @prompt
-	GROUP BY x.model_identity
-	HAVING COUNT(DISTINCT CASE WHEN x.kind IN ('title_de', 'summary_de', 'title_en', 'summary_en') THEN x.kind END) = 4
-	ORDER BY MAX(x.generated_at) DESC, x.model_identity ASC
+const latestPresentationRun = `(SELECT r.id
+	FROM presentation_runs r
+	WHERE r.incident_id = i.id AND r.source_hash = i.content_hash AND r.status = 'complete'
+		AND (@prompt = '` + PipelineVersion + `' OR r.pipeline_version LIKE 'legacy/' || @prompt || '/%')
+	ORDER BY (r.pipeline_version = '` + PipelineVersion + `') DESC, r.completed_at DESC, r.id DESC
 	LIMIT 1)`
 
 const scopedAIColumns = `
-				COALESCE((SELECT value FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND model_identity = ` + latestPresentationModel + ` AND prompt_version = @prompt AND kind = 'title_de' LIMIT 1), ''),
-				COALESCE((SELECT value FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND model_identity = ` + latestPresentationModel + ` AND prompt_version = @prompt AND kind = 'summary_de' LIMIT 1), ''),
-				COALESCE((SELECT value FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND model_identity = ` + latestPresentationModel + ` AND prompt_version = @prompt AND kind = 'title_en' LIMIT 1), ''),
-				COALESCE((SELECT value FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND model_identity = ` + latestPresentationModel + ` AND prompt_version = @prompt AND kind = 'summary_en' LIMIT 1), ''),
-				COALESCE(` + latestPresentationModel + `, ''),
-				CASE WHEN ` + latestPresentationModel + ` IS NULL THEN '' ELSE @prompt END,
-				COALESCE((SELECT MAX(generated_at) FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND model_identity = ` + latestPresentationModel + ` AND prompt_version = @prompt), ''),
-				COALESCE((SELECT status FROM processing_jobs WHERE incident_id = i.id AND source_hash = i.content_hash AND operation LIKE @operation_prefix || '%' ORDER BY updated_at DESC, id DESC LIMIT 1), ''),
-				COALESCE((SELECT attempt_count FROM processing_jobs WHERE incident_id = i.id AND source_hash = i.content_hash AND operation LIKE @operation_prefix || '%' ORDER BY updated_at DESC, id DESC LIMIT 1), 0),
-				COALESCE((SELECT next_retry_at FROM processing_jobs WHERE incident_id = i.id AND source_hash = i.content_hash AND operation LIKE @operation_prefix || '%' ORDER BY updated_at DESC, id DESC LIMIT 1), ''),
-				COALESCE((SELECT failure_kind FROM processing_jobs WHERE incident_id = i.id AND source_hash = i.content_hash AND operation LIKE @operation_prefix || '%' ORDER BY updated_at DESC, id DESC LIMIT 1), '')`
+				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'title_de' LIMIT 1), ''),
+				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
+				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'title_en' LIMIT 1), ''),
+				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_en' LIMIT 1), ''),
+				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'category' LIMIT 1), ''),
+				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'area_name' LIMIT 1), ''),
+				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'area_type' LIMIT 1), ''),
+				COALESCE((SELECT model_identity FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
+				COALESCE((SELECT prompt_version FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
+				COALESCE((SELECT completed_at FROM presentation_runs WHERE id = ` + latestPresentationRun + `), ''),
+				COALESCE((SELECT j.status FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id = j.cycle_item_id WHERE ci.incident_id = i.id AND ci.source_hash = i.content_hash ORDER BY j.updated_at DESC, j.id DESC LIMIT 1), ''),
+				COALESCE((SELECT j.attempt_count FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id = j.cycle_item_id WHERE ci.incident_id = i.id AND ci.source_hash = i.content_hash ORDER BY j.updated_at DESC, j.id DESC LIMIT 1), 0),
+				COALESCE((SELECT j.next_retry_at FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id = j.cycle_item_id WHERE ci.incident_id = i.id AND ci.source_hash = i.content_hash ORDER BY j.updated_at DESC, j.id DESC LIMIT 1), ''),
+				COALESCE((SELECT j.failure_kind FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id = j.cycle_item_id WHERE ci.incident_id = i.id AND ci.source_hash = i.content_hash ORDER BY j.updated_at DESC, j.id DESC LIMIT 1), '')`
 
 const publicReadyCondition = `EXISTS (
-		SELECT 1 FROM derivations x
-		WHERE x.incident_id = i.id AND x.source_hash = i.content_hash
-			AND x.prompt_version = @prompt
-		GROUP BY x.incident_id, x.model_identity
-		HAVING COUNT(DISTINCT CASE WHEN x.kind IN ('title_de', 'summary_de', 'title_en', 'summary_en') THEN x.kind END) = 4
+		SELECT 1 FROM presentation_runs r
+		WHERE r.incident_id = i.id AND r.source_hash = i.content_hash AND r.status = 'complete'
+			AND (@prompt = '` + PipelineVersion + `' OR r.pipeline_version LIKE 'legacy/' || @prompt || '/%')
+)`
+
+const stagedReadyCondition = `EXISTS (
+		SELECT 1 FROM presentation_runs r
+		WHERE r.incident_id = i.id AND r.source_hash = i.content_hash
+			AND r.pipeline_version = '` + PipelineVersion + `' AND r.status = 'complete'
 )`
 
 func presentationArgs(scope PresentationScope) []any {
@@ -116,7 +122,7 @@ func (s *Store) ListPresentationEntries(ctx context.Context, limit, offset int, 
 			SELECT
 				0, d.id, 0, '', 0, d.title, '', '', d.title, d.source_url, d.external_id,
 				d.published_at, d.last_seen_at, d.fetch_status, COALESCE(d.error_message, ''),
-				'', '', '', '', '', '', '', '', 0, '', ''
+				'', '', '', '', '', '', '', '', '', '', '', 0, '', ''
 			FROM source_documents d
 			WHERE ` + statusCondition + ` AND NOT EXISTS (
 				SELECT 1 FROM incidents i WHERE i.source_document_id = d.id
@@ -163,7 +169,11 @@ func (s *Store) ListAdminIncidents(ctx context.Context, limit, offset int, sourc
 	}
 	filterCondition := ""
 	if filter == AdminIncidentsUnprocessed {
-		filterCondition = " AND NOT (" + publicReadyCondition + ")"
+		readyCondition := publicReadyCondition
+		if scope.PromptVersion == PipelineVersion {
+			readyCondition = stagedReadyCondition
+		}
+		filterCondition = " AND NOT (" + readyCondition + ")"
 	}
 	args := presentationArgs(scope)
 
@@ -235,6 +245,7 @@ func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 		&record.TitleDE, &record.BodyDE, &record.ContentHash, &record.SourceTitle, &record.SourceURL,
 		&record.SourceExternalID, &publishedAt, &updatedAt, &record.FetchStatus, &record.ErrorMessage,
 		&record.AITitleDE, &record.AISummaryDE, &record.AITitleEN, &record.AISummaryEN,
+		&record.AICategory, &record.AIAreaName, &record.AIAreaType,
 		&record.AIModel, &record.AIPromptVersion, &aiGeneratedAt,
 		&record.ProcessingStatus, &record.ProcessingAttempts, &nextRetryAt, &record.ProcessingFailureKind,
 	); err != nil {

@@ -35,16 +35,23 @@ func TestRunAIProcessQueuesNeverStartedIncident(t *testing.T) {
 	if err := database.UpsertDocuments(ctx, documents, now); err != nil {
 		t.Fatal(err)
 	}
-	operation := processing.Operation("qwen3.5:4b")
 	records, _, err := database.ListIncidents(ctx, 1, 0)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if err := database.EnsurePipelineSteps(ctx, processing.StepKeys(), now); err != nil {
+		t.Fatal(err)
+	}
+	for _, step := range processing.StepKeys() {
+		if err := database.SetPipelineStepModel(ctx, step, "qwen3.5:4b", now); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if err := database.Close(); err != nil {
 		t.Fatal(err)
 	}
 
-	cfg := config.Config{DatabasePath: databasePath, OllamaModel: "qwen3.5:4b", SourceMode: "fixture"}
+	cfg := config.Config{DatabasePath: databasePath, SourceMode: "fixture"}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	if err := runAIProcess(ctx, logger, cfg, []string{"--incident", formatInt(records[0].ID)}); err != nil {
 		t.Fatal(err)
@@ -55,20 +62,36 @@ func TestRunAIProcessQueuesNeverStartedIncident(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer database.Close()
-	stats, err := database.ProcessingQueueStats(ctx, operation, time.Now())
-	if err != nil || stats.Queued != 1 {
+	stats, err := database.PipelineSnapshot(ctx, "fixture", processing.StepKeys(), time.Now())
+	if err != nil || len(stats.Steps) != 2 || stats.Steps[0].Queued != 1 {
 		t.Fatalf("stats = %#v, err=%v", stats, err)
 	}
 }
 
 func TestRunAIProcessRequiresExactlyOneSelector(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	cfg := config.Config{DatabasePath: filepath.Join(t.TempDir(), "retry.db"), OllamaModel: "qwen3.5:4b", SourceMode: "fixture"}
+	cfg := config.Config{DatabasePath: filepath.Join(t.TempDir(), "retry.db"), SourceMode: "fixture"}
 	if err := runAIProcess(context.Background(), logger, cfg, nil); err == nil {
 		t.Fatal("missing selector was accepted")
 	}
 	if err := runAIProcess(context.Background(), logger, cfg, []string{"--all", "--incident", "1"}); err == nil {
 		t.Fatal("conflicting selectors were accepted")
+	}
+}
+
+func TestRunAIProcessRequiresEverySavedStepModel(t *testing.T) {
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "unconfigured.db")
+	database, err := store.Open(ctx, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := database.Close(); err != nil {
+		t.Fatal(err)
+	}
+	err = runAIProcess(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), config.Config{DatabasePath: path, SourceMode: "fixture"}, []string{"--all"})
+	if err == nil || !strings.Contains(err.Error(), "AI pipeline models are not configured") {
+		t.Fatalf("unconfigured ai-process error = %v", err)
 	}
 }
 

@@ -17,7 +17,6 @@ func TestLoadDefaults(t *testing.T) {
 	t.Setenv("MUNICHBRIEF_ARTICLE_REFRESH_INTERVAL", "")
 	t.Setenv("MUNICHBRIEF_AI_ENABLED", "")
 	t.Setenv("MUNICHBRIEF_OLLAMA_BASE_URL", "")
-	t.Setenv("MUNICHBRIEF_OLLAMA_MODEL", "")
 	t.Setenv("MUNICHBRIEF_AI_INTERVAL", "")
 	t.Setenv("MUNICHBRIEF_AI_TIMEOUT", "")
 	t.Setenv("MUNICHBRIEF_AI_CONTEXT_SIZE", "")
@@ -48,8 +47,8 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.PageSize != defaultPageSize {
 		t.Errorf("PageSize = %d, want %d", cfg.PageSize, defaultPageSize)
 	}
-	if cfg.AIEnabled || cfg.OllamaModel != defaultOllamaModel || cfg.AIContextSize != defaultAIContext {
-		t.Errorf("AI defaults = enabled:%t model:%q context:%d", cfg.AIEnabled, cfg.OllamaModel, cfg.AIContextSize)
+	if cfg.AIEnabled || cfg.AIContextSize != defaultAIContext {
+		t.Errorf("AI defaults = enabled:%t context:%d", cfg.AIEnabled, cfg.AIContextSize)
 	}
 	if cfg.AITimeout != 10*time.Minute {
 		t.Errorf("AITimeout = %s, want 10m", cfg.AITimeout)
@@ -68,7 +67,6 @@ func TestLoadDefaults(t *testing.T) {
 func TestLoadAcceptsRemoteOllamaConfiguration(t *testing.T) {
 	t.Setenv("MUNICHBRIEF_AI_ENABLED", "true")
 	t.Setenv("MUNICHBRIEF_OLLAMA_BASE_URL", "http://192.168.178.102:11434")
-	t.Setenv("MUNICHBRIEF_OLLAMA_MODEL", "qwen3.5:4b")
 	t.Setenv("MUNICHBRIEF_AI_CONTEXT_SIZE", "8192")
 	t.Setenv("MUNICHBRIEF_AI_IMMEDIATE", "true")
 	t.Setenv("MUNICHBRIEF_AI_WINDOW", "22:30-06:15")

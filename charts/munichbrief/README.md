@@ -37,8 +37,9 @@ from the public ingress. Confirmed Process now actions persist and wake manual
 work outside the configured AI window without bypassing validation, sequential
 execution, circuit breaking, or retry delays.
 
-`application.ollamaModel` is a seed preference: it initializes a database that
-has no AI settings row, but it does not overwrite a later protected-admin
-selection. The application discovers installed models from Ollama and pauses AI
-work when the endpoint is unavailable; reader health and readiness remain
-independent.
+The application discovers installed models from Ollama. Every registered
+pipeline step starts unconfigured on a fresh database and is selected from the
+protected admin dashboard. Existing installations migrate their former model
+preference to German analysis while leaving English translation unconfigured.
+Scheduled AI work remains paused until every step has an installed model;
+reader health, synchronization, and readiness remain independent.

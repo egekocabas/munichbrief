@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	_ "embed"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -51,14 +52,13 @@ type incidentStore interface {
 	GetPresentationIncident(context.Context, int64, store.PresentationScope) (store.IncidentRecord, error)
 	ListAdminIncidents(context.Context, int, int, string, store.PresentationScope, store.AdminIncidentFilter) ([]store.IncidentRecord, int, error)
 	Ready(context.Context) error
-	ProcessingQueueStatsForPrompt(context.Context, string, time.Time) (store.ProcessingStats, error)
-	PreferredModel(context.Context) (string, error)
 }
 
 type ProcessingRequester interface {
-	RequestNow(context.Context, string, string, *int64) (store.ProcessingRequestResult, error)
-	ModelStatus(context.Context) (processing.ModelStatus, error)
-	SetPreferredModel(context.Context, string) error
+	RequestNow(context.Context, string, map[string]string, *int64, bool) (store.PipelineRequestResult, error)
+	ModelStatus(context.Context) (processing.PipelineModelStatus, error)
+	SetPreferredStepModel(context.Context, string, string) error
+	Status(context.Context) (processing.PipelineRuntimeStatus, error)
 }
 
 type Options struct {
@@ -103,6 +103,8 @@ type incidentView struct {
 	ContentLanguage     string
 	ProcessingState     string
 	ProcessingLabel     string
+	CategoryLabel       string
+	AreaName            string
 	ShowOriginalMessage bool
 }
 
@@ -135,8 +137,6 @@ type detailPage struct {
 type aboutPage struct{ basePage }
 
 type adminPage struct {
-	Stats             store.ProcessingStats
-	OldestPending     string
 	Notice            string
 	NoticeIsWarning   bool
 	Unprocessed       adminIncidentList
@@ -144,7 +144,8 @@ type adminPage struct {
 	ProcessingEnabled bool
 	UnprocessedPage   int
 	AllPage           int
-	Models            processing.ModelStatus
+	Models            processing.PipelineModelStatus
+	Runtime           processing.PipelineRuntimeStatus
 }
 
 type adminIncidentList struct {
@@ -159,20 +160,22 @@ type adminIncidentList struct {
 	HasNext         bool
 	AllowProcessing bool
 	OtherPage       int
-	Models          processing.ModelStatus
+	Models          processing.PipelineModelStatus
 }
 
 type adminIncidentView struct {
-	Record          store.IncidentRecord
-	ProcessingState string
-	ProcessingLabel string
-	CanProcess      bool
+	Record            store.IncidentRecord
+	ProcessingState   string
+	ProcessingLabel   string
+	PresentationLabel string
+	CategoryLabel     string
+	CanProcess        bool
 }
 
 func New(database incidentStore, logger *slog.Logger, pageSize int, sourceMode string) (*Server, error) {
 	return NewWithOptions(database, logger, Options{
 		PageSize: pageSize, SourceMode: sourceMode, PresentationMode: "review",
-		PromptVersion: processing.PromptVersion,
+		PromptVersion: processing.PipelineVersion,
 	})
 }
 
@@ -252,9 +255,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /static/admin.js", s.adminJavascript)
 	if s.options.AdminEnabled {
 		mux.HandleFunc("GET /admin", s.admin)
+		mux.HandleFunc("GET /api/admin/ai/status", s.pipelineStatus)
 		mux.HandleFunc("POST /api/admin/ai/process-now", s.processIncidentNow)
 		mux.HandleFunc("POST /api/admin/ai/process-all-now", s.processAllNow)
-		mux.HandleFunc("POST /api/admin/ai/preferred-model", s.updatePreferredModel)
+		mux.HandleFunc("POST /api/admin/ai/reprocess-all", s.reprocessAll)
+		mux.HandleFunc("POST /api/admin/ai/step-model", s.updatePreferredStepModel)
 	}
 	return s.requestLogger(s.accessBoundary(mux))
 }
@@ -412,24 +417,20 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 		http.Error(response, "invalid all_page", http.StatusBadRequest)
 		return
 	}
-	stats, err := s.store.ProcessingQueueStatsForPrompt(request.Context(), s.options.PromptVersion, time.Now())
-	if err != nil {
-		s.internalError(response, request, "read admin processing statistics", err)
-		return
-	}
 	scope := store.PresentationScope{
 		PromptVersion: s.options.PromptVersion,
 	}
-	preferred, err := s.store.PreferredModel(request.Context())
-	if err != nil && !errors.Is(err, store.ErrSettingsNotInitialized) {
-		s.internalError(response, request, "read preferred AI model", err)
-		return
-	}
-	models := processing.ModelStatus{Preferred: preferred}
+	models := processing.PipelineModelStatus{}
+	runtime := processing.PipelineRuntimeStatus{}
 	if s.options.Processor != nil {
 		models, err = s.options.Processor.ModelStatus(request.Context())
 		if err != nil {
 			s.internalError(response, request, "read AI model status", err)
+			return
+		}
+		runtime, err = s.options.Processor.Status(request.Context())
+		if err != nil {
+			s.internalError(response, request, "read staged AI runtime status", err)
 			return
 		}
 	}
@@ -456,11 +457,11 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 	data := adminPage{
-		Stats:             stats,
 		ProcessingEnabled: s.options.Processor != nil,
 		UnprocessedPage:   unprocessedPage,
 		AllPage:           allPage,
 		Models:            models,
+		Runtime:           runtime,
 		Unprocessed: s.adminList(unprocessed, unprocessedTotal, unprocessedPage, unprocessedPages,
 			adminPaginationURL(unprocessedPage-1, allPage), adminPaginationURL(unprocessedPage+1, allPage), true, allPage),
 		AllIncidents: s.adminList(allIncidents, allTotal, allPage, allPages,
@@ -468,20 +469,14 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 	}
 	data.Unprocessed.Models = models
 	data.AllIncidents.Models = models
-	if stats.OldestPendingAge > 0 {
-		data.OldestPending = stats.OldestPendingAge.Round(time.Second).String()
-	} else {
-		data.OldestPending = "None"
-	}
 	if requested, ok := nonNegativeQueryInt(request, "requested"); ok {
-		running, _ := nonNegativeQueryInt(request, "running")
 		current, _ := nonNegativeQueryInt(request, "current")
-		model := request.URL.Query().Get("model")
-		data.Notice = fmt.Sprintf("Requested immediate processing with %s for %d incident(s). Already processing: %d. Already current: %d. AI work continues asynchronously.", model, requested, running, current)
-		data.NoticeIsWarning = requested == 0 && running == 0
+		cycleID, _ := nonNegativeQueryInt(request, "cycle")
+		data.Notice = fmt.Sprintf("Queued priority pipeline cycle #%d for %d incident(s). Already current: %d. It will start after the active healthy cycle finishes.", cycleID, requested, current)
+		data.NoticeIsWarning = requested == 0
 	}
-	if updated := request.URL.Query().Get("preferred_model"); updated != "" {
-		data.Notice = fmt.Sprintf("Preferred model updated to %s. Future automatic processing will use this model.", updated)
+	if updated := request.URL.Query().Get("step_model"); updated != "" {
+		data.Notice = fmt.Sprintf("Preferred model for %s updated. Future scheduled cycles will use it.", updated)
 	}
 	response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	response.Header().Set("Cache-Control", "private, no-store")
@@ -495,9 +490,17 @@ func (s *Server) adminList(records []store.IncidentRecord, total, page, totalPag
 	incidents := make([]adminIncidentView, 0, len(records))
 	for _, record := range records {
 		state := record.ProcessingState()
+		presentationLabel := ""
+		if record.HasAI {
+			presentationLabel = "Legacy presentation retained"
+			if record.AIPromptVersion == processing.GermanAnalysisPromptVersion {
+				presentationLabel = "Staged presentation"
+			}
+		}
 		incidents = append(incidents, adminIncidentView{
 			Record: record, ProcessingState: strings.ReplaceAll(state, "_", "-"),
-			ProcessingLabel: adminProcessingLabel(state), CanProcess: state != "running" && state != "ready",
+			ProcessingLabel: adminProcessingLabel(state), PresentationLabel: presentationLabel,
+			CategoryLabel: processing.CategoryLabel(record.AICategory, "en"), CanProcess: state != "running" && state != "ready",
 		})
 	}
 	return adminIncidentList{
@@ -522,6 +525,10 @@ func adminProcessingLabel(state string) string {
 		return "Needs review"
 	case "failed":
 		return "Failed"
+	case "waiting":
+		return "Waiting for previous step"
+	case "superseded":
+		return "Superseded"
 	default:
 		return "Not processed"
 	}
@@ -535,14 +542,18 @@ func adminPaginationURL(unprocessedPage, allPage int) string {
 }
 
 func (s *Server) processIncidentNow(response http.ResponseWriter, request *http.Request) {
-	s.processNow(response, request, true)
+	s.processNow(response, request, true, false)
 }
 
 func (s *Server) processAllNow(response http.ResponseWriter, request *http.Request) {
-	s.processNow(response, request, false)
+	s.processNow(response, request, false, false)
 }
 
-func (s *Server) processNow(response http.ResponseWriter, request *http.Request, single bool) {
+func (s *Server) reprocessAll(response http.ResponseWriter, request *http.Request) {
+	s.processNow(response, request, false, true)
+}
+
+func (s *Server) processNow(response http.ResponseWriter, request *http.Request, single, reprocessAll bool) {
 	if !validAdminMutation(request) {
 		http.Error(response, "cross-site request blocked", http.StatusForbidden)
 		return
@@ -573,12 +584,16 @@ func (s *Server) processNow(response http.ResponseWriter, request *http.Request,
 		}
 		incidentID = &parsed
 	}
-	model := strings.TrimSpace(request.PostForm.Get("model"))
-	if model == "" {
-		http.Error(response, "model is required", http.StatusBadRequest)
-		return
+	models := make(map[string]string)
+	for _, step := range processing.RegisteredSteps() {
+		model := strings.TrimSpace(request.PostForm.Get("model_" + step.Key))
+		if model == "" {
+			http.Error(response, "a model is required for every pipeline step", http.StatusBadRequest)
+			return
+		}
+		models[step.Key] = model
 	}
-	result, err := s.options.Processor.RequestNow(request.Context(), s.options.SourceMode, model, incidentID)
+	result, err := s.options.Processor.RequestNow(request.Context(), s.options.SourceMode, models, incidentID, reprocessAll)
 	if errors.Is(err, store.ErrNotFound) {
 		http.NotFound(response, request)
 		return
@@ -596,14 +611,13 @@ func (s *Server) processNow(response http.ResponseWriter, request *http.Request,
 	target, _ := url.Parse(adminPaginationURL(unprocessedPage, allPage))
 	query := target.Query()
 	query.Set("requested", strconv.Itoa(result.Requested))
-	query.Set("running", strconv.Itoa(result.AlreadyRunning))
-	query.Set("current", strconv.Itoa(result.AlreadyCurrent))
-	query.Set("model", model)
+	query.Set("current", strconv.Itoa(result.Current))
+	query.Set("cycle", strconv.FormatInt(result.CycleID, 10))
 	target.RawQuery = query.Encode()
 	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
 }
 
-func (s *Server) updatePreferredModel(response http.ResponseWriter, request *http.Request) {
+func (s *Server) updatePreferredStepModel(response http.ResponseWriter, request *http.Request) {
 	if !validAdminMutation(request) {
 		http.Error(response, "cross-site request blocked", http.StatusForbidden)
 		return
@@ -621,12 +635,13 @@ func (s *Server) updatePreferredModel(response http.ResponseWriter, request *htt
 		http.Error(response, "AI processing is disabled", http.StatusServiceUnavailable)
 		return
 	}
+	stepKey := strings.TrimSpace(request.PostForm.Get("step"))
 	model := strings.TrimSpace(request.PostForm.Get("model"))
-	if model == "" {
-		http.Error(response, "model is required", http.StatusBadRequest)
+	if stepKey == "" || model == "" {
+		http.Error(response, "step and model are required", http.StatusBadRequest)
 		return
 	}
-	if err := s.options.Processor.SetPreferredModel(request.Context(), model); err != nil {
+	if err := s.options.Processor.SetPreferredStepModel(request.Context(), stepKey, model); err != nil {
 		if errors.Is(err, processing.ErrModelUnavailable) {
 			http.Error(response, "selected Ollama model is unavailable", http.StatusServiceUnavailable)
 			return
@@ -636,9 +651,27 @@ func (s *Server) updatePreferredModel(response http.ResponseWriter, request *htt
 	}
 	target, _ := url.Parse(adminPaginationURL(positiveFormInt(request.PostForm.Get("unprocessed_page")), positiveFormInt(request.PostForm.Get("all_page"))))
 	query := target.Query()
-	query.Set("preferred_model", model)
+	query.Set("step_model", stepKey)
 	target.RawQuery = query.Encode()
 	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
+}
+
+func (s *Server) pipelineStatus(response http.ResponseWriter, request *http.Request) {
+	if s.options.Processor == nil {
+		http.Error(response, "AI processing is disabled", http.StatusServiceUnavailable)
+		return
+	}
+	status, err := s.options.Processor.Status(request.Context())
+	if err != nil {
+		s.internalError(response, request, "read staged AI status", err)
+		return
+	}
+	response.Header().Set("Content-Type", "application/json; charset=utf-8")
+	response.Header().Set("Cache-Control", "private, no-store")
+	response.Header().Set("X-Content-Type-Options", "nosniff")
+	if err := json.NewEncoder(response).Encode(status); err != nil {
+		s.logger.ErrorContext(request.Context(), "encode staged AI status", "error", err)
+	}
 }
 
 func positiveFormInt(raw string) int {
@@ -816,6 +849,8 @@ func (s *Server) incidentForLanguage(record store.IncidentRecord, language strin
 		ProcessingState: strings.ReplaceAll(state, "_", "-"), ProcessingLabel: s.processingLabel(state, language),
 	}
 	if record.HasAI {
+		view.CategoryLabel = processing.CategoryLabel(record.AICategory, language)
+		view.AreaName = record.AIAreaName
 		view.ContentLanguage = language
 		if language == "en" {
 			view.Title, view.Summary = record.AITitleEN, record.AISummaryEN

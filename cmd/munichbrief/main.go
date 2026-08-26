@@ -85,8 +85,7 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 		return err
 	}
 	defer database.Close()
-	preferredModel, err := database.InitializePreferredModel(ctx, cfg.OllamaModel, time.Now())
-	if err != nil {
+	if err := database.EnsurePipelineSteps(ctx, processing.StepKeys(), time.Now()); err != nil {
 		return err
 	}
 
@@ -116,7 +115,7 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 			return err
 		}
 	}
-	var aiWorker *processing.Worker
+	var aiWorker *processing.PipelineWorker
 	if cfg.AIEnabled {
 		catalog, err := processing.NewOllamaModelCatalog(cfg.OllamaBaseURL, 5*time.Second, nil)
 		if err != nil {
@@ -126,7 +125,7 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 		if snapshot.Err != nil {
 			logger.Warn("Ollama model catalog unavailable; AI processing is paused", "error", snapshot.Err)
 		} else {
-			logger.Info("Ollama model catalog loaded", "models", len(snapshot.Models), "preferred_model", preferredModel, "preferred_available", snapshot.Has(preferredModel))
+			logger.Info("Ollama model catalog loaded", "models", len(snapshot.Models))
 		}
 		go catalog.Run(ctx)
 		provider, err := processing.NewOllamaGeneratorProvider(
@@ -144,7 +143,7 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 			Start:     cfg.AIWindowStart,
 			End:       cfg.AIWindowEnd,
 		}
-		aiWorker, err = processing.NewWorker(database, provider, catalog, metrics, logger, cfg.AIInterval, time.Now, schedule)
+		aiWorker, err = processing.NewPipelineWorker(database, provider, catalog, metrics, logger, cfg.AIInterval, time.Now, schedule, cfg.SourceMode)
 		if err != nil {
 			return err
 		}
@@ -152,7 +151,7 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 
 	webServer, err := web.NewWithOptions(database, logger, web.Options{
 		PageSize: cfg.PageSize, SourceMode: cfg.SourceMode, PresentationMode: cfg.PresentationMode,
-		PromptVersion: processing.PromptVersion, SecureCookies: cfg.SecureCookies,
+		PromptVersion: processing.PipelineVersion, SecureCookies: cfg.SecureCookies,
 		AdminEnabled: cfg.AdminEnabled, PublicHosts: cfg.PublicHosts, Processor: aiWorker,
 	})
 	if err != nil {
@@ -170,7 +169,6 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 	if aiWorker != nil {
 		logger.Info("AI processing worker started",
 			"base_url", cfg.OllamaBaseURL,
-			"preferred_model", preferredModel,
 			"immediate", cfg.AIImmediate,
 			"window_start", cfg.AIWindowStart,
 			"window_end", cfg.AIWindowEnd,
@@ -219,7 +217,11 @@ func runAIProcess(ctx context.Context, logger *slog.Logger, cfg config.Config, a
 		return err
 	}
 	defer database.Close()
-	preferredModel, err := database.InitializePreferredModel(ctx, cfg.OllamaModel, time.Now())
+	models, err := database.PreferredPipelineModels(ctx, processing.StepKeys())
+	if err != nil {
+		return err
+	}
+	plans, err := processing.StepPlans(models)
 	if err != nil {
 		return err
 	}
@@ -227,19 +229,13 @@ func runAIProcess(ctx context.Context, logger *slog.Logger, cfg config.Config, a
 	if *incidentID > 0 {
 		selectedID = incidentID
 	}
-	result, err := database.RequestProcessingJobs(ctx, cfg.SourceMode, store.PresentationScope{
-		Operation:     processing.Operation(preferredModel),
-		ModelIdentity: preferredModel,
-		PromptVersion: processing.PromptVersion,
-	}, selectedID, time.Now())
+	result, err := database.CreateManualPipelineCycle(ctx, cfg.SourceMode, plans, selectedID, false, time.Now())
 	if err != nil {
 		return err
 	}
 	logger.Info("immediate AI processing requested",
 		"requested", result.Requested,
-		"already_running", result.AlreadyRunning,
-		"already_current", result.AlreadyCurrent,
-		"model", preferredModel,
+		"cycle_id", result.CycleID,
 	)
 	return nil
 }

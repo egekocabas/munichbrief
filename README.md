@@ -18,7 +18,7 @@ The agreed direction is:
 - one application process and one Kubernetes replica;
 - official RSS discovery followed by bounded fetching of RSS-linked articles;
 - retained extracted German incident text with no automated deletion deadline for now;
-- German summaries and aligned English translations produced in one request by `pi8`;
+- model-grouped German analysis and English translation stages produced by `pi8`;
 - a fail-closed deployed reader plus protected admin and local review views for retained source text;
 - deployment through the operational `homelab-infra` Argo CD path, with application CI limited to artifact publication.
 
@@ -50,12 +50,15 @@ To test AI processing safely against the synthetic fixtures, run:
 MUNICHBRIEF_AI_ENABLED=true \
 MUNICHBRIEF_AI_IMMEDIATE=true \
 MUNICHBRIEF_OLLAMA_BASE_URL=http://192.168.178.102:11434 \
-MUNICHBRIEF_OLLAMA_MODEL=qwen3.5:4b \
+MUNICHBRIEF_ADMIN_ENABLED=true \
 MUNICHBRIEF_PRESENTATION_MODE=review \
 go run ./cmd/munichbrief
 ```
 
-Immediate mode bypasses the default overnight processing window so the worker creates a short German title and summary plus an aligned English title and summary during local development. Processing stays outside browser requests, and the original fixture text remains visible for quality comparison.
+Open the protected/local admin page and select an installed Ollama model for
+each registered step. Immediate mode allows new scheduled cycles outside the
+default overnight window. Processing stays outside browser requests, and the
+original fixture text remains visible for quality comparison.
 
 Useful configuration:
 
@@ -76,9 +79,8 @@ Useful configuration:
 | `MUNICHBRIEF_ARTICLE_REFRESH_INTERVAL` | `6h` | Maximum age before an unchanged article can be refreshed |
 | `MUNICHBRIEF_AI_ENABLED` | `false` | Enable asynchronous Ollama processing |
 | `MUNICHBRIEF_AI_IMMEDIATE` | `false` | Process AI jobs at any time, ignoring the configured window; useful for local development |
-| `MUNICHBRIEF_AI_WINDOW` | `03:00-08:00` | Europe/Berlin wall-clock window in which new Ollama requests may start when immediate mode is off |
+| `MUNICHBRIEF_AI_WINDOW` | `03:00-08:00` | Europe/Berlin wall-clock window in which a new scheduled cycle may begin; an authorized frozen cycle may finish after it closes |
 | `MUNICHBRIEF_OLLAMA_BASE_URL` | `http://127.0.0.1:11434` | Ollama LAN or local base URL |
-| `MUNICHBRIEF_OLLAMA_MODEL` | `qwen3.5:4b` | Initial preferred Ollama model; seeds an empty database once, after which the protected admin override wins |
 | `MUNICHBRIEF_AI_INTERVAL` | `5s` | How often an idle worker checks for new jobs |
 | `MUNICHBRIEF_AI_TIMEOUT` | `10m` | Timeout for one model request; processing remains sequential |
 | `MUNICHBRIEF_AI_CONTEXT_SIZE` | `8192` | Ollama context size, from 2048 to 32768 |
@@ -299,22 +301,14 @@ Represents future machine-generated content and its provenance.
 - prompt version;
 - generation timestamp.
 
-#### `processing_jobs`
+#### Staged processing tables
 
-Represents durable asynchronous work for `pi8`.
-
-- incident and source hash;
-- requested operation;
-- selected model identity;
-- status and attempt count;
-- next retry time;
-- persisted manual processing request time;
-- sanitized last error.
-
-#### `ai_settings`
-
-Stores the administrator-controlled preferred model. The configured Ollama
-model seeds this singleton setting only when it does not yet exist.
+`processing_cycles` freezes scheduled, priority manual, and continuation work.
+Cycle items retain incident/source-hash targets, while `processing_step_jobs`
+persist the active registered step, model, retry/review state, and accepted
+outputs. `presentation_runs` groups derivations from different models into one
+cohesive bilingual presentation. `ai_step_settings` stores a nullable preferred
+model independently for each registered step.
 
 #### `sync_state`
 
@@ -339,7 +333,9 @@ Database constraints will enforce source and incident identity so repeated polls
 | Protected `GET /admin` | Processing operations plus paginated unprocessed and complete incident review lists |
 | Protected `POST /api/admin/ai/process-now` | Create or reset current work and request immediate processing for one incident |
 | Protected `POST /api/admin/ai/process-all-now` | Request immediate sequential processing for every unprocessed incident |
-| Protected `POST /api/admin/ai/preferred-model` | Change the preferred model used for future automatic processing |
+| Protected `POST /api/admin/ai/reprocess-all` | Rerun every current incident from the first pipeline step and supersede duplicate queued automatic work |
+| Protected `POST /api/admin/ai/step-model` | Change one registered step's preferred model for future scheduled cycles |
+| Protected `GET /api/admin/ai/status` | No-store live cycle, queue, model, and per-step status without source or generated text |
 | `GET /healthz` | Process liveness |
 | `GET /readyz` | Database and migration readiness |
 | Internal listener: `GET /metrics` | Prometheus metrics; absent from the reader listener and ingress |
@@ -360,40 +356,55 @@ Every incident view will display:
 
 The application must continue synchronizing and serving existing data when `pi8` is unavailable. AI processing will therefore be asynchronous and outside browser request paths.
 
-During the configured `03:00-08:00` Europe/Berlin processing window, the worker creates current processing jobs for every stored incident that has a German body but no complete presentation for the active source hash and prompt version from any model. Ready work uses the database-preferred model and is processed from the newest publication to the oldest; a request already in progress may finish after the window closes, but no new request starts outside the window. Immediate mode bypasses the window for local development.
+During the configured `03:00-08:00` Europe/Berlin processing window, the worker
+may atomically freeze every eligible source revision into a scheduled cycle. It
+processes every frozen incident through German analysis before switching models
+for English translation. New incidents wait for the following cycle. Once a
+cycle starts it may finish after the window closes, but no new scheduled cycle
+starts outside the window. Immediate mode bypasses only the scheduled-start
+window for local development.
 
 The worker checks Ollama's `/api/tags` catalog at startup and every 30 seconds.
-Automatic work pauses when the preferred model is absent. The protected admin
-dashboard reports installed, missing, and unavailable states separately and can
-select any installed model for one incident or all unprocessed incidents.
+Automatic work pauses until every registered step has an installed preferred
+model. The protected admin dashboard reports installed, missing, and unavailable
+states separately and can select independent installed models for one incident,
+all unprocessed incidents, or a full reprocessing cycle.
 Manual intent is stored in SQLite, survives restarts, and wakes the worker. Only
 the time window is bypassed: work remains sequential and retains normal privacy
 validation, circuit breaking, and retry behavior.
 
-The application-facing processing operation creates one aligned presentation and privacy assessment:
+The application-facing processing operation is a durable linear pipeline:
 
 ```text
-Present(GermanIncident) -> GermanTitle + GermanSummary + EnglishTitle + EnglishSummary + PrivacyStatus
+GermanIncident -> GermanAnalysis -> EnglishTranslation -> CohesivePresentation
 ```
 
 The processing sequence is:
 
-1. Generate a fact-constrained German title and summary from the German incident body.
-2. Generate aligned English translations in the same structured response.
-3. Require the model's privacy assessment and validate schema, lengths, and recognizable direct identifiers.
-4. Persist only privacy-safe output and record source hash, model, prompt version, and processing time.
+1. Generate a fact-constrained German title and summary, fixed incident category, explicitly stated broad area, and privacy assessment.
+2. Accept only schema-valid, privacy-safe German output.
+3. Send only the accepted German title and summary to the translation model and validate the English result.
+4. Persist per-step provenance and publish only a complete cohesive presentation.
 5. Retain the stored German body indefinitely for now; deletion remains a later operator-reviewed step.
 
 The LAN base URL, timeouts, model names, and optional authorization token will be configurable. Secrets will not be committed. The `pi8` inference port should be restricted to `pi16` at the host firewall or equivalent network boundary.
 
-Transient endpoint failures use capped backoff and a circuit breaker. Release-specific malformed or privacy-uncertain output yields to the next release and becomes `needs_review` after three attempts. Processing is idempotent for the combination of incident source hash, operation, model, and prompt version.
+Transient endpoint failures use capped backoff and a circuit breaker. Release-specific malformed or privacy-uncertain output yields to the next release and becomes `needs_review` after three attempts. Processing is idempotent for the incident source, pipeline step, model, and prompt-version inputs.
 
-The initial model is `qwen3.5:4b`. The ConfigMap value seeds a new database once;
-later admin changes persist across restarts. Changing the preference affects
-future automatic work and pending non-manual jobs, but does not invalidate or
-backfill complete presentations. A successful manual alternate-model run becomes
-that incident's newest displayed presentation without deleting older provenance.
-Prompt-version changes continue to invalidate older output.
+Processing identity is split across `incident-pipeline-v1`,
+`incident-analysis-de-v1`, and `incident-translation-en-v1`. Translation input
+is keyed to the accepted German result hash. Fresh databases start with both
+steps unconfigured; upgrades migrate the former preferred model only to German
+analysis. Existing complete bilingual results remain visible as immutable legacy
+runs until a complete staged replacement succeeds.
+
+Prompt versions are code-owned and immutable. The registry in
+`internal/processing/prompts.go` resolves active and retired versions to their
+exact system prompt and user-message template. Active pipeline steps reference
+that registry rather than embedding prompt text in the Ollama transport. Any
+instruction, input-template, or structured-output contract change requires a
+new prompt version; retired prompts remain registered for provenance but cannot
+be selected by the pipeline.
 
 ## Retention
 
@@ -625,7 +636,7 @@ The local MVP is complete when a clean start can:
 - Public mode never renders stored originals and publishes only current privacy-safe AI output.
 - English output is a translation of the accepted German summary.
 - Local-first access, Go, SQLite, server rendering, one replica, and GitOps-only K3s deployment are fixed decisions.
-- `qwen3.5:4b` is the initial preferred model; model choices retain distinct provenance, while only prompt changes invalidate complete presentations globally.
+- Every registered AI step requires an administrator-selected installed model; there is no configured default model.
 
 ## References
 

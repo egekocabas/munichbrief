@@ -9,11 +9,9 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/egekocabas/munichbrief/internal/store"
 )
 
-func TestOllamaClientRequestsStructuredBilingualPresentation(t *testing.T) {
+func TestOllamaClientRequestsStructuredPipelineStep(t *testing.T) {
 	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {
 		if request.URL.Path != "/api/chat" || request.Method != http.MethodPost {
 			t.Errorf("request = %s %s, want POST /api/chat", request.Method, request.URL.Path)
@@ -25,8 +23,9 @@ func TestOllamaClientRequestsStructuredBilingualPresentation(t *testing.T) {
 		if payload.Model != "qwen3.5:4b" || payload.Stream || payload.Think || payload.Options.NumCtx != 8192 {
 			t.Errorf("unexpected request options: %+v", payload)
 		}
-		if len(payload.Format) == 0 || len(payload.Messages) != 2 {
-			t.Errorf("request is missing schema or messages: %+v", payload)
+		step, _ := StepByKey(GermanAnalysisStep)
+		if len(payload.Format) == 0 || len(payload.Messages) != 2 || payload.Messages[0].Content != step.SystemPrompt {
+			t.Errorf("request is missing the registered prompt, schema, or messages: %+v", payload)
 		}
 		var response bytes.Buffer
 		_ = json.NewEncoder(&response).Encode(chatResponse{
@@ -35,8 +34,9 @@ func TestOllamaClientRequestsStructuredBilingualPresentation(t *testing.T) {
 			Message: chatMessage{Role: "assistant", Content: `{
 				"title_de":"Polizeieinsatz in der Altstadt",
 				"summary_de":"Am Abend fand in der Altstadt ein Polizeieinsatz statt. Die Absperrungen wurden später aufgehoben.",
-				"title_en":"Police operation in the old town",
-				"summary_en":"A police operation took place in the old town in the evening. The cordons were later lifted.",
+				"category":"police_operation",
+				"area_name":"Altstadt",
+				"area_type":"neighbourhood",
 				"privacy_status":"safe",
 				"privacy_flags":[]
 			}`},
@@ -52,45 +52,13 @@ func TestOllamaClientRequestsStructuredBilingualPresentation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewOllamaClient() error = %v", err)
 	}
-	result, model, err := client.Generate(context.Background(), "Originaltitel", "Am Abend fand ein Einsatz statt.")
+	step, _ := StepByKey(GermanAnalysisStep)
+	result, model, err := client.GenerateStep(context.Background(), step, StepInput{OriginalTitle: "Einsatz", IncidentBody: "Am Abend fand in der Altstadt ein Einsatz statt."})
 	if err != nil {
-		t.Fatalf("Generate() error = %v", err)
+		t.Fatalf("GenerateStep() error = %v", err)
 	}
-	if model != "qwen3.5:4b" || result.TitleDE != "Polizeieinsatz in der Altstadt" || result.SummaryEN == "" {
+	if model != "qwen3.5:4b" || result.TitleDE != "Polizeieinsatz in der Altstadt" || result.Category != "police_operation" {
 		t.Fatalf("result = %#v model=%q", result, model)
-	}
-}
-
-func TestValidatePresentationRejectsPrivacyReviewAndDirectIdentifiers(t *testing.T) {
-	base := store.AIPresentation{
-		TitleDE: "Sachlicher Titel", SummaryDE: "Eine sachliche Zusammenfassung.",
-		TitleEN: "Factual title", SummaryEN: "A factual summary.", PrivacyStatus: "review_required",
-		PrivacyFlags: []string{"person_name"},
-	}
-	if err := validatePresentation(&base); KindOf(err) != ErrorPrivacy {
-		t.Fatalf("review-required error kind = %q, want privacy", KindOf(err))
-	}
-	base.PrivacyStatus = "safe"
-	base.PrivacyFlags = []string{"person_name", "person_name"}
-	if err := validatePresentation(&base); err != nil || len(base.PrivacyFlags) != 1 {
-		t.Fatalf("duplicate privacy flags were not normalized: %#v, err=%v", base.PrivacyFlags, err)
-	}
-	base.SummaryEN = "Contact test@example.org for details."
-	if err := validatePresentation(&base); KindOf(err) != ErrorPrivacy {
-		t.Fatalf("identifier error kind = %q, want privacy", KindOf(err))
-	}
-	base.SummaryEN = "A factual summary."
-	base.PrivacyFlags = []string{"uncertain"}
-	if err := validatePresentation(&base); KindOf(err) != ErrorPrivacy {
-		t.Fatalf("uncertain flag error kind = %q, want privacy", KindOf(err))
-	}
-}
-
-func TestSystemPromptContainsPrivacyAndInjectionControls(t *testing.T) {
-	for _, expected := range []string{"untrusted source material", "first names", "presumption of innocence", "review_required", "wanted-person"} {
-		if !strings.Contains(systemPrompt, expected) {
-			t.Errorf("system prompt does not contain %q", expected)
-		}
 	}
 }
 
@@ -108,11 +76,8 @@ func TestDirectIdentifiersAreRedactedBeforeGeneration(t *testing.T) {
 	if strings.Contains(redacted, "Kontakt") || strings.Contains(redacted, "IGNORIERE") {
 		t.Fatalf("preprocessed source retains boilerplate or embedded instructions: %s", redacted)
 	}
-	if !strings.Contains(redacted, "Eine Person") {
-		t.Fatalf("preprocessed source did not replace age and name with a neutral role: %s", redacted)
-	}
-	if !strings.Contains(redacted, "Die Polizei prüft den Sachverhalt") {
-		t.Fatalf("preprocessed source unexpectedly removed non-private context: %s", redacted)
+	if !strings.Contains(redacted, "Eine Person") || !strings.Contains(redacted, "Die Polizei prüft den Sachverhalt") {
+		t.Fatalf("preprocessed source lost its neutral role or factual context: %s", redacted)
 	}
 }
 
@@ -132,22 +97,7 @@ func TestMissingPersonAppealIsReplacedWithIdentityFreeSource(t *testing.T) {
 	}
 }
 
-func TestCaseNumberDetectorDoesNotRejectOrdinaryReferenceText(t *testing.T) {
-	value := store.AIPresentation{
-		TitleDE: "Vermisstenfall in München", SummaryDE: "Identität und Kontaktdaten stehen in der offiziellen Quelle.",
-		TitleEN: "Missing-person case in Munich", SummaryEN: "Identity and contact details are available in the official reference source.",
-		PrivacyStatus: "safe", PrivacyFlags: []string{"missing_or_wanted_person"},
-	}
-	if err := validatePresentation(&value); err != nil {
-		t.Fatalf("ordinary reference text rejected: %v", err)
-	}
-	value.SummaryEN = "Official reference TEST-2026/4711."
-	if err := validatePresentation(&value); KindOf(err) != ErrorPrivacy {
-		t.Fatalf("case number error kind = %q, want privacy", KindOf(err))
-	}
-}
-
-func TestOllamaClientRejectsMalformedModelOutput(t *testing.T) {
+func TestOllamaClientRejectsMalformedStepOutput(t *testing.T) {
 	transport := roundTripFunc(func(_ *http.Request) (*http.Response, error) {
 		var response bytes.Buffer
 		_ = json.NewEncoder(&response).Encode(chatResponse{
@@ -161,8 +111,9 @@ func TestOllamaClientRejectsMalformedModelOutput(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewOllamaClient() error = %v", err)
 	}
-	if _, _, err := client.Generate(context.Background(), "Titel", "Text"); err == nil {
-		t.Fatal("Generate() error = nil, want invalid output error")
+	step, _ := StepByKey(GermanAnalysisStep)
+	if _, _, err := client.GenerateStep(context.Background(), step, StepInput{OriginalTitle: "Titel", IncidentBody: "Text"}); err == nil {
+		t.Fatal("GenerateStep() error = nil, want invalid output error")
 	}
 }
 
@@ -179,7 +130,8 @@ func TestOllamaClientClassifiesEndpointErrors(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			_, _, err = client.Generate(context.Background(), "Titel", "Text")
+			step, _ := StepByKey(GermanAnalysisStep)
+			_, _, err = client.GenerateStep(context.Background(), step, StepInput{OriginalTitle: "Titel", IncidentBody: "Text"})
 			if KindOf(err) != test.kind {
 				t.Fatalf("HTTP %d kind = %q, want %q", test.status, KindOf(err), test.kind)
 			}

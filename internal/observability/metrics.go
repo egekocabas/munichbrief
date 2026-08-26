@@ -43,6 +43,20 @@ type Metrics struct {
 	lastProcessingSuccess   atomic.Int64
 	processingDurationNanos atomic.Uint64
 	processingDurationCount atomic.Uint64
+	pipelineAttempts        [2]atomic.Uint64
+	pipelineSuccesses       [2]atomic.Uint64
+	pipelineFailures        [2]atomic.Uint64
+	pipelineDurationNanos   [2]atomic.Uint64
+	pipelineDurationCount   [2]atomic.Uint64
+	pipelineQueued          [2]atomic.Int64
+	pipelineRunning         [2]atomic.Int64
+	pipelineRetrying        [2]atomic.Int64
+	pipelineReview          [2]atomic.Int64
+	pipelineFailed          [2]atomic.Int64
+	pipelineSucceeded       [2]atomic.Int64
+	pipelineActiveCycle     atomic.Int64
+	pipelineActiveStep      atomic.Int64
+	pipelineActiveKind      [3]atomic.Int64
 }
 
 func NewMetrics(version string, startedAt time.Time) *Metrics {
@@ -143,6 +157,60 @@ func (m *Metrics) RecordProcessingDuration(duration time.Duration) {
 	m.processingDurationCount.Add(1)
 }
 
+func pipelineStepIndex(step string) int {
+	if step == "english_translation" {
+		return 1
+	}
+	return 0
+}
+
+func (m *Metrics) RecordPipelineAttempt(step string) {
+	m.pipelineAttempts[pipelineStepIndex(step)].Add(1)
+}
+
+func (m *Metrics) RecordPipelineSuccess(step string, at time.Time) {
+	index := pipelineStepIndex(step)
+	m.pipelineSuccesses[index].Add(1)
+	m.lastProcessingSuccess.Store(at.Unix())
+}
+
+func (m *Metrics) RecordPipelineFailure(step, _ string) {
+	m.pipelineFailures[pipelineStepIndex(step)].Add(1)
+}
+
+func (m *Metrics) RecordPipelineDuration(step string, duration time.Duration) {
+	index := pipelineStepIndex(step)
+	m.pipelineDurationNanos[index].Add(uint64(max(duration.Nanoseconds(), 0)))
+	m.pipelineDurationCount[index].Add(1)
+}
+
+func (m *Metrics) SetPipelineSnapshot(snapshot store.PipelineSnapshot) {
+	for _, stats := range snapshot.Steps {
+		index := pipelineStepIndex(stats.StepKey)
+		m.pipelineQueued[index].Store(int64(max(stats.Queued, 0)))
+		m.pipelineRunning[index].Store(int64(max(stats.Running, 0)))
+		m.pipelineRetrying[index].Store(int64(max(stats.Retrying, 0)))
+		m.pipelineReview[index].Store(int64(max(stats.NeedsReview, 0)))
+		m.pipelineFailed[index].Store(int64(max(stats.Failed, 0)))
+		m.pipelineSucceeded[index].Store(int64(max(stats.Succeeded, 0)))
+	}
+	for index := range m.pipelineActiveKind {
+		m.pipelineActiveKind[index].Store(0)
+	}
+	if snapshot.ActiveCycle == nil {
+		m.pipelineActiveCycle.Store(0)
+		m.pipelineActiveStep.Store(-1)
+		return
+	}
+	m.pipelineActiveCycle.Store(1)
+	m.pipelineActiveStep.Store(int64(snapshot.ActiveCycle.ActiveStep))
+	for index, kind := range []string{"scheduled", "manual", "continuation"} {
+		if snapshot.ActiveCycle.Kind == kind {
+			m.pipelineActiveKind[index].Store(1)
+		}
+	}
+}
+
 func (m *Metrics) Handler() http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		if request.URL.Path != "/metrics" {
@@ -222,6 +290,40 @@ func (m *Metrics) write(writer io.Writer) {
 	fmt.Fprintln(writer, "# HELP munichbrief_ai_processing_window_open Whether new AI requests may start under the configured schedule.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_ai_processing_window_open gauge")
 	fmt.Fprintf(writer, "munichbrief_ai_processing_window_open %d\n", m.processingWindowOpen.Load())
+	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_attempts_total Staged AI attempts by registered step.")
+	fmt.Fprintln(writer, "# TYPE munichbrief_pipeline_attempts_total counter")
+	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_successes_total Successful staged AI jobs by registered step.")
+	fmt.Fprintln(writer, "# TYPE munichbrief_pipeline_successes_total counter")
+	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_failures_total Failed staged AI attempts by registered step.")
+	fmt.Fprintln(writer, "# TYPE munichbrief_pipeline_failures_total counter")
+	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_duration_seconds Staged AI attempt duration by registered step.")
+	fmt.Fprintln(writer, "# TYPE munichbrief_pipeline_duration_seconds summary")
+	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_jobs Staged AI jobs by registered step and bounded state.")
+	fmt.Fprintln(writer, "# TYPE munichbrief_pipeline_jobs gauge")
+	for index, step := range []string{"german_analysis", "english_translation"} {
+		fmt.Fprintf(writer, "munichbrief_pipeline_attempts_total{step=%q} %d\n", step, m.pipelineAttempts[index].Load())
+		fmt.Fprintf(writer, "munichbrief_pipeline_successes_total{step=%q} %d\n", step, m.pipelineSuccesses[index].Load())
+		fmt.Fprintf(writer, "munichbrief_pipeline_failures_total{step=%q} %d\n", step, m.pipelineFailures[index].Load())
+		fmt.Fprintf(writer, "munichbrief_pipeline_duration_seconds_sum{step=%q} %.6f\n", step, float64(m.pipelineDurationNanos[index].Load())/float64(time.Second))
+		fmt.Fprintf(writer, "munichbrief_pipeline_duration_seconds_count{step=%q} %d\n", step, m.pipelineDurationCount[index].Load())
+		for state, value := range map[string]int64{"queued": m.pipelineQueued[index].Load(), "running": m.pipelineRunning[index].Load(), "retrying": m.pipelineRetrying[index].Load(), "needs_review": m.pipelineReview[index].Load(), "failed": m.pipelineFailed[index].Load(), "succeeded": m.pipelineSucceeded[index].Load()} {
+			fmt.Fprintf(writer, "munichbrief_pipeline_jobs{step=%q,state=%q} %d\n", step, state, value)
+		}
+	}
+	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_active_cycle Whether a staged processing cycle is active.")
+	fmt.Fprintln(writer, "# TYPE munichbrief_pipeline_active_cycle gauge")
+	for index, kind := range []string{"scheduled", "manual", "continuation"} {
+		fmt.Fprintf(writer, "munichbrief_pipeline_active_cycle{kind=%q} %d\n", kind, m.pipelineActiveKind[index].Load())
+	}
+	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_active_step Whether a registered step is active.")
+	fmt.Fprintln(writer, "# TYPE munichbrief_pipeline_active_step gauge")
+	for index, step := range []string{"german_analysis", "english_translation"} {
+		active := int64(0)
+		if m.pipelineActiveCycle.Load() == 1 && m.pipelineActiveStep.Load() == int64(index) {
+			active = 1
+		}
+		fmt.Fprintf(writer, "munichbrief_pipeline_active_step{step=%q} %d\n", step, active)
+	}
 	writeCounter(writer, "munichbrief_retention_deletions_total", "Records removed by retention processing.", 0)
 }
 

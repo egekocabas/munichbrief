@@ -26,11 +26,9 @@ MUNICHBRIEF_DATABASE_PATH=.data/munichbrief-live.db \
 go run ./cmd/munichbrief sync
 
 MUNICHBRIEF_DATABASE_PATH=.data/munichbrief-live.db \
-MUNICHBRIEF_OLLAMA_MODEL=qwen3.5:4b \
 go run ./cmd/munichbrief ai-process --incident 123
 
 MUNICHBRIEF_DATABASE_PATH=.data/munichbrief-live.db \
-MUNICHBRIEF_OLLAMA_MODEL=qwen3.5:4b \
 go run ./cmd/munichbrief ai-process --all
 ```
 
@@ -39,23 +37,25 @@ The reader listens on `127.0.0.1:8080` and metrics listen separately on
 metrics listener provides `/metrics`.
 
 The AI worker discovers both existing and newly synchronized incidents with
-stored German text. It processes ready incidents newest-first, one at a time.
+stored German text. It freezes a cycle, processes all German-analysis jobs, then
+switches models and processes all English-translation jobs.
 The five-second AI interval is an idle queue check, while the ten-minute AI
 timeout bounds a single Ollama request. Unless immediate mode is enabled, new
 Ollama requests start only during the configured Europe/Berlin processing
-window; a request already running when the window closes is allowed to finish.
+window; a frozen cycle is allowed to finish all stages after the window closes.
 An explicit admin or `ai-process` request persists manual intent and bypasses
 only this window. Processing remains sequential and retains privacy validation,
 the circuit breaker, and normal retry delays. A command-line request is picked
 up by the running server on its next idle worker check.
 
-`MUNICHBRIEF_OLLAMA_MODEL` seeds the preferred model only when the database has
-no AI settings row. The protected admin dashboard owns later overrides. The
-server refreshes Ollama's `/api/tags` every 30 seconds; automatic processing
-pauses when the preferred model is missing, while admins may explicitly queue
-any installed model. Catalog failure pauses all AI calls but does not affect
-reader readiness. The ten-minute generation timeout already accommodates model
-loading delays of roughly 30 seconds.
+The protected admin dashboard stores one preferred model for every registered
+pipeline step. Fresh databases start unconfigured; upgraded databases migrate
+the former preference only to German analysis. The server refreshes Ollama's
+`/api/tags` every 30 seconds; scheduled processing pauses until all required
+models are installed, while priority manual cycles retain their per-step model
+choices. Catalog failure pauses all AI calls but does not affect reader
+readiness. The ten-minute generation timeout already accommodates model loading
+delays of roughly 30 seconds.
 
 Structured logs identify AI job and incident IDs, attempts, safe failure
 categories, RSS synchronization stages, and press-release document stages.
@@ -76,11 +76,11 @@ behind TLS.
 The checked-in production deployment runs the reader in public mode on both LAN
 and public hosts. `MUNICHBRIEF_PUBLIC_HOSTS` additionally forces each listed
 hostname into public presentation and restricts it to reader-safe paths. The
-optional `/admin` dashboard shows processing queue state, independently
+optional `/admin` dashboard shows live cycle and per-step queue state, independently
 paginated unprocessed and complete incident review lists, retained German
 originals, and both generated languages. Its confirmed Process now actions can
-create a missing job or reset incomplete current work for one incident or every
-unprocessed incident. They wake the in-process worker and run asynchronously
+create a full-pipeline cycle for one incident, every unprocessed incident, or
+every current incident. They wake the in-process worker and run asynchronously
 outside the normal window while retaining the standard safety controls. The
 application does not authenticate users itself: enable the dashboard only when
 Traefik protects `/admin*` and `/api/admin*`, and keep both prefixes absent from

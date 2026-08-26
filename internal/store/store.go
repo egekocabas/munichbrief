@@ -48,6 +48,9 @@ type IncidentRecord struct {
 	AISummaryDE           string
 	AITitleEN             string
 	AISummaryEN           string
+	AICategory            string
+	AIAreaName            string
+	AIAreaType            string
 	AIModel               string
 	AIPromptVersion       string
 	AIGeneratedAt         *time.Time
