@@ -8,6 +8,15 @@ on:
       - "v*.*.*"
     paths-ignore:
       - ".github/workflows/ci.yml"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/pull_request_template.md"
+      - "CODE_OF_CONDUCT.md"
+      - "CONTRIBUTING.md"
+      - "LICENSE"
+      - "README.md"
+      - "SECURITY.md"
+      - "docs/**"
+      - "charts/**/README.md"
 
 permissions:
   contents: read

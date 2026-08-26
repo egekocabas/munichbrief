@@ -50,6 +50,12 @@ jobs:
       - name: Run static analysis
         run: go vet ./...
 
+      - name: Check for reachable vulnerabilities
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...
+
+      - name: Check for unreachable code
+        run: go run golang.org/x/tools/cmd/deadcode@v0.49.0 -test ./...
+
       - name: Run tests with race detector
         run: go test -race ./...
 
@@ -59,22 +65,24 @@ jobs:
       - name: Validate Helm chart
         run: |
           helm lint --strict charts/munichbrief
-          helm lint --strict charts/munichbrief --values deploy/homelab-values.yaml
+          helm lint --strict charts/munichbrief --values deploy/example-values.yaml
           if helm template munichbrief charts/munichbrief --namespace munichbrief --set admin.enabled=true --set ingress.lan.enabled=true >/dev/null 2>&1; then
             echo "admin rendered without a Basic Auth reference" >&2
             exit 1
           fi
-          if helm template munichbrief charts/munichbrief --namespace munichbrief --values deploy/homelab-values.yaml --set admin.basicAuthMiddleware=munichbrief-munichbrief-admin-auth@kubernetescrd >/dev/null 2>&1; then
+          if helm template munichbrief charts/munichbrief --namespace munichbrief --values deploy/example-values.yaml --set admin.basicAuthMiddleware=munichbrief-munichbrief-admin-auth@kubernetescrd >/dev/null 2>&1; then
             echo "admin rendered with both Basic Auth reference forms" >&2
             exit 1
           fi
-          if helm template munichbrief charts/munichbrief --namespace munichbrief --values deploy/homelab-values.yaml --set-string application.canonicalOrigin= >/dev/null 2>&1; then
+          if helm template munichbrief charts/munichbrief --namespace munichbrief --values deploy/example-values.yaml --set-string application.canonicalOrigin= >/dev/null 2>&1; then
             echo "public ingress rendered without a canonical origin" >&2
             exit 1
           fi
-          if helm template munichbrief charts/munichbrief --namespace munichbrief --values deploy/homelab-values.yaml --set-string application.canonicalOrigin=https://example.com >/dev/null 2>&1; then
+          if helm template munichbrief charts/munichbrief --namespace munichbrief --values deploy/example-values.yaml --set-string application.canonicalOrigin=https://example.com >/dev/null 2>&1; then
             echo "public ingress rendered with a canonical origin outside publicHosts" >&2
             exit 1
           fi
-          helm template munichbrief charts/munichbrief --namespace munichbrief --values deploy/homelab-values.yaml > /tmp/munichbrief-rendered.yaml
+          helm template munichbrief charts/munichbrief --namespace munichbrief > /tmp/munichbrief-default.yaml
+          bash ./scripts/check-default-chart.sh /tmp/munichbrief-default.yaml
+          helm template munichbrief charts/munichbrief --namespace munichbrief --values deploy/example-values.yaml > /tmp/munichbrief-rendered.yaml
           ./scripts/check-chart.sh /tmp/munichbrief-rendered.yaml
