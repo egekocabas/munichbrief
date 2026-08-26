@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"log/slog"
@@ -92,6 +93,37 @@ func TestRunAIProcessRequiresEverySavedStepModel(t *testing.T) {
 	err = runAIProcess(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), config.Config{DatabasePath: path, SourceMode: "fixture"}, []string{"--all"})
 	if err == nil || !strings.Contains(err.Error(), "AI pipeline models are not configured") {
 		t.Fatalf("unconfigured ai-process error = %v", err)
+	}
+}
+
+func TestRunRejectsUnknownCommand(t *testing.T) {
+	t.Setenv("MUNICHBRIEF_SOURCE_MODE", "fixture")
+	err := run(context.Background(), slog.New(slog.NewTextHandler(io.Discard, nil)), []string{"unknown"})
+	if err == nil || !strings.Contains(err.Error(), `unknown command "unknown"`) {
+		t.Fatalf("run() error = %v, want unknown command", err)
+	}
+}
+
+func TestRunBackupStreamsRestorableSQLiteDatabase(t *testing.T) {
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "source.db")
+	database, err := store.Open(ctx, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := database.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	var output bytes.Buffer
+	if err := runBackup(ctx, config.Config{DatabasePath: path}, []string{"--output", "-"}, &output); err != nil {
+		t.Fatalf("runBackup() error = %v", err)
+	}
+	if !bytes.HasPrefix(output.Bytes(), []byte("SQLite format 3\x00")) {
+		t.Fatalf("backup prefix = %q, want SQLite header", output.Bytes()[:min(output.Len(), 16)])
+	}
+	if err := runBackup(ctx, config.Config{DatabasePath: path}, nil, io.Discard); err == nil {
+		t.Fatal("runBackup() accepted missing --output")
 	}
 }
 

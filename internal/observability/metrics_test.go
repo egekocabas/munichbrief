@@ -101,3 +101,37 @@ func TestSetLastFeedSuccessRestoresPersistedTimestamp(t *testing.T) {
 		t.Fatal("metrics did not expose the restored feed success timestamp")
 	}
 }
+
+func TestMetricsExposeStagedPipelineState(t *testing.T) {
+	metrics := NewMetrics("test", time.Now())
+	metrics.RecordPipelineAttempt("german_analysis")
+	metrics.RecordPipelineAttempt("english_translation")
+	metrics.RecordPipelineSuccess("german_analysis", time.Unix(4567, 0))
+	metrics.RecordPipelineFailure("english_translation", "output")
+	metrics.RecordPipelineDuration("english_translation", 1750*time.Millisecond)
+	metrics.SetPipelineSnapshot(store.PipelineSnapshot{
+		ActiveCycle: &store.PipelineCycle{Kind: "manual", ActiveStep: 1},
+		Steps: []store.StepQueueStats{
+			{StepKey: "german_analysis", Queued: 2, Succeeded: 3},
+			{StepKey: "english_translation", Running: 1, NeedsReview: 4},
+		},
+	})
+
+	recorder := httptest.NewRecorder()
+	metrics.Handler().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	for _, expected := range []string{
+		`munichbrief_pipeline_attempts_total{step="german_analysis"} 1`,
+		`munichbrief_pipeline_successes_total{step="german_analysis"} 1`,
+		`munichbrief_pipeline_failures_total{step="english_translation"} 1`,
+		`munichbrief_pipeline_duration_seconds_sum{step="english_translation"} 1.750000`,
+		`munichbrief_pipeline_jobs{step="german_analysis",state="queued"} 2`,
+		`munichbrief_pipeline_jobs{step="english_translation",state="needs_review"} 4`,
+		`munichbrief_pipeline_active_cycle{kind="manual"} 1`,
+		`munichbrief_pipeline_active_step{step="english_translation"} 1`,
+		"munichbrief_last_processing_success_timestamp_seconds 4567",
+	} {
+		if !strings.Contains(recorder.Body.String(), expected) {
+			t.Errorf("metrics body does not contain %q", expected)
+		}
+	}
+}
