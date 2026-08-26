@@ -13,7 +13,7 @@ import (
 
 func TestRegisteredPipelineStepsAreStableAndOrdered(t *testing.T) {
 	steps := RegisteredSteps()
-	if len(steps) != 2 || steps[0].Key != GermanAnalysisStep || steps[0].PromptVersion != GermanAnalysisPrompt || steps[1].Key != EnglishTranslationStep || steps[1].PromptVersion != EnglishTranslationPrompt {
+	if len(steps) != 2 || steps[0].Key != GermanAnalysisStep || steps[0].PromptVersion != GermanAnalysisPromptVersion || steps[1].Key != EnglishTranslationStep || steps[1].PromptVersion != EnglishTranslationPromptVersion {
 		t.Fatalf("registered steps = %#v", steps)
 	}
 	if PipelineVersion != "incident-pipeline-v1" {
@@ -23,6 +23,16 @@ func TestRegisteredPipelineStepsAreStableAndOrdered(t *testing.T) {
 		if !strings.Contains(steps[0].SystemPrompt, expected) {
 			t.Errorf("German analysis prompt does not contain %q", expected)
 		}
+	}
+}
+
+func TestRegisteredStepsReturnsDeepCopy(t *testing.T) {
+	steps := RegisteredSteps()
+	steps[0].InputKinds[0] = "modified"
+	steps[0].Schema[0] = 'x'
+	resolved, _ := StepByKey(GermanAnalysisStep)
+	if resolved.InputKinds[0] == "modified" || resolved.Schema[0] == 'x' {
+		t.Fatal("caller mutated the step registry")
 	}
 }
 

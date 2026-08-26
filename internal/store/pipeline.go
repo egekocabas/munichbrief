@@ -379,14 +379,20 @@ func createPipelineCycleTx(ctx context.Context, tx *sql.Tx, kind, sourceMode str
 		if err != nil {
 			return 0, 0, fmt.Errorf("create presentation run: %w", err)
 		}
-		runID, _ := run.LastInsertId()
+		runID, err := run.LastInsertId()
+		if err != nil {
+			return 0, 0, fmt.Errorf("read presentation run ID: %w", err)
+		}
 		item, err := tx.ExecContext(ctx, `
 			INSERT INTO processing_cycle_items(cycle_id, incident_id, source_hash, presentation_run_id, status, created_at, updated_at)
 			VALUES (?, ?, ?, ?, 'pending', ?, ?)`, cycleID, target.id, target.hash, runID, formatted, formatted)
 		if err != nil {
 			return 0, 0, fmt.Errorf("create pipeline cycle item: %w", err)
 		}
-		itemID, _ := item.LastInsertId()
+		itemID, err := item.LastInsertId()
+		if err != nil {
+			return 0, 0, fmt.Errorf("read pipeline cycle item ID: %w", err)
+		}
 		for _, step := range steps {
 			status := "waiting"
 			if step.Order == 0 {
@@ -440,7 +446,7 @@ func (s *Store) ActivateNextPipelineCycle(ctx context.Context, sourceMode string
 		}
 		condition += ` AND COALESCE(i.body_de, '') <> '' AND NOT EXISTS (
 			SELECT 1 FROM presentation_runs r WHERE r.incident_id = i.id AND r.source_hash = i.content_hash
-			AND r.pipeline_version = '` + PipelineVersion + `' AND r.status = 'complete'
+			AND r.pipeline_version = '` + PipelineVersion + `' AND r.status IN ('complete','failed')
 		)`
 		cycleID, count, err := createPipelineCycleTx(ctx, tx, "scheduled", sourceMode, true, "", condition, nil, steps, now)
 		if err != nil {
@@ -556,7 +562,10 @@ func (s *Store) InterruptBlockedScheduledCycle(ctx context.Context, cycleID int6
 	if err != nil {
 		return 0, err
 	}
-	continuationID, _ := result.LastInsertId()
+	continuationID, err := result.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("read continuation cycle ID: %w", err)
+	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO cycle_step_models(cycle_id, step_key, step_order, model_identity, prompt_version) SELECT ?, step_key, step_order, model_identity, prompt_version FROM cycle_step_models WHERE cycle_id = ?`, continuationID, cycleID); err != nil {
 		return 0, err
 	}
@@ -813,23 +822,38 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 	if err == nil {
 		cycle.WindowAuthorized = authorized == 1
 		if started != "" {
-			value, _ := time.Parse(time.RFC3339Nano, started)
+			value, err := time.Parse(time.RFC3339Nano, started)
+			if err != nil {
+				return snapshot, fmt.Errorf("parse active cycle start: %w", err)
+			}
 			cycle.StartedAt = &value
 		}
 		snapshot.ActiveCycle = &cycle
-		_ = s.db.QueryRowContext(ctx, `SELECT step_key, model_identity FROM cycle_step_models WHERE cycle_id = ? AND step_order = ?`, cycle.ID, cycle.ActiveStep).Scan(&snapshot.ActiveStepKey, &snapshot.ActiveModel)
-		_ = s.db.QueryRowContext(ctx, `SELECT COALESCE(SUM(CASE WHEN j.status IN ('succeeded','failed','needs_review','skipped','superseded') THEN 1 ELSE 0 END),0), COUNT(*)
-			FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id=j.cycle_item_id WHERE ci.cycle_id = ?`, cycle.ID).Scan(&snapshot.CycleCompleted, &snapshot.CycleTotal)
-		_ = s.db.QueryRowContext(ctx, `SELECT COALESCE(ci.incident_id,0) FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id=j.cycle_item_id WHERE ci.cycle_id=? AND j.status='running' LIMIT 1`, cycle.ID).Scan(&snapshot.CurrentIncidentID)
+		if err := s.db.QueryRowContext(ctx, `SELECT step_key, model_identity FROM cycle_step_models WHERE cycle_id = ? AND step_order = ?`, cycle.ID, cycle.ActiveStep).Scan(&snapshot.ActiveStepKey, &snapshot.ActiveModel); err != nil {
+			return snapshot, fmt.Errorf("read active cycle step: %w", err)
+		}
+		if err := s.db.QueryRowContext(ctx, `SELECT COALESCE(SUM(CASE WHEN j.status IN ('succeeded','failed','needs_review','skipped','superseded') THEN 1 ELSE 0 END),0), COUNT(*)
+			FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id=j.cycle_item_id WHERE ci.cycle_id = ?`, cycle.ID).Scan(&snapshot.CycleCompleted, &snapshot.CycleTotal); err != nil {
+			return snapshot, fmt.Errorf("read active cycle progress: %w", err)
+		}
+		if err := s.db.QueryRowContext(ctx, `SELECT ci.incident_id FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id=j.cycle_item_id WHERE ci.cycle_id=? AND j.status='running' LIMIT 1`, cycle.ID).Scan(&snapshot.CurrentIncidentID); err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return snapshot, fmt.Errorf("read active cycle incident: %w", err)
+		}
 	}
-	_ = s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM processing_cycles WHERE status='queued' AND kind='manual'`).Scan(&snapshot.ManualCycles)
-	_ = s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM processing_cycles WHERE status='queued' AND kind='continuation'`).Scan(&snapshot.ContinuationCycles)
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM processing_cycles WHERE status='queued' AND kind='manual'`).Scan(&snapshot.ManualCycles); err != nil {
+		return snapshot, fmt.Errorf("count queued manual cycles: %w", err)
+	}
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM processing_cycles WHERE status='queued' AND kind='continuation'`).Scan(&snapshot.ContinuationCycles); err != nil {
+		return snapshot, fmt.Errorf("count queued continuation cycles: %w", err)
+	}
 	condition, err := sourceStatusCondition(sourceMode)
 	if err != nil {
 		return snapshot, err
 	}
-	query := `SELECT COUNT(*) FROM incidents i JOIN source_documents d ON d.id=i.source_document_id WHERE ` + condition + ` AND COALESCE(i.body_de,'')<>'' AND NOT EXISTS (SELECT 1 FROM presentation_runs r WHERE r.incident_id=i.id AND r.source_hash=i.content_hash AND r.pipeline_version=? AND r.status='complete')`
-	_ = s.db.QueryRowContext(ctx, query, PipelineVersion).Scan(&snapshot.ScheduledCandidates)
+	query := `SELECT COUNT(*) FROM incidents i JOIN source_documents d ON d.id=i.source_document_id WHERE ` + condition + ` AND COALESCE(i.body_de,'')<>'' AND NOT EXISTS (SELECT 1 FROM presentation_runs r WHERE r.incident_id=i.id AND r.source_hash=i.content_hash AND r.pipeline_version=? AND r.status IN ('complete','failed'))`
+	if err := s.db.QueryRowContext(ctx, query, PipelineVersion).Scan(&snapshot.ScheduledCandidates); err != nil {
+		return snapshot, fmt.Errorf("count scheduled pipeline candidates: %w", err)
+	}
 	for _, key := range stepKeys {
 		stat := StepQueueStats{StepKey: key}
 		var durationSeconds float64
@@ -854,7 +878,10 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 			stat.AverageDurationSeconds = stat.AverageDuration.Seconds()
 		}
 		if last != "" {
-			value, _ := time.Parse(time.RFC3339Nano, last)
+			value, err := time.Parse(time.RFC3339Nano, last)
+			if err != nil {
+				return snapshot, fmt.Errorf("parse %s last-success time: %w", key, err)
+			}
 			stat.LastSuccess = &value
 		}
 		snapshot.Steps = append(snapshot.Steps, stat)
@@ -873,7 +900,10 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 		if err := eventRows.Scan(&at, &event.CycleID, &event.IncidentID, &event.StepKey, &event.Status, &event.FailureKind); err != nil {
 			return snapshot, err
 		}
-		event.At, _ = time.Parse(time.RFC3339Nano, at)
+		event.At, err = time.Parse(time.RFC3339Nano, at)
+		if err != nil {
+			return snapshot, fmt.Errorf("parse pipeline event time: %w", err)
+		}
 		snapshot.RecentEvents = append(snapshot.RecentEvents, event)
 	}
 	if err := eventRows.Err(); err != nil {

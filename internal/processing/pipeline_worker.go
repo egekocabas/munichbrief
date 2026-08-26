@@ -259,7 +259,10 @@ func (w *PipelineWorker) processCycle(ctx context.Context, cycle store.PipelineC
 			if !w.catalog.Snapshot().Has(job.ModelIdentity) {
 				now := w.clock()
 				retry := now.Add(30 * time.Second)
-				_ = w.repository.FailPipelineJob(ctx, job, "pending", string(ErrorConfiguration), &retry, now, fmt.Errorf("selected Ollama model is unavailable"))
+				if err := w.repository.FailPipelineJob(ctx, job, "pending", string(ErrorConfiguration), &retry, now, fmt.Errorf("selected Ollama model is unavailable")); err != nil {
+					w.logger.Error("defer unavailable staged AI model", "cycle_id", cycle.ID, "job_id", job.ID, "error", err)
+					return false
+				}
 				w.openCircuit(job.StepKey, job.ModelIdentity, retry)
 				return w.yieldBlockedForManual(ctx, cycle)
 			}

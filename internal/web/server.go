@@ -52,8 +52,6 @@ type incidentStore interface {
 	GetPresentationIncident(context.Context, int64, store.PresentationScope) (store.IncidentRecord, error)
 	ListAdminIncidents(context.Context, int, int, string, store.PresentationScope, store.AdminIncidentFilter) ([]store.IncidentRecord, int, error)
 	Ready(context.Context) error
-	ProcessingQueueStatsForPrompt(context.Context, string, time.Time) (store.ProcessingStats, error)
-	PreferredModel(context.Context) (string, error)
 }
 
 type ProcessingRequester interface {
@@ -177,7 +175,7 @@ type adminIncidentView struct {
 func New(database incidentStore, logger *slog.Logger, pageSize int, sourceMode string) (*Server, error) {
 	return NewWithOptions(database, logger, Options{
 		PageSize: pageSize, SourceMode: sourceMode, PresentationMode: "review",
-		PromptVersion: processing.PromptVersion,
+		PromptVersion: processing.PipelineVersion,
 	})
 }
 
@@ -495,7 +493,7 @@ func (s *Server) adminList(records []store.IncidentRecord, total, page, totalPag
 		presentationLabel := ""
 		if record.HasAI {
 			presentationLabel = "Legacy presentation retained"
-			if record.AIPromptVersion == processing.GermanAnalysisPrompt {
+			if record.AIPromptVersion == processing.GermanAnalysisPromptVersion {
 				presentationLabel = "Staged presentation"
 			}
 		}

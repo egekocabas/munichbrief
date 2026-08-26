@@ -21,6 +21,10 @@ import (
 	"github.com/egekocabas/munichbrief/internal/store"
 )
 
+func legacyOperation(model string) string {
+	return "incident-presentation/" + processing.LegacyBilingualPromptVersion + "/" + model
+}
+
 func TestTimelineAndDetailRenderFixtureData(t *testing.T) {
 	database := fixtureStore(t)
 	server := testServer(t, database)
@@ -110,7 +114,7 @@ func TestTemplatesEscapeIncidentContent(t *testing.T) {
 	if err := database.UpsertDocuments(ctx, documents, time.Now()); err != nil {
 		t.Fatalf("UpsertDocuments() error = %v", err)
 	}
-	job, found, err := database.QueueAndClaimProcessingJob(ctx, processing.Operation("qwen3.5:4b"), time.Now())
+	job, found, err := database.QueueAndClaimProcessingJob(ctx, legacyOperation("qwen3.5:4b"), time.Now())
 	if err != nil || !found {
 		t.Fatalf("QueueAndClaimProcessingJob() = found:%t err:%v", found, err)
 	}
@@ -120,7 +124,7 @@ func TestTemplatesEscapeIncidentContent(t *testing.T) {
 		TitleEN:       "<script>alert('english-title')</script>",
 		SummaryEN:     "<img src=x onerror=alert('english-body')>",
 		PrivacyStatus: "safe",
-	}, "qwen3.5:4b", processing.PromptVersion, time.Now()); err != nil {
+	}, "qwen3.5:4b", processing.LegacyBilingualPromptVersion, time.Now()); err != nil {
 		t.Fatalf("CompleteProcessingJob() error = %v", err)
 	}
 
@@ -152,7 +156,7 @@ func TestTimelineAndDetailRenderAIContentWithProvenance(t *testing.T) {
 	ctx := context.Background()
 	database := fixtureStore(t)
 	generatedAt := time.Date(2026, time.August, 23, 9, 0, 0, 0, time.UTC)
-	operation := "incident-presentation/" + processing.PromptVersion + "/qwen3.5:4b"
+	operation := legacyOperation("qwen3.5:4b")
 	job, found, err := database.QueueAndClaimProcessingJob(ctx, operation, generatedAt)
 	if err != nil || !found {
 		t.Fatalf("QueueAndClaimProcessingJob() = found:%t err:%v", found, err)
@@ -164,7 +168,7 @@ func TestTimelineAndDetailRenderAIContentWithProvenance(t *testing.T) {
 		SummaryEN:     "A factual English summary.",
 		PrivacyStatus: "safe",
 	}
-	if err := database.CompleteProcessingJob(ctx, job, presentation, "qwen3.5:4b", processing.PromptVersion, generatedAt); err != nil {
+	if err := database.CompleteProcessingJob(ctx, job, presentation, "qwen3.5:4b", processing.LegacyBilingualPromptVersion, generatedAt); err != nil {
 		t.Fatalf("CompleteProcessingJob() error = %v", err)
 	}
 
@@ -467,7 +471,7 @@ func TestAdminProcessingReturnsUnavailableWhenAIIsDisabled(t *testing.T) {
 	database := fixtureStore(t)
 	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
-		PromptVersion: processing.PromptVersion, AdminEnabled: true,
+		PromptVersion: processing.PipelineVersion, AdminEnabled: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -490,7 +494,7 @@ func TestAdminDistinguishesUnavailableAndMissingPreferredModels(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			database := fixtureStore(t)
 			server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
-				PageSize: 20, SourceMode: "fixture", PresentationMode: "review", PromptVersion: processing.PromptVersion,
+				PageSize: 20, SourceMode: "fixture", PresentationMode: "review", PromptVersion: processing.PipelineVersion,
 				AdminEnabled: true, Processor: fakeProcessingRequester{database: database, status: &test.status},
 			})
 			if err != nil {
@@ -508,7 +512,7 @@ func TestAdminDistinguishesUnavailableAndMissingPreferredModels(t *testing.T) {
 func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
 	ctx := context.Background()
 	database := fixtureStore(t)
-	job, found, err := database.QueueAndClaimProcessingJob(ctx, processing.Operation("qwen3.5:4b"), time.Now())
+	job, found, err := database.QueueAndClaimProcessingJob(ctx, legacyOperation("qwen3.5:4b"), time.Now())
 	if err != nil || !found {
 		t.Fatalf("claim admin presentation job = %t/%v", found, err)
 	}
@@ -516,13 +520,13 @@ func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
 		TitleDE: "Deutscher Admin-Titel", SummaryDE: "Deutsche Admin-Zusammenfassung.",
 		TitleEN: "English admin title", SummaryEN: "English admin summary.", PrivacyStatus: "safe",
 	}
-	if err := database.CompleteProcessingJob(ctx, job, presentation, "qwen3.5:4b", processing.PromptVersion, time.Now()); err != nil {
+	if err := database.CompleteProcessingJob(ctx, job, presentation, "qwen3.5:4b", processing.LegacyBilingualPromptVersion, time.Now()); err != nil {
 		t.Fatal(err)
 	}
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	server, err := NewWithOptions(database, logger, Options{
 		PageSize: 2, SourceMode: "fixture", PresentationMode: "public",
-		PromptVersion: processing.PromptVersion, AdminEnabled: true,
+		PromptVersion: processing.PipelineVersion, AdminEnabled: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -535,7 +539,7 @@ func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
 		t.Fatalf("admin review page status = %d", first.Code)
 	}
 	for _, expected := range []string{
-		"Unprocessed incidents", "2 shown / 27 total", "All incidents", "2 shown / 28 total",
+		"Unprocessed incidents", "2 shown / 28 total", "All incidents", "2 shown / 28 total",
 		presentation.TitleDE, presentation.SummaryDE, presentation.TitleEN, presentation.SummaryEN,
 		job.TitleDE, job.BodyDE, "Original German text", "Summarized and translated",
 		"all_page=1&amp;unprocessed_page=2", "all_page=2&amp;unprocessed_page=1",
@@ -546,13 +550,13 @@ func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
 	}
 
 	expectedUnprocessed, _, err := database.ListAdminIncidents(ctx, 2, 2, "fixture", store.PresentationScope{
-		Operation: processing.Operation("qwen3.5:4b"), ModelIdentity: "qwen3.5:4b", PromptVersion: processing.PromptVersion,
+		Operation: legacyOperation("qwen3.5:4b"), ModelIdentity: "qwen3.5:4b", PromptVersion: processing.PipelineVersion,
 	}, store.AdminIncidentsUnprocessed)
 	if err != nil {
 		t.Fatal(err)
 	}
 	expectedAll, _, err := database.ListAdminIncidents(ctx, 2, 4, "fixture", store.PresentationScope{
-		Operation: processing.Operation("qwen3.5:4b"), ModelIdentity: "qwen3.5:4b", PromptVersion: processing.PromptVersion,
+		Operation: legacyOperation("qwen3.5:4b"), ModelIdentity: "qwen3.5:4b", PromptVersion: processing.PipelineVersion,
 	}, store.AdminIncidentsAll)
 	if err != nil {
 		t.Fatal(err)
@@ -593,7 +597,7 @@ func TestAdminReportsStoreErrors(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	retryServer, err := NewWithOptions(database, logger, Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
-		PromptVersion: processing.PromptVersion, AdminEnabled: true, Processor: fakeProcessingRequester{err: errors.New("processing unavailable")},
+		PromptVersion: processing.PipelineVersion, AdminEnabled: true, Processor: fakeProcessingRequester{err: errors.New("processing unavailable")},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -608,7 +612,7 @@ func TestAdminReportsStoreErrors(t *testing.T) {
 func TestPublicHostUsesFailClosedPresentationAndRejectsAdmin(t *testing.T) {
 	ctx := context.Background()
 	database := fixtureStore(t)
-	job, found, err := database.QueueAndClaimProcessingJob(ctx, processing.Operation("qwen3.5:4b"), time.Now())
+	job, found, err := database.QueueAndClaimProcessingJob(ctx, legacyOperation("qwen3.5:4b"), time.Now())
 	if err != nil || !found {
 		t.Fatalf("claim public fixture job = %t/%v", found, err)
 	}
@@ -616,7 +620,7 @@ func TestPublicHostUsesFailClosedPresentationAndRejectsAdmin(t *testing.T) {
 		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
 		TitleEN: "Safe title", SummaryEN: "Safe summary.", PrivacyStatus: "safe",
 	}
-	if err := database.CompleteProcessingJob(ctx, job, presentation, "qwen3.5:4b", processing.PromptVersion, time.Now()); err != nil {
+	if err := database.CompleteProcessingJob(ctx, job, presentation, "qwen3.5:4b", processing.LegacyBilingualPromptVersion, time.Now()); err != nil {
 		t.Fatal(err)
 	}
 	publicHosts := []string{"munichbrief.egekocabas.com", "munichbrief.de"}
@@ -762,7 +766,7 @@ func TestLocalizedRoutesAndLanguagePreference(t *testing.T) {
 
 	secureServer, err := NewWithOptions(fixtureStore(t), slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
-		PromptVersion: processing.PromptVersion, SecureCookies: true,
+		PromptVersion: processing.PipelineVersion, SecureCookies: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -840,7 +844,7 @@ func TestPublicModeHidesUnprocessedStaleAndOriginalContent(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	publicServer, err := NewWithOptions(database, logger, Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "public",
-		PromptVersion: processing.PromptVersion,
+		PromptVersion: processing.PipelineVersion,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -859,12 +863,12 @@ func TestPublicModeHidesUnprocessedStaleAndOriginalContent(t *testing.T) {
 		t.Fatalf("unprocessed public detail status = %d, want 404", notFound.Code)
 	}
 
-	job, found, err := database.QueueAndClaimProcessingJob(ctx, processing.Operation("qwen3.5:4b"), time.Now())
+	job, found, err := database.QueueAndClaimProcessingJob(ctx, legacyOperation("qwen3.5:4b"), time.Now())
 	if err != nil || !found {
 		t.Fatalf("claim current job = %t/%v", found, err)
 	}
 	presentation := store.AIPresentation{TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.", TitleEN: "Safe title", SummaryEN: "Safe summary.", PrivacyStatus: "safe"}
-	if err := database.CompleteProcessingJob(ctx, job, presentation, "qwen3.5:4b", processing.PromptVersion, time.Now()); err != nil {
+	if err := database.CompleteProcessingJob(ctx, job, presentation, "qwen3.5:4b", processing.LegacyBilingualPromptVersion, time.Now()); err != nil {
 		t.Fatal(err)
 	}
 	processedRecord, err := database.GetIncident(ctx, job.IncidentID)
@@ -891,10 +895,10 @@ func TestPublicModeHidesUnprocessedStaleAndOriginalContent(t *testing.T) {
 	}
 }
 
-func TestPublicModeRejectsStalePromptDerivations(t *testing.T) {
+func TestPublicModeRetainsCompleteLegacyPromptDerivations(t *testing.T) {
 	ctx := context.Background()
 	database := fixtureStore(t)
-	job, found, err := database.QueueAndClaimProcessingJob(ctx, processing.Operation("qwen3.5:4b"), time.Now())
+	job, found, err := database.QueueAndClaimProcessingJob(ctx, legacyOperation("qwen3.5:4b"), time.Now())
 	if err != nil || !found {
 		t.Fatalf("claim job = %t/%v", found, err)
 	}
@@ -903,14 +907,14 @@ func TestPublicModeRejectsStalePromptDerivations(t *testing.T) {
 		t.Fatal(err)
 	}
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
-	server, err := NewWithOptions(database, logger, Options{PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PromptVersion: processing.PromptVersion})
+	server, err := NewWithOptions(database, logger, Options{PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PromptVersion: processing.PipelineVersion})
 	if err != nil {
 		t.Fatal(err)
 	}
 	response := httptest.NewRecorder()
 	server.Handler().ServeHTTP(response, englishRequest(http.MethodGet, "/en/incidents/"+formatID(job.IncidentID), nil))
-	if response.Code != http.StatusNotFound {
-		t.Fatalf("stale prompt detail status = %d, want 404", response.Code)
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), value.SummaryEN) {
+		t.Fatalf("legacy prompt detail was not retained: status=%d body=%q", response.Code, response.Body.String())
 	}
 }
 
@@ -930,18 +934,6 @@ func fixtureStore(t *testing.T) *store.Store {
 		t.Fatalf("UpsertDocuments() error = %v", err)
 	}
 	return database
-}
-
-type failingAdminStore struct {
-	*store.Store
-	statsError error
-}
-
-func (s failingAdminStore) ProcessingQueueStatsForPrompt(ctx context.Context, promptVersion string, now time.Time) (store.ProcessingStats, error) {
-	if s.statsError != nil {
-		return store.ProcessingStats{}, s.statsError
-	}
-	return s.Store.ProcessingQueueStatsForPrompt(ctx, promptVersion, now)
 }
 
 type fakeProcessingRequester struct {
@@ -1010,7 +1002,7 @@ func adminTestServer(t *testing.T, database *store.Store, publicHosts []string) 
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	server, err := NewWithOptions(database, logger, Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
-		PromptVersion: processing.PromptVersion,
+		PromptVersion: processing.PipelineVersion,
 		SecureCookies: true, AdminEnabled: true, PublicHosts: publicHosts,
 		Processor: fakeProcessingRequester{database: database},
 	})

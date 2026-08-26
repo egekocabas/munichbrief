@@ -18,7 +18,13 @@ type pipelineTestProvider struct {
 	mu       sync.Mutex
 	events   []string
 	onGerman func()
+	calls    map[string]int
+	fail     func(string, int) error
 }
+
+type testModelCatalog struct{ snapshot ModelCatalogSnapshot }
+
+func (c testModelCatalog) Snapshot() ModelCatalogSnapshot { return c.snapshot }
 
 func (p *pipelineTestProvider) StepGenerator(model string) (StepGenerator, error) {
 	return pipelineTestGenerator{model: model, provider: p}, nil
@@ -34,23 +40,39 @@ func (g pipelineTestGenerator) ModelIdentity() string { return g.model }
 func (g pipelineTestGenerator) GenerateStep(_ context.Context, step StepDefinition, input StepInput) (StepOutput, string, error) {
 	g.provider.mu.Lock()
 	g.provider.events = append(g.provider.events, step.Key+":"+g.model+":"+input.OriginalTitle)
+	if g.provider.calls == nil {
+		g.provider.calls = make(map[string]int)
+	}
+	g.provider.calls[step.Key]++
+	call := g.provider.calls[step.Key]
+	var failure error
+	if g.provider.fail != nil {
+		failure = g.provider.fail(step.Key, call)
+	}
 	callback := g.provider.onGerman
 	if step.Key == GermanAnalysisStep {
 		g.provider.onGerman = nil
 	}
 	g.provider.mu.Unlock()
+	if failure != nil {
+		return StepOutput{}, "", failure
+	}
 	if step.Key == GermanAnalysisStep {
 		if callback != nil {
 			callback()
 		}
 		return StepOutput{TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.", Category: "other", PrivacyStatus: "safe", PrivacyFlags: []string{}}, g.model, nil
 	}
-	if input.TitleDE != "Sicherer Titel" || input.SummaryDE != "Sichere Zusammenfassung." || input.OriginalTitle == "" || input.IncidentBody == "" {
-		// Original source remains present in the internal job object, but the
-		// Ollama translation generator is independently tested to serialize only
-		// the accepted German fields.
+	if input.TitleDE != "Sicherer Titel" || input.SummaryDE != "Sichere Zusammenfassung." {
+		return StepOutput{}, "", fmt.Errorf("translation received incomplete German presentation")
 	}
 	return StepOutput{TitleEN: "Safe title", SummaryEN: "Safe summary."}, g.model, nil
+}
+
+func (p *pipelineTestProvider) callCount(step string) int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.calls[step]
 }
 
 func TestPipelineWorkerGroupsModelsFreezesTargetsAndStartsNextCycle(t *testing.T) {
@@ -177,6 +199,93 @@ func TestPipelineWorkerDoesNotCallModelsWhileRequiredStepIsUnset(t *testing.T) {
 	status, err := worker.Status(ctx)
 	if err != nil || status.ScheduledReady || status.Models.Ready {
 		t.Fatalf("unconfigured status = %#v, err=%v", status, err)
+	}
+}
+
+func TestPipelineWorkerRetriesPrivacyFailurePerStepThenRequiresReview(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "privacy-retry.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 25, 4, 0, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "privacy")
+	if err := database.EnsurePipelineSteps(ctx, StepKeys(), now); err != nil {
+		t.Fatal(err)
+	}
+	for step, model := range map[string]string{GermanAnalysisStep: "qwen:4b", EnglishTranslationStep: "translate:4b"} {
+		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	provider := &pipelineTestProvider{fail: func(step string, _ int) error {
+		if step == GermanAnalysisStep {
+			return errorOf(ErrorPrivacy, "synthetic privacy uncertainty")
+		}
+		return nil
+	}}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker.processAvailable(ctx)
+	now = now.Add(2 * time.Minute)
+	worker.processAvailable(ctx)
+	now = now.Add(11 * time.Minute)
+	worker.processAvailable(ctx)
+
+	if provider.callCount(GermanAnalysisStep) != contentMaxAttempts || provider.callCount(EnglishTranslationStep) != 0 {
+		t.Fatalf("step calls = german:%d translation:%d", provider.callCount(GermanAnalysisStep), provider.callCount(EnglishTranslationStep))
+	}
+	snapshot, err := database.PipelineSnapshot(ctx, "fixture", StepKeys(), now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snapshot.ActiveCycle != nil || snapshot.ScheduledCandidates != 0 || len(snapshot.Steps) != 2 || snapshot.Steps[0].NeedsReview != 1 {
+		t.Fatalf("privacy retry snapshot = %#v", snapshot)
+	}
+}
+
+func TestPipelineWorkerTransientFailureOpensPerStepModelCircuit(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "circuit.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 25, 4, 0, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "circuit")
+	if err := database.EnsurePipelineSteps(ctx, StepKeys(), now); err != nil {
+		t.Fatal(err)
+	}
+	for step, model := range map[string]string{GermanAnalysisStep: "qwen:4b", EnglishTranslationStep: "translate:4b"} {
+		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	provider := &pipelineTestProvider{fail: func(step string, _ int) error {
+		if step == GermanAnalysisStep {
+			return errorOf(ErrorTransient, "synthetic endpoint outage")
+		}
+		return nil
+	}}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker.processAvailable(ctx)
+	if provider.callCount(GermanAnalysisStep) != 1 || !worker.circuitOpen(GermanAnalysisStep, "qwen:4b", now) {
+		t.Fatalf("first transient failure calls/circuit = %d/%t", provider.callCount(GermanAnalysisStep), worker.circuitOpen(GermanAnalysisStep, "qwen:4b", now))
+	}
+	worker.processAvailable(ctx)
+	if provider.callCount(GermanAnalysisStep) != 1 {
+		t.Fatalf("open circuit made %d model calls", provider.callCount(GermanAnalysisStep))
+	}
+	now = now.Add(time.Minute)
+	worker.processAvailable(ctx)
+	if provider.callCount(GermanAnalysisStep) != 2 {
+		t.Fatalf("expired circuit calls = %d, want 2", provider.callCount(GermanAnalysisStep))
 	}
 }
 

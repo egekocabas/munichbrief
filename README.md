@@ -389,7 +389,7 @@ The processing sequence is:
 
 The LAN base URL, timeouts, model names, and optional authorization token will be configurable. Secrets will not be committed. The `pi8` inference port should be restricted to `pi16` at the host firewall or equivalent network boundary.
 
-Transient endpoint failures use capped backoff and a circuit breaker. Release-specific malformed or privacy-uncertain output yields to the next release and becomes `needs_review` after three attempts. Processing is idempotent for the combination of incident source hash, operation, model, and prompt version.
+Transient endpoint failures use capped backoff and a circuit breaker. Release-specific malformed or privacy-uncertain output yields to the next release and becomes `needs_review` after three attempts. Processing is idempotent for the incident source, pipeline step, model, and prompt-version inputs.
 
 Processing identity is split across `incident-pipeline-v1`,
 `incident-analysis-de-v1`, and `incident-translation-en-v1`. Translation input
@@ -397,6 +397,14 @@ is keyed to the accepted German result hash. Fresh databases start with both
 steps unconfigured; upgrades migrate the former preferred model only to German
 analysis. Existing complete bilingual results remain visible as immutable legacy
 runs until a complete staged replacement succeeds.
+
+Prompt versions are code-owned and immutable. The registry in
+`internal/processing/prompts.go` resolves active and retired versions to their
+exact system prompt and user-message template. Active pipeline steps reference
+that registry rather than embedding prompt text in the Ollama transport. Any
+instruction, input-template, or structured-output contract change requires a
+new prompt version; retired prompts remain registered for provenance but cannot
+be selected by the pipeline.
 
 ## Retention
 
