@@ -30,7 +30,7 @@ const (
 	repositoryURL       = "https://github.com/egekocabas/munichbrief"
 )
 
-// Config contains the runtime settings for the walking skeleton.
+// Config contains the application runtime settings.
 type Config struct {
 	Address          string
 	MetricsAddress   string
