@@ -59,6 +59,8 @@
   const elapsed = panel.querySelector("[data-cycle-elapsed]");
   const progress = panel.querySelector("[data-cycle-progress]");
   const progressText = panel.querySelector("[data-progress-text]");
+  const activeProgress = panel.querySelector("[data-active-step-progress]");
+  const activeProgressText = panel.querySelector("[data-active-progress-text]");
   const manual = panel.querySelector("[data-manual-cycles]");
   const continuations = panel.querySelector("[data-continuations]");
   const candidates = panel.querySelector("[data-candidates]");
@@ -93,7 +95,11 @@
     }
     const completed = Number(queue.cycle_completed || 0);
     const total = Number(queue.cycle_total || 0);
-    setText(progressText, `${completed} / ${total}`);
+    const activeCompleted = Number(queue.active_step_completed || 0);
+    const activeTotal = Number(queue.active_step_total || 0);
+    setText(activeProgressText, `${activeCompleted} / ${activeTotal} incidents`);
+    if (activeProgress instanceof HTMLElement) activeProgress.style.width = `${activeTotal ? Math.min(100, (activeCompleted / activeTotal) * 100) : 0}%`;
+    setText(progressText, `${completed} / ${total} stage jobs`);
     if (progress instanceof HTMLElement) progress.style.width = `${total ? Math.min(100, (completed / total) * 100) : 0}%`;
     setText(manual, queue.manual_cycles || 0);
     setText(continuations, queue.continuation_cycles || 0);
@@ -107,11 +113,17 @@
       setText(card.querySelector("[data-step-model]"), step.preferred || "Not configured");
       setText(card.querySelector("[data-step-availability]"), step.preferred_available ? "✓ Installed and ready" : "✕ Select an installed model before scheduled processing can start");
     }
+    const activeSteps = new Map((queue.active_steps || []).map((step) => [step.step_key, step]));
     for (const step of queue.steps || []) {
-      const card = panel.querySelector(`[data-step-stat="${CSS.escape(step.step_key)}"] p:last-child`);
+      const card = panel.querySelector(`[data-step-stat="${CSS.escape(step.step_key)}"]`);
+      if (!card) continue;
+      const active = activeSteps.get(step.step_key) || {};
       const average = Number(step.average_duration_seconds || 0).toFixed(1);
       const last = step.last_success ? new Date(step.last_success).toLocaleString() : "never";
-      setText(card, `Queued ${step.queued} · Running ${step.running} · Retrying ${step.retrying} · Review ${step.needs_review} · Failed ${step.failed} · Succeeded ${step.succeeded} · Avg ${average}s · Last success ${last}`);
+      setText(card.querySelector("[data-active-step-stats]"), cycle
+        ? `Waiting ${active.waiting || 0} · Ready after stage ${active.ready_after_stage || 0} · Queued ${active.queued || 0} · Running ${active.running || 0} · Retrying ${active.retrying || 0} · Review ${active.needs_review || 0} · Failed ${active.failed || 0} · Succeeded ${active.succeeded || 0}`
+        : "No active cycle");
+      setText(card.querySelector("[data-all-step-stats]"), `Succeeded ${step.succeeded || 0} · Review ${step.needs_review || 0} · Failed ${step.failed || 0} · Avg ${average}s · Last success ${last}`);
     }
     if (events) {
       events.replaceChildren(...(queue.recent_events || []).map((event) => {
