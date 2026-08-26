@@ -134,6 +134,36 @@ other = "Model"
 [PromptVersion]
 other = "Prompt version"
 
+[Category]
+other = "Category"
+
+[Area]
+other = "Area"
+
+[AIProcessing]
+other = "AI processing"
+
+[Step]
+other = "Step"
+
+[GermanAnalysisStep]
+other = "German analysis"
+
+[EnglishTranslationStep]
+other = "English translation"
+
+[LegacyBilingualStep]
+other = "Bilingual presentation"
+
+[StagedPipeline]
+other = "Staged pipeline"
+
+[LegacyPipeline]
+other = "Legacy pipeline"
+
+[Generated]
+other = "Generated"
+
 [MachineGenerated]
 other = "Machine-generated"
 

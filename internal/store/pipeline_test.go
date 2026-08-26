@@ -77,6 +77,10 @@ func TestStagedMigrationMovesPreferenceAndPreservesLegacyPresentation(t *testing
 	if err != nil || record.AITitleEN != "Legacy EN" {
 		t.Fatalf("legacy presentation = %#v, err=%v", record, err)
 	}
+	if !record.AILegacy || record.AIPipelineVersion != "legacy/incident-presentation-v2/qwen:4b" ||
+		record.AIModel != "qwen:4b" || record.AITranslationModel != "qwen:4b" {
+		t.Fatalf("legacy provenance = %#v", record)
+	}
 	incidentID := int64(1)
 	request, err := database.CreateManualPipelineCycle(ctx, "fixture", testPipelinePlans(), &incidentID, false, time.Date(2026, 8, 25, 11, 0, 0, 0, time.UTC))
 	if err != nil {
@@ -116,6 +120,13 @@ func TestStagedMigrationMovesPreferenceAndPreservesLegacyPresentation(t *testing
 	record, err = database.GetPresentationIncident(ctx, 1, PresentationScope{PromptVersion: PipelineVersion})
 	if err != nil || record.AITitleEN != "Staged EN" {
 		t.Fatalf("complete staged replacement = %#v, err=%v", record, err)
+	}
+	if record.AILegacy || record.AIPipelineVersion != PipelineVersion ||
+		record.AIModel != "qwen:4b" || record.AIPromptVersion != "incident-analysis-de-v1" ||
+		record.AITranslationModel != "translate:4b" || record.AITranslationPromptVersion != "incident-translation-en-v1" ||
+		record.AIGeneratedAt == nil || !record.AIGeneratedAt.Equal(time.Date(2026, 8, 25, 11, 0, 3, 0, time.UTC)) ||
+		record.AITranslationGeneratedAt == nil || !record.AITranslationGeneratedAt.Equal(time.Date(2026, 8, 25, 11, 0, 6, 0, time.UTC)) {
+		t.Fatalf("staged provenance = %#v", record)
 	}
 }
 

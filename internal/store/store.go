@@ -29,36 +29,41 @@ type Store struct {
 }
 
 type IncidentRecord struct {
-	ID                    int64
-	SourceDocumentID      int64
-	HasIncident           bool
-	Number                string
-	Position              int
-	TitleDE               string
-	BodyDE                string
-	ContentHash           string
-	SourceTitle           string
-	SourceURL             string
-	SourceExternalID      string
-	PublishedAt           time.Time
-	UpdatedAt             time.Time
-	FetchStatus           string
-	ErrorMessage          string
-	AITitleDE             string
-	AISummaryDE           string
-	AITitleEN             string
-	AISummaryEN           string
-	AICategory            string
-	AIAreaName            string
-	AIAreaType            string
-	AIModel               string
-	AIPromptVersion       string
-	AIGeneratedAt         *time.Time
-	HasAI                 bool
-	ProcessingStatus      string
-	ProcessingAttempts    int
-	ProcessingNextRetryAt *time.Time
-	ProcessingFailureKind string
+	ID                         int64
+	SourceDocumentID           int64
+	HasIncident                bool
+	Number                     string
+	Position                   int
+	TitleDE                    string
+	BodyDE                     string
+	ContentHash                string
+	SourceTitle                string
+	SourceURL                  string
+	SourceExternalID           string
+	PublishedAt                time.Time
+	UpdatedAt                  time.Time
+	FetchStatus                string
+	ErrorMessage               string
+	AITitleDE                  string
+	AISummaryDE                string
+	AITitleEN                  string
+	AISummaryEN                string
+	AICategory                 string
+	AIAreaName                 string
+	AIAreaType                 string
+	AIModel                    string
+	AIPromptVersion            string
+	AIGeneratedAt              *time.Time
+	AITranslationModel         string
+	AITranslationPromptVersion string
+	AITranslationGeneratedAt   *time.Time
+	AIPipelineVersion          string
+	AILegacy                   bool
+	HasAI                      bool
+	ProcessingStatus           string
+	ProcessingAttempts         int
+	ProcessingNextRetryAt      *time.Time
+	ProcessingFailureKind      string
 }
 
 func (r IncidentRecord) ProcessingState() string {
