@@ -99,13 +99,22 @@ type incidentView struct {
 	Record              store.IncidentRecord
 	Title               string
 	Summary             string
-	PromptVersion       string
 	ContentLanguage     string
 	ProcessingState     string
 	ProcessingLabel     string
 	CategoryLabel       string
 	AreaName            string
+	ProcessingSystem    string
+	ProcessingSteps     []processingStepView
 	ShowOriginalMessage bool
+}
+
+type processingStepView struct {
+	Number        int
+	Name          string
+	Model         string
+	PromptVersion string
+	GeneratedAt   *time.Time
 }
 
 type timelinePage struct {
@@ -845,7 +854,7 @@ func alternateLanguageURL(value *url.URL, current, alternate string) string {
 func (s *Server) incidentForLanguage(record store.IncidentRecord, language string) incidentView {
 	state := record.ProcessingState()
 	view := incidentView{
-		Record: record, PromptVersion: shortPromptVersion(record.AIPromptVersion), ContentLanguage: "de",
+		Record: record, ContentLanguage: "de",
 		ProcessingState: strings.ReplaceAll(state, "_", "-"), ProcessingLabel: s.processingLabel(state, language),
 	}
 	if record.HasAI {
@@ -856,6 +865,25 @@ func (s *Server) incidentForLanguage(record store.IncidentRecord, language strin
 			view.Title, view.Summary = record.AITitleEN, record.AISummaryEN
 		} else {
 			view.Title, view.Summary = record.AITitleDE, record.AISummaryDE
+		}
+		if record.AILegacy {
+			view.ProcessingSystem = s.localization.Text(language, "LegacyPipeline")
+			view.ProcessingSteps = []processingStepView{{
+				Number: 1, Name: s.localization.Text(language, "LegacyBilingualStep"),
+				Model: record.AIModel, PromptVersion: record.AIPromptVersion, GeneratedAt: record.AIGeneratedAt,
+			}}
+		} else {
+			view.ProcessingSystem = s.localization.Text(language, "StagedPipeline")
+			view.ProcessingSteps = []processingStepView{{
+				Number: 1, Name: s.localization.Text(language, "GermanAnalysisStep"),
+				Model: record.AIModel, PromptVersion: record.AIPromptVersion, GeneratedAt: record.AIGeneratedAt,
+			}}
+			if language == "en" {
+				view.ProcessingSteps = append(view.ProcessingSteps, processingStepView{
+					Number: 2, Name: s.localization.Text(language, "EnglishTranslationStep"),
+					Model: record.AITranslationModel, PromptVersion: record.AITranslationPromptVersion, GeneratedAt: record.AITranslationGeneratedAt,
+				})
+			}
 		}
 		return view
 	}
@@ -1042,9 +1070,6 @@ func timelineURL(language string, page int) string {
 		return path
 	}
 	return (&url.URL{Path: path, RawQuery: url.Values{"page": {strconv.Itoa(page)}}.Encode()}).RequestURI()
-}
-func shortPromptVersion(value string) string {
-	return strings.TrimPrefix(value, "incident-presentation-")
 }
 func excerpt(value string, limit int) string {
 	normalized := strings.Join(strings.Fields(value), " ")

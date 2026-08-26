@@ -186,10 +186,109 @@ func TestTimelineAndDetailRenderAIContentWithProvenance(t *testing.T) {
 	for _, expected := range []string{
 		"AI-generated summary", presentation.TitleEN, presentation.SummaryEN,
 		"Original German text", "Visible only for quality review",
-		"Model", "qwen3.5:4b", "Prompt version", ">v2</dd>",
+		"AI processing", "Legacy pipeline", "Bilingual presentation",
+		"Model", "qwen3.5:4b", "Prompt version", processing.LegacyBilingualPromptVersion,
 	} {
 		if !strings.Contains(detail.Body.String(), expected) {
 			t.Errorf("detail body does not contain %q", expected)
+		}
+	}
+	if strings.Contains(detail.Body.String(), "English translation") {
+		t.Error("legacy presentation was rendered as a separate translation step")
+	}
+}
+
+func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
+	ctx := context.Background()
+	database := fixtureStore(t)
+	records, _, err := database.ListIncidents(ctx, 1, 0)
+	if err != nil || len(records) != 1 {
+		t.Fatalf("ListIncidents() = %d records, err=%v", len(records), err)
+	}
+	incidentID := records[0].ID
+	models := map[string]string{
+		processing.GermanAnalysisStep:     "qwen3.5:4b",
+		processing.EnglishTranslationStep: "translategemma:4b",
+	}
+	plans, err := processing.StepPlans(models)
+	if err != nil {
+		t.Fatal(err)
+	}
+	startedAt := time.Date(2026, time.August, 25, 9, 0, 0, 0, time.UTC)
+	request, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, &incidentID, false, startedAt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cycle, found, err := database.ActivateNextPipelineCycle(ctx, "fixture", nil, false, startedAt)
+	if err != nil || !found || cycle.ID != request.CycleID {
+		t.Fatalf("ActivateNextPipelineCycle() = %#v, found=%t, err=%v", cycle, found, err)
+	}
+	german, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 0, startedAt)
+	if err != nil || !found {
+		t.Fatalf("ClaimPipelineJob(german) = %#v, found=%t, err=%v", german, found, err)
+	}
+	if err := database.CompletePipelineJob(ctx, german, []store.PipelineValue{
+		{Kind: "title_de", Value: "Unfall am Harras"},
+		{Kind: "summary_de", Value: "Am Harras kam es zu einem Verkehrsunfall."},
+		{Kind: "category", Value: "traffic"},
+		{Kind: "area_name", Value: "Harras"},
+		{Kind: "area_type", Value: "neighbourhood"},
+		{Kind: "privacy_status", Value: "safe"},
+		{Kind: "privacy_flags", Value: "[]"},
+	}, german.ModelIdentity, store.HashPipelineInput("de"), startedAt.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	advance, err := database.AdvancePipelineCycle(ctx, cycle, 2, startedAt.Add(2*time.Minute))
+	if err != nil || !advance.Advanced {
+		t.Fatalf("AdvancePipelineCycle(german) = %#v, err=%v", advance, err)
+	}
+	cycle.ActiveStep = 1
+	translation, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 1, startedAt.Add(3*time.Minute))
+	if err != nil || !found {
+		t.Fatalf("ClaimPipelineJob(translation) = %#v, found=%t, err=%v", translation, found, err)
+	}
+	if err := database.CompletePipelineJob(ctx, translation, []store.PipelineValue{
+		{Kind: "title_en", Value: "Crash at Harras"},
+		{Kind: "summary_en", Value: "A traffic crash occurred at Harras."},
+	}, translation.ModelIdentity, store.HashPipelineInput(translation.TitleDE, translation.SummaryDE), startedAt.Add(4*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	advance, err = database.AdvancePipelineCycle(ctx, cycle, 2, startedAt.Add(5*time.Minute))
+	if err != nil || !advance.Completed {
+		t.Fatalf("AdvancePipelineCycle(translation) = %#v, err=%v", advance, err)
+	}
+
+	handler := testServer(t, database).Handler()
+	timeline := httptest.NewRecorder()
+	handler.ServeHTTP(timeline, englishRequest(http.MethodGet, "/en", nil))
+	for _, expected := range []string{"Category", "Traffic", "Area", "Harras", "Crash at Harras"} {
+		if !strings.Contains(timeline.Body.String(), expected) {
+			t.Errorf("timeline body does not contain %q", expected)
+		}
+	}
+
+	english := httptest.NewRecorder()
+	handler.ServeHTTP(english, englishRequest(http.MethodGet, "/en/incidents/"+formatID(incidentID), nil))
+	for _, expected := range []string{
+		"Category", "Traffic", "Area", "Harras", "Staged pipeline",
+		"German analysis", "qwen3.5:4b", processing.GermanAnalysisPromptVersion,
+		"English translation", "translategemma:4b", processing.EnglishTranslationPromptVersion,
+	} {
+		if !strings.Contains(english.Body.String(), expected) {
+			t.Errorf("English detail body does not contain %q", expected)
+		}
+	}
+
+	germanDetail := httptest.NewRecorder()
+	handler.ServeHTTP(germanDetail, httptest.NewRequest(http.MethodGet, "/de/incidents/"+formatID(incidentID), nil))
+	for _, expected := range []string{"Kategorie", "Verkehr", "Gebiet", "Harras", "Deutsche Analyse", "qwen3.5:4b"} {
+		if !strings.Contains(germanDetail.Body.String(), expected) {
+			t.Errorf("German detail body does not contain %q", expected)
+		}
+	}
+	for _, unexpected := range []string{"Englische Übersetzung", "translategemma:4b", processing.EnglishTranslationPromptVersion} {
+		if strings.Contains(germanDetail.Body.String(), unexpected) {
+			t.Errorf("German detail body unexpectedly contains %q", unexpected)
 		}
 	}
 }

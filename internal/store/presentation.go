@@ -39,7 +39,12 @@ const scopedAIColumns = `
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'area_type' LIMIT 1), ''),
 				COALESCE((SELECT model_identity FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
 				COALESCE((SELECT prompt_version FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
-				COALESCE((SELECT completed_at FROM presentation_runs WHERE id = ` + latestPresentationRun + `), ''),
+				COALESCE((SELECT generated_at FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
+				COALESCE((SELECT model_identity FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_en' LIMIT 1), ''),
+				COALESCE((SELECT prompt_version FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_en' LIMIT 1), ''),
+				COALESCE((SELECT generated_at FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_en' LIMIT 1), ''),
+				COALESCE((SELECT pipeline_version FROM presentation_runs WHERE id = ` + latestPresentationRun + `), ''),
+				COALESCE((SELECT legacy FROM presentation_runs WHERE id = ` + latestPresentationRun + `), 0),
 				COALESCE((SELECT j.status FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id = j.cycle_item_id WHERE ci.incident_id = i.id AND ci.source_hash = i.content_hash ORDER BY j.updated_at DESC, j.id DESC LIMIT 1), ''),
 				COALESCE((SELECT j.attempt_count FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id = j.cycle_item_id WHERE ci.incident_id = i.id AND ci.source_hash = i.content_hash ORDER BY j.updated_at DESC, j.id DESC LIMIT 1), 0),
 				COALESCE((SELECT j.next_retry_at FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id = j.cycle_item_id WHERE ci.incident_id = i.id AND ci.source_hash = i.content_hash ORDER BY j.updated_at DESC, j.id DESC LIMIT 1), ''),
@@ -122,7 +127,7 @@ func (s *Store) ListPresentationEntries(ctx context.Context, limit, offset int, 
 			SELECT
 				0, d.id, 0, '', 0, d.title, '', '', d.title, d.source_url, d.external_id,
 				d.published_at, d.last_seen_at, d.fetch_status, COALESCE(d.error_message, ''),
-				'', '', '', '', '', '', '', '', '', '', '', 0, '', ''
+				'', '', '', '', '', '', '', '', '', '', '', '', '', '', 0, '', 0, '', ''
 			FROM source_documents d
 			WHERE ` + statusCondition + ` AND NOT EXISTS (
 				SELECT 1 FROM incidents i WHERE i.source_document_id = d.id
@@ -239,7 +244,8 @@ func (s *Store) GetPresentationIncident(ctx context.Context, id int64, scope Pre
 
 func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 	var record IncidentRecord
-	var publishedAt, updatedAt, aiGeneratedAt, nextRetryAt string
+	var publishedAt, updatedAt, aiGeneratedAt, aiTranslationGeneratedAt, nextRetryAt string
+	var aiLegacy int
 	if err := row.Scan(
 		&record.ID, &record.SourceDocumentID, &record.HasIncident, &record.Number, &record.Position,
 		&record.TitleDE, &record.BodyDE, &record.ContentHash, &record.SourceTitle, &record.SourceURL,
@@ -247,6 +253,8 @@ func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 		&record.AITitleDE, &record.AISummaryDE, &record.AITitleEN, &record.AISummaryEN,
 		&record.AICategory, &record.AIAreaName, &record.AIAreaType,
 		&record.AIModel, &record.AIPromptVersion, &aiGeneratedAt,
+		&record.AITranslationModel, &record.AITranslationPromptVersion, &aiTranslationGeneratedAt,
+		&record.AIPipelineVersion, &aiLegacy,
 		&record.ProcessingStatus, &record.ProcessingAttempts, &nextRetryAt, &record.ProcessingFailureKind,
 	); err != nil {
 		return IncidentRecord{}, err
@@ -267,6 +275,14 @@ func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 		}
 		record.AIGeneratedAt = &generatedAt
 	}
+	if aiTranslationGeneratedAt != "" {
+		generatedAt, err := time.Parse(time.RFC3339Nano, aiTranslationGeneratedAt)
+		if err != nil {
+			return IncidentRecord{}, fmt.Errorf("parse AI translation generation time: %w", err)
+		}
+		record.AITranslationGeneratedAt = &generatedAt
+	}
+	record.AILegacy = aiLegacy == 1
 	if nextRetryAt != "" {
 		next, err := time.Parse(time.RFC3339Nano, nextRetryAt)
 		if err != nil {

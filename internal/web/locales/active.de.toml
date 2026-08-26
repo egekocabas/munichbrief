@@ -134,6 +134,36 @@ other = "Modell"
 [PromptVersion]
 other = "Prompt-Version"
 
+[Category]
+other = "Kategorie"
+
+[Area]
+other = "Gebiet"
+
+[AIProcessing]
+other = "KI-Verarbeitung"
+
+[Step]
+other = "Schritt"
+
+[GermanAnalysisStep]
+other = "Deutsche Analyse"
+
+[EnglishTranslationStep]
+other = "Englische Übersetzung"
+
+[LegacyBilingualStep]
+other = "Bilinguale Darstellung"
+
+[StagedPipeline]
+other = "Mehrstufige Pipeline"
+
+[LegacyPipeline]
+other = "Altsystem"
+
+[Generated]
+other = "Erstellt"
+
 [MachineGenerated]
 other = "Maschinell erstellt"
 
