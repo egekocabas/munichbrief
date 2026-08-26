@@ -76,6 +76,11 @@ behind TLS.
 The checked-in production deployment runs the reader in public mode on both LAN
 and public hosts. `MUNICHBRIEF_PUBLIC_HOSTS` additionally forces each listed
 hostname into public presentation and restricts it to reader-safe paths. The
+public deployment also requires `MUNICHBRIEF_CANONICAL_ORIGIN`; it must be an
+HTTPS origin using one of those public hostnames. Discovery documents and
+canonical links use this single origin even when an alternate public hostname
+serves the request. Public reader pages negotiate a privacy-safe Markdown
+representation through `Accept: text/markdown`; review-mode pages remain HTML.
 optional `/admin` dashboard shows live cycle and per-step queue state, independently
 paginated unprocessed and complete incident review lists, retained German
 originals, and both generated languages. Its confirmed Process now actions can

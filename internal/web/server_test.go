@@ -1103,12 +1103,20 @@ func adminTestServer(t *testing.T, database *store.Store, publicHosts []string) 
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
 		PromptVersion: processing.PipelineVersion,
 		SecureCookies: true, AdminEnabled: true, PublicHosts: publicHosts,
-		Processor: fakeProcessingRequester{database: database},
+		CanonicalOrigin: canonicalOriginForHosts(publicHosts),
+		Processor:       fakeProcessingRequester{database: database},
 	})
 	if err != nil {
 		t.Fatalf("NewWithOptions() error = %v", err)
 	}
 	return server
+}
+
+func canonicalOriginForHosts(publicHosts []string) string {
+	if len(publicHosts) == 0 {
+		return ""
+	}
+	return "https://munichbrief.de"
 }
 
 func formatID(id int64) string {

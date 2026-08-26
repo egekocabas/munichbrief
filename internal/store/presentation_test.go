@@ -128,3 +128,40 @@ func TestListAdminIncidentsValidatesArguments(t *testing.T) {
 		}
 	}
 }
+
+func TestListPublicIncidentLinksReturnsOnlyCurrentPublishableEntries(t *testing.T) {
+	ctx := context.Background()
+	database := fixtureStoreForBackup(t, ctx)
+	now := time.Date(2026, time.August, 27, 9, 30, 0, 0, time.UTC)
+	operation := "incident-presentation/incident-presentation-v2/qwen3.5:4b"
+
+	currentJob, found, err := database.QueueAndClaimProcessingJob(ctx, operation, now)
+	if err != nil || !found {
+		t.Fatalf("claim current job = %t/%v", found, err)
+	}
+	presentation := AIPresentation{
+		TitleDE: "Aktuell", SummaryDE: "Aktuell.", TitleEN: "Current", SummaryEN: "Current.", PrivacyStatus: "safe",
+	}
+	if err := database.CompleteProcessingJob(ctx, currentJob, presentation, "qwen3.5:4b", "incident-presentation-v2", now); err != nil {
+		t.Fatal(err)
+	}
+
+	staleJob, found, err := database.QueueAndClaimProcessingJob(ctx, operation, now.Add(time.Minute))
+	if err != nil || !found {
+		t.Fatalf("claim stale job = %t/%v", found, err)
+	}
+	if err := database.CompleteProcessingJob(ctx, staleJob, presentation, "qwen3.5:4b", "incident-presentation-v1", now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+
+	links, err := database.ListPublicIncidentLinks(ctx, "fixture", PresentationScope{PromptVersion: "incident-presentation-v2"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(links) != 1 || links[0].ID != currentJob.IncidentID || !links[0].ModifiedAt.Equal(now) {
+		t.Fatalf("public incident links = %#v", links)
+	}
+	if _, err := database.ListPublicIncidentLinks(ctx, "invalid", PresentationScope{PromptVersion: "incident-presentation-v2"}); err == nil {
+		t.Fatal("invalid source mode was accepted")
+	}
+}

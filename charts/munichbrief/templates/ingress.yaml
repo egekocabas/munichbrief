@@ -10,10 +10,16 @@
 {{- if and .Values.ingress.public.enabled (eq (len .Values.ingress.public.hosts) 0) }}
 {{- fail "ingress.public.hosts must contain at least one hostname when public ingress is enabled" }}
 {{- end }}
+{{- if and .Values.ingress.public.enabled (eq .Values.application.canonicalOrigin "") }}
+{{- fail "application.canonicalOrigin is required when public ingress is enabled" }}
+{{- end }}
 {{- range .Values.ingress.public.hosts }}
 {{- if not (has . $.Values.application.publicHosts) }}
 {{- fail (printf "public ingress host %s must also appear in application.publicHosts" .) }}
 {{- end }}
+{{- end }}
+{{- if and .Values.ingress.public.enabled (not (has (trimPrefix "https://" .Values.application.canonicalOrigin) .Values.application.publicHosts)) }}
+{{- fail "application.canonicalOrigin must use a host from application.publicHosts" }}
 {{- end }}
 {{- if .Values.ingress.lan.enabled }}
 {{- if .Values.admin.enabled }}

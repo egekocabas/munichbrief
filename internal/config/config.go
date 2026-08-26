@@ -53,6 +53,7 @@ type Config struct {
 	SecureCookies    bool
 	AdminEnabled     bool
 	PublicHosts      []string
+	CanonicalOrigin  string
 }
 
 // Load reads configuration from the environment and applies local-safe defaults.
@@ -77,6 +78,9 @@ func Load() (Config, error) {
 	}
 	var err error
 	if cfg.PublicHosts, err = publicHostsFromEnv("MUNICHBRIEF_PUBLIC_HOSTS"); err != nil {
+		return Config{}, err
+	}
+	if cfg.CanonicalOrigin, err = canonicalOriginFromEnv("MUNICHBRIEF_CANONICAL_ORIGIN", cfg.PublicHosts); err != nil {
 		return Config{}, err
 	}
 	defaultPresentationMode := "review"
@@ -164,6 +168,27 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("MUNICHBRIEF_OLLAMA_BASE_URL must be an absolute HTTP(S) URL without credentials, query, or fragment")
 	}
 	return cfg, nil
+}
+
+func canonicalOriginFromEnv(key string, publicHosts []string) (string, error) {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		if len(publicHosts) > 0 {
+			return "", fmt.Errorf("%s is required when MUNICHBRIEF_PUBLIC_HOSTS is set", key)
+		}
+		return "", nil
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil || parsed.Port() != "" || (parsed.Path != "" && parsed.Path != "/") || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return "", fmt.Errorf("%s must be an HTTPS origin without credentials, port, path, query, or fragment", key)
+	}
+	host := strings.ToLower(parsed.Hostname())
+	for _, publicHost := range publicHosts {
+		if host == publicHost {
+			return "https://" + host, nil
+		}
+	}
+	return "", fmt.Errorf("%s host must appear in MUNICHBRIEF_PUBLIC_HOSTS", key)
 }
 
 func publicHostsFromEnv(key string) ([]string, error) {

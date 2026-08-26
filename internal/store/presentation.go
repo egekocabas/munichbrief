@@ -17,6 +17,11 @@ type PresentationScope struct {
 
 type AdminIncidentFilter string
 
+type PublicIncidentLink struct {
+	ID         int64
+	ModifiedAt time.Time
+}
+
 const (
 	AdminIncidentsAll         AdminIncidentFilter = "all"
 	AdminIncidentsUnprocessed AdminIncidentFilter = "unprocessed"
@@ -152,6 +157,46 @@ func (s *Store) ListPresentationEntries(ctx context.Context, limit, offset int, 
 		return nil, 0, fmt.Errorf("iterate presentation entries: %w", err)
 	}
 	return records, total, nil
+}
+
+// ListPublicIncidentLinks returns the stable public incident identity and
+// modification time needed by discovery documents without loading article
+// bodies or presentation values.
+func (s *Store) ListPublicIncidentLinks(ctx context.Context, sourceMode string, scope PresentationScope) ([]PublicIncidentLink, error) {
+	statusCondition, err := sourceStatusCondition(sourceMode)
+	if err != nil {
+		return nil, err
+	}
+	scope.PublicOnly = true
+	query := `
+		SELECT i.id,
+			COALESCE((SELECT r.completed_at FROM presentation_runs r WHERE r.id = ` + latestPresentationRun + `), i.updated_at)
+		FROM incidents i
+		JOIN source_documents d ON d.id = i.source_document_id
+		WHERE ` + statusCondition + ` AND ` + publicReadyCondition + `
+		ORDER BY i.id ASC`
+	rows, err := s.db.QueryContext(ctx, query, presentationArgs(scope)...)
+	if err != nil {
+		return nil, fmt.Errorf("list public incident links: %w", err)
+	}
+	defer rows.Close()
+	links := make([]PublicIncidentLink, 0)
+	for rows.Next() {
+		var link PublicIncidentLink
+		var modifiedAt string
+		if err := rows.Scan(&link.ID, &modifiedAt); err != nil {
+			return nil, fmt.Errorf("scan public incident link: %w", err)
+		}
+		link.ModifiedAt, err = time.Parse(time.RFC3339Nano, modifiedAt)
+		if err != nil {
+			return nil, fmt.Errorf("parse public incident modification time: %w", err)
+		}
+		links = append(links, link)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate public incident links: %w", err)
+	}
+	return links, nil
 }
 
 // ListAdminIncidents returns parsed incidents for protected review views. AI

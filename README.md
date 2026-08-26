@@ -72,6 +72,7 @@ Useful configuration:
 | `MUNICHBRIEF_SECURE_COOKIES` | `false` | Set the language preference cookie's `Secure` attribute; enabled by the TLS Helm deployment |
 | `MUNICHBRIEF_ADMIN_ENABLED` | `false` | Register the LAN-only processing dashboard, paginated incident review lists, and confirmed `/api/admin/*` processing actions; production must protect both prefixes at the ingress |
 | `MUNICHBRIEF_PUBLIC_HOSTS` | empty | Comma-separated hosts that always receive fail-closed public presentation and path restrictions |
+| `MUNICHBRIEF_CANONICAL_ORIGIN` | empty | Required with public hosts; canonical HTTPS origin whose hostname must be one of them |
 | `MUNICHBRIEF_PAGE_SIZE` | `20` | Timeline incidents per page, from 1 to 100 |
 | `MUNICHBRIEF_FEED_URL` | Official Munich RSS URL | Live discovery feed; must be HTTPS |
 | `MUNICHBRIEF_USER_AGENT` | Repository-identifying development agent | Identifies outbound source requests; must retain the repository URL |
@@ -90,6 +91,26 @@ Run the test suite with:
 ```bash
 go test ./...
 ```
+
+### Web and agent discovery
+
+Public deployments serve a canonical bilingual discovery surface without
+claiming API or agent capabilities that MunichBrief does not provide:
+
+- `/robots.txt` permits search and live AI grounding, prohibits model training,
+  keeps administrative and operational paths out of crawl scope, and references
+  the sitemap;
+- `/sitemap.xml` is generated from current privacy-safe presentations and lists
+  both German and English document URLs under the configured canonical origin;
+- public HTML responses publish canonical, language-alternate, and pagination
+  links in both the document head and the HTTP `Link` header;
+- public timeline, detail, and about routes return a Markdown representation
+  when it is preferred through `Accept: text/markdown`; HTML remains the default.
+
+The canonical origin must be an HTTPS origin whose hostname is included in
+`MUNICHBRIEF_PUBLIC_HOSTS`. Review-mode pages do not negotiate Markdown, and the
+application does not publish API catalogs, OAuth metadata, MCP cards, agent
+skills, WebMCP tools, or agent-resource manifests.
 
 ### Frontend development
 

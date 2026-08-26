@@ -26,6 +26,7 @@ func TestLoadDefaults(t *testing.T) {
 	t.Setenv("MUNICHBRIEF_SECURE_COOKIES", "")
 	t.Setenv("MUNICHBRIEF_ADMIN_ENABLED", "")
 	t.Setenv("MUNICHBRIEF_PUBLIC_HOSTS", "")
+	t.Setenv("MUNICHBRIEF_CANONICAL_ORIGIN", "")
 
 	cfg, err := Load()
 	if err != nil {
@@ -154,6 +155,7 @@ func TestLoadAcceptsExplicitReviewAndSecureCookies(t *testing.T) {
 func TestLoadAcceptsAdminAndPublicHosts(t *testing.T) {
 	t.Setenv("MUNICHBRIEF_ADMIN_ENABLED", "true")
 	t.Setenv("MUNICHBRIEF_PUBLIC_HOSTS", " MUNICHBRIEF.EGEKOCABAS.COM,munichbrief.de,munichbrief.de ")
+	t.Setenv("MUNICHBRIEF_CANONICAL_ORIGIN", "https://MUNICHBRIEF.DE/")
 	cfg, err := Load()
 	if err != nil {
 		t.Fatal(err)
@@ -161,6 +163,29 @@ func TestLoadAcceptsAdminAndPublicHosts(t *testing.T) {
 	wantHosts := []string{"munichbrief.egekocabas.com", "munichbrief.de"}
 	if !cfg.AdminEnabled || len(cfg.PublicHosts) != len(wantHosts) || cfg.PublicHosts[0] != wantHosts[0] || cfg.PublicHosts[1] != wantHosts[1] {
 		t.Fatalf("admin config = enabled:%t public-hosts:%q", cfg.AdminEnabled, cfg.PublicHosts)
+	}
+	if cfg.CanonicalOrigin != "https://munichbrief.de" {
+		t.Fatalf("canonical origin = %q", cfg.CanonicalOrigin)
+	}
+}
+
+func TestLoadRejectsInvalidCanonicalOrigin(t *testing.T) {
+	for _, test := range []struct {
+		name, publicHosts, origin string
+	}{
+		{name: "missing", publicHosts: "munichbrief.de"},
+		{name: "insecure", publicHosts: "munichbrief.de", origin: "http://munichbrief.de"},
+		{name: "unknown host", publicHosts: "munichbrief.de", origin: "https://example.com"},
+		{name: "path", publicHosts: "munichbrief.de", origin: "https://munichbrief.de/de"},
+		{name: "port", publicHosts: "munichbrief.de", origin: "https://munichbrief.de:443"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv("MUNICHBRIEF_PUBLIC_HOSTS", test.publicHosts)
+			t.Setenv("MUNICHBRIEF_CANONICAL_ORIGIN", test.origin)
+			if _, err := Load(); err == nil {
+				t.Fatal("Load() error = nil, want invalid canonical origin error")
+			}
+		})
 	}
 }
 
