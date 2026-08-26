@@ -21,13 +21,14 @@
     },
     "application": {
       "type": "object",
-      "required": ["publicHosts", "sourceMode", "presentationMode", "secureCookies", "pageSize", "feedURL", "userAgent", "httpTimeout", "articleRefreshInterval", "aiEnabled", "aiImmediate", "aiWindow", "ollamaBaseURL", "aiInterval", "aiTimeout", "aiContextSize"],
+      "required": ["publicHosts", "canonicalOrigin", "sourceMode", "presentationMode", "secureCookies", "pageSize", "feedURL", "userAgent", "httpTimeout", "articleRefreshInterval", "aiEnabled", "aiImmediate", "aiWindow", "ollamaBaseURL", "aiInterval", "aiTimeout", "aiContextSize"],
       "properties": {
         "publicHosts": {
           "type": "array",
           "uniqueItems": true,
           "items": {"type": "string", "pattern": "^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$"}
         },
+        "canonicalOrigin": {"type": "string", "pattern": "^$|^https://[a-z0-9]([a-z0-9.-]*[a-z0-9])?$"},
         "sourceMode": {"enum": ["fixture", "live"]},
         "presentationMode": {"enum": ["review", "public"]},
         "secureCookies": {"type": "boolean"},

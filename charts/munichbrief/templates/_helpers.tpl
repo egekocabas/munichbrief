@@ -17,6 +17,20 @@
       name: {{ include "munichbrief.fullname" . }}
       port:
         name: http
+- path: /robots.txt
+  pathType: Exact
+  backend:
+    service:
+      name: {{ include "munichbrief.fullname" . }}
+      port:
+        name: http
+- path: /sitemap.xml
+  pathType: Exact
+  backend:
+    service:
+      name: {{ include "munichbrief.fullname" . }}
+      port:
+        name: http
 - path: /de
   pathType: Prefix
   backend:

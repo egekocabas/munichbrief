@@ -13,6 +13,8 @@ fullnameOverride: ""
 application:
   # Used for host-aware public presentation and path restrictions.
   publicHosts: []
+  # Required when publicHosts is non-empty; must name one of those HTTPS hosts.
+  canonicalOrigin: ""
   sourceMode: live
   presentationMode: public
   secureCookies: true

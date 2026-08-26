@@ -15,6 +15,7 @@ application:
   publicHosts:
     - munichbrief.egekocabas.com
     - munichbrief.de
+  canonicalOrigin: https://munichbrief.de
   sourceMode: live
   presentationMode: public
   secureCookies: true

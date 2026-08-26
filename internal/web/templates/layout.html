@@ -7,6 +7,11 @@
   <meta name="description" content="{{t .Lang "SiteDescription"}}">
   <meta name="htmx-config" content='{"allowEval":false,"selfRequestsOnly":true}'>
   <title>{{template "title" .}} · MunichBrief</title>
+  {{if .CanonicalURL}}<link rel="canonical" href="{{.CanonicalURL}}">{{end}}
+  {{if .GermanCanonicalURL}}<link rel="alternate" hreflang="de" href="{{.GermanCanonicalURL}}">{{end}}
+  {{if .EnglishCanonicalURL}}<link rel="alternate" hreflang="en" href="{{.EnglishCanonicalURL}}">{{end}}
+  {{if .PreviousCanonicalURL}}<link rel="prev" href="{{.PreviousCanonicalURL}}">{{end}}
+  {{if .NextCanonicalURL}}<link rel="next" href="{{.NextCanonicalURL}}">{{end}}
   <link rel="stylesheet" href="/static/app.css">
   <script defer src="/static/htmx.min.js"></script>
 </head>

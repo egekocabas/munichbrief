@@ -68,5 +68,13 @@ jobs:
             echo "admin rendered with both Basic Auth reference forms" >&2
             exit 1
           fi
+          if helm template munichbrief charts/munichbrief --namespace munichbrief --values deploy/homelab-values.yaml --set-string application.canonicalOrigin= >/dev/null 2>&1; then
+            echo "public ingress rendered without a canonical origin" >&2
+            exit 1
+          fi
+          if helm template munichbrief charts/munichbrief --namespace munichbrief --values deploy/homelab-values.yaml --set-string application.canonicalOrigin=https://example.com >/dev/null 2>&1; then
+            echo "public ingress rendered with a canonical origin outside publicHosts" >&2
+            exit 1
+          fi
           helm template munichbrief charts/munichbrief --namespace munichbrief --values deploy/homelab-values.yaml > /tmp/munichbrief-rendered.yaml
           ./scripts/check-chart.sh /tmp/munichbrief-rendered.yaml

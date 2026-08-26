@@ -49,6 +49,7 @@ var adminScript []byte
 
 type incidentStore interface {
 	ListPresentationEntries(context.Context, int, int, string, store.PresentationScope) ([]store.IncidentRecord, int, error)
+	ListPublicIncidentLinks(context.Context, string, store.PresentationScope) ([]store.PublicIncidentLink, error)
 	GetPresentationIncident(context.Context, int64, store.PresentationScope) (store.IncidentRecord, error)
 	ListAdminIncidents(context.Context, int, int, string, store.PresentationScope, store.AdminIncidentFilter) ([]store.IncidentRecord, int, error)
 	Ready(context.Context) error
@@ -69,6 +70,7 @@ type Options struct {
 	SecureCookies    bool
 	AdminEnabled     bool
 	PublicHosts      []string
+	CanonicalOrigin  string
 	Processor        ProcessingRequester
 }
 
@@ -91,6 +93,12 @@ type basePage struct {
 	AlternateLanguage      string
 	AlternateLanguageURL   string
 	AlternateLanguageLabel string
+	CanonicalOrigin        string
+	CanonicalURL           string
+	GermanCanonicalURL     string
+	EnglishCanonicalURL    string
+	PreviousCanonicalURL   string
+	NextCanonicalURL       string
 	Fixture                bool
 	Review                 bool
 }
@@ -212,6 +220,11 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 		return nil, err
 	}
 	options.PublicHosts = publicHosts
+	canonicalOrigin, err := normalizeCanonicalOrigin(options.CanonicalOrigin, publicHosts)
+	if err != nil {
+		return nil, err
+	}
+	options.CanonicalOrigin = canonicalOrigin
 	location, err := time.LoadLocation("Europe/Berlin")
 	if err != nil {
 		return nil, fmt.Errorf("load Europe/Berlin timezone: %w", err)
@@ -252,6 +265,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /", s.redirectRoot)
 	mux.HandleFunc("GET /about", s.redirectLegacyAbout)
 	mux.HandleFunc("GET /incidents/{id}", s.redirectLegacyIncident)
+	mux.HandleFunc("GET /robots.txt", s.robots)
+	mux.HandleFunc("GET /sitemap.xml", s.sitemap)
 	for _, language := range []string{"de", "en"} {
 		mux.HandleFunc("GET /"+language, s.timeline)
 		mux.HandleFunc("GET /"+language+"/incidents/{id}", s.detail)
@@ -284,12 +299,20 @@ func (s *Server) redirectRoot(response http.ResponseWriter, request *http.Reques
 		http.NotFound(response, request)
 		return
 	}
-	target := &url.URL{Path: "/" + preferredLanguage(request), RawQuery: request.URL.RawQuery}
+	language := preferredLanguage(request)
+	target := &url.URL{Path: "/" + language, RawQuery: request.URL.RawQuery}
+	canonicalTarget := "/" + language
+	if page, err := requestedPage(request); err == nil {
+		canonicalTarget = timelineURL(language, page)
+	}
+	s.prepareRedirectDiscovery(response, request, canonicalTarget)
 	http.Redirect(response, request, target.RequestURI(), http.StatusFound)
 }
 
 func (s *Server) redirectLegacyAbout(response http.ResponseWriter, request *http.Request) {
-	target := &url.URL{Path: "/" + preferredLanguage(request) + "/about", RawQuery: request.URL.RawQuery}
+	language := preferredLanguage(request)
+	target := &url.URL{Path: "/" + language + "/about", RawQuery: request.URL.RawQuery}
+	s.prepareRedirectDiscovery(response, request, "/"+language+"/about")
 	http.Redirect(response, request, target.RequestURI(), http.StatusFound)
 }
 
@@ -299,31 +322,44 @@ func (s *Server) redirectLegacyIncident(response http.ResponseWriter, request *h
 		http.NotFound(response, request)
 		return
 	}
-	target := &url.URL{Path: fmt.Sprintf("/%s/incidents/%d", preferredLanguage(request), id), RawQuery: request.URL.RawQuery}
+	language := preferredLanguage(request)
+	canonicalTarget := fmt.Sprintf("/%s/incidents/%d", language, id)
+	target := &url.URL{Path: canonicalTarget, RawQuery: request.URL.RawQuery}
+	s.prepareRedirectDiscovery(response, request, canonicalTarget)
 	http.Redirect(response, request, target.RequestURI(), http.StatusFound)
 }
 
-func (s *Server) base(request *http.Request, language string) basePage {
+func (s *Server) base(request *http.Request, language, canonicalRelativeURL string) basePage {
 	alternate := "en"
 	alternateLabel := s.localization.Text(language, "SwitchToEnglish")
 	if language == "en" {
 		alternate = "de"
 		alternateLabel = s.localization.Text(language, "SwitchToGerman")
 	}
+	canonicalOrigin := s.canonicalOrigin(request)
+	germanRelativeURL := localizedRelativeURL(canonicalRelativeURL, language, "de")
+	englishRelativeURL := localizedRelativeURL(canonicalRelativeURL, language, "en")
 	return basePage{
 		Lang: language, HomeURL: "/" + language, AboutURL: "/" + language + "/about",
 		AlternateLanguage: alternate, AlternateLanguageURL: alternateLanguageURL(request.URL, language, alternate), AlternateLanguageLabel: alternateLabel,
+		CanonicalOrigin: canonicalOrigin, CanonicalURL: canonicalOrigin + canonicalRelativeURL,
+		GermanCanonicalURL: canonicalOrigin + germanRelativeURL, EnglishCanonicalURL: canonicalOrigin + englishRelativeURL,
 		Fixture: s.options.SourceMode == "fixture", Review: s.options.PresentationMode == "review" && !s.isPublicRequest(request),
 	}
 }
 
-func prepareHTML(response http.ResponseWriter, language string, review bool) {
+func (s *Server) prepareHTML(response http.ResponseWriter, request *http.Request, page basePage) {
 	response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	response.Header().Set("Content-Language", language)
-	response.Header().Set("Vary", "Cookie, Accept-Language")
+	response.Header().Set("Content-Language", page.Lang)
+	addVary(response.Header(), "Cookie", "Accept-Language")
 	response.Header().Set("Cache-Control", "private, no-store")
 	response.Header().Set("X-Content-Type-Options", "nosniff")
-	if review {
+	s.setDocumentLinks(response.Header(), page)
+	if s.scope(request).PublicOnly {
+		response.Header().Set("Content-Signal", contentSignal)
+		addVary(response.Header(), "Accept")
+	}
+	if page.Review {
 		response.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive")
 	}
 }
@@ -340,7 +376,8 @@ func (s *Server) timeline(response http.ResponseWriter, request *http.Request) {
 		http.Error(response, "invalid page", http.StatusBadRequest)
 		return
 	}
-	incidents, total, err := s.store.ListPresentationEntries(request.Context(), s.options.PageSize, (page-1)*s.options.PageSize, s.options.SourceMode, s.scope(request))
+	scope := s.scope(request)
+	incidents, total, err := s.store.ListPresentationEntries(request.Context(), s.options.PageSize, (page-1)*s.options.PageSize, s.options.SourceMode, scope)
 	if err != nil {
 		s.internalError(response, request, "list incidents", err)
 		return
@@ -350,13 +387,24 @@ func (s *Server) timeline(response http.ResponseWriter, request *http.Request) {
 		http.NotFound(response, request)
 		return
 	}
-	base := s.base(request, language)
+	base := s.base(request, language, timelineURL(language, page))
+	if page > 1 {
+		base.PreviousCanonicalURL = base.CanonicalOrigin + timelineURL(language, page-1)
+	}
+	if page < totalPages {
+		base.NextCanonicalURL = base.CanonicalOrigin + timelineURL(language, page+1)
+	}
 	data := timelinePage{
 		basePage: base, Groups: s.groupByDay(incidents, base.Lang), Page: page, TotalPages: totalPages, Total: total,
 		Shown:    len(incidents),
 		Previous: page - 1, Next: page + 1, HasPrevious: page > 1, HasNext: page < totalPages,
 	}
-	prepareHTML(response, base.Lang, base.Review)
+	if scope.PublicOnly && wantsMarkdown(request.Header.Get("Accept")) {
+		s.prepareMarkdown(response, base)
+		s.renderTimelineMarkdown(response, data)
+		return
+	}
+	s.prepareHTML(response, request, base)
 	if err := s.timelineTemplate.ExecuteTemplate(response, "layout", data); err != nil {
 		s.logger.ErrorContext(request.Context(), "render timeline", "error", err)
 	}
@@ -379,7 +427,8 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 		http.Error(response, "invalid page", http.StatusBadRequest)
 		return
 	}
-	incident, err := s.store.GetPresentationIncident(request.Context(), id, s.scope(request))
+	scope := s.scope(request)
+	incident, err := s.store.GetPresentationIncident(request.Context(), id, scope)
 	if errors.Is(err, store.ErrNotFound) {
 		http.NotFound(response, request)
 		return
@@ -392,10 +441,16 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 		http.NotFound(response, request)
 		return
 	}
-	base := s.base(request, language)
+	canonicalRelativeURL := fmt.Sprintf("/%s/incidents/%d", language, id)
+	base := s.base(request, language, canonicalRelativeURL)
 	view := s.incidentForLanguage(incident, base.Lang)
 	data := detailPage{basePage: base, Incident: view, BackURL: timelineURL(base.Lang, page), ShowOriginalSection: base.Review && incident.HasAI}
-	prepareHTML(response, base.Lang, base.Review)
+	if scope.PublicOnly && wantsMarkdown(request.Header.Get("Accept")) {
+		s.prepareMarkdown(response, base)
+		s.renderDetailMarkdown(response, data)
+		return
+	}
+	s.prepareHTML(response, request, base)
 	if err := s.detailTemplate.ExecuteTemplate(response, "layout", data); err != nil {
 		s.logger.ErrorContext(request.Context(), "render incident detail", "incident_id", id, "error", err)
 	}
@@ -408,8 +463,13 @@ func (s *Server) about(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 	s.setLanguagePreference(response, language)
-	base := s.base(request, language)
-	prepareHTML(response, base.Lang, base.Review)
+	base := s.base(request, language, "/"+language+"/about")
+	if s.scope(request).PublicOnly && wantsMarkdown(request.Header.Get("Accept")) {
+		s.prepareMarkdown(response, base)
+		s.renderAboutMarkdown(response, aboutPage{basePage: base})
+		return
+	}
+	s.prepareHTML(response, request, base)
 	if err := s.aboutTemplate.ExecuteTemplate(response, "layout", aboutPage{basePage: base}); err != nil {
 		s.logger.ErrorContext(request.Context(), "render about page", "error", err)
 	}
@@ -776,7 +836,7 @@ func requestHostname(request *http.Request) string {
 }
 
 func isPublicPath(path string) bool {
-	if path == "/" || path == "/about" || path == "/healthz" || path == "/readyz" {
+	if path == "/" || path == "/about" || path == "/healthz" || path == "/readyz" || path == "/robots.txt" || path == "/sitemap.xml" {
 		return true
 	}
 	for _, prefix := range []string{"/de", "/en", "/incidents", "/static"} {
