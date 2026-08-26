@@ -67,16 +67,25 @@
       <p class="mt-4 text-lg font-bold" data-worker-state>{{if .Runtime.Queue.ActiveCycle}}Cycle #{{.Runtime.Queue.ActiveCycle.ID}} · {{.Runtime.Queue.ActiveCycle.Kind}}{{else}}Idle{{end}}</p>
       <p class="mt-1 text-sm text-muted" data-active-step>{{if .Runtime.Queue.ActiveStepKey}}{{.Runtime.Queue.ActiveStepKey}} · {{.Runtime.Queue.ActiveModel}}{{else}}No active model{{end}}</p>
       <p class="mt-1 text-sm text-muted" data-cycle-elapsed>{{if .Runtime.Queue.ActiveCycle}}Elapsed time updates live{{else}}No active cycle{{end}}</p>
-      <div class="mt-4 h-2 overflow-hidden rounded-full bg-newsprint"><div class="h-full bg-civic transition-all" data-cycle-progress style="width:0%"></div></div>
-      <dl class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div><dt class="text-xs font-bold uppercase text-muted">Progress</dt><dd class="mt-1 text-xl font-bold" data-progress-text>{{.Runtime.Queue.CycleCompleted}} / {{.Runtime.Queue.CycleTotal}}</dd></div>
+      <dl class="mt-5 grid gap-3 sm:grid-cols-2">
+        <div class="rounded-md border border-rule bg-white p-3"><dt class="text-xs font-bold uppercase text-muted">Active stage</dt><dd class="mt-1 text-xl font-bold" data-active-progress-text>{{.Runtime.Queue.ActiveStepCompleted}} / {{.Runtime.Queue.ActiveStepTotal}} incidents</dd><div class="mt-3 h-2 overflow-hidden rounded-full bg-newsprint"><div class="h-full bg-civic transition-all" data-active-step-progress style="width:0%"></div></div><p class="mt-2 text-xs text-muted">Completed in the current model batch.</p></div>
+        <div class="rounded-md border border-rule bg-white p-3"><dt class="text-xs font-bold uppercase text-muted">Full pipeline</dt><dd class="mt-1 text-xl font-bold" data-progress-text>{{.Runtime.Queue.CycleCompleted}} / {{.Runtime.Queue.CycleTotal}} stage jobs</dd><div class="mt-3 h-2 overflow-hidden rounded-full bg-newsprint"><div class="h-full bg-civic transition-all" data-cycle-progress style="width:0%"></div></div><p class="mt-2 text-xs text-muted">All steps across the frozen incident set.</p></div>
+      </dl>
+      <dl class="mt-5 grid gap-3 sm:grid-cols-3">
         <div><dt class="text-xs font-bold uppercase text-muted">Priority cycles</dt><dd class="mt-1 text-xl font-bold" data-manual-cycles>{{.Runtime.Queue.ManualCycles}}</dd></div>
         <div><dt class="text-xs font-bold uppercase text-muted">Continuations</dt><dd class="mt-1 text-xl font-bold" data-continuations>{{.Runtime.Queue.ContinuationCycles}}</dd></div>
-        <div><dt class="text-xs font-bold uppercase text-muted">New candidates</dt><dd class="mt-1 text-xl font-bold" data-candidates>{{.Runtime.Queue.ScheduledCandidates}}</dd></div>
+        <div><dt class="text-xs font-bold uppercase text-muted">New outside cycle</dt><dd class="mt-1 text-xl font-bold" data-candidates>{{.Runtime.Queue.ScheduledCandidates}}</dd><p class="mt-1 text-xs text-muted">Eligible incidents not already in an in-flight presentation run.</p></div>
       </dl>
       <div class="mt-5 grid gap-3 lg:grid-cols-2" data-step-stats>
-        {{range .Runtime.Queue.Steps}}<div class="rounded-md border border-rule bg-white p-3" data-step-stat="{{.StepKey}}"><p class="font-mono text-sm font-bold">{{.StepKey}}</p><p class="mt-1 text-sm text-muted">Queued {{.Queued}} · Running {{.Running}} · Retrying {{.Retrying}} · Review {{.NeedsReview}} · Failed {{.Failed}} · Succeeded {{.Succeeded}} · Avg {{.AverageDuration}}</p></div>{{end}}
+        {{range $index, $step := .Runtime.Queue.Steps}}{{$active := index $.Runtime.Queue.ActiveSteps $index}}<div class="rounded-md border border-rule bg-white p-3" data-step-stat="{{$step.StepKey}}">
+          <p class="font-mono text-sm font-bold">{{$step.StepKey}}</p>
+          <div class="mt-3 grid gap-3 sm:grid-cols-2">
+            <div><p class="text-xs font-extrabold uppercase tracking-wider text-civic">Active cycle</p><p class="mt-1 text-sm text-muted" data-active-step-stats>Waiting {{$active.Waiting}} · Ready after stage {{$active.ReadyAfterStage}} · Queued {{$active.Queued}} · Running {{$active.Running}} · Retrying {{$active.Retrying}} · Review {{$active.NeedsReview}} · Failed {{$active.Failed}} · Succeeded {{$active.Succeeded}}</p></div>
+            <div class="border-t border-rule pt-3 sm:border-l sm:border-t-0 sm:pl-3 sm:pt-0"><p class="text-xs font-extrabold uppercase tracking-wider text-muted">All-cycle history</p><p class="mt-1 text-sm text-muted" data-all-step-stats>Succeeded {{$step.Succeeded}} · Review {{$step.NeedsReview}} · Failed {{$step.Failed}} · Avg {{printf "%.1f" $step.AverageDurationSeconds}}s{{if $step.LastSuccess}} · Last success {{formatDateTime "en" $step.LastSuccess}}{{end}}</p></div>
+          </div>
+        </div>{{end}}
       </div>
+      <p class="mt-4 rounded-md border border-civic/20 bg-civic-soft px-3 py-2 text-sm text-civic"><strong>Waiting jobs are durable.</strong> “Ready after stage” means the previous step succeeded; those jobs unlock together when the current model batch finishes.</p>
       <div class="mt-5 border-t border-rule pt-4">
         <h3 class="text-xs font-extrabold uppercase tracking-wider text-muted">Recent safe events</h3>
         <ol class="mt-2 grid gap-1 text-sm text-muted" data-recent-events>{{range .Runtime.Queue.RecentEvents}}<li>Cycle #{{.CycleID}} · incident #{{.IncidentID}} · {{.StepKey}} · {{.Status}}{{if .FailureKind}} ({{.FailureKind}}){{end}}</li>{{else}}<li>No pipeline events yet.</li>{{end}}</ol>

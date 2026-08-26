@@ -71,6 +71,8 @@ type PipelineRequestResult struct {
 
 type StepQueueStats struct {
 	StepKey                string        `json:"step_key"`
+	Waiting                int           `json:"waiting"`
+	ReadyAfterStage        int           `json:"ready_after_stage"`
 	Queued                 int           `json:"queued"`
 	Running                int           `json:"running"`
 	Retrying               int           `json:"retrying"`
@@ -87,11 +89,14 @@ type PipelineSnapshot struct {
 	ActiveStepKey       string           `json:"active_step_key"`
 	ActiveModel         string           `json:"active_model"`
 	CurrentIncidentID   int64            `json:"current_incident_id,omitempty"`
+	ActiveStepCompleted int              `json:"active_step_completed"`
+	ActiveStepTotal     int              `json:"active_step_total"`
 	CycleCompleted      int              `json:"cycle_completed"`
 	CycleTotal          int              `json:"cycle_total"`
 	ManualCycles        int              `json:"manual_cycles"`
 	ContinuationCycles  int              `json:"continuation_cycles"`
 	ScheduledCandidates int              `json:"scheduled_candidates"`
+	ActiveSteps         []StepQueueStats `json:"active_steps"`
 	Steps               []StepQueueStats `json:"steps"`
 	RecentEvents        []PipelineEvent  `json:"recent_events"`
 }
@@ -836,6 +841,11 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 			FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id=j.cycle_item_id WHERE ci.cycle_id = ?`, cycle.ID).Scan(&snapshot.CycleCompleted, &snapshot.CycleTotal); err != nil {
 			return snapshot, fmt.Errorf("read active cycle progress: %w", err)
 		}
+		if err := s.db.QueryRowContext(ctx, `SELECT COALESCE(SUM(CASE WHEN j.status IN ('succeeded','failed','needs_review','skipped','superseded') THEN 1 ELSE 0 END),0), COUNT(*)
+			FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id=j.cycle_item_id
+			WHERE ci.cycle_id = ? AND j.step_order = ?`, cycle.ID, cycle.ActiveStep).Scan(&snapshot.ActiveStepCompleted, &snapshot.ActiveStepTotal); err != nil {
+			return snapshot, fmt.Errorf("read active step progress: %w", err)
+		}
 		if err := s.db.QueryRowContext(ctx, `SELECT ci.incident_id FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id=j.cycle_item_id WHERE ci.cycle_id=? AND j.status='running' LIMIT 1`, cycle.ID).Scan(&snapshot.CurrentIncidentID); err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return snapshot, fmt.Errorf("read active cycle incident: %w", err)
 		}
@@ -850,16 +860,42 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 	if err != nil {
 		return snapshot, err
 	}
-	query := `SELECT COUNT(*) FROM incidents i JOIN source_documents d ON d.id=i.source_document_id WHERE ` + condition + ` AND COALESCE(i.body_de,'')<>'' AND NOT EXISTS (SELECT 1 FROM presentation_runs r WHERE r.incident_id=i.id AND r.source_hash=i.content_hash AND r.pipeline_version=? AND r.status IN ('complete','failed'))`
+	query := `SELECT COUNT(*) FROM incidents i JOIN source_documents d ON d.id=i.source_document_id WHERE ` + condition + ` AND COALESCE(i.body_de,'')<>'' AND NOT EXISTS (SELECT 1 FROM presentation_runs r WHERE r.incident_id=i.id AND r.source_hash=i.content_hash AND r.pipeline_version=? AND r.status IN ('processing','complete','failed'))`
 	if err := s.db.QueryRowContext(ctx, query, PipelineVersion).Scan(&snapshot.ScheduledCandidates); err != nil {
 		return snapshot, fmt.Errorf("count scheduled pipeline candidates: %w", err)
 	}
 	for _, key := range stepKeys {
+		active := StepQueueStats{StepKey: key}
+		if snapshot.ActiveCycle != nil {
+			err := s.db.QueryRowContext(ctx, `SELECT
+				COALESCE(SUM(CASE WHEN j.status='waiting' THEN 1 ELSE 0 END),0),
+				COALESCE(SUM(CASE WHEN j.status='waiting' AND EXISTS (
+					SELECT 1 FROM processing_step_jobs previous WHERE previous.cycle_item_id=j.cycle_item_id
+					AND previous.step_order=j.step_order-1 AND previous.status='succeeded'
+				) THEN 1 ELSE 0 END),0),
+				COALESCE(SUM(CASE WHEN j.status='pending' AND j.attempt_count=0 THEN 1 ELSE 0 END),0),
+				COALESCE(SUM(CASE WHEN j.status='running' THEN 1 ELSE 0 END),0),
+				COALESCE(SUM(CASE WHEN j.status='pending' AND j.attempt_count>0 THEN 1 ELSE 0 END),0),
+				COALESCE(SUM(CASE WHEN j.status='needs_review' THEN 1 ELSE 0 END),0),
+				COALESCE(SUM(CASE WHEN j.status='failed' THEN 1 ELSE 0 END),0),
+				COALESCE(SUM(CASE WHEN j.status='succeeded' THEN 1 ELSE 0 END),0)
+				FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id=j.cycle_item_id
+				WHERE ci.cycle_id=? AND j.step_key=?`, snapshot.ActiveCycle.ID, key).Scan(
+				&active.Waiting, &active.ReadyAfterStage, &active.Queued, &active.Running,
+				&active.Retrying, &active.NeedsReview, &active.Failed, &active.Succeeded,
+			)
+			if err != nil {
+				return snapshot, fmt.Errorf("read active %s queue stats: %w", key, err)
+			}
+		}
+		snapshot.ActiveSteps = append(snapshot.ActiveSteps, active)
+
 		stat := StepQueueStats{StepKey: key}
 		var durationSeconds float64
 		var durationCount int
 		var last string
 		err := s.db.QueryRowContext(ctx, `SELECT
+			COALESCE(SUM(CASE WHEN status='waiting' THEN 1 ELSE 0 END),0),
 			COALESCE(SUM(CASE WHEN status='pending' AND attempt_count=0 THEN 1 ELSE 0 END),0),
 			COALESCE(SUM(CASE WHEN status='running' THEN 1 ELSE 0 END),0),
 			COALESCE(SUM(CASE WHEN status='pending' AND attempt_count>0 THEN 1 ELSE 0 END),0),
@@ -869,7 +905,7 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 			COALESCE(SUM(CASE WHEN completed_at<>'' AND started_at<>'' THEN (julianday(completed_at)-julianday(started_at))*86400 ELSE 0 END),0),
 			COALESCE(SUM(CASE WHEN completed_at<>'' AND started_at<>'' THEN 1 ELSE 0 END),0),
 			COALESCE(MAX(CASE WHEN status='succeeded' THEN completed_at END),'')
-			FROM processing_step_jobs WHERE step_key=?`, key).Scan(&stat.Queued, &stat.Running, &stat.Retrying, &stat.NeedsReview, &stat.Failed, &stat.Succeeded, &durationSeconds, &durationCount, &last)
+			FROM processing_step_jobs WHERE step_key=?`, key).Scan(&stat.Waiting, &stat.Queued, &stat.Running, &stat.Retrying, &stat.NeedsReview, &stat.Failed, &stat.Succeeded, &durationSeconds, &durationCount, &last)
 		if err != nil {
 			return snapshot, err
 		}
