@@ -21,24 +21,15 @@ required_patterns=(
   'path: /sitemap.xml'
   'kind: NetworkPolicy'
   'MUNICHBRIEF_PRESENTATION_MODE: "public"'
-  'MUNICHBRIEF_PUBLIC_HOSTS: "munichbrief.egekocabas.com,munichbrief.de"'
-  'MUNICHBRIEF_CANONICAL_ORIGIN: "https://munichbrief.de"'
-  'MUNICHBRIEF_ADMIN_ENABLED: "true"'
+  'MUNICHBRIEF_PUBLIC_HOSTS: "brief.example.com"'
+  'MUNICHBRIEF_CANONICAL_ORIGIN: "https://brief.example.com"'
+  'MUNICHBRIEF_ADMIN_ENABLED: "false"'
   'MUNICHBRIEF_SECURE_COOKIES: "true"'
-  'MUNICHBRIEF_AI_ENABLED: "true"'
+  'MUNICHBRIEF_AI_ENABLED: "false"'
   'MUNICHBRIEF_AI_IMMEDIATE: "false"'
   'MUNICHBRIEF_AI_WINDOW: "03:00-08:00"'
   'MUNICHBRIEF_AI_TIMEOUT: "10m"'
-  'cidr: 192.168.178.102/32'
-  'port: 11434'
-  'name: munichbrief-lan-admin'
-  'traefik.ingress.kubernetes.io/router.priority: "100"'
-  'path: /admin'
-  'path: /api/admin'
-  'name: munichbrief-admin-auth'
-  'secret: munichbrief-admin-basic-auth'
-  'host: "munichbrief.egekocabas.com"'
-  'host: "munichbrief.de"'
+  'host: "brief.example.com"'
 )
 
 for pattern in "${required_patterns[@]}"; do
@@ -48,8 +39,20 @@ for pattern in "${required_patterns[@]}"; do
   }
 done
 
+for forbidden_pattern in \
+  '192.168.178.' \
+  'egekocabas.com' \
+  'path: /admin' \
+  'path: /api/admin' \
+  'port: 11434'; do
+  if grep -F -- "$forbidden_pattern" "$rendered_chart" >/dev/null; then
+    printf 'Rendered example contains forbidden private/admin pattern: %s\n' "$forbidden_pattern" >&2
+    exit 1
+  fi
+done
+
 public_root_count="$(awk 'NF >= 2 && $(NF - 1) == "path:" && $NF == "/" { getline; if ($1 == "pathType:" && $2 == "Exact") count++ } END { print count + 0 }' "$rendered_chart")"
-[[ "$public_root_count" -ge 2 ]] || {
+[[ "$public_root_count" -ge 1 ]] || {
   printf 'Rendered chart does not constrain the public root path to Exact\n' >&2
   exit 1
 }
