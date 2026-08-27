@@ -24,6 +24,7 @@ func TestAdminIsDisabledByDefault(t *testing.T) {
 		method, path string
 	}{
 		{method: http.MethodGet, path: "/admin"},
+		{method: http.MethodGet, path: "/admin/history"},
 		{method: http.MethodPost, path: "/api/admin/ai/process-all-now"},
 	} {
 		response := httptest.NewRecorder()
@@ -49,7 +50,7 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	if page.Code != http.StatusOK || page.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("admin page = %d/%q", page.Code, page.Header().Get("Cache-Control"))
 	}
-	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", "Installed and ready", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/translation-backfill", "/api/admin/ai/status", "Confirm AI request", "/static/admin.js", "Active stage", "Canonical pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover", "Independent translation queues"} {
+	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", "Installed and ready", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/translation-backfill", "/api/admin/ai/status", "/admin/history", "View full history", "Confirm AI request", "/static/admin.js", "Active stage", "Canonical pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover", "Independent translation queues"} {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("admin page does not contain %q", expected)
 		}
@@ -328,6 +329,63 @@ func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
 		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, test.target, nil))
 		if response.Code != test.status {
 			t.Errorf("GET %s status = %d, want %d", test.target, response.Code, test.status)
+		}
+	}
+}
+
+func TestAdminPipelineHistoryPaginatesPersistedJobStates(t *testing.T) {
+	ctx := context.Background()
+	database := fixtureStore(t)
+	plans, err := processing.StepPlans(map[string]string{
+		processing.IncidentMetadataStep:   "qwen3.5:4b",
+		processing.GermanPresentationStep: "granite4:3b",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	requestedAt := time.Date(2026, 8, 27, 14, 0, 0, 0, time.UTC)
+	result, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, "", nil, true, requestedAt)
+	if err != nil || result.Requested < 3 {
+		t.Fatalf("create history fixture = %#v/%v", result, err)
+	}
+	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
+		PageSize: 2, SourceMode: "fixture", PresentationMode: "review",
+		PromptVersion: processing.PipelineVersion, AdminEnabled: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := server.Handler()
+
+	first := httptest.NewRecorder()
+	handler.ServeHTTP(first, httptest.NewRequest(http.MethodGet, "/admin/history", nil))
+	if first.Code != http.StatusOK || first.Header().Get("Cache-Control") != "private, no-store" {
+		t.Fatalf("pipeline history = %d/%q", first.Code, first.Header().Get("Cache-Control"))
+	}
+	for _, expected := range []string{"Pipeline history", "2 job states shown", "incident_metadata", "qwen3.5:4b", "manual · queued", "Older →"} {
+		if !strings.Contains(first.Body.String(), expected) {
+			t.Errorf("pipeline history does not contain %q", expected)
+		}
+	}
+	match := regexp.MustCompile(`href="(/admin/history\?before=[^"]+)"`).FindStringSubmatch(first.Body.String())
+	if len(match) != 2 {
+		t.Fatalf("pipeline history has no older cursor: %s", first.Body.String())
+	}
+
+	older := httptest.NewRecorder()
+	handler.ServeHTTP(older, httptest.NewRequest(http.MethodGet, match[1], nil))
+	if older.Code != http.StatusOK || !strings.Contains(older.Body.String(), "← Newer") {
+		t.Fatalf("older pipeline history = %d/%q", older.Code, older.Body.String())
+	}
+
+	for _, target := range []string{
+		"/admin/history?before=not-a-cursor",
+		match[1] + "&after=not-a-cursor",
+	} {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, target, nil))
+		if response.Code != http.StatusBadRequest {
+			t.Errorf("GET %s status = %d, want 400", target, response.Code)
 		}
 	}
 }

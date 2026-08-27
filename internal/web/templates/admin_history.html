@@ -1,0 +1,65 @@
+{{define "admin_history"}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>Pipeline history · MunichBrief Admin</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="min-h-screen text-ink antialiased">
+  <header class="border-b border-rule/90 bg-paper/95">
+    <div class="page-shell flex min-h-16 items-center justify-between gap-4 py-3">
+      <a class="inline-flex items-center gap-3 text-ink no-underline" href="/admin" aria-label="MunichBrief administration">
+        <span class="grid size-10 place-items-center rounded-[0.6rem_0.6rem_0.6rem_0.18rem] bg-civic font-serif text-xl font-bold text-white" aria-hidden="true">M</span>
+        <span><strong class="block font-serif text-lg tracking-tight">MunichBrief</strong><small class="block text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted">Administration</small></span>
+      </a>
+      <a class="rounded-md border border-rule bg-white px-3 py-2 text-sm font-bold text-civic no-underline hover:bg-newsprint" href="/admin">Back to dashboard</a>
+    </div>
+  </header>
+  <main class="page-shell py-8">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div class="max-w-3xl">
+        <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Operations</p>
+        <h1 class="mt-1 font-serif text-4xl font-bold tracking-tight">Pipeline history</h1>
+        <p class="mt-3 text-muted">Persisted latest state for pipeline step jobs. Incident text, generated output, and internal error messages are excluded.</p>
+      </div>
+      <p class="text-sm font-semibold text-muted">{{len .Entries}} job states shown</p>
+    </div>
+
+    {{if .Entries}}
+    <div class="mt-8 overflow-x-auto rounded-lg border border-rule bg-paper">
+      <table class="w-full border-collapse text-left text-sm">
+        <thead class="border-b border-rule bg-newsprint/70 text-xs uppercase tracking-wider text-muted">
+          <tr><th class="px-4 py-3">Updated</th><th class="px-4 py-3">Cycle</th><th class="px-4 py-3">Incident</th><th class="px-4 py-3">Step</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Model provenance</th></tr>
+        </thead>
+        <tbody class="divide-y divide-rule/70">
+          {{range .Entries}}
+          <tr class="align-top">
+            <td class="whitespace-nowrap px-4 py-4"><time datetime="{{.UpdatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime "en" .UpdatedAt}}</time></td>
+            <td class="whitespace-nowrap px-4 py-4"><strong>#{{.CycleID}}</strong><span class="mt-1 block text-xs text-muted">{{.CycleKind}} · {{.CycleStatus}}</span></td>
+            <td class="whitespace-nowrap px-4 py-4 font-bold">#{{.IncidentID}}</td>
+            <td class="px-4 py-4 font-mono text-xs font-bold">{{.StepKey}}</td>
+            <td class="whitespace-nowrap px-4 py-4"><strong>{{.Status}}</strong><span class="mt-1 block text-xs text-muted">Attempts {{.AttemptCount}}{{if .FailureKind}} · {{.FailureKind}}{{end}}</span></td>
+            <td class="px-4 py-4"><span class="block font-mono text-xs font-bold">{{.ModelIdentity}}</span><span class="mt-1 block font-mono text-xs text-muted">{{.PromptVersion}}</span></td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+    <nav class="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-4 border-t border-rule pt-5 text-sm text-muted" aria-label="Pipeline history pages">
+      {{if .HasNewer}}<a class="font-bold text-civic no-underline hover:text-civic-dark" href="{{.NewerURL}}">← Newer</a>{{else}}<span></span>{{end}}
+      <span>Ordered by latest update</span>
+      {{if .HasOlder}}<a class="justify-self-end font-bold text-civic no-underline hover:text-civic-dark" href="{{.OlderURL}}">Older →</a>{{end}}
+    </nav>
+    {{else}}
+    <div class="mt-8 rounded-lg border border-dashed border-rule bg-paper px-6 py-12 text-center">
+      <h2 class="font-serif text-2xl font-bold">No pipeline history yet</h2>
+      <p class="mt-2 text-sm text-muted">Job states will appear after a pipeline cycle is queued.</p>
+    </div>
+    {{end}}
+  </main>
+</body>
+</html>
+{{end}}

@@ -503,7 +503,7 @@ func TestPublicHostUsesFailClosedPresentationAndRejectsAdmin(t *testing.T) {
 				}
 			}
 
-			for _, path := range []string{"/admin", "/api/admin/ai/process-all-now", "/private"} {
+			for _, path := range []string{"/admin", "/admin/history", "/api/admin/ai/process-all-now", "/private"} {
 				response := httptest.NewRecorder()
 				request := httptest.NewRequest(http.MethodGet, path, nil)
 				request.Host = publicHost

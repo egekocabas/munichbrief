@@ -30,6 +30,9 @@ var aboutTemplate string
 //go:embed templates/admin.html
 var adminTemplate string
 
+//go:embed templates/admin_history.html
+var adminHistoryTemplate string
+
 //go:embed static/app.css
 var stylesheet []byte
 
@@ -45,6 +48,7 @@ type incidentStore interface {
 	GetPresentationIncident(context.Context, int64, store.PresentationScope) (store.IncidentRecord, error)
 	ListAdminIncidents(context.Context, int, int, string, store.PresentationScope, store.AdminIncidentFilter) ([]store.IncidentRecord, int, error)
 	ListAdminTranslations(context.Context, []int64, []string, string) ([]store.AdminTranslation, error)
+	ListPipelineHistory(context.Context, string, int, *store.PipelineHistoryCursor, *store.PipelineHistoryCursor) (store.PipelineHistoryPage, error)
 	Ready(context.Context) error
 }
 
@@ -76,15 +80,16 @@ type Options struct {
 
 // Server owns MunichBrief's HTTP route tree and parsed embedded templates.
 type Server struct {
-	store            incidentStore
-	logger           *slog.Logger
-	options          Options
-	location         *time.Location
-	localization     *localization
-	timelineTemplate *template.Template
-	detailTemplate   *template.Template
-	aboutTemplate    *template.Template
-	adminTemplate    *template.Template
+	store                incidentStore
+	logger               *slog.Logger
+	options              Options
+	location             *time.Location
+	localization         *localization
+	timelineTemplate     *template.Template
+	detailTemplate       *template.Template
+	aboutTemplate        *template.Template
+	adminTemplate        *template.Template
+	adminHistoryTemplate *template.Template
 }
 
 // NewWithOptions validates all route-affecting configuration before constructing
@@ -154,7 +159,11 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 	if err != nil {
 		return nil, fmt.Errorf("parse admin template: %w", err)
 	}
-	return &Server{store: database, logger: logger, options: options, location: location, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, adminTemplate: admin}, nil
+	adminHistory, err := template.New("admin_history").Funcs(functions).Parse(adminHistoryTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("parse admin history template: %w", err)
+	}
+	return &Server{store: database, logger: logger, options: options, location: location, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, adminTemplate: admin, adminHistoryTemplate: adminHistory}, nil
 }
 
 // Handler returns the complete public and optional review route tree.
@@ -177,6 +186,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /static/admin.js", s.adminJavascript)
 	if s.options.AdminEnabled {
 		mux.HandleFunc("GET /admin", s.admin)
+		mux.HandleFunc("GET /admin/history", s.adminHistory)
 		mux.HandleFunc("GET /api/admin/ai/status", s.pipelineStatus)
 		mux.HandleFunc("POST /api/admin/ai/process-now", s.processIncidentNow)
 		mux.HandleFunc("POST /api/admin/ai/process-all-now", s.processAllNow)
