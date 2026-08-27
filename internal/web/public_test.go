@@ -291,9 +291,14 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	handler := testServer(t, database).Handler()
 	timeline := httptest.NewRecorder()
 	handler.ServeHTTP(timeline, englishRequest(http.MethodGet, "/en", nil))
-	for _, expected := range []string{"Category", "Traffic", "Area", "Harras", "Crash at Harras", "Time stated in report", "24 August 2026, 22:30", "Police request public assistance", "Photo or video material"} {
+	for _, expected := range []string{"Category", "Traffic", "Area", "Harras", "Crash at Harras", "Time stated in report", "24 August 2026, 22:30", "Public assistance needed"} {
 		if !strings.Contains(timeline.Body.String(), expected) {
 			t.Errorf("timeline body does not contain %q", expected)
+		}
+	}
+	for _, unexpected := range []string{"Police request public assistance", "Photo or video material", "Witness observations"} {
+		if strings.Contains(timeline.Body.String(), unexpected) {
+			t.Errorf("timeline body unexpectedly contains public assistance detail %q", unexpected)
 		}
 	}
 

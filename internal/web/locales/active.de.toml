@@ -152,6 +152,9 @@ other = "Öffentliche Mithilfe"
 [PublicAssistanceRequested]
 other = "Polizei bittet um Mithilfe"
 
+[PublicAssistanceNeeded]
+other = "Öffentliche Mithilfe benötigt"
+
 [PublicAssistanceSourceCopy]
 other = "Hinweise, Kontaktwege und weitere Einzelheiten stehen ausschließlich in der offiziellen Quelle."
 

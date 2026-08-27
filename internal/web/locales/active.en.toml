@@ -152,6 +152,9 @@ other = "Public assistance"
 [PublicAssistanceRequested]
 other = "Police request public assistance"
 
+[PublicAssistanceNeeded]
+other = "Public assistance needed"
+
 [PublicAssistanceSourceCopy]
 other = "Instructions, contact routes, and further details are available only in the official source."
 
