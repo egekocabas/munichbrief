@@ -5,13 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/egekocabas/munichbrief/internal/store"
 )
 
+// PipelineRepository is the transactional state-machine surface required by the
+// worker. Implementations must make claim, completion, and advancement atomic.
 type PipelineRepository interface {
 	EnsurePipelineSteps(context.Context, []string, time.Time) error
 	PipelineStepSettings(context.Context) ([]store.StepSetting, error)
@@ -30,6 +31,8 @@ type PipelineRepository interface {
 	PipelineStepModel(context.Context, int64, int) (string, string, error)
 }
 
+// PipelineObserver receives bounded operational state; incident text and model
+// output must never be included in observations.
 type PipelineObserver interface {
 	RecordPipelineAttempt(step string)
 	RecordPipelineSuccess(step string, at time.Time)
@@ -40,6 +43,7 @@ type PipelineObserver interface {
 	SetProcessingWindowOpen(bool)
 }
 
+// StepModelStatus describes one step's configured and currently available model.
 type StepModelStatus struct {
 	Key                string `json:"key"`
 	DisplayName        string `json:"display_name"`
@@ -48,6 +52,7 @@ type StepModelStatus struct {
 	PreferredAvailable bool   `json:"preferred_available"`
 }
 
+// PipelineModelStatus is the review-facing model configuration snapshot.
 type PipelineModelStatus struct {
 	Steps            []StepModelStatus `json:"steps"`
 	Models           []string          `json:"models"`
@@ -56,6 +61,7 @@ type PipelineModelStatus struct {
 	Ready            bool              `json:"ready"`
 }
 
+// PipelineRuntimeStatus combines model, schedule, worker, and queue readiness.
 type PipelineRuntimeStatus struct {
 	GeneratedAt        time.Time              `json:"generated_at"`
 	WindowOpen         bool                   `json:"window_open"`
@@ -65,6 +71,8 @@ type PipelineRuntimeStatus struct {
 	Queue              store.PipelineSnapshot `json:"queue"`
 }
 
+// PipelineWorker serially executes persisted cycles. Database claims protect
+// correctness across restarts; the worker mutex protects only in-memory status.
 type PipelineWorker struct {
 	repository PipelineRepository
 	providers  StepGeneratorProvider
@@ -81,6 +89,8 @@ type PipelineWorker struct {
 	circuits   map[string]time.Time
 }
 
+// NewPipelineWorker validates dependencies and ensures all registered step
+// settings exist before any background processing begins.
 func NewPipelineWorker(repository PipelineRepository, providers StepGeneratorProvider, catalog ModelCatalog, observer PipelineObserver, logger *slog.Logger, interval time.Duration, clock func() time.Time, schedule Schedule, sourceMode string) (*PipelineWorker, error) {
 	if repository == nil || providers == nil || catalog == nil || logger == nil {
 		return nil, errors.New("pipeline repository, generator provider, catalog, and logger are required")
@@ -103,6 +113,8 @@ func NewPipelineWorker(repository PipelineRepository, providers StepGeneratorPro
 	return &PipelineWorker{repository: repository, providers: providers, catalog: catalog, observer: observer, logger: logger, interval: interval, clock: clock, schedule: schedule, sourceMode: sourceMode, wake: make(chan struct{}, 1), available: true, circuits: make(map[string]time.Time)}, nil
 }
 
+// RequestNow queues manual work after verifying every requested model against
+// the most recent catalog snapshot.
 func (w *PipelineWorker) RequestNow(ctx context.Context, sourceMode string, models map[string]string, incidentID *int64, reprocessAll bool) (store.PipelineRequestResult, error) {
 	if sourceMode != w.sourceMode {
 		return store.PipelineRequestResult{}, errors.New("manual request source mode does not match worker")
@@ -181,6 +193,8 @@ func (w *PipelineWorker) Status(ctx context.Context) (PipelineRuntimeStatus, err
 	return PipelineRuntimeStatus{GeneratedAt: w.clock(), WindowOpen: window, ScheduledReady: window && models.Ready, ProcessorAvailable: available && models.CatalogAvailable, Models: models, Queue: queue}, nil
 }
 
+// Run recovers interrupted work, processes immediately available cycles, and
+// continues until ctx is cancelled. Only one Run call is supported per worker.
 func (w *PipelineWorker) Run(ctx context.Context) {
 	if err := w.repository.RecoverPipeline(ctx, w.clock()); err != nil {
 		w.logger.Error("recover staged AI processing", "error", err)
@@ -259,7 +273,7 @@ func (w *PipelineWorker) processCycle(ctx context.Context, cycle store.PipelineC
 			if !w.catalog.Snapshot().Has(job.ModelIdentity) {
 				now := w.clock()
 				retry := now.Add(30 * time.Second)
-				if err := w.repository.FailPipelineJob(ctx, job, "pending", string(ErrorConfiguration), &retry, now, fmt.Errorf("selected Ollama model is unavailable")); err != nil {
+				if err := w.repository.FailPipelineJob(ctx, job, "pending", string(ErrorConfiguration), &retry, now, fmt.Errorf("selected ollama model is unavailable")); err != nil {
 					w.logger.Error("defer unavailable staged AI model", "cycle_id", cycle.ID, "job_id", job.ID, "error", err)
 					return false
 				}
@@ -427,12 +441,4 @@ func (w *PipelineWorker) publishSnapshot(ctx context.Context) {
 		return
 	}
 	w.observer.SetPipelineSnapshot(snapshot)
-}
-
-func ModelsFromForm(values map[string]string) map[string]string {
-	models := make(map[string]string, len(registeredSteps))
-	for _, step := range registeredSteps {
-		models[step.Key] = strings.TrimSpace(values[step.Key])
-	}
-	return models
 }

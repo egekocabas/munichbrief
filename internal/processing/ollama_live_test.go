@@ -10,11 +10,11 @@ import (
 
 func TestLiveOllamaPrivacySafeStagedPresentation(t *testing.T) {
 	if os.Getenv("MUNICHBRIEF_OLLAMA_LIVE_TEST") != "1" {
-		t.Skip("set MUNICHBRIEF_OLLAMA_LIVE_TEST=1 for the explicit pi8 smoke test")
+		t.Skip("set MUNICHBRIEF_OLLAMA_LIVE_TEST=1 for the explicit Ollama smoke test")
 	}
 	baseURL := os.Getenv("MUNICHBRIEF_OLLAMA_BASE_URL")
 	if baseURL == "" {
-		baseURL = "http://192.168.178.102:11434"
+		baseURL = "http://127.0.0.1:11434"
 	}
 	germanModel := os.Getenv("MUNICHBRIEF_OLLAMA_GERMAN_MODEL")
 	if germanModel == "" {

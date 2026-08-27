@@ -50,14 +50,6 @@ var promptRegistry = []PromptDefinition{
 	},
 }
 
-// RegisteredPrompts returns a copy so callers can inspect or expose prompt
-// history without mutating the code-owned registry.
-func RegisteredPrompts() []PromptDefinition {
-	prompts := make([]PromptDefinition, len(promptRegistry))
-	copy(prompts, promptRegistry)
-	return prompts
-}
-
 // PromptByVersion resolves both active and retired prompt identities.
 func PromptByVersion(version string) (PromptDefinition, bool) {
 	for _, prompt := range promptRegistry {

@@ -1,0 +1,53 @@
+name: Bug report
+description: Report a reproducible problem in MunichBrief.
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include police source text, credentials, databases, or private deployment details.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Release tag, image digest, or commit SHA.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Reader and localization
+        - Source ingestion and parsing
+        - AI processing
+        - Storage and migration
+        - Helm and container deployment
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed credentials, personal data, source bodies, and private infrastructure details.
+          required: true

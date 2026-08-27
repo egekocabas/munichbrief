@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+// PresentationScope pins queries to the expected prompt/model provenance and
+// determines whether only complete public output may be returned.
 type PresentationScope struct {
 	Operation     string
 	ModelIdentity string
@@ -15,8 +17,10 @@ type PresentationScope struct {
 	PublicOnly    bool
 }
 
+// AdminIncidentFilter selects review queue subsets without changing visibility.
 type AdminIncidentFilter string
 
+// PublicIncidentLink is the minimal record required to build a sitemap.
 type PublicIncidentLink struct {
 	ID         int64
 	ModifiedAt time.Time
@@ -85,6 +89,8 @@ func sourceStatusCondition(sourceMode string) (string, error) {
 	}
 }
 
+// ListPresentationEntries returns timeline records within the requested scope.
+// Public scopes fail closed by requiring a complete matching presentation run.
 func (s *Store) ListPresentationEntries(ctx context.Context, limit, offset int, sourceMode string, scope PresentationScope) ([]IncidentRecord, int, error) {
 	if limit < 1 {
 		return nil, 0, errors.New("limit must be positive")
@@ -268,6 +274,8 @@ func (s *Store) ListAdminIncidents(ctx context.Context, limit, offset int, sourc
 	return records, total, nil
 }
 
+// GetPresentationIncident returns one incident only when it satisfies the same
+// provenance and public-readiness rules as the timeline.
 func (s *Store) GetPresentationIncident(ctx context.Context, id int64, scope PresentationScope) (IncidentRecord, error) {
 	query := `
 		SELECT

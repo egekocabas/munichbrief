@@ -18,8 +18,10 @@ const (
 	modelCatalogMaxBytes        = 1 << 20
 )
 
-var ErrModelUnavailable = errors.New("Ollama model is unavailable")
+var ErrModelUnavailable = errors.New("ollama model is unavailable")
 
+// ModelCatalogSnapshot is a point-in-time, sorted view of available model names.
+// An unsuccessful refresh fails closed by returning no models and a non-nil Err.
 type ModelCatalogSnapshot struct {
 	Models    []string
 	CheckedAt time.Time
@@ -33,10 +35,12 @@ func (s ModelCatalogSnapshot) Has(model string) bool {
 
 func (s ModelCatalogSnapshot) Available() bool { return s.Err == nil && !s.CheckedAt.IsZero() }
 
+// ModelCatalog supplies the latest immutable availability snapshot.
 type ModelCatalog interface {
 	Snapshot() ModelCatalogSnapshot
 }
 
+// OllamaModelCatalog periodically reads the bounded Ollama tags endpoint.
 type OllamaModelCatalog struct {
 	endpoint string
 	client   *http.Client
@@ -45,13 +49,15 @@ type OllamaModelCatalog struct {
 	snapshot ModelCatalogSnapshot
 }
 
+// NewOllamaModelCatalog validates baseURL and builds a catalog client with a
+// hard request timeout.
 func NewOllamaModelCatalog(baseURL string, timeout time.Duration, baseClient *http.Client) (*OllamaModelCatalog, error) {
 	parsed, err := url.Parse(baseURL)
 	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
-		return nil, errors.New("Ollama base URL must be an absolute HTTP(S) URL without credentials, query, or fragment")
+		return nil, errors.New("ollama base URL must be an absolute HTTP(S) URL without credentials, query, or fragment")
 	}
 	if timeout <= 0 {
-		return nil, errors.New("Ollama model catalog timeout must be positive")
+		return nil, errors.New("ollama model catalog timeout must be positive")
 	}
 	client := &http.Client{Timeout: timeout}
 	if baseClient != nil {
@@ -71,6 +77,8 @@ func (c *OllamaModelCatalog) Snapshot() ModelCatalogSnapshot {
 	return result
 }
 
+// Refresh replaces the complete snapshot, including failures, so stale model
+// availability can never authorize new processing work.
 func (c *OllamaModelCatalog) Refresh(ctx context.Context) ModelCatalogSnapshot {
 	snapshot := ModelCatalogSnapshot{CheckedAt: c.clock()}
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, c.endpoint, nil)
@@ -81,7 +89,7 @@ func (c *OllamaModelCatalog) Refresh(ctx context.Context) ModelCatalogSnapshot {
 		if err == nil {
 			defer response.Body.Close()
 			if response.StatusCode != http.StatusOK {
-				err = fmt.Errorf("Ollama model catalog returned HTTP %d", response.StatusCode)
+				err = fmt.Errorf("ollama model catalog returned HTTP %d", response.StatusCode)
 			} else {
 				var body []byte
 				body, err = readBounded(response.Body, modelCatalogMaxBytes)

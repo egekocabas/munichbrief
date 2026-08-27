@@ -165,7 +165,7 @@ func TestPublicDocumentsExposeCanonicalAndAlternateLinks(t *testing.T) {
 func TestTimelinePaginationPublishesPrevAndNextLinks(t *testing.T) {
 	server := adminTestServer(t, fixtureStore(t), []string{"munichbrief.egekocabas.com", "munichbrief.de"})
 	request := englishRequest(http.MethodGet, "/en?page=2", nil)
-	request.Host = "munichbrief.home.egekocabas.com"
+	request.Host = "munichbrief.internal.example"
 	response := httptest.NewRecorder()
 	server.Handler().ServeHTTP(response, request)
 	if !strings.Contains(response.Header().Get("Link"), `<https://munichbrief.de/en>; rel="prev"`) {

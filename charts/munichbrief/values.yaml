@@ -15,18 +15,18 @@ application:
   publicHosts: []
   # Required when publicHosts is non-empty; must name one of those HTTPS hosts.
   canonicalOrigin: ""
-  sourceMode: live
-  presentationMode: public
+  sourceMode: fixture
+  presentationMode: review
   secureCookies: true
   pageSize: 20
   feedURL: https://www.polizei.bayern.de/rss/polizeiprasidium-munchen.xml
   userAgent: MunichBrief/0.1.0 (+https://github.com/egekocabas/munichbrief)
   httpTimeout: 10s
   articleRefreshInterval: 6h
-  aiEnabled: true
+  aiEnabled: false
   aiImmediate: false
   aiWindow: "03:00-08:00"
-  ollamaBaseURL: http://192.168.178.102:11434
+  ollamaBaseURL: http://127.0.0.1:11434
   aiInterval: 5s
   aiTimeout: 10m
   aiContextSize: 8192
@@ -44,7 +44,7 @@ ingress:
     annotations:
       traefik.ingress.kubernetes.io/router.entrypoints: websecure
       traefik.ingress.kubernetes.io/router.tls: "true"
-    host: munichbrief.home.example.com
+    host: munichbrief.internal.example
     tls: []
   public:
     enabled: false
@@ -99,8 +99,8 @@ networkPolicy:
     - observability
   allowPublicHTTPS: true
   pi8:
-    enabled: true
-    cidr: 192.168.178.102/32
+    enabled: false
+    cidr: 192.168.1.100/32
     port: 11434
 
 serviceMonitor:

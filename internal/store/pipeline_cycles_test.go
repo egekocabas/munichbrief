@@ -1,0 +1,212 @@
+package store
+
+import (
+	"context"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"github.com/egekocabas/munichbrief/internal/domain"
+)
+
+func TestPipelineFreezesTargetsGroupsStepsAndStartsNextCycleImmediately(t *testing.T) {
+	ctx := context.Background()
+	database, err := Open(ctx, filepath.Join(t.TempDir(), "pipeline.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 25, 4, 0, 0, 0, time.UTC)
+	insertPipelineDocuments(t, ctx, database, now, "one", "two")
+	plans := testPipelinePlans()
+	cycle, found, err := database.ActivateNextPipelineCycle(ctx, "fixture", plans, true, now)
+	if err != nil || !found || cycle.Kind != "scheduled" {
+		t.Fatalf("activate scheduled cycle = %#v/%t/%v", cycle, found, err)
+	}
+	insertPipelineDocuments(t, ctx, database, now.Add(time.Minute), "three")
+
+	var germanIDs []int64
+	for {
+		job, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 0, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !found {
+			break
+		}
+		germanIDs = append(germanIDs, job.IncidentID)
+		values := []PipelineValue{{Kind: "title_de", Value: "Titel"}, {Kind: "summary_de", Value: "Zusammenfassung."}, {Kind: "category", Value: "other"}, {Kind: "privacy_status", Value: "safe"}, {Kind: "privacy_flags", Value: "[]"}}
+		if err := database.CompletePipelineJob(ctx, job, values, job.ModelIdentity, HashPipelineInput(job.SourceHash), now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(germanIDs) != 2 {
+		t.Fatalf("frozen German targets = %v, want two", germanIDs)
+	}
+	advance, err := database.AdvancePipelineCycle(ctx, cycle, 2, now)
+	if err != nil || !advance.Advanced {
+		t.Fatalf("advance to translation = %#v/%v", advance, err)
+	}
+	cycle.ActiveStep = 1
+	translations := 0
+	for {
+		job, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 1, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !found {
+			break
+		}
+		translations++
+		if job.TitleDE != "Titel" || job.SummaryDE != "Zusammenfassung." {
+			t.Fatalf("translation input = %q/%q", job.TitleDE, job.SummaryDE)
+		}
+		if err := database.CompletePipelineJob(ctx, job, []PipelineValue{{Kind: "title_en", Value: "Title"}, {Kind: "summary_en", Value: "Summary."}}, job.ModelIdentity, HashPipelineInput(job.TitleDE, job.SummaryDE), now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if translations != 2 {
+		t.Fatalf("translations = %d, want 2", translations)
+	}
+	advance, err = database.AdvancePipelineCycle(ctx, cycle, 2, now)
+	if err != nil || !advance.Completed {
+		t.Fatalf("complete cycle = %#v/%v", advance, err)
+	}
+	next, found, err := database.ActivateNextPipelineCycle(ctx, "fixture", plans, true, now)
+	if err != nil || !found || next.ID == cycle.ID {
+		t.Fatalf("immediate next cycle = %#v/%t/%v", next, found, err)
+	}
+	snapshot, err := database.PipelineSnapshot(ctx, "fixture", []string{"german_analysis", "english_translation"}, now)
+	if err != nil || snapshot.CycleTotal != 2 {
+		t.Fatalf("next frozen snapshot = %#v/%v", snapshot, err)
+	}
+}
+
+func TestManualCyclesCoalesceExactDuplicatesAndSupersedeQueuedAutomaticWork(t *testing.T) {
+	ctx := context.Background()
+	database, err := Open(ctx, filepath.Join(t.TempDir(), "manual-priority.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 25, 4, 0, 0, 0, time.UTC)
+	insertPipelineDocuments(t, ctx, database, now, "one")
+	plans := testPipelinePlans()
+
+	tx, err := database.db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	condition, _ := sourceStatusCondition("fixture")
+	automaticID, count, err := createPipelineCycleTx(ctx, tx, "scheduled", "fixture", true, "", condition+" AND COALESCE(i.body_de,'')<>''", nil, plans, now)
+	if err != nil || count != 1 {
+		t.Fatalf("create queued scheduled cycle = %d/%d/%v", automaticID, count, err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+
+	first, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, nil, true, now.Add(time.Second))
+	if err != nil || first.Requested != 1 {
+		t.Fatalf("first manual request = %#v/%v", first, err)
+	}
+	var automaticStatus string
+	if err := database.db.QueryRowContext(ctx, `SELECT status FROM processing_cycles WHERE id=?`, automaticID).Scan(&automaticStatus); err != nil {
+		t.Fatal(err)
+	}
+	if automaticStatus != "superseded" {
+		t.Fatalf("queued automatic status = %q", automaticStatus)
+	}
+	duplicate, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, nil, true, now.Add(2*time.Second))
+	if err != nil || duplicate.CycleID != first.CycleID || duplicate.Requested != 0 || duplicate.Current != 1 {
+		t.Fatalf("duplicate manual request = %#v/%v, first=%#v", duplicate, err, first)
+	}
+	different := append([]PipelineStepPlan(nil), plans...)
+	different[1].Model = "other-translate:4b"
+	separate, err := database.CreateManualPipelineCycle(ctx, "fixture", different, nil, true, now.Add(3*time.Second))
+	if err != nil || separate.CycleID == first.CycleID {
+		t.Fatalf("different-model manual request = %#v/%v", separate, err)
+	}
+}
+
+func TestManualRequestDoesNotInterruptHealthyRunningScheduledCycle(t *testing.T) {
+	ctx := context.Background()
+	database, err := Open(ctx, filepath.Join(t.TempDir(), "healthy-priority.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 25, 4, 0, 0, 0, time.UTC)
+	insertPipelineDocuments(t, ctx, database, now, "one")
+	plans := testPipelinePlans()
+	cycle, found, err := database.ActivateNextPipelineCycle(ctx, "fixture", plans, true, now)
+	if err != nil || !found {
+		t.Fatalf("activate scheduled cycle = %#v/%t/%v", cycle, found, err)
+	}
+	if _, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, nil, true, now.Add(time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	var status string
+	if err := database.db.QueryRowContext(ctx, `SELECT status FROM processing_cycles WHERE id=?`, cycle.ID).Scan(&status); err != nil {
+		t.Fatal(err)
+	}
+	if status != "running" {
+		t.Fatalf("healthy scheduled cycle was interrupted: %q", status)
+	}
+}
+
+func TestPipelineRecoveryAndSourceRevisionSupersession(t *testing.T) {
+	ctx := context.Background()
+	database, err := Open(ctx, filepath.Join(t.TempDir(), "recover-supersede.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 25, 4, 0, 0, 0, time.UTC)
+	insertPipelineDocuments(t, ctx, database, now, "one")
+	cycle, found, err := database.ActivateNextPipelineCycle(ctx, "fixture", testPipelinePlans(), true, now)
+	if err != nil || !found {
+		t.Fatalf("activate cycle = %#v/%t/%v", cycle, found, err)
+	}
+	job, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 0, now)
+	if err != nil || !found {
+		t.Fatalf("claim before restart = %#v/%t/%v", job, found, err)
+	}
+	if err := database.RecoverPipeline(ctx, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	recovered, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 0, now.Add(time.Minute))
+	if err != nil || !found || recovered.ID != job.ID || recovered.AttemptCount != 2 {
+		t.Fatalf("recovered job = %#v/%t/%v", recovered, found, err)
+	}
+	if err := database.CompletePipelineJob(ctx, recovered, []PipelineValue{{Kind: "title_de", Value: "Accepted DE"}, {Kind: "summary_de", Value: "Accepted summary."}, {Kind: "category", Value: "other"}, {Kind: "privacy_status", Value: "safe"}, {Kind: "privacy_flags", Value: "[]"}}, recovered.ModelIdentity, HashPipelineInput("de"), now.Add(2*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	advance, err := database.AdvancePipelineCycle(ctx, cycle, 2, now.Add(3*time.Minute))
+	if err != nil || !advance.Advanced {
+		t.Fatalf("advance after recovery = %#v/%v", advance, err)
+	}
+	cycle.ActiveStep = 1
+	revised := domain.SourceDocument{
+		ExternalID: "one", SourceURL: "https://fixture.invalid/one", Title: "Release one", PublishedAt: now,
+		FeedFingerprint: "feed-one-v2", SourceHash: "source-one-v2",
+		Incidents: []domain.Incident{{Number: "1", Position: 0, TitleDE: "Titel one revised", BodyDE: "Revised body", ContentHash: "content-one-v2"}},
+	}
+	if err := database.UpsertDocuments(ctx, []domain.SourceDocument{revised}, now.Add(4*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if _, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 1, now.Add(5*time.Minute)); err != nil || found {
+		t.Fatalf("stale translation claim = found:%t err:%v", found, err)
+	}
+	var itemStatus, runStatus string
+	if err := database.db.QueryRowContext(ctx, `SELECT ci.status,r.status FROM processing_cycle_items ci JOIN presentation_runs r ON r.id=ci.presentation_run_id WHERE ci.cycle_id=?`, cycle.ID).Scan(&itemStatus, &runStatus); err != nil {
+		t.Fatal(err)
+	}
+	if itemStatus != "superseded" || runStatus != "superseded" {
+		t.Fatalf("stale item/run = %q/%q", itemStatus, runStatus)
+	}
+	snapshot, err := database.PipelineSnapshot(ctx, "fixture", []string{"german_analysis", "english_translation"}, now.Add(5*time.Minute))
+	if err != nil || snapshot.ScheduledCandidates != 1 {
+		t.Fatalf("revised source eligibility = %#v/%v", snapshot, err)
+	}
+}

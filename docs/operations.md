@@ -73,27 +73,25 @@ before deploying a migration. German and English pages use explicit `/de` and
 cookie used by the root and legacy-route redirects. Enable secure cookies
 behind TLS.
 
-The checked-in production deployment runs the reader in public mode on both LAN
-and public hosts. `MUNICHBRIEF_PUBLIC_HOSTS` additionally forces each listed
-hostname into public presentation and restricts it to reader-safe paths. The
-public deployment also requires `MUNICHBRIEF_CANONICAL_ORIGIN`; it must be an
-HTTPS origin using one of those public hostnames. Discovery documents and
-canonical links use this single origin even when an alternate public hostname
-serves the request. Public reader pages negotiate a privacy-safe Markdown
-representation through `Accept: text/markdown`; review-mode pages remain HTML.
-optional `/admin` dashboard shows live cycle and per-step queue state, independently
-paginated unprocessed and complete incident review lists, retained German
-originals, and both generated languages. Its confirmed Process now actions can
-create a full-pipeline cycle for one incident, every unprocessed incident, or
-every current incident. They wake the in-process worker and run asynchronously
-outside the normal window while retaining the standard safety controls. The
-application does not authenticate users itself: enable the dashboard only when
-Traefik protects `/admin*` and `/api/admin*`, and keep both prefixes absent from
-the public ingress allowlist.
+`MUNICHBRIEF_PUBLIC_HOSTS` forces each listed hostname into public presentation
+and restricts it to reader-safe paths. A public deployment also requires
+`MUNICHBRIEF_CANONICAL_ORIGIN`; it must be an HTTPS origin using one of those
+hostnames. Discovery documents and canonical links use this single origin even
+when an alternate public hostname serves the request. Public reader pages
+negotiate a privacy-safe Markdown representation through
+`Accept: text/markdown`; review-mode pages remain HTML.
 
-The configured pi8 endpoint currently uses unencrypted HTTP on a restricted
-LAN. Limit egress to `192.168.178.102/32:11434`; public presentation mode does
-not reduce the need to protect this hop with HTTPS or an encrypted tunnel.
+The optional `/admin` dashboard shows live cycle and per-step queue state,
+independently paginated incident lists, retained German originals, and both
+generated languages. Its confirmed actions can create a full-pipeline cycle
+for one incident, every unprocessed incident, or every current incident. The
+application does not authenticate users itself: enable the dashboard only when
+the ingress protects `/admin*` and `/api/admin*`, and keep both prefixes absent
+from public ingress.
+
+An Ollama endpoint using unencrypted HTTP must remain on a restricted network
+with narrowly scoped egress. Public presentation mode does not reduce the need
+to protect this hop with HTTPS or an encrypted tunnel.
 
 ## Production-style container
 
@@ -149,7 +147,7 @@ kubectl -n munichbrief exec deployment/munichbrief -- \
 
 Check the command exit status and validate the downloaded database with the
 `migrate` command. A scheduled job must eventually send backups to storage
-outside pi16 and the application PVC; keeping another file on the same NVMe is
+outside the application node and PVC; keeping another file on the same disk is
 not disaster recovery.
 
 ## Restore
@@ -171,12 +169,13 @@ writers on the PVC; `ReadWriteOnce` still permits multiple pods on one node.
 
 ## Release and deployment ownership
 
-- Pull requests run offline tests, race detection, Helm validation, and a
-  non-publishing AMD64/ARM64 image build.
+- Pull requests run offline tests, race detection, vulnerability and dead-code
+  checks, frontend verification, Go builds, and Helm validation.
 - Trusted `main` commits publish `sha-<full-commit>` images to GHCR.
 - Tags matching `vMAJOR.MINOR.PATCH` additionally publish that exact tag and
   normalized semantic-version image tags.
-- The `homelab-infra` repository pins the desired image by tag and digest.
-- Renovate will eventually propose release/digest updates in that repository.
-- Argo CD reconciles the merged desired state. GitHub Actions never receives a
-  kubeconfig and never runs `kubectl` against pi16.
+- The deployment repository pins the desired image by tag and digest.
+- Dependency automation proposes grouped repository updates; deployment image
+  updates remain owned by the deployment repository.
+- GitOps reconciles the merged desired state. Application CI does not receive a
+  kubeconfig or deploy directly to a cluster.

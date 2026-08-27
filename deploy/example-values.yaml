@@ -1,0 +1,36 @@
+# Example values for a public deployment. Copy this file and replace every
+# example hostname and infrastructure-specific setting outside this repository.
+replicaCount: 1
+
+image:
+  repository: ghcr.io/egekocabas/munichbrief
+  tag: main
+  digest: ""
+  pullPolicy: IfNotPresent
+
+application:
+  publicHosts:
+    - brief.example.com
+  canonicalOrigin: https://brief.example.com
+  sourceMode: live
+  presentationMode: public
+  secureCookies: true
+  aiEnabled: false
+  ollamaBaseURL: http://127.0.0.1:11434
+
+ingress:
+  public:
+    enabled: true
+    hosts:
+      - brief.example.com
+
+admin:
+  enabled: false
+
+networkPolicy:
+  enabled: true
+  pi8:
+    enabled: false
+
+serviceMonitor:
+  enabled: false

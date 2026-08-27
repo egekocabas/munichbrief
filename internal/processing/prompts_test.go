@@ -4,7 +4,7 @@ import "testing"
 
 func TestPromptRegistryResolvesActiveAndRetiredVersions(t *testing.T) {
 	seen := make(map[string]bool)
-	for _, prompt := range RegisteredPrompts() {
+	for _, prompt := range promptRegistry {
 		if prompt.Version == "" || prompt.SystemPrompt == "" || prompt.UserPromptTemplate == "" {
 			t.Fatalf("incomplete prompt definition: %#v", prompt)
 		}
@@ -35,14 +35,5 @@ func TestEveryPipelineStepUsesItsRegisteredActivePrompt(t *testing.T) {
 		if prompt.Status != PromptActive || prompt.StepKey != step.Key || prompt.SystemPrompt != step.SystemPrompt {
 			t.Fatalf("step %q prompt does not match registry: %#v", step.Key, prompt)
 		}
-	}
-}
-
-func TestRegisteredPromptsReturnsCopy(t *testing.T) {
-	prompts := RegisteredPrompts()
-	prompts[0].SystemPrompt = "modified"
-	resolved, _ := PromptByVersion(LegacyBilingualPromptVersion)
-	if resolved.SystemPrompt == "modified" {
-		t.Fatal("caller mutated the prompt registry")
 	}
 }

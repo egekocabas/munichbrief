@@ -14,6 +14,7 @@ import (
 	"github.com/egekocabas/munichbrief/internal/store"
 )
 
+// Repository captures the atomic persistence operations needed by a source sync.
 type Repository interface {
 	GetSyncState(context.Context) (store.SyncState, error)
 	RecordSyncAttempt(context.Context, time.Time) error
@@ -25,6 +26,7 @@ type Repository interface {
 	MarkDocumentFetchFailed(context.Context, int64, time.Time, error) error
 }
 
+// Syncer serializes conditional feed refreshes and article parsing.
 type Syncer struct {
 	mu           sync.Mutex
 	repository   Repository
@@ -35,6 +37,7 @@ type Syncer struct {
 	logger       *slog.Logger
 }
 
+// Result summarizes one synchronization attempt for logs and metrics.
 type Result struct {
 	NotModified     bool
 	Discovered      int
@@ -47,6 +50,7 @@ type Result struct {
 	WindowEnd       time.Time
 }
 
+// NewSyncer constructs a live-source synchronizer. A nil clock uses time.Now.
 func NewSyncer(repository Repository, client source.LiveClient, refreshAfter time.Duration, clock func() time.Time, logger *slog.Logger) (*Syncer, error) {
 	if repository == nil || client == nil || logger == nil {
 		return nil, errors.New("repository, live source client, and logger are required")
@@ -71,6 +75,8 @@ func NewSyncer(repository Repository, client source.LiveClient, refreshAfter tim
 	}, nil
 }
 
+// Sync fetches the rolling three-day source window and persists each document
+// independently, allowing one malformed or unavailable article to be retried.
 func (s *Syncer) Sync(ctx context.Context) (Result, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

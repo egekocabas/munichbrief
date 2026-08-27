@@ -67,7 +67,7 @@ func TestLoadDefaults(t *testing.T) {
 
 func TestLoadAcceptsRemoteOllamaConfiguration(t *testing.T) {
 	t.Setenv("MUNICHBRIEF_AI_ENABLED", "true")
-	t.Setenv("MUNICHBRIEF_OLLAMA_BASE_URL", "http://192.168.178.102:11434")
+	t.Setenv("MUNICHBRIEF_OLLAMA_BASE_URL", "http://192.0.2.10:11434")
 	t.Setenv("MUNICHBRIEF_AI_CONTEXT_SIZE", "8192")
 	t.Setenv("MUNICHBRIEF_AI_IMMEDIATE", "true")
 	t.Setenv("MUNICHBRIEF_AI_WINDOW", "22:30-06:15")
@@ -76,7 +76,7 @@ func TestLoadAcceptsRemoteOllamaConfiguration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
-	if !cfg.AIEnabled || !cfg.AIImmediate || cfg.OllamaBaseURL != "http://192.168.178.102:11434" {
+	if !cfg.AIEnabled || !cfg.AIImmediate || cfg.OllamaBaseURL != "http://192.0.2.10:11434" {
 		t.Fatalf("AI configuration = %#v", cfg)
 	}
 	if cfg.AIWindowStart != 22*time.Hour+30*time.Minute || cfg.AIWindowEnd != 6*time.Hour+15*time.Minute {
@@ -105,7 +105,7 @@ func TestLoadRejectsInvalidAISchedule(t *testing.T) {
 }
 
 func TestLoadRejectsInvalidOllamaConfiguration(t *testing.T) {
-	for _, baseURL := range []string{"192.168.178.102:11434", "ftp://pi8/model", "http://user:password@pi8:11434"} {
+	for _, baseURL := range []string{"192.0.2.10:11434", "ftp://ollama.internal/model", "http://user:password@ollama.internal:11434"} {
 		t.Run(baseURL, func(t *testing.T) {
 			t.Setenv("MUNICHBRIEF_OLLAMA_BASE_URL", baseURL)
 			if _, err := Load(); err == nil {
