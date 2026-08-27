@@ -26,10 +26,10 @@ other = "Independent and unofficial."
 other = "This view contains synthetic fixture data only."
 
 [LiveNotice]
-other = "Content is derived from official releases."
+other = "AI is used to summarize, categorize, and extract details from official police releases. Errors may occur, and releases may be updated after publication."
 
 [AuthorityNotice]
-other = "The official police release remains authoritative, and the presumption of innocence applies."
+other = "The latest official information remains authoritative, and the presumption of innocence applies."
 
 [ReviewNotice]
 other = "Review mode: original text that has not been anonymised may be visible. Do not expose publicly."

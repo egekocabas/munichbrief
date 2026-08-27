@@ -20,16 +20,16 @@ other = "Zum Inhalt springen"
 other = "Wichtiger Hinweis"
 
 [NoticeLead]
-other = "Unabhängig und inoffiziell."
+other = "Unabhängig und nicht offiziell."
 
 [FixtureNotice]
 other = "Diese Ansicht enthält ausschließlich synthetische Testdaten."
 
 [LiveNotice]
-other = "Die Inhalte stammen aus offiziellen Meldungen."
+other = "KI wird eingesetzt, um offizielle Polizeimeldungen zusammenzufassen, zu kategorisieren und Angaben daraus zu extrahieren. Dabei können Fehler auftreten, und Meldungen können nachträglich aktualisiert werden."
 
 [AuthorityNotice]
-other = "Maßgeblich bleibt die offizielle Polizeimeldung; die Unschuldsvermutung gilt."
+other = "Maßgeblich sind die jeweils aktuellen offiziellen Informationen; es gilt die Unschuldsvermutung."
 
 [ReviewNotice]
 other = "Prüfmodus: Noch nicht anonymisierte Originaltexte können sichtbar sein. Nicht öffentlich bereitstellen."
