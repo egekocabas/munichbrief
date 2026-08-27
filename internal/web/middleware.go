@@ -58,41 +58,6 @@ func (s *Server) ready(response http.ResponseWriter, request *http.Request) {
 	_, _ = response.Write([]byte("ready\n"))
 }
 
-func (s *Server) css(response http.ResponseWriter, _ *http.Request) {
-	response.Header().Set("Content-Type", "text/css; charset=utf-8")
-	response.Header().Set("Cache-Control", "public, max-age=3600")
-	response.Header().Set("X-Content-Type-Options", "nosniff")
-	_, _ = response.Write(stylesheet)
-}
-
-func (s *Server) javascript(response http.ResponseWriter, _ *http.Request) {
-	response.Header().Set("Content-Type", "text/javascript; charset=utf-8")
-	response.Header().Set("Cache-Control", "public, max-age=3600")
-	response.Header().Set("X-Content-Type-Options", "nosniff")
-	_, _ = response.Write(htmxScript)
-}
-
-func (s *Server) themeJavascript(response http.ResponseWriter, _ *http.Request) {
-	response.Header().Set("Content-Type", "text/javascript; charset=utf-8")
-	response.Header().Set("Cache-Control", "public, max-age=3600")
-	response.Header().Set("X-Content-Type-Options", "nosniff")
-	_, _ = response.Write(themeScript)
-}
-
-func (s *Server) adminJavascript(response http.ResponseWriter, _ *http.Request) {
-	response.Header().Set("Content-Type", "text/javascript; charset=utf-8")
-	response.Header().Set("Cache-Control", "public, max-age=3600")
-	response.Header().Set("X-Content-Type-Options", "nosniff")
-	_, _ = response.Write(adminScript)
-}
-
-func (s *Server) favicon(response http.ResponseWriter, _ *http.Request) {
-	response.Header().Set("Content-Type", "image/svg+xml")
-	response.Header().Set("Cache-Control", "public, max-age=3600")
-	response.Header().Set("X-Content-Type-Options", "nosniff")
-	_, _ = response.Write(favicon)
-}
-
 func (s *Server) internalError(response http.ResponseWriter, request *http.Request, message string, err error) {
 	s.logger.ErrorContext(request.Context(), message, "error", err)
 	http.Error(response, "internal server error", http.StatusInternalServerError)

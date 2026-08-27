@@ -188,6 +188,11 @@ writers on the PVC; `ReadWriteOnce` still permits multiple pods on one node.
 - Published images expose their exact source commit and build time in the reader
   footer and carry OCI labels and manifest/index annotations for source, project
   and documentation URLs, license, vendor, version, revision, and creation time.
+- Reader and admin HTML use `private, no-store`. Embedded static assets use
+  content-fingerprinted URLs with `public, max-age=31556952, immutable`, so a new
+  build immediately references new asset URLs while unchanged assets stay cached.
+  Any reverse proxy or CDN, including Cloudflare, must respect the origin cache
+  headers for this policy to work as intended.
 - Container publishing attaches a BuildKit-generated software bill of materials
   (SBOM) to each image.
 - Tags matching `vMAJOR.MINOR.PATCH` additionally publish that exact tag and

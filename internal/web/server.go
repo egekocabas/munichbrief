@@ -162,6 +162,7 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 		return nil, fmt.Errorf("initialize localization: %w", err)
 	}
 	functions := template.FuncMap{
+		"assetURL":       assetURL,
 		"excerpt":        func(value string) string { return excerpt(value, 190) },
 		"formatDateTime": func(language string, value time.Time) string { return formatDateTime(language, value.In(location)) },
 		"incidentURL":    incidentURL,
@@ -211,11 +212,7 @@ func (s *Server) Handler() http.Handler {
 	}
 	mux.HandleFunc("GET /healthz", s.health)
 	mux.HandleFunc("GET /readyz", s.ready)
-	mux.HandleFunc("GET /static/app.css", s.css)
-	mux.HandleFunc("GET /static/htmx.min.js", s.javascript)
-	mux.HandleFunc("GET /static/theme.js", s.themeJavascript)
-	mux.HandleFunc("GET /static/admin.js", s.adminJavascript)
-	mux.HandleFunc("GET /static/favicon.svg", s.favicon)
+	mux.HandleFunc("GET /static/{asset}", serveStaticAsset)
 	mux.HandleFunc("GET /social/{language}/home", s.socialHome)
 	mux.HandleFunc("GET /social/{language}/about", s.socialAbout)
 	mux.HandleFunc("GET /social/{language}/incidents/{id}", s.socialIncident)
