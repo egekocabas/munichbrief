@@ -297,40 +297,58 @@ other = "AI output requires review"
 other = "The original German report is shown."
 
 [AboutTitle]
-other = "What MunichBrief does—and what it does not"
+other = "How MunichBrief works"
 
 [Methodology]
-other = "Methodology"
+other = "About MunichBrief"
 
 [AboutIntro]
-other = "MunichBrief reorganizes official Munich Police press releases into readable incident cards. It is an independent, unofficial service."
+other = "MunichBrief turns official Munich Police releases into clear, structured incident summaries in German and English."
 
-[SourcePolicy]
-other = "Source policy"
+[FromReleaseToIncident]
+other = "From release to incident"
 
-[SourcePolicyCopy]
-other = "New documents are discovered only through the Munich Police RSS feed. Combined reports are split at their official numbers; separately published reports remain separate."
+[Discover]
+other = "Discover"
 
-[SourceAuthorityCopy]
-other = "The linked police release is authoritative, may later be amended, and does not establish guilt. The presumption of innocence applies."
+[DiscoverCopy]
+other = "New releases are discovered only through the official Munich Police RSS feed."
 
-[ProcessingRetention]
-other = "Processing and retention"
+[Organize]
+other = "Organize"
 
-[ProcessingCopy]
-other = "Extracted German text is currently stored locally without an automated deletion deadline. A later retention policy is explicitly reserved."
+[OrganizeCopy]
+other = "Releases containing multiple reports are split using their official report numbers. Separately published reports remain separate."
 
-[AICopy]
-other = "Local models first extract structured metadata, then create a data-minimised German presentation, and finally translate that accepted text into English. The application localises metadata labels."
+[Summarize]
+other = "Summarize"
 
-[VisibilityCopy]
-other = "Restricted review mode exposes originals and processing states for quality control. Public mode shows only approved AI text and never renders stored originals."
+[SummarizeCopy]
+other = "Local AI models extract details such as categories, locations, dates, and public-assistance requests, then create a data-minimized German summary."
 
-[PrivacyIndependence]
-other = "Privacy and independence"
+[TranslatePublish]
+other = "Translate and publish"
+
+[TranslatePublishCopy]
+other = "German summaries that pass the automated processing checks are translated into English. Public pages display AI-generated content only after the processing pipeline completes successfully."
+
+[AccuracyOfficialInformation]
+other = "Accuracy and official information"
+
+[AccuracyOfficialInformationCopy]
+other = "AI-generated summaries and extracted details may contain errors. Police releases may be updated after publication. The latest official information remains authoritative, and the presumption of innocence applies."
+
+[PrivacyDataHandling]
+other = "Privacy and data handling"
 
 [PrivacyCopy]
-other = "There are no accounts, analytics, or advertising. One necessary language-preference cookie stores only German or English for one year."
+other = "MunichBrief has no accounts, analytics, or advertising. A necessary cookie stores only the selected language for one year."
 
-[LegalCopy]
-other = "Engineering safeguards do not replace legal review. Lawful basis, offence-related data, journalistic exceptions, and retention must be reviewed before public launch."
+[DataHandlingCopy]
+other = "Extracted German source text is stored locally. Restricted review mode can display originals and processing states for quality control; public mode does not display stored originals."
+
+[IndependenceLegalReview]
+other = "Independence and legal review"
+
+[IndependenceLegalReviewCopy]
+other = "MunichBrief is independent from the Bavarian Police. Technical safeguards do not replace legal review. Retention, lawful basis, offence-related data, and applicable journalistic exceptions require ongoing review."

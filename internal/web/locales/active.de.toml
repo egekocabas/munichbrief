@@ -297,40 +297,58 @@ other = "KI-Ausgabe muss geprüft werden"
 other = "Deutscher Originalbericht wird angezeigt."
 
 [AboutTitle]
-other = "Was MunichBrief tut – und was nicht"
+other = "So funktioniert MunichBrief"
 
 [Methodology]
-other = "Methodik"
+other = "Über MunichBrief"
 
 [AboutIntro]
-other = "MunichBrief ordnet offizielle Pressemitteilungen der Münchner Polizei als lesbare Ereigniskarten. Der Dienst ist unabhängig und inoffiziell."
+other = "MunichBrief verwandelt offizielle Meldungen der Münchner Polizei in klare, strukturierte Vorfallszusammenfassungen auf Deutsch und Englisch."
 
-[SourcePolicy]
-other = "Quellenregeln"
+[FromReleaseToIncident]
+other = "Von der Meldung zum Vorfall"
 
-[SourcePolicyCopy]
-other = "Neue Dokumente werden ausschließlich über den RSS-Feed der Münchner Polizei gefunden. Sammelmeldungen werden an ihren offiziellen Nummern getrennt; einzeln veröffentlichte Berichte bleiben einzeln."
+[Discover]
+other = "Entdecken"
 
-[SourceAuthorityCopy]
-other = "Die verlinkte Polizeimeldung ist maßgeblich, kann später geändert werden und stellt keine Schuld fest. Die Unschuldsvermutung gilt."
+[DiscoverCopy]
+other = "Neue Meldungen werden ausschließlich über den offiziellen RSS-Feed der Münchner Polizei gefunden."
 
-[ProcessingRetention]
-other = "Verarbeitung und Aufbewahrung"
+[Organize]
+other = "Strukturieren"
 
-[ProcessingCopy]
-other = "Extrahierter deutscher Text wird derzeit ohne automatische Löschfrist lokal gespeichert. Eine spätere Aufbewahrungsregel bleibt ausdrücklich vorbehalten."
+[OrganizeCopy]
+other = "Veröffentlichungen mit mehreren Meldungen werden anhand ihrer offiziellen Meldungsnummern aufgeteilt. Einzeln veröffentlichte Meldungen bleiben eigenständig."
 
-[AICopy]
-other = "Lokale KI-Modelle extrahieren zuerst strukturierte Metadaten, erstellen danach eine datensparsame deutsche Darstellung und übersetzen diese anschließend ins Englische. Metadatenbezeichnungen werden von der Anwendung lokalisiert."
+[Summarize]
+other = "Zusammenfassen"
 
-[VisibilityCopy]
-other = "Im eingeschränkten Prüfmodus sind Originaltexte und Verarbeitungszustände zur Qualitätskontrolle sichtbar. Der öffentliche Modus zeigt ausschließlich freigegebene KI-Texte und nie gespeicherte Originaltexte."
+[SummarizeCopy]
+other = "Lokale KI-Modelle extrahieren Angaben wie Kategorien, Orte, Daten und öffentliche Mithilfeersuchen und erstellen anschließend eine datensparsame deutsche Zusammenfassung."
 
-[PrivacyIndependence]
-other = "Datenschutz und Unabhängigkeit"
+[TranslatePublish]
+other = "Übersetzen und veröffentlichen"
+
+[TranslatePublishCopy]
+other = "Deutsche Zusammenfassungen, die die automatisierten Verarbeitungskontrollen bestehen, werden ins Englische übersetzt. Öffentliche Seiten zeigen KI-generierte Inhalte erst, nachdem die Verarbeitungspipeline erfolgreich abgeschlossen wurde."
+
+[AccuracyOfficialInformation]
+other = "Genauigkeit und offizielle Informationen"
+
+[AccuracyOfficialInformationCopy]
+other = "KI-generierte Zusammenfassungen und extrahierte Angaben können Fehler enthalten. Polizeimeldungen können nach ihrer Veröffentlichung aktualisiert werden. Maßgeblich sind die jeweils aktuellen offiziellen Informationen; es gilt die Unschuldsvermutung."
+
+[PrivacyDataHandling]
+other = "Datenschutz und Datenverarbeitung"
 
 [PrivacyCopy]
-other = "Es gibt keine Konten, Analyse oder Werbung. Ein technisch notwendiges Sprachpräferenz-Cookie speichert ausschließlich Deutsch oder Englisch für ein Jahr."
+other = "MunichBrief hat keine Konten, Analysefunktionen oder Werbung. Ein technisch notwendiges Cookie speichert ausschließlich die gewählte Sprache für ein Jahr."
 
-[LegalCopy]
-other = "Technische Schutzmaßnahmen ersetzen keine rechtliche Prüfung. Vor einer öffentlichen Bereitstellung müssen Rechtsgrundlage, Daten zu Straftaten, journalistische Ausnahmen und Aufbewahrung geprüft werden."
+[DataHandlingCopy]
+other = "Extrahierte deutsche Quelltexte werden lokal gespeichert. Im eingeschränkten Prüfmodus können Originaltexte und Verarbeitungszustände zur Qualitätskontrolle angezeigt werden; der öffentliche Modus zeigt keine gespeicherten Originaltexte."
+
+[IndependenceLegalReview]
+other = "Unabhängigkeit und rechtliche Prüfung"
+
+[IndependenceLegalReviewCopy]
+other = "MunichBrief ist unabhängig von der Bayerischen Polizei. Technische Schutzmaßnahmen ersetzen keine rechtliche Prüfung. Aufbewahrung, Rechtsgrundlage, Daten zu Straftaten und anwendbare journalistische Ausnahmen erfordern eine fortlaufende Prüfung."

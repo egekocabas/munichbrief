@@ -592,7 +592,7 @@ func TestLocalizedRoutesAndLanguagePreference(t *testing.T) {
 
 	english := httptest.NewRecorder()
 	handler.ServeHTTP(english, httptest.NewRequest(http.MethodGet, "/en/about?page=2", nil))
-	if english.Code != http.StatusOK || english.Header().Get("Content-Language") != "en" || !strings.Contains(english.Body.String(), "What MunichBrief does") {
+	if english.Code != http.StatusOK || english.Header().Get("Content-Language") != "en" || !strings.Contains(english.Body.String(), "How MunichBrief works") {
 		t.Fatalf("English page = %d/%q", english.Code, english.Header().Get("Content-Language"))
 	}
 	if !strings.Contains(english.Body.String(), `href="/de/about?page=2"`) || !strings.Contains(english.Body.String(), `hreflang="de"`) {

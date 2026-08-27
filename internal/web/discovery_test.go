@@ -233,7 +233,7 @@ func TestPublicMarkdownNegotiationPreservesPrivacyBoundary(t *testing.T) {
 	aboutRequest := publicDiscoveryRequest(http.MethodGet, "/de/about")
 	aboutRequest.Header.Set("Accept", "text/markdown")
 	server.Handler().ServeHTTP(about, aboutRequest)
-	if about.Header().Get("Content-Type") != "text/markdown; charset=utf-8" || !strings.Contains(about.Body.String(), "# Was MunichBrief tut") {
+	if about.Header().Get("Content-Type") != "text/markdown; charset=utf-8" || !strings.Contains(about.Body.String(), "# So funktioniert MunichBrief") || !strings.Contains(about.Body.String(), "1. **Entdecken**") {
 		t.Errorf("about Markdown = %q/%q", about.Header().Get("Content-Type"), about.Body.String())
 	}
 }
