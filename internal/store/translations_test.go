@@ -61,7 +61,7 @@ func TestTranslationJobsAreIndependentAuditableAndManualRetriesBypassWindow(t *t
 		t.Fatalf("translation audit attempts = %d/%v", attempts, err)
 	}
 	record, err := database.GetPresentationIncident(ctx, incidentID, PresentationScope{PromptVersion: PipelineVersion, Language: "en", PublicOnly: true})
-	if err != nil || record.AITitleEN != "Safe title" || record.AITranslationModel != "translate:b" {
+	if err != nil || record.AITranslatedTitle != "Safe title" || record.AITranslationModel != "translate:b" {
 		t.Fatalf("completed translation selection = %#v/%v", record, err)
 	}
 	if queued, err := database.QueueIncidentTranslation(ctx, incidentID, TranslationPlan{Language: "en", PromptVersion: plan.PromptVersion, Model: "translate:c"}, now.Add(4*time.Minute)); err != nil || queued != 0 {
@@ -152,8 +152,16 @@ func TestEnglishSelectionUsesOlderTranslatedRunAndSameRunMetadata(t *testing.T) 
 		t.Fatalf("newest German selection = %#v/%v", german, err)
 	}
 	english, err := database.GetPresentationIncident(ctx, incidentID, PresentationScope{PromptVersion: PipelineVersion, Language: "en", PublicOnly: true})
-	if err != nil || english.AITitleEN != "Older English" || english.AICategory != "traffic" || !english.AITranslationFallback {
+	if err != nil || english.AITranslatedTitle != "Older English" || english.AICategory != "traffic" || !english.AITranslationFallback {
 		t.Fatalf("older translated fallback and metadata = %#v/%v", english, err)
+	}
+	adminTranslations, err := database.ListAdminTranslations(ctx, []int64{incidentID}, []string{"en"}, PipelineVersion)
+	if err != nil || len(adminTranslations) != 1 {
+		t.Fatalf("admin translation projection = %#v/%v", adminTranslations, err)
+	}
+	adminTranslation := adminTranslations[0]
+	if adminTranslation.Title != "Older English" || adminTranslation.Status != "pending" || !adminTranslation.Fallback {
+		t.Fatalf("admin fallback and current attempt state = %#v", adminTranslation)
 	}
 }
 

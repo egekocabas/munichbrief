@@ -633,7 +633,7 @@ func TestLocalizedProcessingStateLabels(t *testing.T) {
 }
 
 func TestTranslationCatalogsAreCompleteAndPluralized(t *testing.T) {
-	translations, err := newLocalization()
+	translations, err := newLocalization(readerLanguages)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -664,6 +664,15 @@ func TestTranslationCatalogsAreCompleteAndPluralized(t *testing.T) {
 	}
 	if err := validateCatalogParity(broken, "de.toml", "en.toml"); err == nil {
 		t.Fatal("mismatched translation catalogs were accepted")
+	}
+}
+
+func TestReaderLanguageRegistryMatchesTranslationDefinitions(t *testing.T) {
+	if err := validateReaderLanguages(); err != nil {
+		t.Fatal(err)
+	}
+	if len(translatedReaderLanguages()) != len(processing.RegisteredTranslations()) {
+		t.Fatalf("translated reader registrations = %d, translation definitions = %d", len(translatedReaderLanguages()), len(processing.RegisteredTranslations()))
 	}
 }
 

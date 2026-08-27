@@ -103,6 +103,11 @@ origin is mandatory when public hosts are configured. Public HTML also exposes
 canonical and language-alternate links, a sitemap, crawler policy, and a
 privacy-safe Markdown representation.
 
+Reader-facing language behavior is declared in one compile-time registry. The
+server derives routes, locale catalogs, date formatting, navigation, alternate
+links, and sitemap entries from it, and startup verifies that every translated
+reader registration matches a processing translation definition.
+
 German selection prefers the newest completed v2 run, then a completed v1 run,
 then an imported legacy bilingual run. A target-language page selects the
 newest canonical run with a completed translation for that language; a pending

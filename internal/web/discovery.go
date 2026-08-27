@@ -101,11 +101,8 @@ func (s *Server) setDocumentLinks(header http.Header, page basePage) {
 	links := []string{
 		fmt.Sprintf("<%s>; rel=\"canonical\"", page.CanonicalURL),
 	}
-	if page.GermanCanonicalURL != "" {
-		links = append(links, fmt.Sprintf("<%s>; rel=\"alternate\"; hreflang=\"de\"", page.GermanCanonicalURL))
-	}
-	if page.EnglishCanonicalURL != "" {
-		links = append(links, fmt.Sprintf("<%s>; rel=\"alternate\"; hreflang=\"en\"", page.EnglishCanonicalURL))
+	for _, alternate := range page.LanguageAlternates {
+		links = append(links, fmt.Sprintf("<%s>; rel=\"alternate\"; hreflang=\"%s\"", alternate.URL, alternate.Code))
 	}
 	if page.PreviousCanonicalURL != "" {
 		links = append(links, fmt.Sprintf("<%s>; rel=\"prev\"", page.PreviousCanonicalURL))
@@ -122,7 +119,7 @@ func (s *Server) prepareRedirectDiscovery(response http.ResponseWriter, request 
 		return
 	}
 	language := strings.SplitN(strings.TrimPrefix(parsed.Path, "/"), "/", 2)[0]
-	if language != "de" && language != "en" {
+	if _, registered := readerLanguageByCode(language); !registered {
 		return
 	}
 	page := s.base(request, language, parsed.RequestURI())
@@ -240,37 +237,28 @@ type sitemapURL struct {
 }
 
 func (s *Server) sitemap(response http.ResponseWriter, request *http.Request) {
-	germanLinks, err := s.store.ListPublicIncidentLinks(request.Context(), s.options.SourceMode, store.PresentationScope{
-		PromptVersion: s.options.PromptVersion,
-		Language:      "de",
-		PublicOnly:    true,
-	})
-	if err != nil {
-		s.internalError(response, request, "list sitemap incidents", err)
-		return
-	}
-	englishLinks, err := s.store.ListPublicIncidentLinks(request.Context(), s.options.SourceMode, store.PresentationScope{
-		PromptVersion: s.options.PromptVersion,
-		Language:      "en",
-		PublicOnly:    true,
-	})
-	if err != nil {
-		s.internalError(response, request, "list translated sitemap incidents", err)
-		return
-	}
 	origin := s.canonicalOrigin(request)
-	urls := []sitemapURL{
-		{Location: origin + "/de"},
-		{Location: origin + "/en"},
-		{Location: origin + "/de/about"},
-		{Location: origin + "/en/about"},
-	}
-	for _, link := range germanLinks {
-		lastModified := link.ModifiedAt.UTC().Format(time.RFC3339)
-		urls = append(urls, sitemapURL{Location: fmt.Sprintf("%s/de/incidents/%d", origin, link.ID), LastMod: lastModified})
-	}
-	for _, link := range englishLinks {
-		urls = append(urls, sitemapURL{Location: fmt.Sprintf("%s/en/incidents/%d", origin, link.ID), LastMod: link.ModifiedAt.UTC().Format(time.RFC3339)})
+	urls := make([]sitemapURL, 0)
+	for _, definition := range readerLanguages {
+		links, err := s.store.ListPublicIncidentLinks(request.Context(), s.options.SourceMode, store.PresentationScope{
+			PromptVersion: s.options.PromptVersion,
+			Language:      definition.Code,
+			PublicOnly:    true,
+		})
+		if err != nil {
+			s.internalError(response, request, "list sitemap incidents", err)
+			return
+		}
+		urls = append(urls,
+			sitemapURL{Location: origin + "/" + definition.Code},
+			sitemapURL{Location: origin + "/" + definition.Code + "/about"},
+		)
+		for _, link := range links {
+			urls = append(urls, sitemapURL{
+				Location: fmt.Sprintf("%s/%s/incidents/%d", origin, definition.Code, link.ID),
+				LastMod:  link.ModifiedAt.UTC().Format(time.RFC3339),
+			})
+		}
 	}
 	response.Header().Set("Content-Type", "application/xml; charset=utf-8")
 	response.Header().Set("Cache-Control", "public, max-age=300")
@@ -308,10 +296,7 @@ func writeMarkdownFrontMatter(builder *strings.Builder, title string, page baseP
 }
 
 func pageDescription(page basePage) string {
-	if page.Lang == "en" {
-		return "A local-first reader for Munich Police press releases."
-	}
-	return "Ein lokaler Leser für Pressemitteilungen der Münchner Polizei."
+	return page.Description
 }
 
 func (s *Server) renderTimelineMarkdown(response http.ResponseWriter, data timelinePage) {

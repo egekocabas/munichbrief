@@ -26,8 +26,8 @@ func TestPresentationSelectionPrefersCompleteV2AndRetainsV1Fallback(t *testing.T
 		"title_de": "V1 DE", "summary_de": "V1 summary.", "title_en": "V1 EN", "summary_en": "V1 English summary.",
 		"category": "other", "privacy_status": "safe", "privacy_flags": "[]",
 	})
-	record, err := database.GetPresentationIncident(ctx, incidentID, PresentationScope{PromptVersion: PipelineVersion})
-	if err != nil || record.AIPipelineVersion != PreviousPipelineVersion || record.AITitleEN != "V1 EN" {
+	record, err := database.GetPresentationIncident(ctx, incidentID, PresentationScope{PromptVersion: PipelineVersion, TranslationLanguage: "en"})
+	if err != nil || record.AIPipelineVersion != PreviousPipelineVersion || record.AITranslatedTitle != "V1 EN" {
 		t.Fatalf("v1 fallback = %#v, err=%v, run=%d", record, err, v1)
 	}
 
@@ -36,8 +36,8 @@ func TestPresentationSelectionPrefersCompleteV2AndRetainsV1Fallback(t *testing.T
 			t.Fatal(err)
 		}
 	}
-	record, err = database.GetPresentationIncident(ctx, incidentID, PresentationScope{PromptVersion: PipelineVersion})
-	if err != nil || record.AIPipelineVersion != PreviousPipelineVersion || record.AITitleEN != "V1 EN" {
+	record, err = database.GetPresentationIncident(ctx, incidentID, PresentationScope{PromptVersion: PipelineVersion, TranslationLanguage: "en"})
+	if err != nil || record.AIPipelineVersion != PreviousPipelineVersion || record.AITranslatedTitle != "V1 EN" {
 		t.Fatalf("incomplete v2 displaced v1 = %#v, err=%v", record, err)
 	}
 
@@ -46,8 +46,8 @@ func TestPresentationSelectionPrefersCompleteV2AndRetainsV1Fallback(t *testing.T
 		"category": "traffic", "event_start_date": "2026-08-26",
 		"report_kind": "incident", "public_assistance_status": "not_requested", "public_assistance_types": "[]", "privacy_status": "safe", "privacy_flags": "[]",
 	})
-	record, err = database.GetPresentationIncident(ctx, incidentID, PresentationScope{PromptVersion: PipelineVersion})
-	if err != nil || record.AIPipelineVersion != PipelineVersion || record.AITitleEN != "V2 EN" || record.AIEventStartDate != "2026-08-26" {
+	record, err = database.GetPresentationIncident(ctx, incidentID, PresentationScope{PromptVersion: PipelineVersion, TranslationLanguage: "en"})
+	if err != nil || record.AIPipelineVersion != PipelineVersion || record.AITranslatedTitle != "V2 EN" || record.AIEventStartDate != "2026-08-26" {
 		t.Fatalf("completed v2 selection = %#v, err=%v", record, err)
 	}
 }

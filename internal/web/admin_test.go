@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"time"
 
@@ -270,6 +271,13 @@ func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
 	if first.Code != http.StatusOK {
 		t.Fatalf("admin review page status = %d", first.Code)
 	}
+	seenIDs := make(map[string]struct{})
+	for _, match := range regexp.MustCompile(`\sid="([^"]+)"`).FindAllStringSubmatch(first.Body.String(), -1) {
+		if _, duplicate := seenIDs[match[1]]; duplicate {
+			t.Errorf("admin review page contains duplicate id %q", match[1])
+		}
+		seenIDs[match[1]] = struct{}{}
+	}
 	for _, expected := range []string{
 		"Unprocessed incidents", "2 shown / 28 total", "All incidents", "2 shown / 28 total",
 		presentation.TitleDE, presentation.SummaryDE, presentation.TitleEN, presentation.SummaryEN,
@@ -321,6 +329,13 @@ func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
 		if response.Code != test.status {
 			t.Errorf("GET %s status = %d, want %d", test.target, response.Code, test.status)
 		}
+	}
+}
+
+func TestAdminTranslationLabelKeepsCurrentFailureVisibleWithFallback(t *testing.T) {
+	translation := store.AdminTranslation{Model: "translate:4b", Status: "failed", FailureKind: "output", Fallback: true}
+	if label := adminTranslationLabel(translation); label != "Failed · older translated fallback" {
+		t.Fatalf("fallback translation label = %q", label)
 	}
 }
 

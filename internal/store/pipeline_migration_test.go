@@ -121,8 +121,8 @@ func TestStagedMigrationMovesPreferenceAndPreservesLegacyPresentation(t *testing
 	if err != nil || snapshot.ScheduledCandidates != 1 {
 		t.Fatalf("new incident was not v2 eligible = %#v, err=%v", snapshot, err)
 	}
-	record, err := database.GetPresentationIncident(ctx, 1, PresentationScope{PromptVersion: PipelineVersion})
-	if err != nil || record.AITitleEN != "Legacy EN" {
+	record, err := database.GetPresentationIncident(ctx, 1, PresentationScope{PromptVersion: PipelineVersion, TranslationLanguage: "en"})
+	if err != nil || record.AITranslatedTitle != "Legacy EN" {
 		t.Fatalf("legacy presentation = %#v, err=%v", record, err)
 	}
 	if !record.AILegacy || record.AIPipelineVersion != "legacy/incident-presentation-v2/qwen:4b" ||
@@ -150,8 +150,8 @@ func TestStagedMigrationMovesPreferenceAndPreservesLegacyPresentation(t *testing
 	if err := database.CompletePipelineJob(ctx, metadata, metadataValues, metadata.ModelIdentity, HashPipelineInput("metadata"), time.Date(2026, 8, 25, 11, 0, 3, 0, time.UTC)); err != nil {
 		t.Fatal(err)
 	}
-	record, err = database.GetPresentationIncident(ctx, 1, PresentationScope{PromptVersion: PipelineVersion})
-	if err != nil || record.AITitleEN != "Legacy EN" {
+	record, err = database.GetPresentationIncident(ctx, 1, PresentationScope{PromptVersion: PipelineVersion, TranslationLanguage: "en"})
+	if err != nil || record.AITranslatedTitle != "Legacy EN" {
 		t.Fatalf("partial replacement displaced legacy = %#v, err=%v", record, err)
 	}
 	advance, err := database.AdvancePipelineCycle(ctx, cycle, len(testPipelinePlans()), time.Date(2026, 8, 25, 11, 0, 4, 0, time.UTC))
@@ -171,7 +171,7 @@ func TestStagedMigrationMovesPreferenceAndPreservesLegacyPresentation(t *testing
 		t.Fatalf("German was not visible at canonical completion = %#v, err=%v", record, err)
 	}
 	englishFallback, err := database.GetPresentationIncident(ctx, 1, PresentationScope{PromptVersion: PipelineVersion, Language: "en"})
-	if err != nil || englishFallback.AITitleEN != "Legacy EN" {
+	if err != nil || englishFallback.AITranslatedTitle != "Legacy EN" {
 		t.Fatalf("English fallback while v2 translation is absent = %#v, err=%v", englishFallback, err)
 	}
 	advance, err = database.AdvancePipelineCycle(ctx, cycle, len(testPipelinePlans()), time.Date(2026, 8, 25, 11, 0, 7, 0, time.UTC))
@@ -189,7 +189,7 @@ func TestStagedMigrationMovesPreferenceAndPreservesLegacyPresentation(t *testing
 		t.Fatal(err)
 	}
 	record, err = database.GetPresentationIncident(ctx, 1, PresentationScope{PromptVersion: PipelineVersion, Language: "en"})
-	if err != nil || record.AITitleEN != "Staged EN" {
+	if err != nil || record.AITranslatedTitle != "Staged EN" {
 		t.Fatalf("complete staged replacement = %#v, err=%v", record, err)
 	}
 	if record.AILegacy || record.AIPipelineVersion != PipelineVersion ||
