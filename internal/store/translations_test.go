@@ -124,6 +124,89 @@ func TestTranslationClaimSkipsOnlyModelsWithOpenCircuits(t *testing.T) {
 	}
 }
 
+func TestNewestCanonicalRunSupersedesOlderPendingTranslation(t *testing.T) {
+	ctx := context.Background()
+	database, err := Open(ctx, filepath.Join(t.TempDir(), "translation-supersession.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 27, 10, 50, 0, 0, time.UTC)
+	insertPipelineDocuments(t, ctx, database, now, "one")
+	var incidentID int64
+	var sourceHash string
+	if err := database.db.QueryRowContext(ctx, `SELECT id,content_hash FROM incidents LIMIT 1`).Scan(&incidentID, &sourceHash); err != nil {
+		t.Fatal(err)
+	}
+	plan := TranslationPlan{Language: "en", PromptVersion: "incident-translation-en-v1", Model: "translate:4b"}
+	olderRun := insertCompletedPresentationRun(t, ctx, database, incidentID, sourceHash, PipelineVersion, now, map[string]string{
+		"title_de": "Alter Titel", "summary_de": "Alte Zusammenfassung.",
+	})
+	if queued, err := database.QueueTranslationsForRun(ctx, olderRun, []TranslationPlan{plan}, "manual", now); err != nil || queued != 1 {
+		t.Fatalf("queue older translation = %d/%v", queued, err)
+	}
+	newerRun := insertCompletedPresentationRun(t, ctx, database, incidentID, sourceHash, PipelineVersion, now.Add(time.Minute), map[string]string{
+		"title_de": "Neuer Titel", "summary_de": "Neue Zusammenfassung.",
+	})
+	if queued, err := database.QueueTranslationsForRun(ctx, newerRun, []TranslationPlan{plan}, "manual", now.Add(time.Minute)); err != nil || queued != 1 {
+		t.Fatalf("queue newer translation = %d/%v", queued, err)
+	}
+
+	var olderStatus, newerStatus string
+	if err := database.db.QueryRowContext(ctx, `SELECT status FROM presentation_translations WHERE presentation_run_id=? AND language_code='en'`, olderRun).Scan(&olderStatus); err != nil {
+		t.Fatal(err)
+	}
+	if err := database.db.QueryRowContext(ctx, `SELECT status FROM presentation_translations WHERE presentation_run_id=? AND language_code='en'`, newerRun).Scan(&newerStatus); err != nil {
+		t.Fatal(err)
+	}
+	if olderStatus != "superseded" || newerStatus != "pending" {
+		t.Fatalf("translation statuses = older:%q newer:%q", olderStatus, newerStatus)
+	}
+	job, found, err := database.ClaimTranslationJob(ctx, false, nil, now.Add(time.Minute))
+	if err != nil || !found || job.PresentationRunID != newerRun || job.TitleDE != "Neuer Titel" {
+		t.Fatalf("claim newest translation = %#v/%t/%v", job, found, err)
+	}
+}
+
+func TestNewestCanonicalRunLeavesOlderRunningTranslationUntouched(t *testing.T) {
+	ctx := context.Background()
+	database, err := Open(ctx, filepath.Join(t.TempDir(), "translation-running.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 27, 10, 55, 0, 0, time.UTC)
+	insertPipelineDocuments(t, ctx, database, now, "one")
+	var incidentID int64
+	var sourceHash string
+	if err := database.db.QueryRowContext(ctx, `SELECT id,content_hash FROM incidents LIMIT 1`).Scan(&incidentID, &sourceHash); err != nil {
+		t.Fatal(err)
+	}
+	plan := TranslationPlan{Language: "en", PromptVersion: "incident-translation-en-v1", Model: "translate:4b"}
+	olderRun := insertCompletedPresentationRun(t, ctx, database, incidentID, sourceHash, PipelineVersion, now, map[string]string{
+		"title_de": "Alter Titel", "summary_de": "Alte Zusammenfassung.",
+	})
+	if queued, err := database.QueueTranslationsForRun(ctx, olderRun, []TranslationPlan{plan}, "manual", now); err != nil || queued != 1 {
+		t.Fatalf("queue older translation = %d/%v", queued, err)
+	}
+	if job, found, err := database.ClaimTranslationJob(ctx, false, nil, now); err != nil || !found || job.PresentationRunID != olderRun {
+		t.Fatalf("claim older translation = %#v/%t/%v", job, found, err)
+	}
+	newerRun := insertCompletedPresentationRun(t, ctx, database, incidentID, sourceHash, PipelineVersion, now.Add(time.Minute), map[string]string{
+		"title_de": "Neuer Titel", "summary_de": "Neue Zusammenfassung.",
+	})
+	if queued, err := database.QueueTranslationsForRun(ctx, newerRun, []TranslationPlan{plan}, "manual", now.Add(time.Minute)); err != nil || queued != 1 {
+		t.Fatalf("queue newer translation = %d/%v", queued, err)
+	}
+	var status string
+	if err := database.db.QueryRowContext(ctx, `SELECT status FROM presentation_translations WHERE presentation_run_id=? AND language_code='en'`, olderRun).Scan(&status); err != nil {
+		t.Fatal(err)
+	}
+	if status != "running" {
+		t.Fatalf("older running translation status = %q", status)
+	}
+}
+
 func TestEnglishSelectionUsesOlderTranslatedRunAndSameRunMetadata(t *testing.T) {
 	ctx := context.Background()
 	database, err := Open(ctx, filepath.Join(t.TempDir(), "translation-fallback.db"))
