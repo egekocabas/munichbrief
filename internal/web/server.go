@@ -42,6 +42,9 @@ var htmxScript []byte
 //go:embed static/admin.js
 var adminScript []byte
 
+//go:embed static/favicon.svg
+var favicon []byte
+
 type incidentStore interface {
 	ListPresentationEntries(context.Context, int, int, string, store.PresentationScope) ([]store.IncidentRecord, int, error)
 	ListPublicIncidentLinks(context.Context, string, store.PresentationScope) ([]store.PublicIncidentLink, error)
@@ -184,6 +187,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /static/app.css", s.css)
 	mux.HandleFunc("GET /static/htmx.min.js", s.javascript)
 	mux.HandleFunc("GET /static/admin.js", s.adminJavascript)
+	mux.HandleFunc("GET /static/favicon.svg", s.favicon)
 	if s.options.AdminEnabled {
 		mux.HandleFunc("GET /admin", s.admin)
 		mux.HandleFunc("GET /admin/history", s.adminHistory)

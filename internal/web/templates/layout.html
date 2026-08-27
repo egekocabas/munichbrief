@@ -7,6 +7,7 @@
   <meta name="description" content="{{t .Lang "SiteDescription"}}">
   <meta name="htmx-config" content='{"allowEval":false,"selfRequestsOnly":true}'>
   <title>{{template "title" .}}</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   {{if .CanonicalURL}}<link rel="canonical" href="{{.CanonicalURL}}">{{end}}
   {{range .LanguageAlternates}}<link rel="alternate" hreflang="{{.Code}}" href="{{.URL}}">{{end}}
   {{if .PreviousCanonicalURL}}<link rel="prev" href="{{.PreviousCanonicalURL}}">{{end}}
