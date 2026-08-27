@@ -15,7 +15,10 @@
         <span class="grid size-10 place-items-center rounded-[0.6rem_0.6rem_0.6rem_0.18rem] bg-civic font-serif text-xl font-bold text-white" aria-hidden="true">M</span>
         <span><strong class="block font-serif text-lg tracking-tight">MunichBrief</strong><small class="block text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted">Administration</small></span>
       </a>
-      <a class="rounded-md border border-rule bg-white px-3 py-2 text-sm font-bold text-civic no-underline hover:bg-newsprint" href="/admin">Back to dashboard</a>
+      <nav class="flex flex-wrap items-center justify-end gap-2" aria-label="Administration">
+        <a class="rounded-md border border-civic bg-newsprint px-3 py-2 text-sm font-bold text-civic no-underline" href="/admin/history" aria-current="page">Pipeline history</a>
+        <a class="rounded-md border border-rule bg-white px-3 py-2 text-sm font-bold text-civic no-underline hover:bg-newsprint" href="/en">Open reader</a>
+      </nav>
     </div>
   </header>
   <main class="page-shell py-8">
@@ -23,7 +26,7 @@
       <div class="max-w-3xl">
         <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Operations</p>
         <h1 class="mt-1 font-serif text-4xl font-bold tracking-tight">Pipeline history</h1>
-        <p class="mt-3 text-muted">Persisted latest state for pipeline step jobs. Incident text, generated output, and internal error messages are excluded.</p>
+        <p class="mt-3 text-muted">Persisted latest state for canonical pipeline and independent translation jobs. Incident text, generated output, and internal error messages are excluded.</p>
       </div>
       <p class="text-sm font-semibold text-muted">{{len .Entries}} job states shown</p>
     </div>
@@ -32,13 +35,13 @@
     <div class="mt-8 overflow-x-auto rounded-lg border border-rule bg-paper">
       <table class="w-full border-collapse text-left text-sm">
         <thead class="border-b border-rule bg-newsprint/70 text-xs uppercase tracking-wider text-muted">
-          <tr><th class="px-4 py-3">Updated</th><th class="px-4 py-3">Cycle</th><th class="px-4 py-3">Incident</th><th class="px-4 py-3">Step</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Model provenance</th></tr>
+          <tr><th class="px-4 py-3">Updated</th><th class="px-4 py-3">Context</th><th class="px-4 py-3">Incident</th><th class="px-4 py-3">Step</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Model provenance</th></tr>
         </thead>
         <tbody class="divide-y divide-rule/70">
           {{range .Entries}}
           <tr class="align-top">
             <td class="whitespace-nowrap px-4 py-4"><time datetime="{{.UpdatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime "en" .UpdatedAt}}</time></td>
-            <td class="whitespace-nowrap px-4 py-4"><strong>#{{.CycleID}}</strong><span class="mt-1 block text-xs text-muted">{{.CycleKind}} · {{.CycleStatus}}</span></td>
+            <td class="whitespace-nowrap px-4 py-4"><strong>{{if .CycleID}}Cycle #{{.CycleID}}{{else}}Independent{{end}}</strong><span class="mt-1 block text-xs text-muted">{{if eq .Kind "translation"}}translation · {{.RequestKind}}{{else}}{{.CycleKind}} · {{.CycleStatus}}{{end}}</span></td>
             <td class="whitespace-nowrap px-4 py-4 font-bold">#{{.IncidentID}}</td>
             <td class="px-4 py-4 font-mono text-xs font-bold">{{.StepKey}}</td>
             <td class="whitespace-nowrap px-4 py-4"><strong>{{.Status}}</strong><span class="mt-1 block text-xs text-muted">Attempts {{.AttemptCount}}{{if .FailureKind}} · {{.FailureKind}}{{end}}</span></td>
@@ -56,7 +59,7 @@
     {{else}}
     <div class="mt-8 rounded-lg border border-dashed border-rule bg-paper px-6 py-12 text-center">
       <h2 class="font-serif text-2xl font-bold">No pipeline history yet</h2>
-      <p class="mt-2 text-sm text-muted">Job states will appear after a pipeline cycle is queued.</p>
+      <p class="mt-2 text-sm text-muted">Job states will appear after a pipeline cycle or translation is queued.</p>
     </div>
     {{end}}
   </main>

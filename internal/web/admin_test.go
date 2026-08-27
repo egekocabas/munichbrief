@@ -50,7 +50,7 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	if page.Code != http.StatusOK || page.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("admin page = %d/%q", page.Code, page.Header().Get("Cache-Control"))
 	}
-	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", "Installed and ready", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/translation-backfill", "/api/admin/ai/status", "/admin/history", "View full history", "Confirm AI request", "/static/admin.js", "Active stage", "Canonical pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover", "Independent translation queues"} {
+	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", "Installed and ready", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/translation-backfill", "/api/admin/ai/status", "/admin/history", "Pipeline history", "Open reader", "View full history", "Confirm AI request", "/static/admin.js", "Active stage", "Canonical pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover", "Independent translation queues"} {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("admin page does not contain %q", expected)
 		}
@@ -333,9 +333,13 @@ func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
 	}
 }
 
-func TestAdminPipelineHistoryPaginatesPersistedJobStates(t *testing.T) {
+func TestAdminPipelineHistoryCombinesCanonicalAndTranslationJobs(t *testing.T) {
 	ctx := context.Background()
 	database := fixtureStore(t)
+	records, _, err := database.ListIncidents(ctx, 1, 0)
+	if err != nil || len(records) != 1 {
+		t.Fatalf("history fixture incident = %d/%v", len(records), err)
+	}
 	plans, err := processing.StepPlans(map[string]string{
 		processing.IncidentMetadataStep:   "qwen3.5:4b",
 		processing.GermanPresentationStep: "granite4:3b",
@@ -344,13 +348,52 @@ func TestAdminPipelineHistoryPaginatesPersistedJobStates(t *testing.T) {
 		t.Fatal(err)
 	}
 	requestedAt := time.Date(2026, 8, 27, 14, 0, 0, 0, time.UTC)
-	result, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, "", nil, true, requestedAt)
-	if err != nil || result.Requested < 3 {
+	result, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, "translategemma:4b", &records[0].ID, false, requestedAt)
+	if err != nil || result.Requested != 1 {
 		t.Fatalf("create history fixture = %#v/%v", result, err)
+	}
+	cycle, found, err := database.ActivateNextPipelineCycle(ctx, "fixture", nil, false, requestedAt)
+	if err != nil || !found {
+		t.Fatalf("activate history cycle = %#v/%t/%v", cycle, found, err)
+	}
+	metadata, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 0, requestedAt)
+	if err != nil || !found {
+		t.Fatalf("claim history metadata = %#v/%t/%v", metadata, found, err)
+	}
+	metadataValues := []store.PipelineValue{{Kind: "category", Value: "other"}, {Kind: "report_kind", Value: "incident"}, {Kind: "public_assistance_status", Value: "not_requested"}, {Kind: "public_assistance_types", Value: "[]"}}
+	if err := database.CompletePipelineJob(ctx, metadata, metadataValues, metadata.ModelIdentity, store.HashPipelineInput(metadata.SourceHash), requestedAt); err != nil {
+		t.Fatal(err)
+	}
+	if advanced, err := database.AdvancePipelineCycle(ctx, cycle, len(plans), requestedAt); err != nil || !advanced.Advanced {
+		t.Fatalf("advance history metadata = %#v/%v", advanced, err)
+	}
+	cycle.ActiveStep = 1
+	german, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 1, requestedAt)
+	if err != nil || !found {
+		t.Fatalf("claim history German = %#v/%t/%v", german, found, err)
+	}
+	germanValues := []store.PipelineValue{{Kind: "title_de", Value: "Titel"}, {Kind: "summary_de", Value: "Zusammenfassung."}, {Kind: "privacy_status", Value: "safe"}, {Kind: "privacy_flags", Value: "[]"}}
+	if err := database.CompletePipelineJob(ctx, german, germanValues, german.ModelIdentity, store.HashPipelineInput(german.SourceHash), requestedAt); err != nil {
+		t.Fatal(err)
+	}
+	if completed, err := database.AdvancePipelineCycle(ctx, cycle, len(plans), requestedAt); err != nil || !completed.Completed {
+		t.Fatalf("complete history cycle = %#v/%v", completed, err)
+	}
+	translationPlan := store.TranslationPlan{Language: "en", PromptVersion: "incident-translation-en-v1", Model: "translategemma:4b"}
+	if queued, err := database.QueueTranslationsForRun(ctx, german.PresentationRunID, []store.TranslationPlan{translationPlan}, "manual", requestedAt); err != nil || queued != 1 {
+		t.Fatalf("queue history translation = %d/%v", queued, err)
+	}
+	translation, found, err := database.ClaimTranslationJob(ctx, false, nil, requestedAt)
+	if err != nil || !found {
+		t.Fatalf("claim history translation = %#v/%t/%v", translation, found, err)
+	}
+	if err := database.CompleteTranslationJob(ctx, translation, "Title", "Summary.", translation.ModelIdentity, translation.InputHash, requestedAt); err != nil {
+		t.Fatal(err)
 	}
 	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
 		PageSize: 2, SourceMode: "fixture", PresentationMode: "review",
 		PromptVersion: processing.PipelineVersion, AdminEnabled: true,
+		Processor: fakeProcessingRequester{database: database},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -362,10 +405,23 @@ func TestAdminPipelineHistoryPaginatesPersistedJobStates(t *testing.T) {
 	if first.Code != http.StatusOK || first.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("pipeline history = %d/%q", first.Code, first.Header().Get("Cache-Control"))
 	}
-	for _, expected := range []string{"Pipeline history", "2 job states shown", "incident_metadata", "qwen3.5:4b", "manual · queued", "Older →"} {
+	for _, expected := range []string{"Pipeline history", "Open reader", `aria-current="page"`, "2 job states shown", "translation:en", "translategemma:4b", "translation · manual", "german_presentation", "Older →"} {
 		if !strings.Contains(first.Body.String(), expected) {
 			t.Errorf("pipeline history does not contain %q", expected)
 		}
+	}
+	if strings.Contains(first.Body.String(), "Back to dashboard") {
+		t.Error("pipeline history retained redundant dashboard button")
+	}
+	dashboard := httptest.NewRecorder()
+	handler.ServeHTTP(dashboard, httptest.NewRequest(http.MethodGet, "/admin", nil))
+	if dashboard.Code != http.StatusOK || !strings.Contains(dashboard.Body.String(), "translation:en") || !strings.Contains(dashboard.Body.String(), "Cycle #"+formatID(result.CycleID)) {
+		t.Fatalf("admin dashboard translation history = %d/%q", dashboard.Code, dashboard.Body.String())
+	}
+	status := httptest.NewRecorder()
+	handler.ServeHTTP(status, httptest.NewRequest(http.MethodGet, "/api/admin/ai/status", nil))
+	if status.Code != http.StatusOK || !strings.Contains(status.Body.String(), `"kind":"translation"`) || !strings.Contains(status.Body.String(), `"step_key":"translation:en"`) {
+		t.Fatalf("live admin translation history = %d/%q", status.Code, status.Body.String())
 	}
 	match := regexp.MustCompile(`href="(/admin/history\?before=[^"]+)"`).FindStringSubmatch(first.Body.String())
 	if len(match) != 2 {

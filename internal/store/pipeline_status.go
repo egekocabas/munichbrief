@@ -152,28 +152,16 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 	if err := translationRows.Close(); err != nil {
 		return snapshot, err
 	}
-	eventRows, err := s.db.QueryContext(ctx, `SELECT j.updated_at, c.id, ci.incident_id, j.step_key, j.status, COALESCE(j.failure_kind,'')
-		FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id=j.cycle_item_id
-		JOIN processing_cycles c ON c.id=ci.cycle_id WHERE j.status <> 'waiting'
-		ORDER BY j.updated_at DESC, j.id DESC LIMIT 12`)
+	history, err := s.listPipelineHistoryEntries(ctx, sourceMode, 12, nil, nil)
 	if err != nil {
-		return snapshot, err
+		return snapshot, fmt.Errorf("read recent pipeline history: %w", err)
 	}
-	defer eventRows.Close()
-	for eventRows.Next() {
-		var event PipelineEvent
-		var at string
-		if err := eventRows.Scan(&at, &event.CycleID, &event.IncidentID, &event.StepKey, &event.Status, &event.FailureKind); err != nil {
-			return snapshot, err
-		}
-		event.At, err = time.Parse(time.RFC3339Nano, at)
-		if err != nil {
-			return snapshot, fmt.Errorf("parse pipeline event time: %w", err)
-		}
-		snapshot.RecentEvents = append(snapshot.RecentEvents, event)
-	}
-	if err := eventRows.Err(); err != nil {
-		return snapshot, err
+	for _, entry := range history {
+		snapshot.RecentEvents = append(snapshot.RecentEvents, PipelineEvent{
+			At: entry.UpdatedAt, Kind: entry.Kind, CycleID: entry.CycleID,
+			IncidentID: entry.IncidentID, StepKey: entry.StepKey, Language: entry.Language,
+			Status: entry.Status, FailureKind: entry.FailureKind,
+		})
 	}
 	return snapshot, nil
 }
