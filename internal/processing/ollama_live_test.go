@@ -13,6 +13,8 @@ import (
 	"github.com/egekocabas/munichbrief/internal/source"
 )
 
+const liveOllamaJobTimeout = 10 * time.Minute
+
 func TestLiveOllamaPrivacySafeMetadataFirstPresentation(t *testing.T) {
 	if os.Getenv("MUNICHBRIEF_OLLAMA_LIVE_TEST") != "1" {
 		t.Skip("set MUNICHBRIEF_OLLAMA_LIVE_TEST=1 for the explicit Ollama smoke test")
@@ -29,11 +31,11 @@ func TestLiveOllamaPrivacySafeMetadataFirstPresentation(t *testing.T) {
 	if translationModel == "" {
 		translationModel = "translategemma:4b"
 	}
-	germanClient, err := NewOllamaClient(baseURL, germanModel, 5*time.Minute, 8192, nil)
+	germanClient, err := NewOllamaClient(baseURL, germanModel, liveOllamaJobTimeout, 8192, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	translationClient, err := NewOllamaClient(baseURL, translationModel, 5*time.Minute, 8192, nil)
+	translationClient, err := NewOllamaClient(baseURL, translationModel, liveOllamaJobTimeout, 8192, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,10 +75,10 @@ func TestLiveOllamaPrivacySafeMetadataFirstPresentation(t *testing.T) {
 
 	for _, fixture := range fixtures {
 		t.Run(fixture.name, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-			defer cancel()
 			metadataInput := StepInput{Values: map[string]string{"original_title": fixture.title, "incident_body": fixture.body, "published_at": publishedAt}}
-			metadata, returnedMetadataModel, err := germanClient.GenerateStep(ctx, metadataStep, metadataInput)
+			metadataContext, cancelMetadata := context.WithTimeout(context.Background(), liveOllamaJobTimeout)
+			metadata, returnedMetadataModel, err := germanClient.GenerateStep(metadataContext, metadataStep, metadataInput)
+			cancelMetadata()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -98,14 +100,18 @@ func TestLiveOllamaPrivacySafeMetadataFirstPresentation(t *testing.T) {
 			for _, value := range values {
 				germanValues[value.Kind] = value.Value
 			}
-			analysis, returnedGermanModel, err := germanClient.GenerateStep(ctx, germanStep, StepInput{Values: germanValues})
+			germanContext, cancelGerman := context.WithTimeout(context.Background(), liveOllamaJobTimeout)
+			analysis, returnedGermanModel, err := germanClient.GenerateStep(germanContext, germanStep, StepInput{Values: germanValues})
+			cancelGerman()
 			if err != nil {
 				t.Fatal(err)
 			}
 			if returnedGermanModel == "" || analysis.PrivacyStatus != "safe" {
 				t.Fatalf("German model/privacy = %q/%q", returnedGermanModel, analysis.PrivacyStatus)
 			}
-			translation, returnedTranslationModel, err := translationClient.GenerateStep(ctx, translationStep, StepInput{Values: map[string]string{"title_de": analysis.TitleDE, "summary_de": analysis.SummaryDE}})
+			translationContext, cancelTranslation := context.WithTimeout(context.Background(), liveOllamaJobTimeout)
+			translation, returnedTranslationModel, err := translationClient.GenerateStep(translationContext, translationStep, StepInput{Values: map[string]string{"title_de": analysis.TitleDE, "summary_de": analysis.SummaryDE}})
+			cancelTranslation()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -132,7 +138,7 @@ func TestLiveOllamaOfficialRSSMetadataAndGermanPresentation(t *testing.T) {
 	if model == "" {
 		model = "qwen3.5:4b"
 	}
-	qwen, err := NewOllamaClient(baseURL, model, 5*time.Minute, 8192, nil)
+	qwen, err := NewOllamaClient(baseURL, model, liveOllamaJobTimeout, 8192, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,16 +153,17 @@ func TestLiveOllamaOfficialRSSMetadataAndGermanPresentation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 12*time.Minute)
-	defer cancel()
-	feed, err := police.FetchFeed(ctx, "", "")
+	sourceContext, cancelSource := context.WithTimeout(context.Background(), time.Minute)
+	defer cancelSource()
+	feed, err := police.FetchFeed(sourceContext, "", "")
 	if err != nil {
 		t.Fatalf("fetch official RSS: %v", err)
 	}
 	if len(feed.Documents) == 0 {
 		t.Fatal("official RSS returned no documents")
 	}
-	article, err := police.FetchArticle(ctx, feed.Documents[0].SourceURL)
+	article, err := police.FetchArticle(sourceContext, feed.Documents[0].SourceURL)
+	cancelSource()
 	if err != nil {
 		t.Fatalf("fetch latest official release: %v", err)
 	}
@@ -173,11 +180,13 @@ func TestLiveOllamaOfficialRSSMetadataAndGermanPresentation(t *testing.T) {
 	acceptedSummaries := 0
 	for index := range limit {
 		incident := release.Incidents[index]
-		output, returnedModel, err := qwen.GenerateStep(ctx, step, StepInput{Values: map[string]string{
+		metadataContext, cancelMetadata := context.WithTimeout(context.Background(), liveOllamaJobTimeout)
+		output, returnedModel, err := qwen.GenerateStep(metadataContext, step, StepInput{Values: map[string]string{
 			"original_title": incident.TitleDE,
 			"incident_body":  incident.BodyDE,
 			"published_at":   feed.Documents[0].PublishedAt.Format(time.RFC3339),
 		}})
+		cancelMetadata()
 		if err != nil {
 			t.Fatalf("metadata extraction for sanitized incident %d: %v", index+1, err)
 		}
@@ -192,7 +201,9 @@ func TestLiveOllamaOfficialRSSMetadataAndGermanPresentation(t *testing.T) {
 		for _, value := range values {
 			germanValues[value.Kind] = value.Value
 		}
-		presentation, summaryModel, err := qwen.GenerateStep(ctx, germanStep, StepInput{Values: germanValues})
+		germanContext, cancelGerman := context.WithTimeout(context.Background(), liveOllamaJobTimeout)
+		presentation, summaryModel, err := qwen.GenerateStep(germanContext, germanStep, StepInput{Values: germanValues})
+		cancelGerman()
 		if err != nil {
 			if KindOf(err) == ErrorPrivacy {
 				t.Logf("incident=%d metadata_model=%s German summary safely routed to privacy review", index+1, returnedModel)
@@ -223,7 +234,7 @@ func TestLiveOllamaTemporalMetadataMatrix(t *testing.T) {
 	if model == "" {
 		model = "qwen3.5:4b"
 	}
-	qwen, err := NewOllamaClient(baseURL, model, 5*time.Minute, 8192, nil)
+	qwen, err := NewOllamaClient(baseURL, model, liveOllamaJobTimeout, 8192, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -245,7 +256,7 @@ func TestLiveOllamaTemporalMetadataMatrix(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+			ctx, cancel := context.WithTimeout(context.Background(), liveOllamaJobTimeout)
 			defer cancel()
 			output, _, err := qwen.GenerateStep(ctx, step, StepInput{Values: map[string]string{"original_title": "Fiktive Mitteilung", "incident_body": test.body, "published_at": publishedAt}})
 			if err != nil {
