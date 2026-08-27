@@ -48,9 +48,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Capture build time
+        id: build-time
+        run: echo "value=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
+
       - name: Generate image metadata
         id: metadata
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        env:
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
@@ -59,6 +65,20 @@ jobs:
             type=raw,value=${{ github.ref_name }},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
             type=semver,pattern={{version}},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
             type=semver,pattern={{major}}.{{minor}},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+          labels: |
+            org.opencontainers.image.url=https://github.com/egekocabas/munichbrief
+            org.opencontainers.image.documentation=https://github.com/egekocabas/munichbrief#readme
+            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.vendor=MunichBrief
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ steps.build-time.outputs.value }}
+          annotations: |
+            org.opencontainers.image.url=https://github.com/egekocabas/munichbrief
+            org.opencontainers.image.documentation=https://github.com/egekocabas/munichbrief#readme
+            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.vendor=MunichBrief
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ steps.build-time.outputs.value }}
 
       - name: Build and publish image
         id: build
@@ -69,7 +89,12 @@ jobs:
           push: true
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
-          build-args: VERSION=${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || github.sha }}
+          annotations: ${{ steps.metadata.outputs.annotations }}
+          sbom: true
+          build-args: |
+            VERSION=${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || github.sha }}
+            COMMIT_SHA=${{ github.sha }}
+            BUILD_TIME=${{ steps.build-time.outputs.value }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
