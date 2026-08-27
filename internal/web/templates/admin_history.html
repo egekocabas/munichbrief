@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow,noarchive">
   <title>Pipeline history · MunichBrief Admin</title>
+  <script src="/static/theme.js"></script>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/app.css">
 </head>
@@ -13,12 +14,16 @@
   <header class="border-b border-rule/90 bg-paper/95">
     <div class="page-shell flex min-h-16 items-center justify-between gap-4 py-3">
       <a class="inline-flex items-center gap-3 text-ink no-underline" href="/admin" aria-label="MunichBrief administration">
-        <span class="grid size-10 place-items-center rounded-[0.6rem_0.6rem_0.6rem_0.18rem] bg-civic font-serif text-xl font-bold text-white" aria-hidden="true">M</span>
+        <span class="grid size-10 place-items-center rounded-[0.6rem_0.6rem_0.6rem_0.18rem] bg-civic font-serif text-xl font-bold text-on-accent" aria-hidden="true">M</span>
         <span><strong class="block font-serif text-lg tracking-tight">MunichBrief</strong><small class="block text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted">Administration</small></span>
       </a>
       <nav class="flex flex-wrap items-center justify-end gap-2" aria-label="Administration">
         <a class="rounded-md border border-civic bg-newsprint px-3 py-2 text-sm font-bold text-civic no-underline" href="/admin/history" aria-current="page">Pipeline history</a>
         <a class="rounded-md border border-rule bg-white px-3 py-2 text-sm font-bold text-civic no-underline hover:bg-newsprint" href="/en">Open reader</a>
+        <button class="inline-flex size-9 items-center justify-center rounded-md border border-rule bg-white text-civic hover:border-civic/40 hover:bg-newsprint" type="button" data-theme-toggle aria-label="Dark mode" aria-pressed="false" title="Dark mode">
+          <svg class="theme-icon-moon size-5" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.4 15.5A8.8 8.8 0 0 1 8.5 3.6 9 9 0 1 0 20.4 15.5Z"/></svg>
+          <svg class="theme-icon-sun size-5" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0-5a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1Zm0 17a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1ZM3 11h1a1 1 0 1 1 0 2H3a1 1 0 1 1 0-2Zm17 0h1a1 1 0 1 1 0 2h-1a1 1 0 1 1 0-2ZM5.6 4.2l.7.7a1 1 0 0 1-1.4 1.4l-.7-.7a1 1 0 0 1 1.4-1.4Zm13.5 13.5.7.7a1 1 0 0 1-1.4 1.4l-.7-.7a1 1 0 0 1 1.4-1.4ZM18.4 4.2a1 1 0 0 1 1.4 1.4l-.7.7a1 1 0 0 1-1.4-1.4l.7-.7ZM6.3 17.7a1 1 0 0 1 0 1.4l-.7.7a1 1 0 0 1-1.4-1.4l.7-.7a1 1 0 0 1 1.4 0Z"/></svg>
+        </button>
       </nav>
     </div>
   </header>

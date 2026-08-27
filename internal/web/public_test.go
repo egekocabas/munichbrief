@@ -37,6 +37,8 @@ func TestTimelineAndDetailRenderFixtureData(t *testing.T) {
 		"20 shown / 28 total",
 		"Page 1 of 2",
 		"/en?page=2",
+		`src="/static/theme.js"`,
+		"data-theme-toggle",
 	} {
 		if !strings.Contains(timeline.Body.String(), expected) {
 			t.Errorf("timeline body does not contain %q", expected)

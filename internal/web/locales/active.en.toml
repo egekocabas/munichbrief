@@ -22,6 +22,9 @@ other = "Primary navigation"
 [SkipToContent]
 other = "Skip to content"
 
+[DarkMode]
+other = "Dark mode"
+
 [NoticeLabel]
 other = "Important notice"
 

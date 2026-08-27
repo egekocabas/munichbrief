@@ -39,6 +39,9 @@ var stylesheet []byte
 //go:embed static/htmx.min.js
 var htmxScript []byte
 
+//go:embed static/theme.js
+var themeScript []byte
+
 //go:embed static/admin.js
 var adminScript []byte
 
@@ -194,6 +197,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /readyz", s.ready)
 	mux.HandleFunc("GET /static/app.css", s.css)
 	mux.HandleFunc("GET /static/htmx.min.js", s.javascript)
+	mux.HandleFunc("GET /static/theme.js", s.themeJavascript)
 	mux.HandleFunc("GET /static/admin.js", s.adminJavascript)
 	mux.HandleFunc("GET /static/favicon.svg", s.favicon)
 	mux.HandleFunc("GET /social/{language}/home", s.socialHome)

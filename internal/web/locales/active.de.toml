@@ -22,6 +22,9 @@ other = "Hauptnavigation"
 [SkipToContent]
 other = "Zum Inhalt springen"
 
+[DarkMode]
+other = "Dunkelmodus"
+
 [NoticeLabel]
 other = "Wichtiger Hinweis"
 

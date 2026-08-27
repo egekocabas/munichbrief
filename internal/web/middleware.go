@@ -72,6 +72,13 @@ func (s *Server) javascript(response http.ResponseWriter, _ *http.Request) {
 	_, _ = response.Write(htmxScript)
 }
 
+func (s *Server) themeJavascript(response http.ResponseWriter, _ *http.Request) {
+	response.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+	response.Header().Set("Cache-Control", "public, max-age=3600")
+	response.Header().Set("X-Content-Type-Options", "nosniff")
+	_, _ = response.Write(themeScript)
+}
+
 func (s *Server) adminJavascript(response http.ResponseWriter, _ *http.Request) {
 	response.Header().Set("Content-Type", "text/javascript; charset=utf-8")
 	response.Header().Set("Cache-Control", "public, max-age=3600")
