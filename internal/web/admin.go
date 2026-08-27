@@ -87,6 +87,10 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 	if updated := request.URL.Query().Get("step_model"); updated != "" {
 		data.Notice = fmt.Sprintf("Preferred model for %s updated. Future scheduled cycles will use it.", updated)
 	}
+	if queued, ok := nonNegativeQueryInt(request, "translations_queued"); ok {
+		data.Notice = fmt.Sprintf("Queued %d English translation job(s). Canonical German presentations remain available independently.", queued)
+		data.NoticeIsWarning = queued == 0
+	}
 	response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	response.Header().Set("Cache-Control", "private, no-store")
 	response.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive")
@@ -113,12 +117,14 @@ func (s *Server) adminList(records []store.IncidentRecord, total, page, totalPag
 			primaryProvenanceLabel = "German provenance"
 		}
 		publicView := s.incidentForLanguage(record, "en")
+		translationLabel := adminTranslationLabel(record)
 		incidents = append(incidents, adminIncidentView{
 			Record: record, ProcessingState: strings.ReplaceAll(state, "_", "-"),
 			ProcessingLabel: adminProcessingLabel(state), PresentationLabel: presentationLabel,
 			CategoryLabel: processing.CategoryLabel(record.AICategory, "en"), CanProcess: state != "running",
 			EventText: publicView.EventText, EventLabel: publicView.EventLabel, ReportKindLabel: publicView.ReportKindLabel,
 			PublicAssistanceTypes: publicView.PublicAssistanceTypes, PrimaryProvenanceLabel: primaryProvenanceLabel,
+			TranslationLabel: translationLabel, CanRetryTranslation: record.HasAI && record.AITranslationModel == "" && record.AITranslationStatus != "pending" && record.AITranslationStatus != "running",
 		})
 	}
 	return adminIncidentList{
@@ -181,6 +187,8 @@ func (s *Server) processNow(response http.ResponseWriter, request *http.Request,
 		}
 		models[step.Key] = model
 	}
+	translationModel := strings.TrimSpace(request.PostForm.Get("model_" + processing.TranslationModelStep))
+	models[processing.TranslationModelStep] = translationModel
 	result, err := s.options.Processor.RequestNow(request.Context(), s.options.SourceMode, models, incidentID, reprocessAll)
 	if errors.Is(err, store.ErrNotFound) {
 		http.NotFound(response, request)
@@ -201,6 +209,73 @@ func (s *Server) processNow(response http.ResponseWriter, request *http.Request,
 	query.Set("requested", strconv.Itoa(result.Requested))
 	query.Set("current", strconv.Itoa(result.Current))
 	query.Set("cycle", strconv.FormatInt(result.CycleID, 10))
+	target.RawQuery = query.Encode()
+	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
+}
+
+func (s *Server) retryTranslation(response http.ResponseWriter, request *http.Request) {
+	s.translationMutation(response, request, false)
+}
+
+func (s *Server) backfillTranslations(response http.ResponseWriter, request *http.Request) {
+	s.translationMutation(response, request, true)
+}
+
+func (s *Server) translationMutation(response http.ResponseWriter, request *http.Request, backfill bool) {
+	if !validAdminMutation(request) {
+		http.Error(response, "cross-site request blocked", http.StatusForbidden)
+		return
+	}
+	if !isFormPost(request) {
+		http.Error(response, "form content type required", http.StatusUnsupportedMediaType)
+		return
+	}
+	request.Body = http.MaxBytesReader(response, request.Body, 4096)
+	if err := request.ParseForm(); err != nil {
+		http.Error(response, "invalid form", http.StatusBadRequest)
+		return
+	}
+	if request.PostForm.Get("confirmed") != "true" {
+		http.Error(response, "translation confirmation is required", http.StatusBadRequest)
+		return
+	}
+	if s.options.Processor == nil {
+		http.Error(response, "AI processing is disabled", http.StatusServiceUnavailable)
+		return
+	}
+	language := strings.TrimSpace(request.PostForm.Get("language"))
+	model := strings.TrimSpace(request.PostForm.Get("model"))
+	if language == "" || model == "" {
+		http.Error(response, "language and model are required", http.StatusBadRequest)
+		return
+	}
+	var queued int
+	var err error
+	if backfill {
+		queued, err = s.options.Processor.BackfillTranslations(request.Context(), language, model)
+	} else {
+		incidentID, parseErr := strconv.ParseInt(request.PostForm.Get("incident_id"), 10, 64)
+		if parseErr != nil || incidentID < 1 {
+			http.Error(response, "incident_id must be a positive integer", http.StatusBadRequest)
+			return
+		}
+		queued, err = s.options.Processor.RetryTranslation(request.Context(), incidentID, language, model)
+	}
+	if errors.Is(err, store.ErrNotFound) {
+		http.NotFound(response, request)
+		return
+	}
+	if errors.Is(err, processing.ErrModelUnavailable) {
+		http.Error(response, "selected Ollama model is unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	if err != nil {
+		s.internalError(response, request, "queue translation work", err)
+		return
+	}
+	target, _ := url.Parse(adminPaginationURL(positiveFormInt(request.PostForm.Get("unprocessed_page")), positiveFormInt(request.PostForm.Get("all_page"))))
+	query := target.Query()
+	query.Set("translations_queued", strconv.Itoa(queued))
 	target.RawQuery = query.Encode()
 	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
 }
@@ -301,12 +376,14 @@ type adminIncidentView struct {
 	PublicAssistanceTypes  []string
 	PrimaryProvenanceLabel string
 	CanProcess             bool
+	TranslationLabel       string
+	CanRetryTranslation    bool
 }
 
 func adminProcessingLabel(state string) string {
 	switch state {
 	case "ready":
-		return "Summarized and translated"
+		return "German presentation ready"
 	case "queued":
 		return "Queued"
 	case "running":
@@ -324,6 +401,34 @@ func adminProcessingLabel(state string) string {
 	default:
 		return "Not processed"
 	}
+}
+
+func adminTranslationLabel(record store.IncidentRecord) string {
+	label := ""
+	if record.AITranslationModel != "" {
+		label = "Completed"
+	} else {
+		switch record.AITranslationStatus {
+		case "pending":
+			if record.AITranslationAttempts > 0 {
+				label = "Retrying"
+			} else {
+				label = "Pending"
+			}
+		case "running":
+			label = "Running"
+		case "needs_review":
+			label = "Needs review"
+		case "failed":
+			label = "Failed"
+		default:
+			label = "Missing"
+		}
+	}
+	if record.AITranslationFallback {
+		label += " · older translated fallback"
+	}
+	return label
 }
 
 func adminPaginationURL(unprocessedPage, allPage int) string {

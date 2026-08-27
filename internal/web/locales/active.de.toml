@@ -218,6 +218,9 @@ other = "KI-Verarbeitung"
 [Step]
 other = "Schritt"
 
+[Translation]
+other = "Übersetzung"
+
 [GermanAnalysisStep]
 other = "Deutsche Analyse"
 

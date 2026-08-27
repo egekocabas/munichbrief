@@ -48,7 +48,7 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	if page.Code != http.StatusOK || page.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("admin page = %d/%q", page.Code, page.Header().Get("Cache-Control"))
 	}
-	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", "Installed and ready", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_english_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/status", "Confirm AI request", "/static/admin.js", "Active stage", "Full pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover"} {
+	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", "Installed and ready", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/translation-backfill", "/api/admin/ai/status", "Confirm AI request", "/static/admin.js", "Active stage", "Canonical pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover", "Independent translation queues"} {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("admin page does not contain %q", expected)
 		}
@@ -144,6 +144,77 @@ func TestAdminProcessingReturnsUnavailableWhenAIIsDisabled(t *testing.T) {
 	}
 }
 
+func TestAdminRetriesMissingTranslationAndConfirmsHistoricalBackfill(t *testing.T) {
+	ctx := context.Background()
+	database := fixtureStore(t)
+	records, _, err := database.ListIncidents(ctx, 1, 0)
+	if err != nil || len(records) != 1 {
+		t.Fatalf("fixture incident = %d/%v", len(records), err)
+	}
+	plans, err := processing.StepPlans(map[string]string{
+		processing.IncidentMetadataStep:   "qwen3.5:4b",
+		processing.GermanPresentationStep: "qwen3.5:4b",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 8, 27, 13, 0, 0, 0, time.UTC)
+	request, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, "", &records[0].ID, false, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cycle, found, err := database.ActivateNextPipelineCycle(ctx, "fixture", nil, false, now)
+	if err != nil || !found || cycle.ID != request.CycleID {
+		t.Fatalf("activate canonical cycle = %#v/%t/%v", cycle, found, err)
+	}
+	metadata, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 0, now)
+	if err != nil || !found {
+		t.Fatalf("claim metadata = %#v/%t/%v", metadata, found, err)
+	}
+	if err := database.CompletePipelineJob(ctx, metadata, []store.PipelineValue{{Kind: "category", Value: "other"}, {Kind: "report_kind", Value: "incident"}, {Kind: "public_assistance_status", Value: "not_requested"}, {Kind: "public_assistance_types", Value: "[]"}}, metadata.ModelIdentity, store.HashPipelineInput("metadata"), now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	advance, err := database.AdvancePipelineCycle(ctx, cycle, len(plans), now.Add(2*time.Minute))
+	if err != nil || !advance.Advanced {
+		t.Fatalf("advance metadata = %#v/%v", advance, err)
+	}
+	cycle.ActiveStep = 1
+	german, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 1, now.Add(3*time.Minute))
+	if err != nil || !found {
+		t.Fatalf("claim German = %#v/%t/%v", german, found, err)
+	}
+	if err := database.CompletePipelineJob(ctx, german, []store.PipelineValue{{Kind: "title_de", Value: "Kanonischer Titel"}, {Kind: "summary_de", Value: "Kanonische Zusammenfassung."}, {Kind: "privacy_status", Value: "safe"}, {Kind: "privacy_flags", Value: "[]"}}, german.ModelIdentity, store.HashPipelineInput("german"), now.Add(4*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.AdvancePipelineCycle(ctx, cycle, len(plans), now.Add(5*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+
+	handler := adminTestServer(t, database, nil).Handler()
+	page := httptest.NewRecorder()
+	handler.ServeHTTP(page, httptest.NewRequest(http.MethodGet, "/admin", nil))
+	for _, expected := range []string{"Kanonischer Titel", "English state", "Missing", "/api/admin/ai/translation-retry"} {
+		if !strings.Contains(page.Body.String(), expected) {
+			t.Errorf("admin missing-translation page does not contain %q", expected)
+		}
+	}
+	unconfirmed := httptest.NewRecorder()
+	handler.ServeHTTP(unconfirmed, formRequest(http.MethodPost, "/api/admin/ai/translation-retry", "incident_id="+formatID(records[0].ID)+"&language=en&model=qwen3.5%3A4b"))
+	if unconfirmed.Code != http.StatusBadRequest {
+		t.Fatalf("unconfirmed translation retry = %d", unconfirmed.Code)
+	}
+	retry := httptest.NewRecorder()
+	handler.ServeHTTP(retry, formRequest(http.MethodPost, "/api/admin/ai/translation-retry", "confirmed=true&incident_id="+formatID(records[0].ID)+"&language=en&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
+	if retry.Code != http.StatusSeeOther || !strings.Contains(retry.Header().Get("Location"), "translations_queued=1") {
+		t.Fatalf("translation retry = %d/%q", retry.Code, retry.Header().Get("Location"))
+	}
+	backfill := httptest.NewRecorder()
+	handler.ServeHTTP(backfill, formRequest(http.MethodPost, "/api/admin/ai/translation-backfill", "confirmed=true&language=en&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
+	if backfill.Code != http.StatusSeeOther || !strings.Contains(backfill.Header().Get("Location"), "translations_queued=0") {
+		t.Fatalf("translation backfill = %d/%q", backfill.Code, backfill.Header().Get("Location"))
+	}
+}
+
 func TestAdminDistinguishesUnavailableAndMissingPreferredModels(t *testing.T) {
 	for _, test := range []struct {
 		name, expected string
@@ -202,7 +273,7 @@ func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
 	for _, expected := range []string{
 		"Unprocessed incidents", "2 shown / 28 total", "All incidents", "2 shown / 28 total",
 		presentation.TitleDE, presentation.SummaryDE, presentation.TitleEN, presentation.SummaryEN,
-		job.TitleDE, job.BodyDE, "Original German text", "Summarized and translated",
+		job.TitleDE, job.BodyDE, "Original German text", "German presentation ready",
 		"all_page=1&amp;unprocessed_page=2", "all_page=2&amp;unprocessed_page=1",
 	} {
 		if !strings.Contains(first.Body.String(), expected) {

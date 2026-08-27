@@ -55,24 +55,40 @@ func (p fakeProcessingRequester) RequestNow(ctx context.Context, sourceMode stri
 	if err != nil {
 		return store.PipelineRequestResult{}, err
 	}
-	return p.database.CreateManualPipelineCycle(ctx, sourceMode, plans, incidentID, reprocessAll, time.Now())
+	return p.database.CreateManualPipelineCycle(ctx, sourceMode, plans, models[processing.TranslationModelStep], incidentID, reprocessAll, time.Now())
 }
 
 func (p fakeProcessingRequester) ModelStatus(ctx context.Context) (processing.PipelineModelStatus, error) {
 	if p.status != nil {
 		return *p.status, nil
 	}
-	return processing.PipelineModelStatus{Steps: defaultTestStepStatus("qwen3.5:4b"), Models: []string{"granite4:3b", "qwen3.5:4b"}, CatalogAvailable: true, Ready: true}, nil
+	return processing.PipelineModelStatus{Steps: defaultTestStepStatus("qwen3.5:4b"), Translation: processing.StepModelStatus{Key: processing.TranslationModelStep, DisplayName: "Translations", Preferred: "qwen3.5:4b", PreferredAvailable: true}, Models: []string{"granite4:3b", "qwen3.5:4b"}, CatalogAvailable: true, Ready: true, TranslationReady: true}, nil
 }
 
 func (p fakeProcessingRequester) SetPreferredStepModel(ctx context.Context, step, model string) error {
 	if model != "qwen3.5:4b" && model != "granite4:3b" {
 		return processing.ErrModelUnavailable
 	}
-	if err := p.database.EnsurePipelineSteps(ctx, processing.StepKeys(), time.Now()); err != nil {
+	if err := p.database.EnsurePipelineSteps(ctx, processing.ModelSettingKeys(), time.Now()); err != nil {
 		return err
 	}
 	return p.database.SetPipelineStepModel(ctx, step, model, time.Now())
+}
+
+func (p fakeProcessingRequester) RetryTranslation(ctx context.Context, incidentID int64, language, model string) (int, error) {
+	definition, found := processing.TranslationByLanguage(language)
+	if !found {
+		return 0, store.ErrNotFound
+	}
+	return p.database.QueueIncidentTranslation(ctx, incidentID, store.TranslationPlan{Language: language, PromptVersion: definition.PromptVersion, Model: model}, time.Now())
+}
+
+func (p fakeProcessingRequester) BackfillTranslations(ctx context.Context, language, model string) (int, error) {
+	definition, found := processing.TranslationByLanguage(language)
+	if !found {
+		return 0, store.ErrNotFound
+	}
+	return p.database.QueueMissingTranslations(ctx, "fixture", []store.TranslationPlan{{Language: language, PromptVersion: definition.PromptVersion, Model: model}}, true, time.Now())
 }
 
 func (p fakeProcessingRequester) Status(ctx context.Context) (processing.PipelineRuntimeStatus, error) {
@@ -146,5 +162,5 @@ func formRequest(method, target, body string) *http.Request {
 }
 
 func stagedModelForm(body string) string {
-	return body + "&model_incident_metadata=qwen3.5%3A4b&model_german_presentation=qwen3.5%3A4b&model_english_translation=qwen3.5%3A4b"
+	return body + "&model_incident_metadata=qwen3.5%3A4b&model_german_presentation=qwen3.5%3A4b&model_translation=qwen3.5%3A4b"
 }

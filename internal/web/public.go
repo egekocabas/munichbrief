@@ -18,8 +18,12 @@ import (
 )
 
 func (s *Server) scope(request *http.Request) store.PresentationScope {
+	language, _ := routeLanguage(request)
+	if language == "" {
+		language = preferredLanguage(request)
+	}
 	return store.PresentationScope{
-		PromptVersion: s.options.PromptVersion, PublicOnly: s.options.PresentationMode == "public" || s.isPublicRequest(request),
+		PromptVersion: s.options.PromptVersion, Language: language, PublicOnly: s.options.PresentationMode == "public" || s.isPublicRequest(request),
 	}
 }
 
@@ -172,8 +176,20 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 	}
 	canonicalRelativeURL := fmt.Sprintf("/%s/incidents/%d", language, id)
 	base := s.base(request, language, canonicalRelativeURL)
+	if language == "de" {
+		englishScope := scope
+		englishScope.Language = "en"
+		englishScope.PublicOnly = true
+		if _, englishErr := s.store.GetPresentationIncident(request.Context(), id, englishScope); errors.Is(englishErr, store.ErrNotFound) {
+			base.EnglishCanonicalURL = ""
+			base.AlternateLanguageURL = ""
+		} else if englishErr != nil {
+			s.internalError(response, request, "check incident translation", englishErr)
+			return
+		}
+	}
 	view := s.incidentForLanguage(incident, base.Lang)
-	data := detailPage{basePage: base, Incident: view, BackURL: timelineURL(base.Lang, page), ShowOriginalSection: base.Review && incident.HasAI}
+	data := detailPage{basePage: base, Incident: view, BackURL: timelineURL(base.Lang, page), ShowOriginalSection: base.Review && view.Record.HasAI}
 	if scope.PublicOnly && wantsMarkdown(request.Header.Get("Accept")) {
 		s.prepareMarkdown(response, base)
 		s.renderDetailMarkdown(response, data)
@@ -237,6 +253,12 @@ func (s *Server) incidentForLanguage(record store.IncidentRecord, language strin
 			}
 			view.PublicAssistanceTypesText = strings.Join(view.PublicAssistanceTypes, ", ")
 		}
+		if language == "en" && (record.AITitleEN == "" || record.AISummaryEN == "") {
+			view.Record.HasAI = false
+			view.Title, view.Summary = record.TitleDE, excerpt(record.BodyDE, 190)
+			view.ShowOriginalMessage = record.HasIncident
+			return view
+		}
 		view.ContentLanguage = language
 		if language == "en" {
 			view.Title, view.Summary = record.AITitleEN, record.AISummaryEN
@@ -257,7 +279,7 @@ func (s *Server) incidentForLanguage(record store.IncidentRecord, language strin
 			}
 			if language == "en" {
 				view.ProcessingSteps = append(view.ProcessingSteps, processingStepView{
-					Number: 3, Name: s.localization.Text(language, "EnglishTranslationStep"),
+					Name:  s.localization.Text(language, "EnglishTranslationStep"),
 					Model: record.AITranslationModel, PromptVersion: record.AITranslationPromptVersion, GeneratedAt: record.AITranslationGeneratedAt,
 				})
 			}
@@ -269,7 +291,7 @@ func (s *Server) incidentForLanguage(record store.IncidentRecord, language strin
 			}}
 			if language == "en" {
 				view.ProcessingSteps = append(view.ProcessingSteps, processingStepView{
-					Number: 2, Name: s.localization.Text(language, "EnglishTranslationStep"),
+					Name:  s.localization.Text(language, "EnglishTranslationStep"),
 					Model: record.AITranslationModel, PromptVersion: record.AITranslationPromptVersion, GeneratedAt: record.AITranslationGeneratedAt,
 				})
 			}

@@ -54,6 +54,8 @@ type ProcessingRequester interface {
 	RequestNow(context.Context, string, map[string]string, *int64, bool) (store.PipelineRequestResult, error)
 	ModelStatus(context.Context) (processing.PipelineModelStatus, error)
 	SetPreferredStepModel(context.Context, string, string) error
+	RetryTranslation(context.Context, int64, string, string) (int, error)
+	BackfillTranslations(context.Context, string, string) (int, error)
 	Status(context.Context) (processing.PipelineRuntimeStatus, error)
 }
 
@@ -176,6 +178,8 @@ func (s *Server) Handler() http.Handler {
 		mux.HandleFunc("POST /api/admin/ai/process-all-now", s.processAllNow)
 		mux.HandleFunc("POST /api/admin/ai/reprocess-all", s.reprocessAll)
 		mux.HandleFunc("POST /api/admin/ai/step-model", s.updatePreferredStepModel)
+		mux.HandleFunc("POST /api/admin/ai/translation-retry", s.retryTranslation)
+		mux.HandleFunc("POST /api/admin/ai/translation-backfill", s.backfillTranslations)
 	}
 	return s.requestLogger(s.accessBoundary(mux))
 }

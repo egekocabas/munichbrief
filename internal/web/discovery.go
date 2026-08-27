@@ -100,8 +100,12 @@ func addVary(header http.Header, values ...string) {
 func (s *Server) setDocumentLinks(header http.Header, page basePage) {
 	links := []string{
 		fmt.Sprintf("<%s>; rel=\"canonical\"", page.CanonicalURL),
-		fmt.Sprintf("<%s>; rel=\"alternate\"; hreflang=\"de\"", page.GermanCanonicalURL),
-		fmt.Sprintf("<%s>; rel=\"alternate\"; hreflang=\"en\"", page.EnglishCanonicalURL),
+	}
+	if page.GermanCanonicalURL != "" {
+		links = append(links, fmt.Sprintf("<%s>; rel=\"alternate\"; hreflang=\"de\"", page.GermanCanonicalURL))
+	}
+	if page.EnglishCanonicalURL != "" {
+		links = append(links, fmt.Sprintf("<%s>; rel=\"alternate\"; hreflang=\"en\"", page.EnglishCanonicalURL))
 	}
 	if page.PreviousCanonicalURL != "" {
 		links = append(links, fmt.Sprintf("<%s>; rel=\"prev\"", page.PreviousCanonicalURL))
@@ -236,12 +240,22 @@ type sitemapURL struct {
 }
 
 func (s *Server) sitemap(response http.ResponseWriter, request *http.Request) {
-	links, err := s.store.ListPublicIncidentLinks(request.Context(), s.options.SourceMode, store.PresentationScope{
+	germanLinks, err := s.store.ListPublicIncidentLinks(request.Context(), s.options.SourceMode, store.PresentationScope{
 		PromptVersion: s.options.PromptVersion,
+		Language:      "de",
 		PublicOnly:    true,
 	})
 	if err != nil {
 		s.internalError(response, request, "list sitemap incidents", err)
+		return
+	}
+	englishLinks, err := s.store.ListPublicIncidentLinks(request.Context(), s.options.SourceMode, store.PresentationScope{
+		PromptVersion: s.options.PromptVersion,
+		Language:      "en",
+		PublicOnly:    true,
+	})
+	if err != nil {
+		s.internalError(response, request, "list translated sitemap incidents", err)
 		return
 	}
 	origin := s.canonicalOrigin(request)
@@ -251,14 +265,12 @@ func (s *Server) sitemap(response http.ResponseWriter, request *http.Request) {
 		{Location: origin + "/de/about"},
 		{Location: origin + "/en/about"},
 	}
-	for _, link := range links {
+	for _, link := range germanLinks {
 		lastModified := link.ModifiedAt.UTC().Format(time.RFC3339)
-		for _, language := range []string{"de", "en"} {
-			urls = append(urls, sitemapURL{
-				Location: fmt.Sprintf("%s/%s/incidents/%d", origin, language, link.ID),
-				LastMod:  lastModified,
-			})
-		}
+		urls = append(urls, sitemapURL{Location: fmt.Sprintf("%s/de/incidents/%d", origin, link.ID), LastMod: lastModified})
+	}
+	for _, link := range englishLinks {
+		urls = append(urls, sitemapURL{Location: fmt.Sprintf("%s/en/incidents/%d", origin, link.ID), LastMod: link.ModifiedAt.UTC().Format(time.RFC3339)})
 	}
 	response.Header().Set("Content-Type", "application/xml; charset=utf-8")
 	response.Header().Set("Cache-Control", "public, max-age=300")

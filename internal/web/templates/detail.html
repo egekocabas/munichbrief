@@ -40,7 +40,7 @@
     </div>
     <ol class="mt-4 grid gap-3 {{if gt (len .Incident.ProcessingSteps) 1}}sm:grid-cols-2{{end}} {{if gt (len .Incident.ProcessingSteps) 2}}lg:grid-cols-3{{end}}">
       {{range .Incident.ProcessingSteps}}<li class="rounded-md border border-rule bg-paper p-4">
-        <p class="text-[0.65rem] font-extrabold uppercase tracking-[0.1em] text-alert">{{t $.Lang "Step"}} {{.Number}}</p>
+        <p class="text-[0.65rem] font-extrabold uppercase tracking-[0.1em] text-alert">{{if .Number}}{{t $.Lang "Step"}} {{.Number}}{{else}}{{t $.Lang "Translation"}}{{end}}</p>
         <h3 class="mt-1 font-serif text-lg font-bold text-ink">{{.Name}}</h3>
         <dl class="mt-3 grid gap-2 text-xs text-muted">
           <div><dt class="font-bold text-ink">{{t $.Lang "Model"}}</dt><dd class="mt-0.5 break-words">{{.Model}}</dd></div>

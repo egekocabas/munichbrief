@@ -3,6 +3,7 @@ package web
 import (
 	"bytes"
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -202,14 +203,14 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	models := map[string]string{
 		processing.IncidentMetadataStep:   "qwen3.5:4b",
 		processing.GermanPresentationStep: "qwen3.5:4b",
-		processing.EnglishTranslationStep: "translategemma:4b",
+		processing.TranslationModelStep:   "translate:4b",
 	}
 	plans, err := processing.StepPlans(models)
 	if err != nil {
 		t.Fatal(err)
 	}
 	startedAt := time.Date(2026, time.August, 25, 9, 0, 0, 0, time.UTC)
-	request, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, &incidentID, false, startedAt)
+	request, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, "translate:4b", &incidentID, false, startedAt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,7 +234,7 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	}, metadata.ModelIdentity, store.HashPipelineInput("metadata"), startedAt.Add(time.Minute)); err != nil {
 		t.Fatal(err)
 	}
-	advance, err := database.AdvancePipelineCycle(ctx, cycle, 3, startedAt.Add(2*time.Minute))
+	advance, err := database.AdvancePipelineCycle(ctx, cycle, len(plans), startedAt.Add(2*time.Minute))
 	if err != nil || !advance.Advanced {
 		t.Fatalf("AdvancePipelineCycle(metadata) = %#v, err=%v", advance, err)
 	}
@@ -250,24 +251,41 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	}, german.ModelIdentity, store.HashPipelineInput("de"), startedAt.Add(4*time.Minute)); err != nil {
 		t.Fatal(err)
 	}
-	advance, err = database.AdvancePipelineCycle(ctx, cycle, 3, startedAt.Add(5*time.Minute))
-	if err != nil || !advance.Advanced {
-		t.Fatalf("AdvancePipelineCycle(german) = %#v, err=%v", advance, err)
+	if _, err := database.GetPresentationIncident(ctx, incidentID, store.PresentationScope{PromptVersion: processing.PipelineVersion, Language: "de", PublicOnly: true}); err != nil {
+		t.Fatalf("German was not public immediately after canonical success: %v", err)
 	}
-	cycle.ActiveStep = 2
-	translation, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 2, startedAt.Add(6*time.Minute))
-	if err != nil || !found {
-		t.Fatalf("ClaimPipelineJob(translation) = %#v, found=%t, err=%v", translation, found, err)
+	if _, err := database.GetPresentationIncident(ctx, incidentID, store.PresentationScope{PromptVersion: processing.PipelineVersion, Language: "en", PublicOnly: true}); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("English was public before translation completion: %v", err)
 	}
-	if err := database.CompletePipelineJob(ctx, translation, []store.PipelineValue{
-		{Kind: "title_en", Value: "Crash at Harras"},
-		{Kind: "summary_en", Value: "A traffic crash occurred at Harras."},
-	}, translation.ModelIdentity, store.HashPipelineInput(translation.TitleDE, translation.SummaryDE), startedAt.Add(7*time.Minute)); err != nil {
+	canonicalOnlyServer, err := NewWithOptions(database, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), Options{
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PromptVersion: processing.PipelineVersion,
+	})
+	if err != nil {
 		t.Fatal(err)
 	}
-	advance, err = database.AdvancePipelineCycle(ctx, cycle, 3, startedAt.Add(8*time.Minute))
+	germanOnly := httptest.NewRecorder()
+	canonicalOnlyServer.Handler().ServeHTTP(germanOnly, httptest.NewRequest(http.MethodGet, "/de/incidents/"+formatID(incidentID), nil))
+	if germanOnly.Code != http.StatusOK || strings.Contains(germanOnly.Body.String(), `hreflang="en"`) || strings.Contains(germanOnly.Header().Get("Link"), `hreflang="en"`) {
+		t.Fatalf("German-only discovery exposed an unfinished English alternate: %d/%q", germanOnly.Code, germanOnly.Header().Get("Link"))
+	}
+	missingEnglish := httptest.NewRecorder()
+	canonicalOnlyServer.Handler().ServeHTTP(missingEnglish, englishRequest(http.MethodGet, "/en/incidents/"+formatID(incidentID), nil))
+	if missingEnglish.Code != http.StatusNotFound {
+		t.Fatalf("unfinished English detail = %d, want 404", missingEnglish.Code)
+	}
+	advance, err = database.AdvancePipelineCycle(ctx, cycle, len(plans), startedAt.Add(5*time.Minute))
 	if err != nil || !advance.Completed {
-		t.Fatalf("AdvancePipelineCycle(translation) = %#v, err=%v", advance, err)
+		t.Fatalf("AdvancePipelineCycle(german) = %#v, err=%v", advance, err)
+	}
+	if queued, err := database.QueueTranslationsForRun(ctx, german.PresentationRunID, []store.TranslationPlan{{Language: processing.EnglishLanguage, PromptVersion: processing.EnglishTranslationPromptVersion, Model: "translate:4b"}}, "manual", startedAt.Add(6*time.Minute)); err != nil || queued != 1 {
+		t.Fatalf("QueueTranslationsForRun() = %d, err=%v", queued, err)
+	}
+	translation, found, err := database.ClaimTranslationJob(ctx, false, startedAt.Add(6*time.Minute))
+	if err != nil || !found {
+		t.Fatalf("ClaimTranslationJob() = %#v, found=%t, err=%v", translation, found, err)
+	}
+	if err := database.CompleteTranslationJob(ctx, translation, "Crash at Harras", "A traffic crash occurred at Harras.", translation.ModelIdentity, translation.InputHash, startedAt.Add(7*time.Minute)); err != nil {
+		t.Fatal(err)
 	}
 
 	handler := testServer(t, database).Handler()
@@ -285,7 +303,7 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 		"Category", "Traffic", "Area", "Harras", "Metadata-first pipeline v2",
 		"Incident metadata", "qwen3.5:4b", processing.IncidentMetadataPromptVersion,
 		"German presentation", processing.GermanPresentationPromptVersion,
-		"English translation", "translategemma:4b", processing.EnglishTranslationPromptVersion,
+		"English translation", "translate:4b", processing.EnglishTranslationPromptVersion,
 		"Time stated in report", "24 August 2026, 22:30", "Report kind", "Incident", "Police request public assistance",
 		`aria-label="Public assistance"`,
 	} {
@@ -301,7 +319,7 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 			t.Errorf("German detail body does not contain %q", expected)
 		}
 	}
-	for _, unexpected := range []string{"Englische Übersetzung", "translategemma:4b", processing.EnglishTranslationPromptVersion} {
+	for _, unexpected := range []string{"Englische Übersetzung", "translate:4b", processing.EnglishTranslationPromptVersion} {
 		if strings.Contains(germanDetail.Body.String(), unexpected) {
 			t.Errorf("German detail body unexpectedly contains %q", unexpected)
 		}

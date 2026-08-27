@@ -218,6 +218,9 @@ other = "AI processing"
 [Step]
 other = "Step"
 
+[Translation]
+other = "Translation"
+
 [GermanAnalysisStep]
 other = "German analysis"
 
