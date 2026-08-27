@@ -29,6 +29,11 @@ func TestAboutHealthReadinessAndRequestHeaders(t *testing.T) {
 			t.Errorf("about response unexpectedly contains %q", unexpected)
 		}
 	}
+	for _, unexpected := range []string{"sm:grid-cols-2", "rounded-lg border border-rule bg-paper"} {
+		if strings.Contains(about.Body.String(), unexpected) {
+			t.Errorf("about response unexpectedly contains card layout %q", unexpected)
+		}
+	}
 	if about.Header().Get("X-Request-ID") != "test-request" || about.Header().Get("X-Correlation-ID") != "test-request" {
 		t.Errorf("request headers = %q/%q", about.Header().Get("X-Request-ID"), about.Header().Get("X-Correlation-ID"))
 	}
