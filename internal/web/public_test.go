@@ -309,7 +309,7 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 		"Incident metadata", "qwen3.5:4b", processing.IncidentMetadataPromptVersion,
 		"German presentation", processing.GermanPresentationPromptVersion,
 		"English translation", "translate:4b", processing.EnglishTranslationPromptVersion,
-		"Incident time", "24 August 2026, 22:30", "Report kind", "Incident", "Public assistance needed", "Police request public assistance", "Photo or video material",
+		"Incident time", "24 August 2026, 22:30", "Public assistance needed", "Police request public assistance", "Photo or video material",
 		"AI-generated summary", "Verify important details against the latest official information.",
 		`aria-label="Public assistance"`,
 	} {
@@ -322,6 +322,9 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	}
 	if strings.Contains(english.Body.String(), "Machine-generated") {
 		t.Error("English detail unexpectedly renders the redundant machine-generated label")
+	}
+	if strings.Contains(english.Body.String(), "Report kind") {
+		t.Error("English detail unexpectedly renders the report kind badge")
 	}
 	for _, assistanceDetail := range []string{"Police request public assistance", "Photo or video material", "Witness observations"} {
 		if count := strings.Count(english.Body.String(), assistanceDetail); count != 1 {
@@ -345,6 +348,9 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 		if strings.Contains(germanDetail.Body.String(), unexpected) {
 			t.Errorf("German detail body unexpectedly contains %q", unexpected)
 		}
+	}
+	if strings.Contains(germanDetail.Body.String(), "Meldungsart") {
+		t.Error("German detail unexpectedly renders the report kind badge")
 	}
 
 	markdown := httptest.NewRecorder()

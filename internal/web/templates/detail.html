@@ -10,11 +10,10 @@
       <span>{{t .Lang "Published"}}: <time datetime="{{.Incident.Record.PublishedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime .Lang .Incident.Record.PublishedAt}}</time></span>
     </div>
     {{if .Review}}<p class="mt-4 text-[0.68rem] font-extrabold uppercase tracking-[0.1em] text-civic data-[state=failed]:text-amber-700 data-[state=needs-review]:text-amber-700 data-[state=retrying]:text-amber-700 data-[state=running]:text-amber-700" data-state="{{.Incident.ProcessingState}}">{{.Incident.ProcessingLabel}}</p>{{end}}
-    {{if or .Incident.CategoryLabel .Incident.AreaName .Incident.EventText .Incident.ReportKindLabel .Incident.PublicAssistance}}<dl class="mt-4 flex flex-wrap gap-2 text-xs">
+    {{if or .Incident.CategoryLabel .Incident.AreaName .Incident.EventText .Incident.PublicAssistance}}<dl class="mt-4 flex flex-wrap gap-2 text-xs">
       {{if .Incident.CategoryLabel}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{t .Lang "Category"}}</dt><dd class="font-bold text-civic">{{.Incident.CategoryLabel}}</dd></div>{{end}}
       {{if .Incident.AreaName}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{t .Lang "Area"}}</dt><dd class="font-bold text-civic">{{.Incident.AreaName}}</dd></div>{{end}}
       {{if .Incident.EventText}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{.Incident.EventLabel}}</dt><dd class="font-bold text-civic">{{.Incident.EventText}}</dd></div>{{end}}
-      {{if .Incident.ReportKindLabel}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{t .Lang "ReportKind"}}</dt><dd class="font-bold text-civic">{{.Incident.ReportKindLabel}}</dd></div>{{end}}
       {{if .Incident.PublicAssistance}}<div class="inline-flex items-center rounded-full border border-alert/30 bg-alert-soft px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-alert">{{t .Lang "PublicAssistanceNeeded"}}</dt></div>{{end}}
     </dl>{{end}}
     <h1 class="mt-3 max-w-3xl font-serif text-3xl font-bold leading-[1.08] tracking-[-0.03em] text-ink sm:text-5xl" lang="{{.Incident.ContentLanguage}}">{{.Incident.Title}}</h1>
