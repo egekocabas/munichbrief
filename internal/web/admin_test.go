@@ -50,7 +50,7 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	if page.Code != http.StatusOK || page.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("admin page = %d/%q", page.Code, page.Header().Get("Cache-Control"))
 	}
-	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", "Installed and ready", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/translation-backfill", "/api/admin/ai/status", "/admin/history", "View full history", "Confirm AI request", "/static/admin.js", "Active stage", "Canonical pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover", "Independent translation queues"} {
+	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", "Installed and ready", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/translation-backfill", "/api/admin/ai/status", "/admin/history", "Pipeline history", "Open reader", "View full history", "Confirm AI request", "/static/admin.js", "Active stage", "Canonical pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover", "Independent translation queues"} {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("admin page does not contain %q", expected)
 		}
@@ -405,10 +405,13 @@ func TestAdminPipelineHistoryCombinesCanonicalAndTranslationJobs(t *testing.T) {
 	if first.Code != http.StatusOK || first.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("pipeline history = %d/%q", first.Code, first.Header().Get("Cache-Control"))
 	}
-	for _, expected := range []string{"Pipeline history", "2 job states shown", "translation:en", "translategemma:4b", "translation · manual", "german_presentation", "Older →"} {
+	for _, expected := range []string{"Pipeline history", "Open reader", `aria-current="page"`, "2 job states shown", "translation:en", "translategemma:4b", "translation · manual", "german_presentation", "Older →"} {
 		if !strings.Contains(first.Body.String(), expected) {
 			t.Errorf("pipeline history does not contain %q", expected)
 		}
+	}
+	if strings.Contains(first.Body.String(), "Back to dashboard") {
+		t.Error("pipeline history retained redundant dashboard button")
 	}
 	dashboard := httptest.NewRecorder()
 	handler.ServeHTTP(dashboard, httptest.NewRequest(http.MethodGet, "/admin", nil))
