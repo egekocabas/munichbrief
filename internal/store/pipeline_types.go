@@ -139,6 +139,38 @@ type PipelineEvent struct {
 	FailureKind string    `json:"failure_kind,omitempty"`
 }
 
+// PipelineHistoryEntry is the review-facing persisted state of one pipeline
+// step job. It intentionally excludes incident text, generated values, and
+// internal error messages.
+type PipelineHistoryEntry struct {
+	JobID         int64
+	UpdatedAt     time.Time
+	CycleID       int64
+	CycleKind     string
+	CycleStatus   string
+	IncidentID    int64
+	StepKey       string
+	Status        string
+	AttemptCount  int
+	FailureKind   string
+	ModelIdentity string
+	PromptVersion string
+}
+
+// PipelineHistoryCursor identifies a stable boundary in reverse-chronological
+// pipeline history.
+type PipelineHistoryCursor struct {
+	UpdatedAt time.Time
+	JobID     int64
+}
+
+// PipelineHistoryPage contains one bounded page and navigation availability.
+type PipelineHistoryPage struct {
+	Entries  []PipelineHistoryEntry
+	HasNewer bool
+	HasOlder bool
+}
+
 // AdvanceResult describes whether a cycle changed stage, completed, or must wait.
 type AdvanceResult struct {
 	Advanced  bool
