@@ -137,8 +137,8 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 	if (options.Build.Commit == "") != options.Build.BuiltAt.IsZero() {
 		return nil, errors.New("build commit and build time must be provided together")
 	}
-	if options.Build.Commit != "" && !gitCommitPattern.MatchString(options.Build.Commit) {
-		return nil, errors.New("build commit must be a full lowercase Git SHA")
+	if options.Build.Commit != "" && options.Build.Commit != "dev" && !gitCommitPattern.MatchString(options.Build.Commit) {
+		return nil, errors.New("build commit must be dev or a full lowercase Git SHA")
 	}
 	if err := validateReaderLanguages(); err != nil {
 		return nil, fmt.Errorf("validate reader languages: %w", err)

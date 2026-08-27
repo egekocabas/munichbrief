@@ -78,8 +78,11 @@ func (s *Server) base(request *http.Request, language, canonicalRelativeURL stri
 		Fixture:        s.options.SourceMode == "fixture", Review: s.options.PresentationMode == "review" && !s.isPublicRequest(request),
 	}
 	if s.options.Build.Commit != "" {
-		page.BuildCommit = s.options.Build.Commit[:7]
-		page.BuildCommitURL = "https://github.com/egekocabas/munichbrief/commit/" + s.options.Build.Commit
+		page.BuildCommit = s.options.Build.Commit
+		if s.options.Build.Commit != "dev" {
+			page.BuildCommit = s.options.Build.Commit[:7]
+			page.BuildCommitURL = "https://github.com/egekocabas/munichbrief/commit/" + s.options.Build.Commit
+		}
 		page.BuildTime = s.options.Build.BuiltAt.Format(time.RFC3339)
 		page.BuildTimeLabel = s.options.Build.BuiltAt.In(s.location).Format("02.01.2006, 15:04") + " CET"
 	}

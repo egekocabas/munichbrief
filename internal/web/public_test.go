@@ -114,6 +114,37 @@ func TestReaderFooterShowsBuildProvenance(t *testing.T) {
 	}
 }
 
+func TestReaderFooterShowsDevelopmentBuildPlaceholder(t *testing.T) {
+	database := fixtureStore(t)
+	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), Options{
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
+		PromptVersion: processing.PipelineVersion,
+		Build: BuildInfo{
+			Commit:  "dev",
+			BuiltAt: time.Date(2026, time.August, 27, 8, 15, 0, 0, time.UTC),
+		},
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	response := httptest.NewRecorder()
+	server.Handler().ServeHTTP(response, englishRequest(http.MethodGet, "/en", nil))
+	for _, expected := range []string{
+		"Built (",
+		`<strong class="font-mono">dev</strong>)`,
+		`datetime="2026-08-27T08:15:00Z"`,
+		"27.08.2026, 10:15 CET",
+	} {
+		if !strings.Contains(response.Body.String(), expected) {
+			t.Errorf("timeline footer does not contain %q", expected)
+		}
+	}
+	if strings.Contains(response.Body.String(), `/commit/dev`) {
+		t.Error("development placeholder links to a nonexistent commit")
+	}
+}
+
 func TestTemplatesEscapeIncidentContent(t *testing.T) {
 	ctx := context.Background()
 	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "munichbrief.db"))

@@ -34,7 +34,8 @@ func TestInjectedBuildInfo(t *testing.T) {
 
 	buildCommit = "28c9a1265115c07d46e61fa26bd489e07acf95c4"
 	buildTime = "2026-08-24T19:02:00Z"
-	build, err := injectedBuildInfo()
+	now := time.Date(2026, time.August, 27, 10, 15, 0, 0, time.UTC)
+	build, err := injectedBuildInfo(now)
 	if err != nil {
 		t.Fatalf("injectedBuildInfo() error = %v", err)
 	}
@@ -43,8 +44,14 @@ func TestInjectedBuildInfo(t *testing.T) {
 	}
 
 	buildTime = "not-a-time"
-	if _, err := injectedBuildInfo(); err == nil {
+	if _, err := injectedBuildInfo(now); err == nil {
 		t.Fatal("injectedBuildInfo() accepted an invalid timestamp")
+	}
+
+	buildCommit, buildTime = "dev", "dev"
+	build, err = injectedBuildInfo(now)
+	if err != nil || build.Commit != "dev" || !build.BuiltAt.Equal(now) {
+		t.Fatalf("development injectedBuildInfo() = %#v, %v", build, err)
 	}
 }
 

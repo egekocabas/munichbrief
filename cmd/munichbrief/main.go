@@ -78,7 +78,7 @@ func run(ctx context.Context, logger *slog.Logger, arguments []string) error {
 }
 
 func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
-	build, err := injectedBuildInfo()
+	build, err := injectedBuildInfo(time.Now())
 	if err != nil {
 		return err
 	}
@@ -200,11 +200,11 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 	}
 }
 
-func injectedBuildInfo() (web.BuildInfo, error) {
+func injectedBuildInfo(now time.Time) (web.BuildInfo, error) {
 	commit := strings.TrimSpace(buildCommit)
 	timestamp := strings.TrimSpace(buildTime)
 	if (commit == "" || commit == "dev") && (timestamp == "" || timestamp == "dev") {
-		return web.BuildInfo{}, nil
+		return web.BuildInfo{Commit: "dev", BuiltAt: now}, nil
 	}
 	if commit == "" || commit == "dev" || timestamp == "" || timestamp == "dev" {
 		return web.BuildInfo{}, errors.New("build commit and build time must be provided together")
