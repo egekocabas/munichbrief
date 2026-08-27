@@ -305,7 +305,7 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	english := httptest.NewRecorder()
 	handler.ServeHTTP(english, englishRequest(http.MethodGet, "/en/incidents/"+formatID(incidentID), nil))
 	for _, expected := range []string{
-		"Category", "Traffic", "Area", "Harras", "Metadata-first pipeline v2",
+		"Category", "Traffic", "Area", "Harras", "Published in", "Metadata-first pipeline v2",
 		"Incident metadata", "qwen3.5:4b", processing.IncidentMetadataPromptVersion,
 		"German presentation", processing.GermanPresentationPromptVersion,
 		"English translation", "translate:4b", processing.EnglishTranslationPromptVersion,
@@ -342,7 +342,7 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 
 	germanDetail := httptest.NewRecorder()
 	handler.ServeHTTP(germanDetail, httptest.NewRequest(http.MethodGet, "/de/incidents/"+formatID(incidentID), nil))
-	for _, expected := range []string{"Kategorie", "Verkehr", "Gebiet", "Harras", "Vorfallsmetadaten", "Deutsche Darstellung", "qwen3.5:4b", "Vorfallszeit", "24. August 2026, 22:30", "Öffentliche Mithilfe benötigt", "Polizei bittet um Mithilfe", "Foto- oder Videomaterial", "KI-generierte Zusammenfassung", "Wichtige Angaben bitte anhand der aktuellen offiziellen Informationen prüfen.", "Offizielle Polizeimeldung öffnen"} {
+	for _, expected := range []string{"Kategorie", "Verkehr", "Gebiet", "Harras", "Veröffentlicht in", "Vorfallsmetadaten", "Deutsche Darstellung", "qwen3.5:4b", "Vorfallszeit", "24. August 2026, 22:30", "Öffentliche Mithilfe benötigt", "Polizei bittet um Mithilfe", "Foto- oder Videomaterial", "KI-generierte Zusammenfassung", "Wichtige Angaben bitte anhand der aktuellen offiziellen Informationen prüfen.", "Offizielle Polizeimeldung öffnen"} {
 		if !strings.Contains(germanDetail.Body.String(), expected) {
 			t.Errorf("German detail body does not contain %q", expected)
 		}
