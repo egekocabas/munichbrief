@@ -316,6 +316,9 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 			t.Errorf("English detail body does not contain %q", expected)
 		}
 	}
+	if count := strings.Count(english.Body.String(), ">Crash at Harras</"); count != 1 {
+		t.Errorf("English detail renders the incident heading %d times, want 1", count)
+	}
 
 	germanDetail := httptest.NewRecorder()
 	handler.ServeHTTP(germanDetail, httptest.NewRequest(http.MethodGet, "/de/incidents/"+formatID(incidentID), nil))
