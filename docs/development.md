@@ -96,16 +96,6 @@ go test -timeout 25m \
   -v ./internal/processing
 ```
 
-## Pipeline v2 visual fixtures
-
-These review-mode screenshots use only the repository's synthetic fixture
-content. They demonstrate the localized incident-time and public-assistance
-presentation and the two canonical steps with independent translation controls.
-
-![Synthetic incident timing and public-assistance cards](screenshots/metadata-pipeline-v2-assistance.png)
-
-![Canonical pipeline and translation controls in the admin view](screenshots/metadata-pipeline-v2-admin.png)
-
 ## Validation
 
 The checks are intentionally layered so changes are validated at the file,
