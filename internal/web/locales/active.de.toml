@@ -159,7 +159,7 @@ other = "Öffentliche Mithilfe benötigt"
 other = "Hinweise, Kontaktwege und weitere Einzelheiten stehen ausschließlich in der offiziellen Quelle."
 
 [TimeStatedInReport]
-other = "Zeitangabe in der Meldung"
+other = "Vorfallszeit"
 
 [DayPartMorning]
 other = "morgens"

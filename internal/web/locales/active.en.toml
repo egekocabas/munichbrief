@@ -159,7 +159,7 @@ other = "Public assistance needed"
 other = "Instructions, contact routes, and further details are available only in the official source."
 
 [TimeStatedInReport]
-other = "Time stated in report"
+other = "Incident time"
 
 [DayPartMorning]
 other = "morning"
