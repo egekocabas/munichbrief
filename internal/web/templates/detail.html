@@ -3,6 +3,7 @@
 <nav class="py-5 text-sm" aria-label="{{t .Lang "Breadcrumb"}}"><a class="font-bold text-civic no-underline hover:text-civic-dark" href="{{.BackURL}}"><span aria-hidden="true">←</span> {{t .Lang "Back"}}</a></nav>
 
 <article class="mx-auto max-w-4xl overflow-hidden rounded-lg border border-rule bg-paper">
+  {{/* Publication context and language-neutral incident metadata. */}}
   <header class="border-b border-rule px-5 py-7 sm:px-8 sm:py-9">
     <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.7rem] font-extrabold uppercase tracking-[0.09em] text-muted">
       {{if .Incident.Record.Number}}<span class="text-alert">{{t .Lang "Report"}} {{.Incident.Record.Number}}</span>{{end}}
@@ -24,6 +25,7 @@
   </header>
 
   {{if .Incident.Record.HasAI}}
+  {{/* Accepted canonical or translated presentation shown to readers. */}}
   <section class="px-5 py-7 sm:px-8 sm:py-9" aria-labelledby="ai-summary-heading">
     <div class="grid gap-2 border-l-3 border-civic pl-4 sm:grid-cols-[minmax(0,1fr)_15rem] sm:items-end">
       <div><p class="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-civic">{{t .Lang "MachineGenerated"}}</p><h2 id="ai-summary-heading" class="mt-1 font-serif text-2xl font-bold">{{t .Lang "AISummary"}}</h2></div>
@@ -33,6 +35,7 @@
     {{if .Incident.PublicAssistance}}<aside class="mt-6 rounded-md border border-alert/30 bg-alert-soft px-4 py-3" aria-label="{{t .Lang "PublicAssistance"}}"><p class="font-bold text-alert">{{.Incident.PublicAssistanceLabel}}</p>{{if .Incident.PublicAssistanceTypes}}<ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">{{range .Incident.PublicAssistanceTypes}}<li>{{.}}</li>{{end}}</ul>{{end}}<p class="mt-2 text-sm text-muted">{{t .Lang "PublicAssistanceSourceCopy"}}</p></aside>{{end}}
   </section>
 
+  {{/* Canonical and translation provenance are separate processing layers. */}}
   <section class="border-t border-rule bg-newsprint/35 px-5 py-7 sm:px-8" aria-labelledby="ai-processing-heading">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <h2 id="ai-processing-heading" class="font-serif text-xl font-bold">{{t .Lang "AIProcessing"}}</h2>
@@ -59,12 +62,14 @@
   {{end}}
 
   {{if .ShowOriginalSection}}
+  {{/* Review mode keeps the retained German source available for comparison. */}}
   <details class="group border-t border-rule px-5 py-5 sm:px-8">
     <summary class="cursor-pointer font-bold text-civic marker:text-muted">{{t .Lang "OriginalGerman"}}</summary>
     <div class="mt-5" lang="de"><p class="text-sm text-muted">{{t .Lang "OriginalQACopy"}}</p><h2 class="mt-5 font-serif text-2xl font-bold">{{.Incident.Record.TitleDE}}</h2><div class="incident-body mt-4 leading-7 text-ink">{{.Incident.Record.BodyDE}}</div></div>
   </details>
   {{end}}
 
+  {{/* The official police release remains the authoritative destination. */}}
   <footer class="grid gap-5 border-t border-rule bg-newsprint/60 px-5 py-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-8">
     <div><p class="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-alert">{{t .Lang "AuthoritativeSource"}}</p><p class="mt-1 max-w-2xl text-sm leading-relaxed text-muted">{{if .Fixture}}{{t .Lang "FixtureSourceCopy"}}{{else}}{{t .Lang "LiveSourceCopy"}}{{end}}</p></div>
     <a class="inline-flex min-h-11 items-center justify-center rounded-md bg-civic px-4 text-sm font-extrabold text-white no-underline hover:bg-civic-dark" href="{{.Incident.Record.SourceURL}}" target="_blank" rel="noopener noreferrer">{{t .Lang "OpenOfficialSource"}} <span class="ml-2" aria-hidden="true">↗</span></a>

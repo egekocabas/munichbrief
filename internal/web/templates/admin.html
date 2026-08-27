@@ -28,6 +28,7 @@
 
     {{if .Notice}}<div class="mt-6 rounded-md border px-4 py-3 font-semibold {{if .NoticeIsWarning}}border-alert/30 bg-alert-soft text-alert{{else}}border-civic/25 bg-paper text-civic{{end}}" role="status">{{.Notice}}</div>{{end}}
 
+    {{/* Canonical stages are numbered; the shared translation model is intentionally unnumbered. */}}
     <section class="mt-8" aria-labelledby="model-heading">
       <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Ollama configuration</p>
       <h2 id="model-heading" class="mt-1 font-serif text-2xl font-bold">Registered pipeline steps</h2>
@@ -80,6 +81,7 @@
       </div>
     </section>
 
+    {{/* Live operational state keeps canonical and translation queues distinct. */}}
     <section class="mt-8 rounded-lg border border-rule bg-paper p-5" aria-labelledby="queue-heading" data-pipeline-status data-status-url="/api/admin/ai/status">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div><p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Live operations</p><h2 id="queue-heading" class="mt-1 font-serif text-2xl font-bold">Current cycle</h2></div>
@@ -119,6 +121,7 @@
       <p class="mt-4 text-sm font-semibold {{if .Runtime.WindowOpen}}text-emerald-700{{else}}text-muted{{end}}" data-window-state>{{if .Runtime.WindowOpen}}Processing window open{{else}}Processing window closed{{end}}</p>
     </section>
 
+    {{/* Manual controls freeze the selected models into each requested job. */}}
     <section class="mt-10 grid gap-6 lg:grid-cols-3" aria-labelledby="process-heading">
       <div class="rounded-lg border border-rule bg-paper p-5">
         <h2 id="process-heading" class="font-serif text-xl font-bold">Process one incident now</h2>
@@ -158,6 +161,7 @@
       </div>
     </section>
 
+    {{/* Incidents without any current completed presentation. */}}
     <section class="mt-12 border-t border-rule pt-8" aria-labelledby="unprocessed-heading">
       <div class="flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -172,6 +176,7 @@
       </div>
     </section>
 
+    {{/* Full incident history for source, metadata, and provenance review. */}}
     <section class="mt-12 border-t border-rule pt-8" aria-labelledby="all-incidents-heading">
       <div class="flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -186,6 +191,7 @@
       </div>
     </section>
   </main>
+  {{/* Shared confirmation dialog for immediate and bulk processing requests. */}}
   <dialog id="processing-confirmation" class="w-full max-w-xl rounded-lg border border-rule bg-paper p-0 text-ink" aria-labelledby="processing-confirmation-title" aria-describedby="processing-confirmation-description">
     <form method="dialog" class="p-5 sm:p-6">
       <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-alert">Confirm AI request</p>
@@ -206,6 +212,7 @@
 {{end}}
 
 {{define "admin-incident-list"}}
+  {{/* Reusable expandable list used by both admin review queues. */}}
   {{if .Incidents}}
   <div class="grid gap-3">
     {{range .Incidents}}{{$incident := .}}

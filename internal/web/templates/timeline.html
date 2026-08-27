@@ -1,5 +1,6 @@
 {{define "title"}}{{t .Lang "Timeline"}}{{end}}
 {{define "content"}}
+{{/* Timeline introduction and result count. */}}
 <section class="border-b border-rule py-8 sm:py-11">
   <div class="grid items-end gap-6 md:grid-cols-[minmax(0,1fr)_auto]">
     <div class="max-w-3xl">
@@ -11,6 +12,7 @@
   </div>
 </section>
 
+{{/* Publication-day groups remain the primary timeline structure. */}}
 <section class="py-7" aria-labelledby="timeline-heading">
   <div class="mb-6 flex items-end justify-between gap-4">
     <div>
@@ -63,6 +65,7 @@
     {{end}}
   </div>
   {{if or .HasPrevious .HasNext}}
+  {{/* Pagination follows publication order rather than extracted incident time. */}}
   <nav class="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-4 border-t border-rule pt-5 text-sm text-muted" aria-label="{{t .Lang "Timeline"}}">
     {{if .HasPrevious}}<a class="font-bold text-civic no-underline hover:text-civic-dark" href="/{{.Lang}}?page={{.Previous}}">← {{t .Lang "Newer"}}</a>{{else}}<span></span>{{end}}
     <span>{{t .Lang "Page"}} {{.Page}} {{t .Lang "Of"}} {{.TotalPages}}</span>

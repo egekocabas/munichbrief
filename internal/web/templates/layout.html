@@ -18,6 +18,7 @@
 <body hx-boost="true" hx-indicator="#navigation-progress" class="flex min-h-screen flex-col text-ink antialiased">
   <div id="navigation-progress" class="htmx-progress fixed inset-x-0 top-0 z-50 h-0.5 bg-civic" aria-hidden="true"></div>
   <a class="sr-only z-50 rounded-sm bg-paper px-4 py-2 font-bold text-civic focus:not-sr-only focus:fixed focus:left-4 focus:top-4" href="#content">{{t .Lang "SkipToContent"}}</a>
+  {{/* Shared reader navigation and language switcher. */}}
   <header class="border-b border-rule/90 bg-paper/95">
     <div class="page-shell flex min-h-16 items-center justify-between gap-2 py-3 sm:min-h-18 sm:gap-6">
       <a class="group inline-flex min-w-0 items-center gap-2 text-ink no-underline sm:gap-3" href="{{.HomeURL}}" aria-label="MunichBrief">
@@ -36,14 +37,17 @@
     </div>
   </header>
   <main id="content" class="page-shell flex-1">
+    {{/* The authority notice appears on every reader page. */}}
     <aside class="mt-4 border-l-3 border-alert bg-paper px-4 py-3 text-sm leading-relaxed text-muted" aria-label="{{t .Lang "NoticeLabel"}}">
       <strong class="text-ink">{{t .Lang "NoticeLead"}}</strong>
       {{if .Fixture}}{{t .Lang "FixtureNotice"}}{{else}}{{t .Lang "LiveNotice"}}{{end}}
       {{t .Lang "AuthorityNotice"}}
       {{if .Review}}<span class="mt-1 block font-bold text-alert">{{t .Lang "ReviewNotice"}}</span>{{end}}
     </aside>
+    {{/* Page-specific reader content is rendered below the shared notice. */}}
     {{template "content" .}}
   </main>
+  {{/* Shared reader footer. */}}
   <footer class="mt-12 border-t border-rule bg-paper">
     <div class="page-shell py-6 text-center text-xs leading-relaxed text-muted"><p>{{t .Lang "Footer"}}</p></div>
   </footer>
