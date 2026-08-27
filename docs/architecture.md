@@ -42,21 +42,44 @@ when the source changes.
 ## Processing pipeline
 
 AI work is persisted as a frozen cycle with ordered steps. The current pipeline
-performs German analysis first and English translation second. Each step stores
-its prompt version, model identity, input hash, timestamps, status, and safe
-failure category.
+is `incident-pipeline-v2` and performs three narrowly scoped operations:
+
+1. `incident_metadata` receives the privacy-minimised German source plus the
+   release timestamp, its localized weekday, `Europe/Berlin`, and direct lookup
+   maps for recent relative days and weekdays. It extracts category, broad area,
+   one primary incident date with an optional clock time or day part, report
+   kind, and any explicit public-assistance request. The application does not
+   parse changing German time phrases itself.
+2. `german_presentation` receives only the minimized source and validated
+   metadata. It creates the canonical privacy-safe German title and summary.
+3. `english_translation` receives only the accepted German title and summary.
+
+Application code localizes metadata labels. Each step declares its ordered
+input kinds; the worker passes only those values and hashes the actual inputs
+with prompt version and model identity. A metadata change therefore invalidates
+the German-stage input without exposing source text to the English stage. Each
+job stores its prompt version, model identity, input hash, timestamps, status,
+and safe failure category. Reader pages label extracted timing neutrally as a
+time stated in the report.
 
 The worker:
 
 1. Activates one eligible cycle and freezes its target incidents and models.
 2. Processes every job for the current step sequentially.
-3. Validates generated content before storing it.
+3. Validates schemas, temporal consistency and relative-date resolution,
+   source-grounded areas and assistance requests, and privacy before storage.
 4. Advances only when the step has no unfinished jobs.
-5. Publishes a presentation only when the complete pipeline is current.
+5. Publishes a v2 presentation only when all three stages complete.
 
 Scheduled work starts inside the configured Europe/Berlin window. A frozen
 cycle may finish after the window closes. Explicit admin or CLI requests persist
 manual priority but retain validation, circuit breaking, and retry delays.
+
+The v2 migration records an automatic-scheduling cutover. Incidents existing at
+that boundary are not automatically upgraded, and unfinished v1 work is marked
+superseded so a three-stage worker cannot resume a two-stage snapshot. Manual
+processing may upgrade historical incidents. Completed v1 and legacy
+presentations remain immutable audit data.
 
 ## Presentation boundary
 
@@ -70,6 +93,11 @@ request hostname even when another listener uses review mode. A canonical HTTPS
 origin is mandatory when public hosts are configured. Public HTML also exposes
 canonical and language-alternate links, a sitemap, crawler policy, and a
 privacy-safe Markdown representation.
+
+Presentation selection prefers the newest completed v2 run, then a completed
+v1 run, then an imported legacy bilingual run. A failed or incomplete v2 run
+never displaces a completed fallback. Timeline grouping and pagination remain
+based on publication time; incident timing is display metadata.
 
 The optional admin routes contain retained originals and processing controls.
 The application does not authenticate them; the ingress must protect both
