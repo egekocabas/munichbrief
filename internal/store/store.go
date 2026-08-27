@@ -49,17 +49,31 @@ type IncidentRecord struct {
 	ErrorMessage               string
 	AITitleDE                  string
 	AISummaryDE                string
-	AITitleEN                  string
-	AISummaryEN                string
+	AITranslatedTitle          string
+	AITranslatedSummary        string
 	AICategory                 string
 	AIAreaName                 string
 	AIAreaType                 string
+	AIEventStartDate           string
+	AIEventStartTime           string
+	AIEventDayPart             string
+	AIReportKind               string
+	AIPublicAssistanceStatus   string
+	AIPublicAssistanceTypes    string
+	AIMetadataModel            string
+	AIMetadataPromptVersion    string
+	AIMetadataGeneratedAt      *time.Time
 	AIModel                    string
 	AIPromptVersion            string
 	AIGeneratedAt              *time.Time
 	AITranslationModel         string
 	AITranslationPromptVersion string
 	AITranslationGeneratedAt   *time.Time
+	AITranslationStatus        string
+	AITranslationAttempts      int
+	AITranslationNextRetryAt   *time.Time
+	AITranslationFailureKind   string
+	AITranslationFallback      bool
 	AIPipelineVersion          string
 	AILegacy                   bool
 	HasAI                      bool
@@ -384,8 +398,8 @@ func scanIncident(row scanner) (IncidentRecord, error) {
 		&record.ErrorMessage,
 		&record.AITitleDE,
 		&record.AISummaryDE,
-		&record.AITitleEN,
-		&record.AISummaryEN,
+		&record.AITranslatedTitle,
+		&record.AITranslatedSummary,
 		&record.AIModel,
 		&record.AIPromptVersion,
 		&aiGeneratedAt,
@@ -409,7 +423,7 @@ func scanIncident(row scanner) (IncidentRecord, error) {
 		}
 		record.AIGeneratedAt = &generatedAt
 	}
-	record.HasAI = record.AITitleDE != "" && record.AISummaryDE != "" && record.AITitleEN != "" && record.AISummaryEN != ""
+	record.HasAI = record.AITitleDE != "" && record.AISummaryDE != "" && record.AITranslatedTitle != "" && record.AITranslatedSummary != ""
 	return record, nil
 }
 

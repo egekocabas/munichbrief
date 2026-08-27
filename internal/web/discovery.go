@@ -100,8 +100,9 @@ func addVary(header http.Header, values ...string) {
 func (s *Server) setDocumentLinks(header http.Header, page basePage) {
 	links := []string{
 		fmt.Sprintf("<%s>; rel=\"canonical\"", page.CanonicalURL),
-		fmt.Sprintf("<%s>; rel=\"alternate\"; hreflang=\"de\"", page.GermanCanonicalURL),
-		fmt.Sprintf("<%s>; rel=\"alternate\"; hreflang=\"en\"", page.EnglishCanonicalURL),
+	}
+	for _, alternate := range page.LanguageAlternates {
+		links = append(links, fmt.Sprintf("<%s>; rel=\"alternate\"; hreflang=\"%s\"", alternate.URL, alternate.Code))
 	}
 	if page.PreviousCanonicalURL != "" {
 		links = append(links, fmt.Sprintf("<%s>; rel=\"prev\"", page.PreviousCanonicalURL))
@@ -118,7 +119,7 @@ func (s *Server) prepareRedirectDiscovery(response http.ResponseWriter, request 
 		return
 	}
 	language := strings.SplitN(strings.TrimPrefix(parsed.Path, "/"), "/", 2)[0]
-	if language != "de" && language != "en" {
+	if _, registered := readerLanguageByCode(language); !registered {
 		return
 	}
 	page := s.base(request, language, parsed.RequestURI())
@@ -236,27 +237,26 @@ type sitemapURL struct {
 }
 
 func (s *Server) sitemap(response http.ResponseWriter, request *http.Request) {
-	links, err := s.store.ListPublicIncidentLinks(request.Context(), s.options.SourceMode, store.PresentationScope{
-		PromptVersion: s.options.PromptVersion,
-		PublicOnly:    true,
-	})
-	if err != nil {
-		s.internalError(response, request, "list sitemap incidents", err)
-		return
-	}
 	origin := s.canonicalOrigin(request)
-	urls := []sitemapURL{
-		{Location: origin + "/de"},
-		{Location: origin + "/en"},
-		{Location: origin + "/de/about"},
-		{Location: origin + "/en/about"},
-	}
-	for _, link := range links {
-		lastModified := link.ModifiedAt.UTC().Format(time.RFC3339)
-		for _, language := range []string{"de", "en"} {
+	urls := make([]sitemapURL, 0)
+	for _, definition := range readerLanguages {
+		links, err := s.store.ListPublicIncidentLinks(request.Context(), s.options.SourceMode, store.PresentationScope{
+			PromptVersion: s.options.PromptVersion,
+			Language:      definition.Code,
+			PublicOnly:    true,
+		})
+		if err != nil {
+			s.internalError(response, request, "list sitemap incidents", err)
+			return
+		}
+		urls = append(urls,
+			sitemapURL{Location: origin + "/" + definition.Code},
+			sitemapURL{Location: origin + "/" + definition.Code + "/about"},
+		)
+		for _, link := range links {
 			urls = append(urls, sitemapURL{
-				Location: fmt.Sprintf("%s/%s/incidents/%d", origin, language, link.ID),
-				LastMod:  lastModified,
+				Location: fmt.Sprintf("%s/%s/incidents/%d", origin, definition.Code, link.ID),
+				LastMod:  link.ModifiedAt.UTC().Format(time.RFC3339),
 			})
 		}
 	}
@@ -296,10 +296,7 @@ func writeMarkdownFrontMatter(builder *strings.Builder, title string, page baseP
 }
 
 func pageDescription(page basePage) string {
-	if page.Lang == "en" {
-		return "A local-first reader for Munich Police press releases."
-	}
-	return "Ein lokaler Leser für Pressemitteilungen der Münchner Polizei."
+	return page.Description
 }
 
 func (s *Server) renderTimelineMarkdown(response http.ResponseWriter, data timelinePage) {
@@ -331,6 +328,7 @@ func (s *Server) renderTimelineMarkdown(response http.ResponseWriter, data timel
 			if incident.AreaName != "" {
 				fmt.Fprintf(&builder, "- %s: %s\n", markdownText(s.localization.Text(data.Lang, "Area")), markdownText(incident.AreaName))
 			}
+			writeIncidentMetadataMarkdown(&builder, s, data.Lang, incident)
 		}
 	}
 	if data.HasPrevious || data.HasNext {
@@ -362,6 +360,7 @@ func (s *Server) renderDetailMarkdown(response http.ResponseWriter, data detailP
 	if data.Incident.AreaName != "" {
 		fmt.Fprintf(&builder, "- %s: %s\n", markdownText(s.localization.Text(data.Lang, "Area")), markdownText(data.Incident.AreaName))
 	}
+	writeIncidentMetadataMarkdown(&builder, s, data.Lang, data.Incident)
 	sourceCopy := "LiveSourceCopy"
 	if data.Fixture {
 		sourceCopy = "FixtureSourceCopy"
@@ -369,6 +368,22 @@ func (s *Server) renderDetailMarkdown(response http.ResponseWriter, data detailP
 	fmt.Fprintf(&builder, "\n## %s\n\n%s\n\n", markdownText(s.localization.Text(data.Lang, "AuthoritativeSource")), markdownText(s.localization.Text(data.Lang, sourceCopy)))
 	fmt.Fprintf(&builder, "[%s](<%s>)\n", markdownText(s.localization.Text(data.Lang, "OpenOfficialSource")), markdownURL(data.Incident.Record.SourceURL))
 	_, _ = io.WriteString(response, builder.String())
+}
+
+func writeIncidentMetadataMarkdown(builder *strings.Builder, s *Server, language string, incident incidentView) {
+	if incident.EventText != "" {
+		fmt.Fprintf(builder, "- %s: %s\n", markdownText(incident.EventLabel), markdownText(incident.EventText))
+	}
+	if incident.ReportKindLabel != "" {
+		fmt.Fprintf(builder, "- %s: %s\n", markdownText(s.localization.Text(language, "ReportKind")), markdownText(incident.ReportKindLabel))
+	}
+	if incident.PublicAssistance {
+		value := incident.PublicAssistanceLabel
+		if len(incident.PublicAssistanceTypes) > 0 {
+			value += ": " + strings.Join(incident.PublicAssistanceTypes, ", ")
+		}
+		fmt.Fprintf(builder, "- %s: %s. %s\n", markdownText(s.localization.Text(language, "PublicAssistance")), markdownText(value), markdownText(s.localization.Text(language, "PublicAssistanceSourceCopy")))
+	}
 }
 
 func (s *Server) renderAboutMarkdown(response http.ResponseWriter, data aboutPage) {

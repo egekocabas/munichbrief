@@ -85,7 +85,7 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 		return err
 	}
 	defer database.Close()
-	if err := database.EnsurePipelineSteps(ctx, processing.StepKeys(), time.Now()); err != nil {
+	if err := database.EnsurePipelineSteps(ctx, processing.ModelSettingKeys(), time.Now()); err != nil {
 		return err
 	}
 
@@ -148,11 +148,12 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 			return err
 		}
 	}
+	processor := webProcessor(aiWorker)
 
 	webServer, err := web.NewWithOptions(database, logger, web.Options{
 		PageSize: cfg.PageSize, SourceMode: cfg.SourceMode, PresentationMode: cfg.PresentationMode,
 		PromptVersion: processing.PipelineVersion, SecureCookies: cfg.SecureCookies,
-		AdminEnabled: cfg.AdminEnabled, PublicHosts: cfg.PublicHosts, CanonicalOrigin: cfg.CanonicalOrigin, Processor: aiWorker,
+		AdminEnabled: cfg.AdminEnabled, PublicHosts: cfg.PublicHosts, CanonicalOrigin: cfg.CanonicalOrigin, Processor: processor,
 	})
 	if err != nil {
 		return err
@@ -188,6 +189,13 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 		}
 		return err
 	}
+}
+
+func webProcessor(worker *processing.PipelineWorker) web.ProcessingRequester {
+	if worker == nil {
+		return nil
+	}
+	return worker
 }
 
 func restoreFeedSuccessMetric(ctx context.Context, database *store.Store, metrics *observability.Metrics) error {
@@ -229,7 +237,11 @@ func runAIProcess(ctx context.Context, logger *slog.Logger, cfg config.Config, a
 	if *incidentID > 0 {
 		selectedID = incidentID
 	}
-	result, err := database.CreateManualPipelineCycle(ctx, cfg.SourceMode, plans, selectedID, false, time.Now())
+	translationModel := ""
+	if translationModels, translationErr := database.PreferredPipelineModels(ctx, []string{processing.TranslationModelStep}); translationErr == nil {
+		translationModel = translationModels[processing.TranslationModelStep]
+	}
+	result, err := database.CreateManualPipelineCycle(ctx, cfg.SourceMode, plans, translationModel, selectedID, false, time.Now())
 	if err != nil {
 		return err
 	}

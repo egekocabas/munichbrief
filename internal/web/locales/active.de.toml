@@ -125,6 +125,9 @@ other = "Brotkrümelnavigation"
 [PublishedWithin]
 other = "Veröffentlicht in"
 
+[Published]
+other = "Veröffentlicht"
+
 [LastProcessed]
 other = "Zuletzt verarbeitet"
 
@@ -140,14 +143,92 @@ other = "Kategorie"
 [Area]
 other = "Gebiet"
 
+[ReportKind]
+other = "Meldungsart"
+
+[PublicAssistance]
+other = "Öffentliche Mithilfe"
+
+[PublicAssistanceRequested]
+other = "Polizei bittet um Mithilfe"
+
+[PublicAssistanceSourceCopy]
+other = "Hinweise, Kontaktwege und weitere Einzelheiten stehen ausschließlich in der offiziellen Quelle."
+
+[TimeStatedInReport]
+other = "Zeitangabe in der Meldung"
+
+[DayPartMorning]
+other = "morgens"
+
+[DayPartMidday]
+other = "mittags"
+
+[DayPartAfternoon]
+other = "nachmittags"
+
+[DayPartEvening]
+other = "abends"
+
+[DayPartNight]
+other = "nachts"
+
+[ReportKindIncident]
+other = "Vorfall"
+
+[ReportKindFollowUp]
+other = "Folgemeldung"
+
+[ReportKindMissingPerson]
+other = "Vermisstenmeldung"
+
+[ReportKindWantedPerson]
+other = "Fahndungsmeldung"
+
+[ReportKindPublicWarning]
+other = "Öffentliche Warnung"
+
+[ReportKindOther]
+other = "Sonstige Meldung"
+
+[AssistanceWitnessObservations]
+other = "Zeugenbeobachtungen"
+
+[AssistanceIdentifyPerson]
+other = "Person identifizieren"
+
+[AssistanceLocatePerson]
+other = "Person auffinden"
+
+[AssistancePhotoVideo]
+other = "Foto- oder Videomaterial"
+
+[AssistanceVehicleInformation]
+other = "Fahrzeughinweise"
+
+[AssistancePropertyInformation]
+other = "Hinweise zu Gegenständen"
+
+[AssistanceOtherInformation]
+other = "Sonstige Hinweise"
+
 [AIProcessing]
 other = "KI-Verarbeitung"
 
 [Step]
 other = "Schritt"
 
+[Translation]
+other = "Übersetzung"
+
 [GermanAnalysisStep]
 other = "Deutsche Analyse"
+
+[IncidentMetadataStep]
+other = "Vorfallsmetadaten"
+
+[GermanPresentationStep]
+other = "Deutsche Darstellung"
 
 [EnglishTranslationStep]
 other = "Englische Übersetzung"
@@ -157,6 +238,12 @@ other = "Bilinguale Darstellung"
 
 [StagedPipeline]
 other = "Mehrstufige Pipeline"
+
+[MetadataFirstPipeline]
+other = "Metadaten-Pipeline v2"
+
+[V1FallbackPipeline]
+other = "Pipeline v1 (Fallback)"
 
 [LegacyPipeline]
 other = "Altsystem"
@@ -231,7 +318,7 @@ other = "Verarbeitung und Aufbewahrung"
 other = "Extrahierter deutscher Text wird derzeit ohne automatische Löschfrist lokal gespeichert. Eine spätere Aufbewahrungsregel bleibt ausdrücklich vorbehalten."
 
 [AICopy]
-other = "Ein lokales KI-Modell erstellt in einer Anfrage eine datensparsame deutsche und englische Darstellung. Nur Ausgaben der aktuellen Modell- und Prompt-Version werden veröffentlicht."
+other = "Lokale KI-Modelle extrahieren zuerst strukturierte Metadaten, erstellen danach eine datensparsame deutsche Darstellung und übersetzen diese anschließend ins Englische. Metadatenbezeichnungen werden von der Anwendung lokalisiert."
 
 [VisibilityCopy]
 other = "Im eingeschränkten Prüfmodus sind Originaltexte und Verarbeitungszustände zur Qualitätskontrolle sichtbar. Der öffentliche Modus zeigt ausschließlich freigegebene KI-Texte und nie gespeicherte Originaltexte."

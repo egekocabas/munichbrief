@@ -113,6 +113,14 @@
       setText(card.querySelector("[data-step-model]"), step.preferred || "Not configured");
       setText(card.querySelector("[data-step-availability]"), step.preferred_available ? "✓ Installed and ready" : "✕ Select an installed model before scheduled processing can start");
     }
+    const translationModel = status.models?.translation;
+    if (translationModel) {
+      const card = document.querySelector(`[data-step-card="${CSS.escape(translationModel.key)}"]`);
+      if (card) {
+        setText(card.querySelector("[data-step-model]"), translationModel.preferred || "Not configured");
+        setText(card.querySelector("[data-step-availability]"), translationModel.preferred_available ? "✓ Installed and ready" : "✕ Translations are paused; German processing can continue");
+      }
+    }
     const activeSteps = new Map((queue.active_steps || []).map((step) => [step.step_key, step]));
     for (const step of queue.steps || []) {
       const card = panel.querySelector(`[data-step-stat="${CSS.escape(step.step_key)}"]`);
@@ -124,6 +132,12 @@
         ? `Waiting ${active.waiting || 0} · Ready after stage ${active.ready_after_stage || 0} · Queued ${active.queued || 0} · Running ${active.running || 0} · Retrying ${active.retrying || 0} · Review ${active.needs_review || 0} · Failed ${active.failed || 0} · Succeeded ${active.succeeded || 0}`
         : "No active cycle");
       setText(card.querySelector("[data-all-step-stats]"), `Succeeded ${step.succeeded || 0} · Review ${step.needs_review || 0} · Failed ${step.failed || 0} · Avg ${average}s · Last success ${last}`);
+    }
+    for (const translation of queue.translations || []) {
+      const card = panel.querySelector(`[data-translation-language="${CSS.escape(translation.language)}"]`);
+      if (!card) continue;
+      const details = card.querySelector("p + p");
+      setText(details, `Pending ${translation.pending || 0} · Running ${translation.running || 0} · Retrying ${translation.retrying || 0} · Review ${translation.needs_review || 0} · Failed ${translation.failed || 0} · Completed ${translation.succeeded || 0}`);
     }
     if (events) {
       events.replaceChildren(...(queue.recent_events || []).map((event) => {

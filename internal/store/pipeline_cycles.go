@@ -11,7 +11,7 @@ import (
 
 // CreateManualPipelineCycle atomically freezes targets and step configuration.
 // An identical queued request coalesces into the existing cycle.
-func (s *Store) CreateManualPipelineCycle(ctx context.Context, sourceMode string, steps []PipelineStepPlan, incidentID *int64, reprocessAll bool, now time.Time) (PipelineRequestResult, error) {
+func (s *Store) CreateManualPipelineCycle(ctx context.Context, sourceMode string, steps []PipelineStepPlan, translationModel string, incidentID *int64, reprocessAll bool, now time.Time) (PipelineRequestResult, error) {
 	if err := validateStepPlans(steps); err != nil {
 		return PipelineRequestResult{}, err
 	}
@@ -30,7 +30,7 @@ func (s *Store) CreateManualPipelineCycle(ctx context.Context, sourceMode string
 	} else if !reprocessAll {
 		condition += ` AND NOT EXISTS (
 			SELECT 1 FROM presentation_runs r WHERE r.incident_id = i.id AND r.source_hash = i.content_hash
-			AND r.pipeline_version = '` + PipelineVersion + `' AND r.status = 'complete'
+			AND r.status = 'complete'
 		)`
 	}
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -38,7 +38,7 @@ func (s *Store) CreateManualPipelineCycle(ctx context.Context, sourceMode string
 		return PipelineRequestResult{}, fmt.Errorf("begin manual pipeline cycle: %w", err)
 	}
 	defer tx.Rollback()
-	requestKey, targetCount, err := manualRequestKeyTx(ctx, tx, sourceMode, condition, args, steps)
+	requestKey, targetCount, err := manualRequestKeyTx(ctx, tx, sourceMode, condition, args, steps, translationModel)
 	if err != nil {
 		return PipelineRequestResult{}, err
 	}
@@ -51,7 +51,7 @@ func (s *Store) CreateManualPipelineCycle(ctx context.Context, sourceMode string
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		return PipelineRequestResult{}, err
 	}
-	cycleID, count, err := createPipelineCycleTx(ctx, tx, "manual", sourceMode, true, requestKey, condition, args, steps, now)
+	cycleID, count, err := createPipelineCycleTx(ctx, tx, "manual", sourceMode, true, requestKey, condition, args, steps, translationModel, now)
 	if err != nil {
 		return PipelineRequestResult{}, err
 	}
@@ -101,11 +101,13 @@ func (s *Store) ActivateNextPipelineCycle(ctx context.Context, sourceMode string
 		if err != nil {
 			return PipelineCycle{}, false, err
 		}
-		condition += ` AND COALESCE(i.body_de, '') <> '' AND NOT EXISTS (
+		condition += ` AND COALESCE(i.body_de, '') <> ''
+			AND julianday(i.created_at) > julianday((SELECT scheduled_after FROM pipeline_cutovers WHERE pipeline_version = '` + PipelineVersion + `'))
+			AND NOT EXISTS (
 			SELECT 1 FROM presentation_runs r WHERE r.incident_id = i.id AND r.source_hash = i.content_hash
 			AND r.pipeline_version = '` + PipelineVersion + `' AND r.status IN ('complete','failed')
 		)`
-		cycleID, count, err := createPipelineCycleTx(ctx, tx, "scheduled", sourceMode, true, "", condition, nil, steps, now)
+		cycleID, count, err := createPipelineCycleTx(ctx, tx, "scheduled", sourceMode, true, "", condition, nil, steps, "", now)
 		if err != nil {
 			return PipelineCycle{}, false, err
 		}
@@ -157,11 +159,9 @@ func (s *Store) HasQueuedManualCycle(ctx context.Context) (bool, error) {
 	return count > 0, nil
 }
 
-// InterruptBlockedScheduledCycle closes a blocked scheduled cycle while moving
-// every unfinished item, its accepted outputs, and its remaining jobs into a
-// continuation cycle. The continuation retains the original window lease.
-// InterruptBlockedScheduledCycle yields automatic work to queued manual work
-// without losing unfinished targets; the remainder becomes a continuation cycle.
+// InterruptBlockedScheduledCycle yields automatic work to a queued manual cycle
+// without losing unfinished targets. The continuation retains its window lease,
+// accepted outputs, and remaining jobs.
 func (s *Store) InterruptBlockedScheduledCycle(ctx context.Context, cycleID int64, now time.Time) (int64, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -169,15 +169,15 @@ func (s *Store) InterruptBlockedScheduledCycle(ctx context.Context, cycleID int6
 	}
 	defer tx.Rollback()
 	formatted := formatTime(now.UTC())
-	var sourceMode, kind, status string
+	var kind, status string
 	var activeStep int
-	if err := tx.QueryRowContext(ctx, `SELECT source_mode, kind, status, active_step FROM processing_cycles WHERE id = ?`, cycleID).Scan(&sourceMode, &kind, &status, &activeStep); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT kind, status, active_step FROM processing_cycles WHERE id = ?`, cycleID).Scan(&kind, &status, &activeStep); err != nil {
 		return 0, err
 	}
 	if kind != "scheduled" || status != "running" {
 		return 0, errors.New("only a running scheduled cycle may be interrupted")
 	}
-	result, err := tx.ExecContext(ctx, `INSERT INTO processing_cycles(kind, source_mode, status, active_step, window_authorized, created_at, updated_at) VALUES ('continuation', ?, 'queued', ?, 1, ?, ?)`, sourceMode, activeStep, formatted, formatted)
+	result, err := tx.ExecContext(ctx, `INSERT INTO processing_cycles(kind, source_mode, status, active_step, window_authorized, translation_model_identity, created_at, updated_at) SELECT 'continuation', source_mode, 'queued', ?, 1, translation_model_identity, ?, ? FROM processing_cycles WHERE id = ?`, activeStep, formatted, formatted, cycleID)
 	if err != nil {
 		return 0, err
 	}
@@ -283,12 +283,13 @@ func (s *Store) AdvancePipelineCycle(ctx context.Context, cycle PipelineCycle, s
 	return AdvanceResult{Completed: true}, nil
 }
 
-func manualRequestKeyTx(ctx context.Context, tx *sql.Tx, sourceMode, condition string, args []any, steps []PipelineStepPlan) (string, int, error) {
+func manualRequestKeyTx(ctx context.Context, tx *sql.Tx, sourceMode, condition string, args []any, steps []PipelineStepPlan, translationModel string) (string, int, error) {
 	hash := sha256.New()
 	fmt.Fprintf(hash, "manual\x00%s", sourceMode)
 	for _, step := range steps {
 		fmt.Fprintf(hash, "\x00%s\x00%d\x00%s\x00%s", step.Key, step.Order, step.PromptVersion, step.Model)
 	}
+	fmt.Fprintf(hash, "\x00translation\x00%s", translationModel)
 	rows, err := tx.QueryContext(ctx, `SELECT i.id, i.content_hash FROM incidents i JOIN source_documents d ON d.id=i.source_document_id WHERE `+condition+` ORDER BY i.id`, args...)
 	if err != nil {
 		return "", 0, fmt.Errorf("select manual request signature targets: %w", err)
@@ -348,15 +349,15 @@ func supersedeQueuedAutomaticTargetsTx(ctx context.Context, tx *sql.Tx, manualCy
 	return nil
 }
 
-func createPipelineCycleTx(ctx context.Context, tx *sql.Tx, kind, sourceMode string, windowAuthorized bool, requestKey, targetCondition string, targetArgs []any, steps []PipelineStepPlan, now time.Time) (int64, int, error) {
+func createPipelineCycleTx(ctx context.Context, tx *sql.Tx, kind, sourceMode string, windowAuthorized bool, requestKey, targetCondition string, targetArgs []any, steps []PipelineStepPlan, translationModel string, now time.Time) (int64, int, error) {
 	formatted := formatTime(now.UTC())
 	requested := any(nil)
 	if kind == "manual" {
 		requested = formatted
 	}
 	result, err := tx.ExecContext(ctx, `
-		INSERT INTO processing_cycles(kind, source_mode, status, active_step, window_authorized, requested_at, request_key, created_at, updated_at)
-		VALUES (?, ?, 'queued', 0, ?, ?, ?, ?, ?)`, kind, sourceMode, boolInt(windowAuthorized), requested, nullableString(requestKey), formatted, formatted)
+		INSERT INTO processing_cycles(kind, source_mode, status, active_step, window_authorized, translation_model_identity, requested_at, request_key, created_at, updated_at)
+		VALUES (?, ?, 'queued', 0, ?, ?, ?, ?, ?, ?)`, kind, sourceMode, boolInt(windowAuthorized), nullableString(translationModel), requested, nullableString(requestKey), formatted, formatted)
 	if err != nil {
 		return 0, 0, fmt.Errorf("create pipeline cycle: %w", err)
 	}
@@ -388,6 +389,10 @@ func createPipelineCycleTx(ctx context.Context, tx *sql.Tx, kind, sourceMode str
 			return 0, 0, fmt.Errorf("scan pipeline target: %w", err)
 		}
 		targets = append(targets, value)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return 0, 0, fmt.Errorf("iterate pipeline cycle targets: %w", err)
 	}
 	if err := rows.Close(); err != nil {
 		return 0, 0, err
@@ -435,14 +440,14 @@ func createPipelineCycleTx(ctx context.Context, tx *sql.Tx, kind, sourceMode str
 }
 
 func selectCycleTx(ctx context.Context, tx *sql.Tx, condition string, args []any) (PipelineCycle, bool, error) {
-	query := `SELECT id, kind, status, active_step, window_authorized, COALESCE(started_at, ''), COALESCE(completed_at, '')
+	query := `SELECT id, kind, status, active_step, window_authorized, COALESCE(started_at, ''), COALESCE(completed_at, ''), COALESCE(translation_model_identity, '')
 		FROM processing_cycles WHERE ` + condition + `
 		ORDER BY CASE kind WHEN 'manual' THEN 0 WHEN 'continuation' THEN 1 ELSE 2 END,
 			COALESCE(requested_at, created_at), id LIMIT 1`
 	var cycle PipelineCycle
 	var authorized int
 	var started, completed string
-	err := tx.QueryRowContext(ctx, query, args...).Scan(&cycle.ID, &cycle.Kind, &cycle.Status, &cycle.ActiveStep, &authorized, &started, &completed)
+	err := tx.QueryRowContext(ctx, query, args...).Scan(&cycle.ID, &cycle.Kind, &cycle.Status, &cycle.ActiveStep, &authorized, &started, &completed, &cycle.TranslationModel)
 	if errors.Is(err, sql.ErrNoRows) {
 		return PipelineCycle{}, false, nil
 	}

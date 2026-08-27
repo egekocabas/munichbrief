@@ -2,6 +2,7 @@ package web
 
 import (
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -17,8 +18,13 @@ import (
 )
 
 func (s *Server) scope(request *http.Request) store.PresentationScope {
+	language, _ := routeLanguage(request)
+	if language == "" {
+		language = preferredLanguage(request)
+	}
 	return store.PresentationScope{
-		PromptVersion: s.options.PromptVersion, PublicOnly: s.options.PresentationMode == "public" || s.isPublicRequest(request),
+		PromptVersion: s.options.PromptVersion, Language: language, TranslationLanguage: language,
+		PublicOnly: s.options.PresentationMode == "public" || s.isPublicRequest(request),
 	}
 }
 
@@ -58,22 +64,24 @@ func (s *Server) redirectLegacyIncident(response http.ResponseWriter, request *h
 }
 
 func (s *Server) base(request *http.Request, language, canonicalRelativeURL string) basePage {
-	alternate := "en"
-	alternateLabel := s.localization.Text(language, "SwitchToEnglish")
-	if language == "en" {
-		alternate = "de"
-		alternateLabel = s.localization.Text(language, "SwitchToGerman")
-	}
 	canonicalOrigin := s.canonicalOrigin(request)
-	germanRelativeURL := localizedRelativeURL(canonicalRelativeURL, language, "de")
-	englishRelativeURL := localizedRelativeURL(canonicalRelativeURL, language, "en")
-	return basePage{
+	page := basePage{
 		Lang: language, HomeURL: "/" + language, AboutURL: "/" + language + "/about",
-		AlternateLanguage: alternate, AlternateLanguageURL: alternateLanguageURL(request.URL, language, alternate), AlternateLanguageLabel: alternateLabel,
+		Description:     s.localization.Text(language, "SiteDescription"),
 		CanonicalOrigin: canonicalOrigin, CanonicalURL: canonicalOrigin + canonicalRelativeURL,
-		GermanCanonicalURL: canonicalOrigin + germanRelativeURL, EnglishCanonicalURL: canonicalOrigin + englishRelativeURL,
 		Fixture: s.options.SourceMode == "fixture", Review: s.options.PresentationMode == "review" && !s.isPublicRequest(request),
 	}
+	for _, definition := range readerLanguages {
+		relativeURL := localizedRelativeURL(canonicalRelativeURL, language, definition.Code)
+		page.LanguageAlternates = append(page.LanguageAlternates, languageLink{Code: definition.Code, URL: canonicalOrigin + relativeURL})
+		if definition.Code != language {
+			page.LanguageSwitches = append(page.LanguageSwitches, languageLink{
+				Code: definition.Code, URL: alternateLanguageURL(request.URL, language, definition.Code),
+				Label: s.localization.Text(language, definition.SwitchMessageID),
+			})
+		}
+	}
+	return page
 }
 
 func (s *Server) prepareHTML(response http.ResponseWriter, request *http.Request, page basePage) {
@@ -171,8 +179,22 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 	}
 	canonicalRelativeURL := fmt.Sprintf("/%s/incidents/%d", language, id)
 	base := s.base(request, language, canonicalRelativeURL)
+	for _, definition := range translatedReaderLanguages() {
+		if definition.Code == language {
+			continue
+		}
+		translatedScope := scope
+		translatedScope.Language = definition.Code
+		translatedScope.PublicOnly = true
+		if _, translatedErr := s.store.GetPresentationIncident(request.Context(), id, translatedScope); errors.Is(translatedErr, store.ErrNotFound) {
+			base.removeLanguage(definition.Code)
+		} else if translatedErr != nil {
+			s.internalError(response, request, "check incident translation", translatedErr)
+			return
+		}
+	}
 	view := s.incidentForLanguage(incident, base.Lang)
-	data := detailPage{basePage: base, Incident: view, BackURL: timelineURL(base.Lang, page), ShowOriginalSection: base.Review && incident.HasAI}
+	data := detailPage{basePage: base, Incident: view, BackURL: timelineURL(base.Lang, page), ShowOriginalSection: base.Review && view.Record.HasAI}
 	if scope.PublicOnly && wantsMarkdown(request.Header.Get("Accept")) {
 		s.prepareMarkdown(response, base)
 		s.renderDetailMarkdown(response, data)
@@ -212,6 +234,10 @@ func (s *Server) setLanguagePreference(response http.ResponseWriter, language st
 }
 
 func (s *Server) incidentForLanguage(record store.IncidentRecord, language string) incidentView {
+	languageDefinition, registered := readerLanguageByCode(language)
+	if !registered {
+		languageDefinition = canonicalReaderLanguage()
+	}
 	state := record.ProcessingState()
 	view := incidentView{
 		Record: record, ContentLanguage: "de",
@@ -220,9 +246,31 @@ func (s *Server) incidentForLanguage(record store.IncidentRecord, language strin
 	if record.HasAI {
 		view.CategoryLabel = processing.CategoryLabel(record.AICategory, language)
 		view.AreaName = record.AIAreaName
+		view.ReportKindLabel = s.metadataCodeLabel(language, "ReportKind", record.AIReportKind)
+		view.EventLabel = s.localization.Text(language, "TimeStatedInReport")
+		view.EventText = s.formatIncidentTime(record, language)
+		if record.AIPublicAssistanceStatus == "requested" {
+			view.PublicAssistance = true
+			view.PublicAssistanceLabel = s.localization.Text(language, "PublicAssistanceRequested")
+			var assistanceTypes []string
+			if json.Unmarshal([]byte(record.AIPublicAssistanceTypes), &assistanceTypes) == nil {
+				for _, code := range assistanceTypes {
+					if label := s.metadataCodeLabel(language, "AssistanceType", code); label != "" {
+						view.PublicAssistanceTypes = append(view.PublicAssistanceTypes, label)
+					}
+				}
+			}
+			view.PublicAssistanceTypesText = strings.Join(view.PublicAssistanceTypes, ", ")
+		}
+		if !languageDefinition.Canonical && (record.AITranslatedTitle == "" || record.AITranslatedSummary == "") {
+			view.Record.HasAI = false
+			view.Title, view.Summary = record.TitleDE, excerpt(record.BodyDE, 190)
+			view.ShowOriginalMessage = record.HasIncident
+			return view
+		}
 		view.ContentLanguage = language
-		if language == "en" {
-			view.Title, view.Summary = record.AITitleEN, record.AISummaryEN
+		if !languageDefinition.Canonical {
+			view.Title, view.Summary = record.AITranslatedTitle, record.AITranslatedSummary
 		} else {
 			view.Title, view.Summary = record.AITitleDE, record.AISummaryDE
 		}
@@ -232,15 +280,27 @@ func (s *Server) incidentForLanguage(record store.IncidentRecord, language strin
 				Number: 1, Name: s.localization.Text(language, "LegacyBilingualStep"),
 				Model: record.AIModel, PromptVersion: record.AIPromptVersion, GeneratedAt: record.AIGeneratedAt,
 			}}
+		} else if record.AIPipelineVersion == processing.PipelineVersion {
+			view.ProcessingSystem = s.localization.Text(language, "MetadataFirstPipeline")
+			view.ProcessingSteps = []processingStepView{
+				{Number: 1, Name: s.localization.Text(language, "IncidentMetadataStep"), Model: record.AIMetadataModel, PromptVersion: record.AIMetadataPromptVersion, GeneratedAt: record.AIMetadataGeneratedAt},
+				{Number: 2, Name: s.localization.Text(language, "GermanPresentationStep"), Model: record.AIModel, PromptVersion: record.AIPromptVersion, GeneratedAt: record.AIGeneratedAt},
+			}
+			if !languageDefinition.Canonical {
+				view.ProcessingSteps = append(view.ProcessingSteps, processingStepView{
+					Name:  s.localization.Text(language, languageDefinition.StepMessageID),
+					Model: record.AITranslationModel, PromptVersion: record.AITranslationPromptVersion, GeneratedAt: record.AITranslationGeneratedAt,
+				})
+			}
 		} else {
-			view.ProcessingSystem = s.localization.Text(language, "StagedPipeline")
+			view.ProcessingSystem = s.localization.Text(language, "V1FallbackPipeline")
 			view.ProcessingSteps = []processingStepView{{
 				Number: 1, Name: s.localization.Text(language, "GermanAnalysisStep"),
 				Model: record.AIModel, PromptVersion: record.AIPromptVersion, GeneratedAt: record.AIGeneratedAt,
 			}}
-			if language == "en" {
+			if !languageDefinition.Canonical {
 				view.ProcessingSteps = append(view.ProcessingSteps, processingStepView{
-					Number: 2, Name: s.localization.Text(language, "EnglishTranslationStep"),
+					Name:  s.localization.Text(language, languageDefinition.StepMessageID),
 					Model: record.AITranslationModel, PromptVersion: record.AITranslationPromptVersion, GeneratedAt: record.AITranslationGeneratedAt,
 				})
 			}
@@ -250,6 +310,47 @@ func (s *Server) incidentForLanguage(record store.IncidentRecord, language strin
 	view.Title, view.Summary = record.TitleDE, excerpt(record.BodyDE, 190)
 	view.ShowOriginalMessage = record.HasIncident
 	return view
+}
+
+func (s *Server) metadataCodeLabel(language, group, code string) string {
+	if code == "" || code == "unknown" || code == "unclear" || code == "not_requested" {
+		return ""
+	}
+	keys := map[string]map[string]string{
+		"ReportKind":     {"incident": "ReportKindIncident", "follow_up": "ReportKindFollowUp", "missing_person": "ReportKindMissingPerson", "wanted_person": "ReportKindWantedPerson", "public_warning": "ReportKindPublicWarning", "other": "ReportKindOther"},
+		"AssistanceType": {"witness_observations": "AssistanceWitnessObservations", "identify_person": "AssistanceIdentifyPerson", "locate_person": "AssistanceLocatePerson", "photo_video_material": "AssistancePhotoVideo", "vehicle_information": "AssistanceVehicleInformation", "property_information": "AssistancePropertyInformation", "other_information": "AssistanceOtherInformation"},
+		"DayPart":        {"morning": "DayPartMorning", "midday": "DayPartMidday", "afternoon": "DayPartAfternoon", "evening": "DayPartEvening", "night": "DayPartNight"},
+	}
+	key := keys[group][code]
+	if key == "" {
+		return ""
+	}
+	return s.localization.Text(language, key)
+}
+
+func (s *Server) formatIncidentTime(record store.IncidentRecord, language string) string {
+	if record.AIEventStartDate == "" {
+		return ""
+	}
+	startDate, err := time.ParseInLocation("2006-01-02", record.AIEventStartDate, s.location)
+	if err != nil {
+		return ""
+	}
+	dateText := formatIncidentDate(language, startDate)
+	start := dateText
+	if part := s.metadataCodeLabel(language, "DayPart", record.AIEventDayPart); part != "" {
+		start += ", " + part
+	} else if record.AIEventStartTime != "" {
+		start += ", " + record.AIEventStartTime
+	}
+	return start
+}
+
+func formatIncidentDate(language string, value time.Time) string {
+	if definition, ok := readerLanguageByCode(language); ok {
+		return definition.FormatDate(value)
+	}
+	return canonicalReaderLanguage().FormatDate(value)
 }
 
 func (s *Server) processingLabel(state, language string) string {
@@ -287,34 +388,60 @@ func (s *Server) groupByDay(incidents []store.IncidentRecord, language string) [
 }
 
 type basePage struct {
-	Lang                   string
-	HomeURL                string
-	AboutURL               string
-	AlternateLanguage      string
-	AlternateLanguageURL   string
-	AlternateLanguageLabel string
-	CanonicalOrigin        string
-	CanonicalURL           string
-	GermanCanonicalURL     string
-	EnglishCanonicalURL    string
-	PreviousCanonicalURL   string
-	NextCanonicalURL       string
-	Fixture                bool
-	Review                 bool
+	Lang                 string
+	HomeURL              string
+	AboutURL             string
+	Description          string
+	LanguageAlternates   []languageLink
+	LanguageSwitches     []languageLink
+	CanonicalOrigin      string
+	CanonicalURL         string
+	PreviousCanonicalURL string
+	NextCanonicalURL     string
+	Fixture              bool
+	Review               bool
+}
+
+type languageLink struct {
+	Code  string
+	URL   string
+	Label string
+}
+
+func (p *basePage) removeLanguage(code string) {
+	p.LanguageAlternates = languageLinksWithout(p.LanguageAlternates, code)
+	p.LanguageSwitches = languageLinksWithout(p.LanguageSwitches, code)
+}
+
+func languageLinksWithout(links []languageLink, code string) []languageLink {
+	filtered := links[:0]
+	for _, link := range links {
+		if link.Code != code {
+			filtered = append(filtered, link)
+		}
+	}
+	return filtered
 }
 
 type incidentView struct {
-	Record              store.IncidentRecord
-	Title               string
-	Summary             string
-	ContentLanguage     string
-	ProcessingState     string
-	ProcessingLabel     string
-	CategoryLabel       string
-	AreaName            string
-	ProcessingSystem    string
-	ProcessingSteps     []processingStepView
-	ShowOriginalMessage bool
+	Record                    store.IncidentRecord
+	Title                     string
+	Summary                   string
+	ContentLanguage           string
+	ProcessingState           string
+	ProcessingLabel           string
+	CategoryLabel             string
+	AreaName                  string
+	EventLabel                string
+	EventText                 string
+	ReportKindLabel           string
+	PublicAssistance          bool
+	PublicAssistanceLabel     string
+	PublicAssistanceTypes     []string
+	PublicAssistanceTypesText string
+	ProcessingSystem          string
+	ProcessingSteps           []processingStepView
+	ShowOriginalMessage       bool
 }
 
 type processingStepView struct {
@@ -354,8 +481,10 @@ type detailPage struct {
 type aboutPage struct{ basePage }
 
 func preferredLanguage(request *http.Request) string {
-	if cookie, err := request.Cookie("munichbrief_language"); err == nil && (cookie.Value == "de" || cookie.Value == "en") {
-		return cookie.Value
+	if cookie, err := request.Cookie("munichbrief_language"); err == nil {
+		if _, registered := readerLanguageByCode(cookie.Value); registered {
+			return cookie.Value
+		}
 	}
 	type preference struct {
 		language string
@@ -369,7 +498,7 @@ func preferredLanguage(request *http.Request) string {
 		if index := strings.IndexByte(language, '-'); index >= 0 {
 			language = language[:index]
 		}
-		if language != "de" && language != "en" {
+		if _, registered := readerLanguageByCode(language); !registered {
 			continue
 		}
 		quality := 1.0
@@ -387,12 +516,13 @@ func preferredLanguage(request *http.Request) string {
 	if len(preferences) > 0 && preferences[0].quality > 0 {
 		return preferences[0].language
 	}
-	return "de"
+	return canonicalReaderLanguage().Code
 }
 
 func routeLanguage(request *http.Request) (string, bool) {
 	language := strings.SplitN(strings.TrimPrefix(request.URL.Path, "/"), "/", 2)[0]
-	return language, language == "de" || language == "en"
+	_, registered := readerLanguageByCode(language)
+	return language, registered
 }
 
 func alternateLanguageURL(value *url.URL, current, alternate string) string {
@@ -410,17 +540,17 @@ func alternateLanguageURL(value *url.URL, current, alternate string) string {
 }
 
 func formatDay(language string, value time.Time) string {
-	if language == "de" {
-		return germanWeekdays[value.Weekday()] + ", " + value.Format("02.") + " " + germanMonths[value.Month()] + " " + value.Format("2006")
+	if definition, ok := readerLanguageByCode(language); ok {
+		return definition.FormatDay(value)
 	}
-	return value.Format("Monday, 02 January 2006")
+	return canonicalReaderLanguage().FormatDay(value)
 }
 
 func formatDateTime(language string, value time.Time) string {
-	if language == "de" {
-		return value.Format("02.") + " " + germanMonths[value.Month()] + value.Format(" 2006, 15:04 MST")
+	if definition, ok := readerLanguageByCode(language); ok {
+		return definition.FormatDateTime(value)
 	}
-	return value.Format("02 January 2006, 15:04 MST")
+	return canonicalReaderLanguage().FormatDateTime(value)
 }
 
 var germanMonths = map[time.Month]string{time.January: "Januar", time.February: "Februar", time.March: "März", time.April: "April", time.May: "Mai", time.June: "Juni", time.July: "Juli", time.August: "August", time.September: "September", time.October: "Oktober", time.November: "November", time.December: "Dezember"}

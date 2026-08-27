@@ -125,6 +125,9 @@ other = "Breadcrumb"
 [PublishedWithin]
 other = "Published within"
 
+[Published]
+other = "Published"
+
 [LastProcessed]
 other = "Last processed"
 
@@ -140,14 +143,92 @@ other = "Category"
 [Area]
 other = "Area"
 
+[ReportKind]
+other = "Report kind"
+
+[PublicAssistance]
+other = "Public assistance"
+
+[PublicAssistanceRequested]
+other = "Police request public assistance"
+
+[PublicAssistanceSourceCopy]
+other = "Instructions, contact routes, and further details are available only in the official source."
+
+[TimeStatedInReport]
+other = "Time stated in report"
+
+[DayPartMorning]
+other = "morning"
+
+[DayPartMidday]
+other = "midday"
+
+[DayPartAfternoon]
+other = "afternoon"
+
+[DayPartEvening]
+other = "evening"
+
+[DayPartNight]
+other = "night"
+
+[ReportKindIncident]
+other = "Incident"
+
+[ReportKindFollowUp]
+other = "Follow-up"
+
+[ReportKindMissingPerson]
+other = "Missing-person report"
+
+[ReportKindWantedPerson]
+other = "Wanted-person report"
+
+[ReportKindPublicWarning]
+other = "Public warning"
+
+[ReportKindOther]
+other = "Other report"
+
+[AssistanceWitnessObservations]
+other = "Witness observations"
+
+[AssistanceIdentifyPerson]
+other = "Identify a person"
+
+[AssistanceLocatePerson]
+other = "Locate a person"
+
+[AssistancePhotoVideo]
+other = "Photo or video material"
+
+[AssistanceVehicleInformation]
+other = "Vehicle information"
+
+[AssistancePropertyInformation]
+other = "Property information"
+
+[AssistanceOtherInformation]
+other = "Other information"
+
 [AIProcessing]
 other = "AI processing"
 
 [Step]
 other = "Step"
 
+[Translation]
+other = "Translation"
+
 [GermanAnalysisStep]
 other = "German analysis"
+
+[IncidentMetadataStep]
+other = "Incident metadata"
+
+[GermanPresentationStep]
+other = "German presentation"
 
 [EnglishTranslationStep]
 other = "English translation"
@@ -157,6 +238,12 @@ other = "Bilingual presentation"
 
 [StagedPipeline]
 other = "Staged pipeline"
+
+[MetadataFirstPipeline]
+other = "Metadata-first pipeline v2"
+
+[V1FallbackPipeline]
+other = "Pipeline v1 fallback"
 
 [LegacyPipeline]
 other = "Legacy pipeline"
@@ -231,7 +318,7 @@ other = "Processing and retention"
 other = "Extracted German text is currently stored locally without an automated deletion deadline. A later retention policy is explicitly reserved."
 
 [AICopy]
-other = "One local-model request creates a data-minimised German and English presentation. Only output from the active model and prompt version is publishable."
+other = "Local models first extract structured metadata, then create a data-minimised German presentation, and finally translate that accepted text into English. The application localises metadata labels."
 
 [VisibilityCopy]
 other = "Restricted review mode exposes originals and processing states for quality control. Public mode shows only approved AI text and never renders stored originals."

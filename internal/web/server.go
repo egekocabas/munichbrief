@@ -44,6 +44,7 @@ type incidentStore interface {
 	ListPublicIncidentLinks(context.Context, string, store.PresentationScope) ([]store.PublicIncidentLink, error)
 	GetPresentationIncident(context.Context, int64, store.PresentationScope) (store.IncidentRecord, error)
 	ListAdminIncidents(context.Context, int, int, string, store.PresentationScope, store.AdminIncidentFilter) ([]store.IncidentRecord, int, error)
+	ListAdminTranslations(context.Context, []int64, []string, string) ([]store.AdminTranslation, error)
 	Ready(context.Context) error
 }
 
@@ -54,6 +55,8 @@ type ProcessingRequester interface {
 	RequestNow(context.Context, string, map[string]string, *int64, bool) (store.PipelineRequestResult, error)
 	ModelStatus(context.Context) (processing.PipelineModelStatus, error)
 	SetPreferredStepModel(context.Context, string, string) error
+	RetryTranslation(context.Context, int64, string, string) (int, error)
+	BackfillTranslations(context.Context, string, string) (int, error)
 	Status(context.Context) (processing.PipelineRuntimeStatus, error)
 }
 
@@ -106,6 +109,9 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 	if strings.TrimSpace(options.PromptVersion) == "" {
 		return nil, errors.New("presentation prompt version is required")
 	}
+	if err := validateReaderLanguages(); err != nil {
+		return nil, fmt.Errorf("validate reader languages: %w", err)
+	}
 	publicHosts, err := normalizePublicHosts(options.PublicHosts)
 	if err != nil {
 		return nil, err
@@ -120,7 +126,7 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 	if err != nil {
 		return nil, fmt.Errorf("load Europe/Berlin timezone: %w", err)
 	}
-	translations, err := newLocalization()
+	translations, err := newLocalization(readerLanguages)
 	if err != nil {
 		return nil, fmt.Errorf("initialize localization: %w", err)
 	}
@@ -159,10 +165,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /incidents/{id}", s.redirectLegacyIncident)
 	mux.HandleFunc("GET /robots.txt", s.robots)
 	mux.HandleFunc("GET /sitemap.xml", s.sitemap)
-	for _, language := range []string{"de", "en"} {
-		mux.HandleFunc("GET /"+language, s.timeline)
-		mux.HandleFunc("GET /"+language+"/incidents/{id}", s.detail)
-		mux.HandleFunc("GET /"+language+"/about", s.about)
+	for _, language := range readerLanguages {
+		mux.HandleFunc("GET /"+language.Code, s.timeline)
+		mux.HandleFunc("GET /"+language.Code+"/incidents/{id}", s.detail)
+		mux.HandleFunc("GET /"+language.Code+"/about", s.about)
 	}
 	mux.HandleFunc("GET /healthz", s.health)
 	mux.HandleFunc("GET /readyz", s.ready)
@@ -176,6 +182,8 @@ func (s *Server) Handler() http.Handler {
 		mux.HandleFunc("POST /api/admin/ai/process-all-now", s.processAllNow)
 		mux.HandleFunc("POST /api/admin/ai/reprocess-all", s.reprocessAll)
 		mux.HandleFunc("POST /api/admin/ai/step-model", s.updatePreferredStepModel)
+		mux.HandleFunc("POST /api/admin/ai/translation-retry", s.retryTranslation)
+		mux.HandleFunc("POST /api/admin/ai/translation-backfill", s.backfillTranslations)
 	}
 	return s.requestLogger(s.accessBoundary(mux))
 }

@@ -23,20 +23,21 @@
     <div class="max-w-3xl">
       <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Operations</p>
       <h1 class="mt-1 font-serif text-4xl font-bold tracking-tight">AI processing</h1>
-      <p class="mt-3 text-muted">Registered LLM steps run in durable, model-grouped cycles. Priority admin cycles start after the active healthy cycle finishes.</p>
+      <p class="mt-3 text-muted">The two-stage canonical pipeline publishes German first. Independent per-language translation jobs run afterward and never block German availability.</p>
     </div>
 
     {{if .Notice}}<div class="mt-6 rounded-md border px-4 py-3 font-semibold {{if .NoticeIsWarning}}border-alert/30 bg-alert-soft text-alert{{else}}border-civic/25 bg-paper text-civic{{end}}" role="status">{{.Notice}}</div>{{end}}
 
+    {{/* Canonical stages are numbered; the shared translation model is intentionally unnumbered. */}}
     <section class="mt-8" aria-labelledby="model-heading">
       <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Ollama configuration</p>
       <h2 id="model-heading" class="mt-1 font-serif text-2xl font-bold">Registered pipeline steps</h2>
       {{if not .Models.CatalogAvailable}}<p class="mt-3 font-bold text-alert">The Ollama catalog is unavailable. No LLM calls will start.</p>{{end}}
-      <div class="mt-4 grid gap-4 lg:grid-cols-2">
+      <div class="mt-4 grid gap-4 lg:grid-cols-3">
         {{range .Models.Steps}}
         {{$step := .}}
         <article class="rounded-lg border border-rule bg-paper p-5" data-step-card="{{.Key}}">
-          <p class="text-xs font-bold uppercase tracking-wider text-muted">Step {{if eq .Key "german_analysis"}}1{{else}}2{{end}}</p>
+          <p class="text-xs font-bold uppercase tracking-wider text-muted">Step {{.Number}}</p>
           <h3 class="mt-1 font-serif text-xl font-bold">{{.DisplayName}}</h3>
           <p class="mt-1 font-mono text-xs text-muted">{{.PromptVersion}}</p>
           <p class="mt-3 font-mono font-bold" data-step-model>{{if .Preferred}}{{.Preferred}}{{else}}Not configured{{end}}</p>
@@ -56,9 +57,34 @@
           {{end}}
         </article>
         {{end}}
+        {{$translation := .Models.Translation}}
+        <article class="rounded-lg border border-civic/25 bg-paper p-5" data-step-card="{{$translation.Key}}">
+          <p class="text-xs font-bold uppercase tracking-wider text-civic">Shared translation model</p>
+          <h3 class="mt-1 font-serif text-xl font-bold">{{$translation.DisplayName}}</h3>
+          <p class="mt-1 font-mono text-xs text-muted">One independent prompt and job per language</p>
+          <p class="mt-3 font-mono font-bold" data-step-model>{{if $translation.Preferred}}{{$translation.Preferred}}{{else}}Not configured{{end}}</p>
+          {{if $translation.PreferredAvailable}}<p class="mt-1 text-sm font-bold text-emerald-700" data-step-availability>✓ Installed and ready</p>{{else}}<p class="mt-1 text-sm font-bold text-alert" data-step-availability>✕ Translations are paused; German processing can continue</p>{{end}}
+          {{if .ProcessingEnabled}}
+          <form class="mt-4 flex flex-col gap-2" method="post" action="/api/admin/ai/step-model">
+            <input name="step" type="hidden" value="{{$translation.Key}}"><input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}"><input name="all_page" type="hidden" value="{{.AllPage}}">
+            <label class="text-sm font-bold" for="preferred-translation">Preferred model</label>
+            <select class="rounded-md border border-rule bg-white px-3 py-2" id="preferred-translation" name="model" required {{if or (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>{{if not $translation.PreferredAvailable}}<option value="" selected disabled>Choose an installed model</option>{{end}}{{range .Models.Models}}<option value="{{.}}" {{if eq . $translation.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>
+            <button class="rounded-md bg-civic px-4 py-2 font-bold text-white hover:bg-civic-dark" type="submit" {{if or (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>Save translation model</button>
+          </form>
+          {{/* Each registered translation receives its own explicit historical backfill action. */}}
+          {{range .TranslationLanguages}}{{$language := .}}
+          <form class="mt-4 flex flex-col gap-2 border-t border-rule pt-4" method="post" action="/api/admin/ai/translation-backfill" data-confirm-processing data-confirm-description="Queue {{$language.DisplayName}} translations for historical canonical presentations that do not have one.">
+            <input name="confirmed" type="hidden" value="false"><input name="language" type="hidden" value="{{$language.Code}}"><input name="unprocessed_page" type="hidden" value="{{$.UnprocessedPage}}"><input name="all_page" type="hidden" value="{{$.AllPage}}">
+            <label class="text-sm font-bold" for="backfill-{{$language.Code}}-model">{{$language.DisplayName}} backfill model</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="backfill-{{$language.Code}}-model" name="model" required {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>{{range $.Models.Models}}<option value="{{.}}" {{if eq . $translation.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>
+            <button class="w-full rounded-md border border-civic bg-white px-4 py-2 text-sm font-bold text-civic hover:bg-newsprint" type="submit" {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>Backfill {{$language.DisplayName}} history</button>
+          </form>
+          {{end}}
+          {{end}}
+        </article>
       </div>
     </section>
 
+    {{/* Live operational state keeps canonical and translation queues distinct. */}}
     <section class="mt-8 rounded-lg border border-rule bg-paper p-5" aria-labelledby="queue-heading" data-pipeline-status data-status-url="/api/admin/ai/status">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div><p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Live operations</p><h2 id="queue-heading" class="mt-1 font-serif text-2xl font-bold">Current cycle</h2></div>
@@ -67,9 +93,10 @@
       <p class="mt-4 text-lg font-bold" data-worker-state>{{if .Runtime.Queue.ActiveCycle}}Cycle #{{.Runtime.Queue.ActiveCycle.ID}} · {{.Runtime.Queue.ActiveCycle.Kind}}{{else}}Idle{{end}}</p>
       <p class="mt-1 text-sm text-muted" data-active-step>{{if .Runtime.Queue.ActiveStepKey}}{{.Runtime.Queue.ActiveStepKey}} · {{.Runtime.Queue.ActiveModel}}{{else}}No active model{{end}}</p>
       <p class="mt-1 text-sm text-muted" data-cycle-elapsed>{{if .Runtime.Queue.ActiveCycle}}Elapsed time updates live{{else}}No active cycle{{end}}</p>
+      {{if .Runtime.Queue.ScheduledAfter}}<p class="mt-2 rounded-md border border-rule bg-newsprint/60 px-3 py-2 text-sm text-muted"><strong class="text-ink">Automatic v2 cutover:</strong> <time datetime="{{.Runtime.Queue.ScheduledAfter.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime "en" .Runtime.Queue.ScheduledAfter}}</time>. Earlier incidents remain on their completed presentation unless manually reprocessed.</p>{{end}}
       <dl class="mt-5 grid gap-3 sm:grid-cols-2">
         <div class="rounded-md border border-rule bg-white p-3"><dt class="text-xs font-bold uppercase text-muted">Active stage</dt><dd class="mt-1 text-xl font-bold" data-active-progress-text>{{.Runtime.Queue.ActiveStepCompleted}} / {{.Runtime.Queue.ActiveStepTotal}} incidents</dd><div class="mt-3 h-2 overflow-hidden rounded-full bg-newsprint"><div class="h-full bg-civic transition-all" data-active-step-progress style="width:0%"></div></div><p class="mt-2 text-xs text-muted">Completed in the current model batch.</p></div>
-        <div class="rounded-md border border-rule bg-white p-3"><dt class="text-xs font-bold uppercase text-muted">Full pipeline</dt><dd class="mt-1 text-xl font-bold" data-progress-text>{{.Runtime.Queue.CycleCompleted}} / {{.Runtime.Queue.CycleTotal}} stage jobs</dd><div class="mt-3 h-2 overflow-hidden rounded-full bg-newsprint"><div class="h-full bg-civic transition-all" data-cycle-progress style="width:0%"></div></div><p class="mt-2 text-xs text-muted">All steps across the frozen incident set.</p></div>
+        <div class="rounded-md border border-rule bg-white p-3"><dt class="text-xs font-bold uppercase text-muted">Canonical pipeline</dt><dd class="mt-1 text-xl font-bold" data-progress-text>{{.Runtime.Queue.CycleCompleted}} / {{.Runtime.Queue.CycleTotal}} stage jobs</dd><div class="mt-3 h-2 overflow-hidden rounded-full bg-newsprint"><div class="h-full bg-civic transition-all" data-cycle-progress style="width:0%"></div></div><p class="mt-2 text-xs text-muted">All canonical steps across the frozen incident set.</p></div>
       </dl>
       <dl class="mt-5 grid gap-3 sm:grid-cols-3">
         <div><dt class="text-xs font-bold uppercase text-muted">Priority cycles</dt><dd class="mt-1 text-xl font-bold" data-manual-cycles>{{.Runtime.Queue.ManualCycles}}</dd></div>
@@ -85,6 +112,10 @@
           </div>
         </div>{{end}}
       </div>
+      <div class="mt-5 border-t border-rule pt-4" data-translation-stats>
+        <h3 class="text-xs font-extrabold uppercase tracking-wider text-civic">Independent translation queues</h3>
+        <div class="mt-3 grid gap-3 lg:grid-cols-2">{{range .Runtime.Queue.Translations}}<div class="rounded-md border border-rule bg-white p-3" data-translation-language="{{.Language}}"><p class="font-mono text-sm font-bold">{{.Language}}</p><p class="mt-1 text-sm text-muted">Pending {{.Pending}} · Running {{.Running}} · Retrying {{.Retrying}} · Review {{.NeedsReview}} · Failed {{.Failed}} · Completed {{.Succeeded}}</p></div>{{else}}<p class="text-sm text-muted">No translation languages registered.</p>{{end}}</div>
+      </div>
       <p class="mt-4 rounded-md border border-civic/20 bg-civic-soft px-3 py-2 text-sm text-civic"><strong>Waiting jobs are durable.</strong> “Ready after stage” means the previous step succeeded; those jobs unlock together when the current model batch finishes.</p>
       <div class="mt-5 border-t border-rule pt-4">
         <h3 class="text-xs font-extrabold uppercase tracking-wider text-muted">Recent safe events</h3>
@@ -93,45 +124,47 @@
       <p class="mt-4 text-sm font-semibold {{if .Runtime.WindowOpen}}text-emerald-700{{else}}text-muted{{end}}" data-window-state>{{if .Runtime.WindowOpen}}Processing window open{{else}}Processing window closed{{end}}</p>
     </section>
 
+    {{/* Manual controls freeze the selected models into each requested job. */}}
     <section class="mt-10 grid gap-6 lg:grid-cols-3" aria-labelledby="process-heading">
       <div class="rounded-lg border border-rule bg-paper p-5">
         <h2 id="process-heading" class="font-serif text-xl font-bold">Process one incident now</h2>
-        <p class="mt-2 text-sm text-muted">Queue a complete two-stage rerun for one incident.</p>
+        <p class="mt-2 text-sm text-muted">Queue the two canonical stages for one incident. Its English job is created independently after German succeeds.</p>
         <form class="mt-4 flex flex-col gap-3" method="post" action="/api/admin/ai/process-now" data-confirm-processing data-confirm-description="Create or reset the current AI job for the entered incident." data-incident-input="incident-id">
           <input name="confirmed" type="hidden" value="false">
           <input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}">
           <input name="all_page" type="hidden" value="{{.AllPage}}">
           <label class="text-sm font-bold" for="incident-id">Incident ID</label>
           <input class="rounded-md border border-rule bg-white px-3 py-2" id="incident-id" name="incident_id" type="number" min="1" step="1" required inputmode="numeric">
-          {{range .Models.Steps}}{{$step := .}}<label class="text-sm font-bold" for="incident-model-{{.Key}}">{{.DisplayName}} model</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="incident-model-{{.Key}}" name="model_{{.Key}}" required {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>{{if not .PreferredAvailable}}<option value="" selected disabled>Choose an installed model</option>{{end}}{{range $.Models.Models}}<option value="{{.}}" {{if eq . $step.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>{{end}}
+          {{range .Models.Steps}}{{$step := .}}<label class="text-sm font-bold" for="incident-model-{{.Key}}">{{.DisplayName}} model</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="incident-model-{{.Key}}" name="model_{{.Key}}" required {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>{{if not .PreferredAvailable}}<option value="" selected disabled>Choose an installed model</option>{{end}}{{range $.Models.Models}}<option value="{{.}}" {{if eq . $step.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>{{end}}{{$translation := .Models.Translation}}<label class="text-sm font-bold" for="incident-model-translation">Translation model (optional)</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="incident-model-translation" name="model_translation"><option value="">Do not queue translation yet</option>{{range .Models.Models}}<option value="{{.}}" {{if eq . $translation.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>
           <button class="rounded-md bg-civic px-4 py-2 font-bold text-white hover:bg-civic-dark" type="submit" {{if or (not .ProcessingEnabled) (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>Process incident now</button>
           {{if not .ProcessingEnabled}}<p class="text-sm font-semibold text-alert">AI processing is disabled in this application instance.</p>{{end}}
         </form>
       </div>
       <div class="rounded-lg border border-alert/25 bg-paper p-5">
         <h2 class="font-serif text-xl font-bold">Process all unprocessed incidents</h2>
-        <p class="mt-2 text-sm text-muted">Queue every incident that has no complete current staged presentation.</p>
+        <p class="mt-2 text-sm text-muted">Queue incidents with no valid completed presentation. Completed v1 and legacy presentations count as processed.</p>
         <form class="mt-4 flex flex-col gap-3" method="post" action="/api/admin/ai/process-all-now" data-confirm-processing data-confirm-description="Request immediate processing for all {{.Unprocessed.Total}} currently unprocessed incidents.">
           <input name="confirmed" type="hidden" value="false">
           <input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}">
           <input name="all_page" type="hidden" value="{{.AllPage}}">
-          {{range .Models.Steps}}{{$step := .}}<label class="text-sm font-bold" for="bulk-model-{{.Key}}">{{.DisplayName}} model</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="bulk-model-{{.Key}}" name="model_{{.Key}}" required {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>{{if not .PreferredAvailable}}<option value="" selected disabled>Choose an installed model</option>{{end}}{{range $.Models.Models}}<option value="{{.}}" {{if eq . $step.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>{{end}}
+          {{range .Models.Steps}}{{$step := .}}<label class="text-sm font-bold" for="bulk-model-{{.Key}}">{{.DisplayName}} model</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="bulk-model-{{.Key}}" name="model_{{.Key}}" required {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>{{if not .PreferredAvailable}}<option value="" selected disabled>Choose an installed model</option>{{end}}{{range $.Models.Models}}<option value="{{.}}" {{if eq . $step.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>{{end}}{{$translation := .Models.Translation}}<label class="text-sm font-bold" for="bulk-model-translation">Translation model (optional)</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="bulk-model-translation" name="model_translation"><option value="">Do not queue translation yet</option>{{range .Models.Models}}<option value="{{.}}" {{if eq . $translation.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>
           <button class="w-full rounded-md border border-alert bg-white px-4 py-2 font-bold text-alert hover:bg-alert-soft" type="submit" {{if or (not .ProcessingEnabled) (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>Process all now</button>
         </form>
       </div>
       <div class="rounded-lg border border-alert bg-alert-soft/30 p-5">
         <h2 class="font-serif text-xl font-bold">Reprocess everything</h2>
-        <p class="mt-2 text-sm text-muted">Freeze every current incident and rerun the full pipeline from German analysis. Older queued automatic work for these revisions is superseded.</p>
+        <p class="mt-2 text-sm text-muted">Freeze every current incident and upgrade it through the canonical v2 pipeline from metadata extraction. Translations follow asynchronously; older queued automatic work for these revisions is superseded.</p>
         <form class="mt-4 flex flex-col gap-3" method="post" action="/api/admin/ai/reprocess-all" data-confirm-processing data-confirm-description="Reprocess every current incident from the first pipeline step. Older queued scheduled and continuation work for these source revisions will be superseded.">
           <input name="confirmed" type="hidden" value="false">
           <input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}">
           <input name="all_page" type="hidden" value="{{.AllPage}}">
-          {{range .Models.Steps}}{{$step := .}}<label class="text-sm font-bold" for="reprocess-model-{{.Key}}">{{.DisplayName}} model</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="reprocess-model-{{.Key}}" name="model_{{.Key}}" required {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>{{if not .PreferredAvailable}}<option value="" selected disabled>Choose an installed model</option>{{end}}{{range $.Models.Models}}<option value="{{.}}" {{if eq . $step.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>{{end}}
+          {{range .Models.Steps}}{{$step := .}}<label class="text-sm font-bold" for="reprocess-model-{{.Key}}">{{.DisplayName}} model</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="reprocess-model-{{.Key}}" name="model_{{.Key}}" required {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>{{if not .PreferredAvailable}}<option value="" selected disabled>Choose an installed model</option>{{end}}{{range $.Models.Models}}<option value="{{.}}" {{if eq . $step.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>{{end}}{{$translation := .Models.Translation}}<label class="text-sm font-bold" for="reprocess-model-translation">Translation model (optional)</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="reprocess-model-translation" name="model_translation"><option value="">Do not queue translation yet</option>{{range .Models.Models}}<option value="{{.}}" {{if eq . $translation.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>
           <button class="w-full rounded-md bg-alert px-4 py-2 font-bold text-white hover:opacity-90" type="submit" {{if or (not .ProcessingEnabled) (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>Reprocess everything</button>
         </form>
       </div>
     </section>
 
+    {{/* Incidents without any current completed presentation. */}}
     <section class="mt-12 border-t border-rule pt-8" aria-labelledby="unprocessed-heading">
       <div class="flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -146,6 +179,7 @@
       </div>
     </section>
 
+    {{/* Full incident history for source, metadata, and provenance review. */}}
     <section class="mt-12 border-t border-rule pt-8" aria-labelledby="all-incidents-heading">
       <div class="flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -160,6 +194,7 @@
       </div>
     </section>
   </main>
+  {{/* Shared confirmation dialog for immediate and bulk processing requests. */}}
   <dialog id="processing-confirmation" class="w-full max-w-xl rounded-lg border border-rule bg-paper p-0 text-ink" aria-labelledby="processing-confirmation-title" aria-describedby="processing-confirmation-description">
     <form method="dialog" class="p-5 sm:p-6">
       <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-alert">Confirm AI request</p>
@@ -180,6 +215,7 @@
 {{end}}
 
 {{define "admin-incident-list"}}
+  {{/* Reusable expandable list used by both admin review queues. */}}
   {{if .Incidents}}
   <div class="grid gap-3">
     {{range .Incidents}}{{$incident := .}}
@@ -205,17 +241,23 @@
             <h3 class="mt-2 font-serif text-xl font-bold leading-tight">{{.Record.AITitleDE}}</h3>
             <p class="mt-2 leading-relaxed text-muted">{{.Record.AISummaryDE}}</p>
           </section>
-          <section lang="en" aria-label="English AI presentation">
-            <p class="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-civic">English translation</p>
-            <h3 class="mt-2 font-serif text-xl font-bold leading-tight">{{.Record.AITitleEN}}</h3>
-            <p class="mt-2 leading-relaxed text-muted">{{.Record.AISummaryEN}}</p>
+          {{range .Translations}}
+          <section lang="{{.Language}}" aria-label="{{.DisplayName}} AI presentation">
+            <p class="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-civic">{{.DisplayName}} translation</p>
+            {{if .Title}}<h3 class="mt-2 font-serif text-xl font-bold leading-tight">{{.Title}}</h3><p class="mt-2 leading-relaxed text-muted">{{.Summary}}</p>{{else}}<p class="mt-2 font-semibold text-muted">{{.StatusLabel}}</p>{{end}}
+            {{if .Model}}<p class="mt-3 text-xs text-muted"><strong class="text-ink">Provenance:</strong> {{.Model}} · <span class="font-mono">{{.PromptVersion}}</span></p>{{end}}
           </section>
+          {{end}}
         </div>
         <dl class="mt-5 grid gap-3 border-t border-rule/70 pt-4 text-xs text-muted sm:grid-cols-3">
           {{if .Record.AICategory}}<div><dt class="font-bold text-ink">Category</dt><dd class="mt-0.5">{{.CategoryLabel}} · <span class="font-mono">{{.Record.AICategory}}</span></dd></div>{{end}}
           {{if .Record.AIAreaName}}<div><dt class="font-bold text-ink">Area</dt><dd class="mt-0.5">{{.Record.AIAreaName}} · {{.Record.AIAreaType}}</dd></div>{{end}}
-          <div><dt class="font-bold text-ink">Model</dt><dd class="mt-0.5">{{.Record.AIModel}}</dd></div>
-          <div><dt class="font-bold text-ink">Prompt</dt><dd class="mt-0.5">{{.Record.AIPromptVersion}}</dd></div>
+          {{if .EventText}}<div><dt class="font-bold text-ink">{{.EventLabel}}</dt><dd class="mt-0.5">{{.EventText}}</dd></div>{{end}}
+          {{if .Record.AIReportKind}}<div><dt class="font-bold text-ink">Report kind</dt><dd class="mt-0.5">{{.ReportKindLabel}} · <span class="font-mono">{{.Record.AIReportKind}}</span></dd></div>{{end}}
+          {{if .Record.AIPublicAssistanceStatus}}<div><dt class="font-bold text-ink">Public assistance</dt><dd class="mt-0.5"><span class="font-mono">{{.Record.AIPublicAssistanceStatus}} / {{.Record.AIPublicAssistanceTypes}}</span>{{range .PublicAssistanceTypes}} · {{.}}{{end}}</dd></div>{{end}}
+          {{if .Record.AIMetadataModel}}<div><dt class="font-bold text-ink">Metadata provenance</dt><dd class="mt-0.5">{{.Record.AIMetadataModel}} · <span class="font-mono">{{.Record.AIMetadataPromptVersion}}</span></dd></div>{{end}}
+          {{if .Record.AIModel}}<div><dt class="font-bold text-ink">{{.PrimaryProvenanceLabel}}</dt><dd class="mt-0.5">{{.Record.AIModel}} · <span class="font-mono">{{.Record.AIPromptVersion}}</span></dd></div>{{end}}
+          {{range .Translations}}<div><dt class="font-bold text-ink">{{.DisplayName}} state</dt><dd class="mt-0.5">{{.StatusLabel}}{{if .FailureKind}} · <span class="font-mono">{{.FailureKind}}</span>{{end}}</dd></div>{{end}}
           {{if .Record.AIGeneratedAt}}<div><dt class="font-bold text-ink">Generated</dt><dd class="mt-0.5"><time datetime="{{.Record.AIGeneratedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime "en" .Record.AIGeneratedAt}}</time></dd></div>{{end}}
         </dl>
         {{end}}
@@ -229,12 +271,12 @@
         {{if $.AllowProcessing}}
         <div class="mt-6 border-t border-rule/70 pt-4">
           {{if .CanProcess}}
-          <form class="grid gap-2 sm:grid-cols-[repeat(2,minmax(0,1fr))_auto] sm:items-end" method="post" action="/api/admin/ai/process-now" data-confirm-processing data-confirm-description="Rerun the complete pipeline for incident #{{.Record.ID}}.">
+          <form class="grid gap-2 sm:grid-cols-[repeat(3,minmax(0,1fr))_auto] sm:items-end" method="post" action="/api/admin/ai/process-now" data-confirm-processing data-confirm-description="Rerun the complete pipeline for incident #{{.Record.ID}}.">
             <input name="confirmed" type="hidden" value="false">
             <input name="incident_id" type="hidden" value="{{.Record.ID}}">
             <input name="unprocessed_page" type="hidden" value="{{$.Page}}">
             <input name="all_page" type="hidden" value="{{$.OtherPage}}">
-            {{range $.Models.Steps}}{{$step := .}}<label class="grid gap-1 text-xs font-bold" for="incident-{{$incident.Record.ID}}-{{.Key}}"><span>{{.DisplayName}}</span><select class="rounded-md border border-rule bg-white px-2 py-2 text-sm" id="incident-{{$incident.Record.ID}}-{{.Key}}" name="model_{{.Key}}" required {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>{{if not .PreferredAvailable}}<option value="" selected disabled>Choose model</option>{{end}}{{range $.Models.Models}}<option value="{{.}}" {{if eq . $step.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select></label>{{end}}
+            {{range $.Models.Steps}}{{$step := .}}<label class="grid gap-1 text-xs font-bold" for="incident-{{$incident.Record.ID}}-{{.Key}}"><span>{{.DisplayName}}</span><select class="rounded-md border border-rule bg-white px-2 py-2 text-sm" id="incident-{{$incident.Record.ID}}-{{.Key}}" name="model_{{.Key}}" required {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>{{if not .PreferredAvailable}}<option value="" selected disabled>Choose model</option>{{end}}{{range $.Models.Models}}<option value="{{.}}" {{if eq . $step.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select></label>{{end}}{{$translation := $.Models.Translation}}<label class="grid gap-1 text-xs font-bold" for="incident-{{$incident.Record.ID}}-translation"><span>Translation (optional)</span><select class="rounded-md border border-rule bg-white px-2 py-2 text-sm" id="incident-{{$incident.Record.ID}}-translation" name="model_translation"><option value="">Not yet</option>{{range $.Models.Models}}<option value="{{.}}" {{if eq . $translation.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select></label>
             <button class="rounded-md bg-civic px-4 py-2 text-sm font-bold text-white hover:bg-civic-dark" type="submit" {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>Process now</button>
           </form>
           {{else}}
@@ -242,6 +284,15 @@
           {{end}}
         </div>
         {{end}}
+
+        {{/* Missing and failed translations are retried independently by registered language. */}}
+        {{range .Translations}}{{if .CanRetry}}{{$language := .}}
+        <form class="mt-4 flex flex-wrap items-end gap-2 border-t border-rule/70 pt-4" method="post" action="/api/admin/ai/translation-retry" data-confirm-processing data-confirm-description="Retry the missing or failed {{$language.DisplayName}} translation for incident #{{$incident.Record.ID}} immediately.">
+          <input name="confirmed" type="hidden" value="false"><input name="incident_id" type="hidden" value="{{$incident.Record.ID}}"><input name="language" type="hidden" value="{{$language.Language}}"><input name="unprocessed_page" type="hidden" value="{{$.Page}}"><input name="all_page" type="hidden" value="{{$.OtherPage}}">
+          {{$translation := $.Models.Translation}}<label class="grid gap-1 text-xs font-bold" for="retry-{{$.IDPrefix}}-{{$language.Language}}-{{$incident.Record.ID}}"><span>{{$language.DisplayName}} translation model</span><select class="rounded-md border border-rule bg-white px-2 py-2 text-sm" id="retry-{{$.IDPrefix}}-{{$language.Language}}-{{$incident.Record.ID}}" name="model" required>{{range $.Models.Models}}<option value="{{.}}" {{if eq . $translation.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+          <button class="rounded-md border border-civic bg-white px-4 py-2 text-sm font-bold text-civic hover:bg-newsprint" type="submit" {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>Retry {{$language.DisplayName}} now</button>
+        </form>
+        {{end}}{{end}}
 
         <footer class="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-rule/70 pt-4 text-sm text-muted">
           <span>Incident ID {{.Record.ID}}</span>

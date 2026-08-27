@@ -39,6 +39,26 @@ identity or culpability, and use broad editorial categories rather than legal
 conclusions. Every incident links to its authoritative official release and
 states that MunichBrief is independent and unofficial.
 
+The metadata stage receives publication date, time, weekday, `Europe/Berlin`,
+and direct lookup maps for recent relative days and weekdays. This lets the
+model resolve phrases such as “Monday”, “yesterday afternoon”, or “this
+morning” without application-side German phrase parsing. Publication time is
+never substituted for incident time. The stage returns one primary date and,
+when available, either a clock time or day part. Unknown or contradictory
+timing remains absent. Reader pages continue to group by publication date while
+displaying the time stated in the report separately.
+
+Public-assistance metadata is set only for an explicit source appeal. Reader
+pages show broad requested assistance types but never reproduce contact details,
+case numbers, identifying descriptions, or instructions; readers are directed
+to the official source. Missing- and wanted-person input continues to use a
+generic identity-free replacement even when that reduces metadata completeness.
+
+Only an accepted privacy-safe German title and summary cross into a translation
+job. Translation records never contain retained source text, contact details,
+or identity data. A translation failure cannot expose the original or delay the
+canonical German presentation.
+
 The presumption of innocence applies. A generated summary never replaces the
 official source.
 

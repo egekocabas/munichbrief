@@ -8,7 +8,6 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
-	"golang.org/x/text/language"
 )
 
 //go:embed locales/*.toml
@@ -18,15 +17,22 @@ type localization struct {
 	bundle *i18n.Bundle
 }
 
-func newLocalization() (*localization, error) {
-	if err := validateCatalogParity(localeFiles, "locales/active.de.toml", "locales/active.en.toml"); err != nil {
+func newLocalization(languages []readerLanguage) (*localization, error) {
+	if len(languages) == 0 {
+		return nil, fmt.Errorf("at least one reader language is required")
+	}
+	catalogs := make([]string, 0, len(languages))
+	for _, definition := range languages {
+		catalogs = append(catalogs, definition.Catalog)
+	}
+	if err := validateCatalogParity(localeFiles, catalogs...); err != nil {
 		return nil, err
 	}
-	bundle := i18n.NewBundle(language.German)
+	bundle := i18n.NewBundle(canonicalReaderLanguage().Tag)
 	bundle.RegisterUnmarshalFunc("toml", toml.Unmarshal)
-	for _, name := range []string{"locales/active.de.toml", "locales/active.en.toml"} {
-		if _, err := bundle.LoadMessageFileFS(localeFiles, name); err != nil {
-			return nil, fmt.Errorf("load translation catalog %s: %w", name, err)
+	for _, definition := range languages {
+		if _, err := bundle.LoadMessageFileFS(localeFiles, definition.Catalog); err != nil {
+			return nil, fmt.Errorf("load translation catalog %s: %w", definition.Catalog, err)
 		}
 	}
 	return &localization{bundle: bundle}, nil

@@ -142,14 +142,13 @@ func (c *OllamaClient) GenerateStep(ctx context.Context, step StepDefinition, in
 		return StepOutput{}, "", err
 	}
 	var output StepOutput
-	decoder := json.NewDecoder(strings.NewReader(content))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&output); err != nil {
-		return StepOutput{}, "", errorOf(ErrorOutput, "decode structured %s output: %v", step.Key, err)
+	if step.OutputDecoder != nil {
+		output, err = step.OutputDecoder(content)
+	} else {
+		err = decodeStrictJSON(content, &output)
 	}
-	var trailing any
-	if err := decoder.Decode(&trailing); err != io.EOF {
-		return StepOutput{}, "", errorOf(ErrorOutput, "structured model output contains trailing content")
+	if err != nil {
+		return StepOutput{}, "", errorOf(ErrorOutput, "decode structured %s output: %v", step.Key, err)
 	}
 	if err := ValidateStepOutput(step, requestInput, &output); err != nil {
 		return StepOutput{}, "", err
@@ -240,11 +239,16 @@ var sourceDirectReplacements = []struct {
 
 var repeatedFullStops = regexp.MustCompile(`(?:\s*\.\s*){2,}`)
 
-var identityAppealDetector = regexp.MustCompile(`(?i)\b(?:vermisst|vermisste[rsn]?|vermisstensuche|vermisstenfall|öffentlichkeitsfahndung|fahndungsaufruf)\b`)
+var missingPersonAppealDetector = regexp.MustCompile(`(?i)\b(?:vermisst|vermisste[rsn]?|vermisstensuche|vermisstenfall)\b`)
+var wantedPersonAppealDetector = regexp.MustCompile(`(?i)(?:öffentlichkeitsfahndung|fahndungsaufruf)\b`)
 
 func minimizeIncidentSource(title, body string) (string, string) {
-	if identityAppealDetector.MatchString(title + "\n" + body) {
-		return "Vermissten- oder Fahndungsaufruf", "Die Polizei hat eine Vermissten- oder Fahndungsmeldung veröffentlicht. Identität, Beschreibung, Bild- und Kontaktdaten wurden aus Datenschutzgründen entfernt. Für Einzelheiten und Hinweise ist die offizielle Quelle maßgeblich."
+	source := title + "\n" + body
+	if missingPersonAppealDetector.MatchString(source) {
+		return "Vermisstenmeldung", "Die Polizei hat eine Vermisstenmeldung veröffentlicht. Identität, Beschreibung, Bild- und Kontaktdaten wurden aus Datenschutzgründen entfernt. Für Einzelheiten und Hinweise ist die offizielle Quelle maßgeblich."
+	}
+	if wantedPersonAppealDetector.MatchString(source) {
+		return "Fahndungsaufruf", "Die Polizei hat einen Fahndungsaufruf veröffentlicht. Identität, Beschreibung, Bild- und Kontaktdaten wurden aus Datenschutzgründen entfernt. Für Einzelheiten und Hinweise ist die offizielle Quelle maßgeblich."
 	}
 	return redactDirectIdentifiers(title), redactDirectIdentifiers(body)
 }

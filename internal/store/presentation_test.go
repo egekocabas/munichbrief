@@ -14,7 +14,7 @@ func TestListAdminIncidentsScopesAndFiltersPresentations(t *testing.T) {
 		prompt    = "incident-presentation-v2"
 		operation = "incident-presentation/incident-presentation-v2/qwen3.5:4b"
 	)
-	scope := PresentationScope{Operation: operation, ModelIdentity: model, PromptVersion: prompt}
+	scope := PresentationScope{Operation: operation, ModelIdentity: model, PromptVersion: prompt, TranslationLanguage: "en"}
 	now := time.Date(2026, time.August, 25, 10, 0, 0, 0, time.UTC)
 
 	currentJob, found, err := database.QueueAndClaimProcessingJob(ctx, operation, now)
@@ -70,9 +70,9 @@ func TestListAdminIncidentsScopesAndFiltersPresentations(t *testing.T) {
 	for _, record := range all {
 		switch record.ID {
 		case currentJob.IncidentID:
-			currentFound = record.HasAI && record.AISummaryEN == alternate.SummaryEN && record.AIModel == alternateScope.ModelIdentity
+			currentFound = record.HasAI && record.AITranslatedSummary == alternate.SummaryEN && record.AIModel == alternateScope.ModelIdentity
 		case staleJob.IncidentID:
-			staleFound = !record.HasAI && record.AISummaryEN == ""
+			staleFound = !record.HasAI && record.AITranslatedSummary == ""
 		}
 	}
 	if !currentFound || !staleFound {

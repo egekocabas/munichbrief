@@ -10,10 +10,19 @@ import (
 
 func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKeys []string, now time.Time) (PipelineSnapshot, error) {
 	var snapshot PipelineSnapshot
+	var scheduledAfter string
+	if err := s.db.QueryRowContext(ctx, `SELECT scheduled_after FROM pipeline_cutovers WHERE pipeline_version = ?`, PipelineVersion).Scan(&scheduledAfter); err != nil {
+		return snapshot, fmt.Errorf("read pipeline cutover: %w", err)
+	}
+	cutover, err := time.Parse(time.RFC3339Nano, scheduledAfter)
+	if err != nil {
+		return snapshot, fmt.Errorf("parse pipeline cutover: %w", err)
+	}
+	snapshot.ScheduledAfter = &cutover
 	var cycle PipelineCycle
 	var authorized int
 	var started, completed string
-	err := s.db.QueryRowContext(ctx, `SELECT id, kind, status, active_step, window_authorized, COALESCE(started_at,''), COALESCE(completed_at,'') FROM processing_cycles WHERE status = 'running' LIMIT 1`).Scan(&cycle.ID, &cycle.Kind, &cycle.Status, &cycle.ActiveStep, &authorized, &started, &completed)
+	err = s.db.QueryRowContext(ctx, `SELECT id, kind, status, active_step, window_authorized, COALESCE(started_at,''), COALESCE(completed_at,'') FROM processing_cycles WHERE status = 'running' LIMIT 1`).Scan(&cycle.ID, &cycle.Kind, &cycle.Status, &cycle.ActiveStep, &authorized, &started, &completed)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return snapshot, err
 	}
@@ -53,8 +62,8 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 	if err != nil {
 		return snapshot, err
 	}
-	query := `SELECT COUNT(*) FROM incidents i JOIN source_documents d ON d.id=i.source_document_id WHERE ` + condition + ` AND COALESCE(i.body_de,'')<>'' AND NOT EXISTS (SELECT 1 FROM presentation_runs r WHERE r.incident_id=i.id AND r.source_hash=i.content_hash AND r.pipeline_version=? AND r.status IN ('processing','complete','failed'))`
-	if err := s.db.QueryRowContext(ctx, query, PipelineVersion).Scan(&snapshot.ScheduledCandidates); err != nil {
+	query := `SELECT COUNT(*) FROM incidents i JOIN source_documents d ON d.id=i.source_document_id WHERE ` + condition + ` AND COALESCE(i.body_de,'')<>'' AND julianday(i.created_at) > julianday((SELECT scheduled_after FROM pipeline_cutovers WHERE pipeline_version=?)) AND NOT EXISTS (SELECT 1 FROM presentation_runs r WHERE r.incident_id=i.id AND r.source_hash=i.content_hash AND r.pipeline_version=? AND r.status IN ('processing','complete','failed'))`
+	if err := s.db.QueryRowContext(ctx, query, PipelineVersion, PipelineVersion).Scan(&snapshot.ScheduledCandidates); err != nil {
 		return snapshot, fmt.Errorf("count scheduled pipeline candidates: %w", err)
 	}
 	for _, key := range stepKeys {
@@ -114,6 +123,34 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 			stat.LastSuccess = &value
 		}
 		snapshot.Steps = append(snapshot.Steps, stat)
+	}
+	translationRows, err := s.db.QueryContext(ctx, `SELECT languages.language_code,
+		COALESCE(SUM(CASE WHEN translations.status='pending' AND translations.attempt_count=0 THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN translations.status='running' THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN translations.status='pending' AND translations.attempt_count>0 THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN translations.status='needs_review' THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN translations.status='failed' THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN translations.status='succeeded' THEN 1 ELSE 0 END),0)
+		FROM translation_language_cutovers languages
+		LEFT JOIN presentation_translations translations ON translations.language_code=languages.language_code
+		GROUP BY languages.language_code ORDER BY languages.language_code`)
+	if err != nil {
+		return snapshot, fmt.Errorf("read translation queue stats: %w", err)
+	}
+	for translationRows.Next() {
+		var stat TranslationQueueStats
+		if err := translationRows.Scan(&stat.Language, &stat.Pending, &stat.Running, &stat.Retrying, &stat.NeedsReview, &stat.Failed, &stat.Succeeded); err != nil {
+			translationRows.Close()
+			return snapshot, err
+		}
+		snapshot.Translations = append(snapshot.Translations, stat)
+	}
+	if err := translationRows.Err(); err != nil {
+		translationRows.Close()
+		return snapshot, fmt.Errorf("iterate translation queue stats: %w", err)
+	}
+	if err := translationRows.Close(); err != nil {
+		return snapshot, err
 	}
 	eventRows, err := s.db.QueryContext(ctx, `SELECT j.updated_at, c.id, ci.incident_id, j.step_key, j.status, COALESCE(j.failure_kind,'')
 		FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id=j.cycle_item_id

@@ -20,6 +20,12 @@ import (
 	"github.com/egekocabas/munichbrief/internal/store"
 )
 
+func TestDisabledAIUsesANilWebProcessor(t *testing.T) {
+	if webProcessor(nil) != nil {
+		t.Fatal("disabled AI produced a typed-nil web processor")
+	}
+}
+
 func TestRunAIProcessQueuesNeverStartedIncident(t *testing.T) {
 	ctx := context.Background()
 	databasePath := filepath.Join(t.TempDir(), "retry.db")
@@ -40,13 +46,16 @@ func TestRunAIProcessQueuesNeverStartedIncident(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := database.EnsurePipelineSteps(ctx, processing.StepKeys(), now); err != nil {
+	if err := database.EnsurePipelineSteps(ctx, processing.ModelSettingKeys(), now); err != nil {
 		t.Fatal(err)
 	}
 	for _, step := range processing.StepKeys() {
 		if err := database.SetPipelineStepModel(ctx, step, "qwen3.5:4b", now); err != nil {
 			t.Fatal(err)
 		}
+	}
+	if err := database.SetPipelineStepModel(ctx, processing.TranslationModelStep, "qwen3.5:4b", now); err != nil {
+		t.Fatal(err)
 	}
 	if err := database.Close(); err != nil {
 		t.Fatal(err)

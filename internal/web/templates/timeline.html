@@ -1,5 +1,6 @@
 {{define "title"}}{{t .Lang "Timeline"}}{{end}}
 {{define "content"}}
+{{/* Timeline introduction and result count. */}}
 <section class="border-b border-rule py-8 sm:py-11">
   <div class="grid items-end gap-6 md:grid-cols-[minmax(0,1fr)_auto]">
     <div class="max-w-3xl">
@@ -11,6 +12,7 @@
   </div>
 </section>
 
+{{/* Publication-day groups remain the primary timeline structure. */}}
 <section class="py-7" aria-labelledby="timeline-heading">
   <div class="mb-6 flex items-end justify-between gap-4">
     <div>
@@ -31,13 +33,15 @@
         <article class="min-w-0 rounded-lg border border-rule bg-paper px-4 py-4 transition-colors hover:border-civic/35 sm:px-5 sm:py-5">
           <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.7rem] font-extrabold uppercase tracking-[0.09em] text-muted">
             {{if .Record.HasIncident}}{{if .Record.Number}}<span class="text-alert">{{t $.Lang "Report"}} {{.Record.Number}}</span>{{end}}{{else}}<span class="text-alert">{{t $.Lang "SourceMetadata"}}</span>{{end}}
-            <time datetime="{{.Record.PublishedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime $.Lang .Record.PublishedAt}}</time>
+            <span>{{t $.Lang "Published"}}: <time datetime="{{.Record.PublishedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime $.Lang .Record.PublishedAt}}</time></span>
           </div>
           {{if .Record.HasIncident}}
             {{if $.Review}}<p class="mt-3 text-[0.68rem] font-extrabold uppercase tracking-[0.1em] text-civic data-[state=failed]:text-amber-700 data-[state=needs-review]:text-amber-700 data-[state=retrying]:text-amber-700 data-[state=running]:text-amber-700" data-state="{{.ProcessingState}}">{{.ProcessingLabel}}</p>{{end}}
-            {{if .CategoryLabel}}<dl class="mt-3 flex flex-wrap gap-2 text-xs">
-              <div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{t $.Lang "Category"}}</dt><dd class="font-bold text-civic">{{.CategoryLabel}}</dd></div>
+            {{if or .CategoryLabel .AreaName .EventText .PublicAssistance}}<dl class="mt-3 flex flex-wrap gap-2 text-xs">
+              {{if .CategoryLabel}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{t $.Lang "Category"}}</dt><dd class="font-bold text-civic">{{.CategoryLabel}}</dd></div>{{end}}
               {{if .AreaName}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{t $.Lang "Area"}}</dt><dd class="font-bold text-civic">{{.AreaName}}</dd></div>{{end}}
+              {{if .EventText}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{.EventLabel}}</dt><dd class="font-bold text-civic">{{.EventText}}</dd></div>{{end}}
+              {{if .PublicAssistance}}<div class="inline-flex items-center gap-1.5 rounded-full border border-alert/30 bg-alert-soft px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-alert">{{t $.Lang "PublicAssistance"}}</dt><dd class="font-bold text-alert">{{.PublicAssistanceLabel}}{{if .PublicAssistanceTypesText}} · {{.PublicAssistanceTypesText}}{{end}}</dd></div>{{end}}
             </dl>{{end}}
             <h4 class="mt-3 font-serif text-xl font-bold leading-tight tracking-[-0.015em] sm:text-2xl"><a class="text-ink no-underline hover:text-civic" href="{{incidentURL $.Lang .Record.ID $.Page}}" lang="{{.ContentLanguage}}">{{.Title}}</a></h4>
             <p class="mt-2 leading-relaxed text-muted" lang="{{.ContentLanguage}}">{{.Summary}}</p>
@@ -49,7 +53,10 @@
           {{end}}
           <footer class="mt-4 flex flex-col gap-3 border-t border-rule/70 pt-3 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
             <span class="min-w-0 truncate">{{.Record.SourceTitle}}</span>
-            {{if .Record.HasIncident}}<a class="shrink-0 font-extrabold text-civic no-underline hover:text-civic-dark" href="{{incidentURL $.Lang .Record.ID $.Page}}">{{t $.Lang "ReadIncident"}} <span aria-hidden="true">→</span></a>{{else}}<a class="shrink-0 font-extrabold text-civic no-underline hover:text-civic-dark" href="{{.Record.SourceURL}}" rel="noopener noreferrer">{{t $.Lang "OpenOfficialSource"}} <span aria-hidden="true">↗</span></a>{{end}}
+            <span class="flex flex-wrap items-center gap-3">
+              {{if and .Record.HasIncident .PublicAssistance}}<a class="shrink-0 font-extrabold text-civic no-underline hover:text-civic-dark" href="{{.Record.SourceURL}}" target="_blank" rel="noopener noreferrer">{{t $.Lang "OpenOfficialSource"}} <span aria-hidden="true">↗</span></a>{{end}}
+              {{if .Record.HasIncident}}<a class="shrink-0 font-extrabold text-civic no-underline hover:text-civic-dark" href="{{incidentURL $.Lang .Record.ID $.Page}}">{{t $.Lang "ReadIncident"}} <span aria-hidden="true">→</span></a>{{else}}<a class="shrink-0 font-extrabold text-civic no-underline hover:text-civic-dark" href="{{.Record.SourceURL}}" rel="noopener noreferrer">{{t $.Lang "OpenOfficialSource"}} <span aria-hidden="true">↗</span></a>{{end}}
+            </span>
           </footer>
         </article>
         {{end}}
@@ -58,6 +65,7 @@
     {{end}}
   </div>
   {{if or .HasPrevious .HasNext}}
+  {{/* Pagination follows publication order rather than extracted incident time. */}}
   <nav class="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-4 border-t border-rule pt-5 text-sm text-muted" aria-label="{{t .Lang "Timeline"}}">
     {{if .HasPrevious}}<a class="font-bold text-civic no-underline hover:text-civic-dark" href="/{{.Lang}}?page={{.Previous}}">← {{t .Lang "Newer"}}</a>{{else}}<span></span>{{end}}
     <span>{{t .Lang "Page"}} {{.Page}} {{t .Lang "Of"}} {{.TotalPages}}</span>

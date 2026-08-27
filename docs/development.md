@@ -74,7 +74,26 @@ Select an installed model for every registered step in the protected/local
 admin view. The explicit live Ollama smoke test is:
 
 ```bash
-MUNICHBRIEF_OLLAMA_LIVE_TEST=1 go test -run TestLiveOllamaPrivacySafeBilingualPresentation -v ./internal/processing
+MUNICHBRIEF_OLLAMA_LIVE_TEST=1 go test -run TestLiveOllamaPrivacySafeMetadataFirstPresentation -v ./internal/processing
+```
+
+The smoke suite uses handcrafted timing, ambiguity, assistance, and privacy
+cases. `TestLiveOllamaTemporalMetadataMatrix` covers relative days, weekday
+compounds, explicit dates, clock times, day parts, overnight starts, and absent
+timing. `TestLiveOfficialRSSFormatInventory` inventories current official
+wording without logging report text, while `TestLiveOllamaOfficialRSSMetadataAndGermanPresentation`
+validates metadata and German summaries for two current, privacy-minimised
+incidents. Never commit downloaded source text, model output, or test databases,
+and never write to a production database during verification.
+
+The real-RSS Qwen check requires its separate explicit opt-in:
+
+```bash
+MUNICHBRIEF_OLLAMA_RSS_LIVE_TEST=1 \
+MUNICHBRIEF_OLLAMA_BASE_URL=http://127.0.0.1:11434 \
+go test -timeout 25m \
+  -run TestLiveOllamaOfficialRSSMetadataAndGermanPresentation \
+  -v ./internal/processing
 ```
 
 ## Validation
