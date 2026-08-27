@@ -68,7 +68,7 @@ other = "Ein klarer Überblick über lokale Vorfälle, zusammengefasst aus offiz
 other = "Synthetische Meldungen"
 
 [LatestIncidents]
-other = "Neueste Meldungen"
+other = "Neueste Vorfälle"
 
 [Reports]
 one = "{{.Count}} Meldung"

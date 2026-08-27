@@ -68,7 +68,7 @@ other = "A clear overview of local incidents, summarized from official police re
 other = "Synthetic reports"
 
 [LatestIncidents]
-other = "Latest reports"
+other = "Latest incidents"
 
 [Reports]
 one = "{{.Count}} report"
