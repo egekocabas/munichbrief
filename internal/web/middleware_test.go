@@ -50,7 +50,7 @@ func TestAboutHealthReadinessAndRequestHeaders(t *testing.T) {
 			t.Errorf("content security policy does not contain %q", expected)
 		}
 	}
-	for _, expected := range []string{`src="` + staticAssets["htmx.min.js"].path + `"`, `hx-boost="true"`, `"allowEval":false`} {
+	for _, expected := range []string{`src="` + staticAssets["htmx.min.js"].path + `"`, `hx-boost="true"`, `"allowEval":false`, `"includeIndicatorStyles":false`} {
 		if !strings.Contains(about.Body.String(), expected) {
 			t.Errorf("about response does not contain %q", expected)
 		}
