@@ -18,6 +18,8 @@ var (
 	numberedHeadingPattern  = regexp.MustCompile(`^([0-9]{1,6})\.\s*(.+)$`)
 )
 
+// ParsedRelease contains the normalized incidents and a deterministic hash of
+// their content, not of incidental source markup.
 type ParsedRelease struct {
 	SourceHash string
 	Incidents  []domain.Incident
@@ -28,6 +30,8 @@ type block struct {
 	Text string
 }
 
+// ParsePoliceRelease extracts numbered incidents from supported police release
+// page shapes. It never retains or renders the original HTML.
 func ParsePoliceRelease(contents []byte) (ParsedRelease, error) {
 	document, err := html.Parse(bytes.NewReader(contents))
 	if err != nil {
@@ -52,6 +56,9 @@ func ParsePoliceRelease(contents []byte) (ParsedRelease, error) {
 	var current *domain.Incident
 	var bodyBlocks []string
 
+	// A new numbered heading closes the preceding incident. Non-numbered headings
+	// remain part of that incident's body because real releases use them as
+	// subheadings.
 	finishCurrent := func() {
 		if current == nil {
 			return

@@ -4,6 +4,8 @@ import "time"
 
 const contentMaxAttempts = 3
 
+// Schedule defines the daily processing window in its configured location.
+// Windows whose start is after their end cross midnight.
 type Schedule struct {
 	Immediate bool
 	Location  *time.Location
@@ -11,6 +13,7 @@ type Schedule struct {
 	End       time.Duration
 }
 
+// Allows reports whether automatic processing may begin at value.
 func (s Schedule) Allows(value time.Time) bool {
 	if s.Immediate {
 		return true

@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+// CreateManualPipelineCycle atomically freezes targets and step configuration.
+// An identical queued request coalesces into the existing cycle.
 func (s *Store) CreateManualPipelineCycle(ctx context.Context, sourceMode string, steps []PipelineStepPlan, incidentID *int64, reprocessAll bool, now time.Time) (PipelineRequestResult, error) {
 	if err := validateStepPlans(steps); err != nil {
 		return PipelineRequestResult{}, err
@@ -67,6 +69,8 @@ func (s *Store) CreateManualPipelineCycle(ctx context.Context, sourceMode string
 	return PipelineRequestResult{CycleID: cycleID, Requested: count}, nil
 }
 
+// ActivateNextPipelineCycle returns the running cycle, promotes queued manual
+// work, or creates scheduled work when the caller authorizes the window.
 func (s *Store) ActivateNextPipelineCycle(ctx context.Context, sourceMode string, steps []PipelineStepPlan, allowScheduled bool, now time.Time) (PipelineCycle, bool, error) {
 	if allowScheduled {
 		if err := validateStepPlans(steps); err != nil {
@@ -133,6 +137,7 @@ func (s *Store) ActivateNextPipelineCycle(ctx context.Context, sourceMode string
 	return cycle, true, nil
 }
 
+// RecoverPipeline makes jobs interrupted by process termination claimable again.
 func (s *Store) RecoverPipeline(ctx context.Context, now time.Time) error {
 	formatted := formatTime(now.UTC())
 	_, err := s.db.ExecContext(ctx, `
@@ -155,6 +160,8 @@ func (s *Store) HasQueuedManualCycle(ctx context.Context) (bool, error) {
 // InterruptBlockedScheduledCycle closes a blocked scheduled cycle while moving
 // every unfinished item, its accepted outputs, and its remaining jobs into a
 // continuation cycle. The continuation retains the original window lease.
+// InterruptBlockedScheduledCycle yields automatic work to queued manual work
+// without losing unfinished targets; the remainder becomes a continuation cycle.
 func (s *Store) InterruptBlockedScheduledCycle(ctx context.Context, cycleID int64, now time.Time) (int64, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -193,6 +200,8 @@ func (s *Store) InterruptBlockedScheduledCycle(ctx context.Context, cycleID int6
 	return continuationID, nil
 }
 
+// AdvancePipelineCycle moves to the next stage only when every active-stage job
+// is terminal, or marks the cycle complete after its last stage.
 func (s *Store) AdvancePipelineCycle(ctx context.Context, cycle PipelineCycle, stepCount int, now time.Time) (AdvanceResult, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {

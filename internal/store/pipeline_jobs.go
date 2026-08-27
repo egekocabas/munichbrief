@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// PipelineStepModel returns the frozen step key and model for a cycle stage.
 func (s *Store) PipelineStepModel(ctx context.Context, cycleID int64, stepOrder int) (string, string, error) {
 	var step, model string
 	if err := s.db.QueryRowContext(ctx, `SELECT step_key, model_identity FROM cycle_step_models WHERE cycle_id=? AND step_order=?`, cycleID, stepOrder).Scan(&step, &model); err != nil {
@@ -17,6 +18,8 @@ func (s *Store) PipelineStepModel(ctx context.Context, cycleID int64, stepOrder 
 	return step, model, nil
 }
 
+// ClaimPipelineJob atomically changes one eligible pending job to running and
+// returns the exact provenance the worker must process.
 func (s *Store) ClaimPipelineJob(ctx context.Context, cycleID int64, stepOrder int, now time.Time) (PipelineJob, bool, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -83,6 +86,8 @@ func (s *Store) ClaimPipelineJob(ctx context.Context, cycleID int64, stepOrder i
 	return job, true, nil
 }
 
+// CompletePipelineJob stores validated values and marks their running job
+// successful in the same transaction.
 func (s *Store) CompletePipelineJob(ctx context.Context, job PipelineJob, values []PipelineValue, modelIdentity, inputHash string, completedAt time.Time) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -115,6 +120,8 @@ func (s *Store) CompletePipelineJob(ctx context.Context, job PipelineJob, values
 	return nil
 }
 
+// FailPipelineJob applies a validated retry or terminal transition only while
+// the claimed job is still running.
 func (s *Store) FailPipelineJob(ctx context.Context, job PipelineJob, status, failureKind string, retryAt *time.Time, failedAt time.Time, processingError error) error {
 	if status != "pending" && status != "needs_review" && status != "failed" {
 		return fmt.Errorf("invalid pipeline failure status %q", status)

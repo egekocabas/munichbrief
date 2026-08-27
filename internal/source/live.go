@@ -22,6 +22,7 @@ const repositoryURL = "https://github.com/egekocabas/munichbrief"
 
 var articlePathPattern = regexp.MustCompile(`^/aktuelles/pressemitteilungen/([0-9]+)/index\.html$`)
 
+// FeedResult is a bounded, normalized response from the configured RSS source.
 type FeedResult struct {
 	NotModified  bool
 	ETag         string
@@ -30,11 +31,14 @@ type FeedResult struct {
 	Skipped      int
 }
 
+// LiveClient supplies conditional feed reads and allowlisted article bodies.
 type LiveClient interface {
 	FetchFeed(context.Context, string, string) (FeedResult, error)
 	FetchArticle(context.Context, string) ([]byte, error)
 }
 
+// HTTPClient constrains requests to the configured HTTPS source origin and
+// enforces response-size limits before parsing.
 type HTTPClient struct {
 	feedURL          *url.URL
 	allowedHosts     map[string]bool
@@ -68,6 +72,8 @@ type rssItem struct {
 	PubDate     string `xml:"pubDate"`
 }
 
+// NewHTTPClient validates the source trust boundary and returns a constrained
+// client. baseClient is cloned before its timeout and redirect policy are set.
 func NewHTTPClient(feedURL, userAgent string, timeout time.Duration, feedMaxBytes, articleMaxBytes int64, baseClient *http.Client) (*HTTPClient, error) {
 	parsedFeedURL, err := url.Parse(feedURL)
 	if err != nil || parsedFeedURL.Scheme != "https" || parsedFeedURL.Host == "" || parsedFeedURL.User != nil {
@@ -99,6 +105,8 @@ func NewHTTPClient(feedURL, userAgent string, timeout time.Duration, feedMaxByte
 			allowedHosts["www.polizei.bayern.de"] = true
 		}
 	}
+	// Refuse cross-origin redirects even when the destination would otherwise be
+	// a valid HTTPS URL; article URLs originate in untrusted feed content.
 	client.CheckRedirect = func(request *http.Request, via []*http.Request) error {
 		if len(via) >= 3 {
 			return errors.New("too many redirects")
@@ -120,6 +128,8 @@ func NewHTTPClient(feedURL, userAgent string, timeout time.Duration, feedMaxByte
 	}, nil
 }
 
+// FetchFeed performs a conditional RSS request and discards malformed or
+// non-allowlisted entries rather than handing them to ingestion.
 func (c *HTTPClient) FetchFeed(ctx context.Context, etag, lastModified string) (FeedResult, error) {
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, c.feedURL.String(), nil)
 	if err != nil {

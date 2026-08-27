@@ -23,11 +23,14 @@ var migrationFiles embed.FS
 
 var ErrNotFound = errors.New("incident not found")
 
+// Store is the application's single SQLite persistence boundary.
 type Store struct {
 	db   *sql.DB
 	path string
 }
 
+// IncidentRecord is a query model used by review and presentation code. Public
+// visibility is decided by scoped presentation queries, not by this type.
 type IncidentRecord struct {
 	ID                         int64
 	SourceDocumentID           int64
@@ -96,6 +99,8 @@ const incidentAIColumns = `
 			COALESCE((SELECT prompt_version FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND kind = 'summary_de' ORDER BY generated_at DESC LIMIT 1), ''),
 			COALESCE((SELECT generated_at FROM derivations WHERE incident_id = i.id AND source_hash = i.content_hash AND kind = 'summary_de' ORDER BY generated_at DESC LIMIT 1), '')`
 
+// Open creates or opens a SQLite database, applies required pragmas, and runs
+// all embedded migrations before returning it to callers.
 func Open(ctx context.Context, path string) (*Store, error) {
 	if path == "" {
 		return nil, errors.New("database path is required")
@@ -110,6 +115,8 @@ func Open(ctx context.Context, path string) (*Store, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
+	// One connection keeps SQLite transaction ordering predictable and ensures
+	// in-memory databases do not split into independent per-connection stores.
 	db.SetMaxOpenConns(1)
 
 	store := &Store{db: db, path: path}

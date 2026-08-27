@@ -8,10 +8,12 @@ import (
 	"time"
 )
 
+// PipelineVersion identifies the persisted semantics of the staged pipeline.
 const PipelineVersion = "incident-pipeline-v1"
 
 var ErrPipelineUnconfigured = errors.New("AI pipeline models are not configured")
 
+// PipelineStepPlan freezes a registry step and selected model for one cycle.
 type PipelineStepPlan struct {
 	Key           string
 	Order         int
@@ -19,12 +21,14 @@ type PipelineStepPlan struct {
 	Model         string
 }
 
+// StepSetting is the mutable preferred model for a registered step.
 type StepSetting struct {
 	StepKey        string    `json:"step_key"`
 	PreferredModel string    `json:"preferred_model"`
 	UpdatedAt      time.Time `json:"updated_at"`
 }
 
+// PipelineCycle is the persisted coordinator for an ordered set of step jobs.
 type PipelineCycle struct {
 	ID               int64      `json:"id"`
 	Kind             string     `json:"kind"`
@@ -35,6 +39,7 @@ type PipelineCycle struct {
 	CompletedAt      *time.Time `json:"completed_at,omitempty"`
 }
 
+// PipelineJob is a claimed unit of work with its frozen input provenance.
 type PipelineJob struct {
 	ID                int64
 	CycleID           int64
@@ -55,17 +60,20 @@ type PipelineJob struct {
 	SummaryDE         string
 }
 
+// PipelineValue is one validated presentation field produced by a step.
 type PipelineValue struct {
 	Kind  string
 	Value string
 }
 
+// PipelineRequestResult reports newly queued work or an equivalent current cycle.
 type PipelineRequestResult struct {
 	CycleID   int64
 	Requested int
 	Current   int
 }
 
+// StepQueueStats summarizes bounded queue state for one registered step.
 type StepQueueStats struct {
 	StepKey                string        `json:"step_key"`
 	Waiting                int           `json:"waiting"`
@@ -81,6 +89,7 @@ type StepQueueStats struct {
 	LastSuccess            *time.Time    `json:"last_success,omitempty"`
 }
 
+// PipelineEvent is a sanitized recent transition for the review status view.
 type PipelineEvent struct {
 	At          time.Time `json:"at"`
 	CycleID     int64     `json:"cycle_id"`
@@ -90,6 +99,7 @@ type PipelineEvent struct {
 	FailureKind string    `json:"failure_kind,omitempty"`
 }
 
+// AdvanceResult describes whether a cycle changed stage, completed, or must wait.
 type AdvanceResult struct {
 	Advanced  bool
 	Completed bool
@@ -114,6 +124,7 @@ func validateStepPlans(steps []PipelineStepPlan) error {
 	return nil
 }
 
+// HashPipelineInput returns an unambiguous hash of the ordered step inputs.
 func HashPipelineInput(values ...string) string {
 	hash := sha256.Sum256([]byte(strings.Join(values, "\x00")))
 	return fmt.Sprintf("%x", hash[:])
@@ -133,6 +144,7 @@ func nullableString(value string) any {
 	return value
 }
 
+// PipelineSnapshot is an operational view of active, queued, and candidate work.
 type PipelineSnapshot struct {
 	ActiveCycle         *PipelineCycle   `json:"active_cycle,omitempty"`
 	ActiveStepKey       string           `json:"active_step_key"`

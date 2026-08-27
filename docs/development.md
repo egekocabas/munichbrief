@@ -79,19 +79,37 @@ MUNICHBRIEF_OLLAMA_LIVE_TEST=1 go test -run TestLiveOllamaPrivacySafeBilingualPr
 
 ## Validation
 
+The checks are intentionally layered so changes are validated at the file,
+package, boundary, and assembled-application levels:
+
+| Area | Checks |
+| --- | --- |
+| All tracked changes | `git diff --check` and full-history Gitleaks before publication |
+| Go files and packages | `gofmt`, module consistency, `go vet`, Staticcheck, dead-code analysis, vulnerability reachability, race tests, and a binary build |
+| Markdown | Local file and heading links through `scripts/check-docs.mjs` |
+| Shell and workflows | ShellCheck and Actionlint |
+| Frontend | Reproducible build, committed-output diff, and npm audit |
+| Helm/deployment | Strict lint, negative configuration tests, and assertions over both default and public example renders |
+| Container/application | Local multi-stage image build plus package-level and boundary tests |
+
 Before opening a pull request, run:
 
 ```bash
+git diff --check
+node scripts/check-docs.mjs
 test -z "$(gofmt -l .)"
 go mod tidy -diff
 go vet ./...
+go run honnef.co/go/tools/cmd/staticcheck@v0.8.1 ./...
 go test -race ./...
 go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...
 go run golang.org/x/tools/cmd/deadcode@v0.49.0 -test ./...
+go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+shellcheck scripts/*.sh
 npm ci
 npm run build
 git diff --exit-code -- internal/web/static
-npm audit
+npm audit --audit-level=high
 helm lint --strict charts/munichbrief
 helm lint --strict charts/munichbrief --values deploy/example-values.yaml
 helm template munichbrief charts/munichbrief --namespace munichbrief \
@@ -104,4 +122,6 @@ docker build --build-arg VERSION=local -t munichbrief:local .
 ```
 
 Routine unit tests remain offline. A contribution that requires network access
-in the default suite is not acceptable.
+in the default suite is not acceptable. See [the internal package map](../internal/README.md)
+and [repository check notes](../scripts/README.md) when deciding where new tests
+or validations belong.

@@ -47,6 +47,9 @@ type incidentStore interface {
 	Ready(context.Context) error
 }
 
+// ProcessingRequester is the narrow pipeline surface used by review routes.
+// Keeping it as an interface lets route tests exercise access rules without an
+// Ollama server or background worker.
 type ProcessingRequester interface {
 	RequestNow(context.Context, string, map[string]string, *int64, bool) (store.PipelineRequestResult, error)
 	ModelStatus(context.Context) (processing.PipelineModelStatus, error)
@@ -54,6 +57,8 @@ type ProcessingRequester interface {
 	Status(context.Context) (processing.PipelineRuntimeStatus, error)
 }
 
+// Options controls presentation and access behavior for a Server.
+// PublicHosts identifies requests that must never reach review-only routes.
 type Options struct {
 	PageSize         int
 	SourceMode       string
@@ -66,6 +71,7 @@ type Options struct {
 	Processor        ProcessingRequester
 }
 
+// Server owns MunichBrief's HTTP route tree and parsed embedded templates.
 type Server struct {
 	store            incidentStore
 	logger           *slog.Logger
@@ -78,6 +84,9 @@ type Server struct {
 	adminTemplate    *template.Template
 }
 
+// NewWithOptions validates all route-affecting configuration before constructing
+// a server. Invalid host or presentation settings fail startup rather than
+// weakening the request boundary at runtime.
 func NewWithOptions(database incidentStore, logger *slog.Logger, options Options) (*Server, error) {
 	if database == nil {
 		return nil, errors.New("incident store is required")
@@ -142,6 +151,7 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 	return &Server{store: database, logger: logger, options: options, location: location, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, adminTemplate: admin}, nil
 }
 
+// Handler returns the complete public and optional review route tree.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", s.redirectRoot)

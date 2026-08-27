@@ -17,6 +17,8 @@ const (
 	EnglishTranslationStep = "english_translation"
 )
 
+// StepDefinition is an immutable registry entry describing one pipeline stage.
+// Callers receive deep copies so persisted behavior cannot be mutated at runtime.
 type StepDefinition struct {
 	Key           string
 	DisplayName   string
@@ -31,6 +33,8 @@ type StepDefinition struct {
 	OutputValues  func(StepOutput) ([]store.PipelineValue, error)
 }
 
+// StepInput contains the minimal source or accepted upstream values needed by a
+// step. Later stages must not receive the original incident body.
 type StepInput struct {
 	OriginalTitle string
 	IncidentBody  string
@@ -38,6 +42,8 @@ type StepInput struct {
 	SummaryDE     string
 }
 
+// StepOutput is the strict union decoded from model responses. A step validator
+// decides which fields are permitted and publishable for that stage.
 type StepOutput struct {
 	TitleDE       string   `json:"title_de,omitempty"`
 	SummaryDE     string   `json:"summary_de,omitempty"`
@@ -50,11 +56,13 @@ type StepOutput struct {
 	PrivacyFlags  []string `json:"privacy_flags,omitempty"`
 }
 
+// StepGenerator executes one registered step with a fixed model identity.
 type StepGenerator interface {
 	GenerateStep(context.Context, StepDefinition, StepInput) (StepOutput, string, error)
 	ModelIdentity() string
 }
 
+// StepGeneratorProvider constructs a generator for a selected model.
 type StepGeneratorProvider interface {
 	StepGenerator(model string) (StepGenerator, error)
 }
@@ -121,6 +129,7 @@ var registeredSteps = []StepDefinition{
 	},
 }
 
+// RegisteredSteps returns a deep copy of the stable, ordered step registry.
 func RegisteredSteps() []StepDefinition {
 	steps := make([]StepDefinition, len(registeredSteps))
 	for index, step := range registeredSteps {
@@ -153,6 +162,7 @@ func StepKeys() []string {
 	return keys
 }
 
+// StepPlans freezes registered prompt versions and selected models into a cycle.
 func StepPlans(models map[string]string) ([]store.PipelineStepPlan, error) {
 	plans := make([]store.PipelineStepPlan, 0, len(registeredSteps))
 	for _, step := range registeredSteps {
@@ -165,6 +175,7 @@ func StepPlans(models map[string]string) ([]store.PipelineStepPlan, error) {
 	return plans, nil
 }
 
+// ValidateStepOutput applies the stage-specific publication and privacy rules.
 func ValidateStepOutput(step StepDefinition, input StepInput, output *StepOutput) error {
 	if step.Validator == nil {
 		return errorOf(ErrorConfiguration, "unknown pipeline step %q", step.Key)

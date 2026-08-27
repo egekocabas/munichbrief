@@ -14,6 +14,7 @@ import (
 	"time"
 )
 
+// ErrorKind classifies failures for retry, configuration, and privacy handling.
 type ErrorKind string
 
 const (
@@ -23,6 +24,7 @@ const (
 	ErrorPrivacy       ErrorKind = "privacy"
 )
 
+// ProcessingError attaches a stable operational classification to an error.
 type ProcessingError struct {
 	Kind ErrorKind
 	Err  error
@@ -35,6 +37,8 @@ func errorOf(kind ErrorKind, format string, arguments ...any) error {
 	return &ProcessingError{Kind: kind, Err: fmt.Errorf(format, arguments...)}
 }
 
+// KindOf returns the pipeline classification, defaulting unknown errors to a
+// retryable transient failure.
 func KindOf(err error) ErrorKind {
 	var processingError *ProcessingError
 	if errors.As(err, &processingError) {
@@ -43,6 +47,7 @@ func KindOf(err error) ErrorKind {
 	return ErrorTransient
 }
 
+// OllamaGeneratorProvider creates constrained clients for selected local models.
 type OllamaGeneratorProvider struct {
 	baseURL     string
 	timeout     time.Duration
@@ -63,6 +68,8 @@ func (p *OllamaGeneratorProvider) StepGenerator(model string) (StepGenerator, er
 	return NewOllamaClient(p.baseURL, model, p.timeout, p.contextSize, p.baseClient)
 }
 
+// OllamaClient calls one model and treats every response as untrusted until the
+// registered step's schema and validator both accept it.
 type OllamaClient struct {
 	endpoint    string
 	model       string
@@ -99,13 +106,13 @@ type chatResponse struct {
 func NewOllamaClient(baseURL, model string, timeout time.Duration, contextSize int, baseClient *http.Client) (*OllamaClient, error) {
 	parsed, err := url.Parse(baseURL)
 	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
-		return nil, errors.New("Ollama base URL must be an absolute HTTP(S) URL without credentials, query, or fragment")
+		return nil, errors.New("ollama base URL must be an absolute HTTP(S) URL without credentials, query, or fragment")
 	}
 	if strings.TrimSpace(model) == "" {
-		return nil, errors.New("Ollama model is required")
+		return nil, errors.New("ollama model is required")
 	}
 	if timeout <= 0 || contextSize < 2048 {
-		return nil, errors.New("Ollama timeout and context size must be positive")
+		return nil, errors.New("ollama timeout and context size must be positive")
 	}
 
 	httpClient := &http.Client{Timeout: timeout}
@@ -120,6 +127,8 @@ func NewOllamaClient(baseURL, model string, timeout time.Duration, contextSize i
 
 func (c *OllamaClient) ModelIdentity() string { return c.model }
 
+// GenerateStep minimizes input, requests structured output, and validates the
+// decoded response before returning values to persistence.
 func (c *OllamaClient) GenerateStep(ctx context.Context, step StepDefinition, input StepInput) (StepOutput, string, error) {
 	if step.Generator == nil {
 		return StepOutput{}, "", errorOf(ErrorConfiguration, "unknown pipeline step %q", step.Key)
@@ -156,11 +165,11 @@ func (c *OllamaClient) chat(ctx context.Context, system, user string, schema jso
 		Options: chatOptions{Temperature: 0, NumCtx: c.contextSize}, KeepAlive: "10m",
 	})
 	if err != nil {
-		return "", "", errorOf(ErrorOutput, "encode Ollama request: %v", err)
+		return "", "", errorOf(ErrorOutput, "encode ollama request: %v", err)
 	}
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint, bytes.NewReader(payload))
 	if err != nil {
-		return "", "", errorOf(ErrorConfiguration, "create Ollama request: %v", err)
+		return "", "", errorOf(ErrorConfiguration, "create ollama request: %v", err)
 	}
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Accept", "application/json")
@@ -171,7 +180,7 @@ func (c *OllamaClient) chat(ctx context.Context, system, user string, schema jso
 	defer response.Body.Close()
 	bodyBytes, err := readBounded(response.Body, 1<<20)
 	if err != nil {
-		return "", "", errorOf(ErrorTransient, "read Ollama response: %v", err)
+		return "", "", errorOf(ErrorTransient, "read ollama response: %v", err)
 	}
 	if response.StatusCode != http.StatusOK {
 		kind := ErrorConfiguration
@@ -182,10 +191,10 @@ func (c *OllamaClient) chat(ctx context.Context, system, user string, schema jso
 	}
 	var result chatResponse
 	if err := json.Unmarshal(bodyBytes, &result); err != nil {
-		return "", "", errorOf(ErrorOutput, "decode Ollama response: %v", err)
+		return "", "", errorOf(ErrorOutput, "decode ollama response: %v", err)
 	}
 	if !result.Done {
-		return "", "", errorOf(ErrorTransient, "Ollama response was incomplete")
+		return "", "", errorOf(ErrorTransient, "ollama response was incomplete")
 	}
 	modelIdentity := strings.TrimSpace(result.Model)
 	if modelIdentity == "" {

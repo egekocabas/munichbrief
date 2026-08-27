@@ -15,6 +15,9 @@ import (
 
 func (s *Server) accessBoundary(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		// The deployment may route public and review traffic to the same process.
+		// Host classification therefore happens before dispatch, so an accidentally
+		// exposed admin route still returns 404 on a configured public hostname.
 		adminPath := request.URL.Path == "/admin" || strings.HasPrefix(request.URL.Path, "/admin/") || request.URL.Path == "/api/admin" || strings.HasPrefix(request.URL.Path, "/api/admin/")
 		if adminPath && (!s.options.AdminEnabled || s.isPublicRequest(request)) {
 			http.NotFound(response, request)

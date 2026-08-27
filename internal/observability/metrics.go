@@ -11,6 +11,8 @@ import (
 	"github.com/egekocabas/munichbrief/internal/store"
 )
 
+// Metrics stores fixed-cardinality counters and gauges using atomics so
+// instrumentation does not serialize request or worker paths.
 type Metrics struct {
 	version                 string
 	startedAt               time.Time
@@ -59,6 +61,7 @@ type Metrics struct {
 	pipelineActiveKind      [3]atomic.Int64
 }
 
+// NewMetrics creates an empty registry for one process instance.
 func NewMetrics(version string, startedAt time.Time) *Metrics {
 	if version == "" {
 		version = "dev"
@@ -211,6 +214,7 @@ func (m *Metrics) SetPipelineSnapshot(snapshot store.PipelineSnapshot) {
 	}
 }
 
+// Handler exposes the registry in the Prometheus text format.
 func (m *Metrics) Handler() http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		if request.URL.Path != "/metrics" {
@@ -228,6 +232,7 @@ func (m *Metrics) Handler() http.Handler {
 	})
 }
 
+// Wrap records HTTP status classes for a handler without changing its response.
 func (m *Metrics) Wrap(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		recorder := &statusWriter{ResponseWriter: response, status: http.StatusOK}

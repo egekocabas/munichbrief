@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// EnsurePipelineSteps idempotently creates settings rows for registered steps.
 func (s *Store) EnsurePipelineSteps(ctx context.Context, stepKeys []string, now time.Time) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -52,6 +53,8 @@ func (s *Store) PipelineStepSettings(ctx context.Context) ([]StepSetting, error)
 	return settings, rows.Err()
 }
 
+// SetPipelineStepModel changes the preference used by future cycles. Active and
+// queued cycle plans remain frozen.
 func (s *Store) SetPipelineStepModel(ctx context.Context, stepKey, model string, now time.Time) error {
 	model = strings.TrimSpace(model)
 	if strings.TrimSpace(stepKey) == "" || model == "" {
@@ -67,6 +70,8 @@ func (s *Store) SetPipelineStepModel(ctx context.Context, stepKey, model string,
 	return nil
 }
 
+// PreferredPipelineModels returns all requested preferences or fails closed when
+// any registered step is unconfigured.
 func (s *Store) PreferredPipelineModels(ctx context.Context, stepKeys []string) (map[string]string, error) {
 	settings, err := s.PipelineStepSettings(ctx)
 	if err != nil {
