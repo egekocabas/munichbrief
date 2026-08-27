@@ -4,6 +4,12 @@ other = "Ein lokaler Leser für Pressemitteilungen der Münchner Polizei."
 [BrandTagline]
 other = "München im Überblick"
 
+[SocialImageAlt]
+other = "MunichBrief-Vorschau mit dem Münchner Olympiapark."
+
+[SocialIncidentLabel]
+other = "Vorfall"
+
 [Timeline]
 other = "Aktuelles"
 

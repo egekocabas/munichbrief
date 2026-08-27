@@ -53,6 +53,9 @@ func TestAboutHealthReadinessAndRequestHeaders(t *testing.T) {
 			t.Errorf("about response does not contain %q", expected)
 		}
 	}
+	if !strings.Contains(about.Body.String(), `<meta name="robots" content="noindex,nofollow,noarchive">`) {
+		t.Error("review page does not publish its noindex directive in HTML")
+	}
 	if !strings.Contains(about.Body.String(), `rel="icon" href="/static/favicon.svg" type="image/svg+xml"`) {
 		t.Error("about response does not link the MunichBrief favicon")
 	}

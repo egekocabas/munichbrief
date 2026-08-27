@@ -4,6 +4,12 @@ other = "A local-first reader for Munich Police press releases."
 [BrandTagline]
 other = "Munich at a glance"
 
+[SocialImageAlt]
+other = "MunichBrief preview featuring Munich's Olympiapark."
+
+[SocialIncidentLabel]
+other = "Incident"
+
 [Timeline]
 other = "Latest"
 

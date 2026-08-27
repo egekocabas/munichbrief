@@ -143,7 +143,7 @@ func isPublicPath(path string) bool {
 	if path == "/" || path == "/about" || path == "/healthz" || path == "/readyz" || path == "/robots.txt" || path == "/sitemap.xml" {
 		return true
 	}
-	for _, prefix := range []string{"/de", "/en", "/incidents", "/static"} {
+	for _, prefix := range []string{"/de", "/en", "/incidents", "/social", "/static"} {
 		if path == prefix || strings.HasPrefix(path, prefix+"/") {
 			return true
 		}

@@ -45,6 +45,9 @@ var adminScript []byte
 //go:embed static/favicon.svg
 var favicon []byte
 
+//go:embed static/olympiapark-background.png
+var socialCardBackground []byte
+
 type incidentStore interface {
 	ListPresentationEntries(context.Context, int, int, string, store.PresentationScope) ([]store.IncidentRecord, int, error)
 	ListPublicIncidentLinks(context.Context, string, store.PresentationScope) ([]store.PublicIncidentLink, error)
@@ -93,6 +96,7 @@ type Server struct {
 	aboutTemplate        *template.Template
 	adminTemplate        *template.Template
 	adminHistoryTemplate *template.Template
+	socialCards          *socialCardRenderer
 }
 
 // NewWithOptions validates all route-affecting configuration before constructing
@@ -166,7 +170,11 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 	if err != nil {
 		return nil, fmt.Errorf("parse admin history template: %w", err)
 	}
-	return &Server{store: database, logger: logger, options: options, location: location, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, adminTemplate: admin, adminHistoryTemplate: adminHistory}, nil
+	socialCards, err := newSocialCardRenderer()
+	if err != nil {
+		return nil, fmt.Errorf("initialize social card renderer: %w", err)
+	}
+	return &Server{store: database, logger: logger, options: options, location: location, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, adminTemplate: admin, adminHistoryTemplate: adminHistory, socialCards: socialCards}, nil
 }
 
 // Handler returns the complete public and optional review route tree.
@@ -188,6 +196,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /static/htmx.min.js", s.javascript)
 	mux.HandleFunc("GET /static/admin.js", s.adminJavascript)
 	mux.HandleFunc("GET /static/favicon.svg", s.favicon)
+	mux.HandleFunc("GET /social/{language}/home", s.socialHome)
+	mux.HandleFunc("GET /social/{language}/about", s.socialAbout)
+	mux.HandleFunc("GET /social/{language}/incidents/{id}", s.socialIncident)
 	if s.options.AdminEnabled {
 		mux.HandleFunc("GET /admin", s.admin)
 		mux.HandleFunc("GET /admin/history", s.adminHistory)
