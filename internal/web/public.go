@@ -2,6 +2,7 @@ package web
 
 import (
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -220,6 +221,22 @@ func (s *Server) incidentForLanguage(record store.IncidentRecord, language strin
 	if record.HasAI {
 		view.CategoryLabel = processing.CategoryLabel(record.AICategory, language)
 		view.AreaName = record.AIAreaName
+		view.ReportKindLabel = s.metadataCodeLabel(language, "ReportKind", record.AIReportKind)
+		view.EventLabel = s.localization.Text(language, "TimeStatedInReport")
+		view.EventText = s.formatIncidentTime(record, language)
+		if record.AIPublicAssistanceStatus == "requested" {
+			view.PublicAssistance = true
+			view.PublicAssistanceLabel = s.localization.Text(language, "PublicAssistanceRequested")
+			var assistanceTypes []string
+			if json.Unmarshal([]byte(record.AIPublicAssistanceTypes), &assistanceTypes) == nil {
+				for _, code := range assistanceTypes {
+					if label := s.metadataCodeLabel(language, "AssistanceType", code); label != "" {
+						view.PublicAssistanceTypes = append(view.PublicAssistanceTypes, label)
+					}
+				}
+			}
+			view.PublicAssistanceTypesText = strings.Join(view.PublicAssistanceTypes, ", ")
+		}
 		view.ContentLanguage = language
 		if language == "en" {
 			view.Title, view.Summary = record.AITitleEN, record.AISummaryEN
@@ -232,8 +249,20 @@ func (s *Server) incidentForLanguage(record store.IncidentRecord, language strin
 				Number: 1, Name: s.localization.Text(language, "LegacyBilingualStep"),
 				Model: record.AIModel, PromptVersion: record.AIPromptVersion, GeneratedAt: record.AIGeneratedAt,
 			}}
+		} else if record.AIPipelineVersion == processing.PipelineVersion {
+			view.ProcessingSystem = s.localization.Text(language, "MetadataFirstPipeline")
+			view.ProcessingSteps = []processingStepView{
+				{Number: 1, Name: s.localization.Text(language, "IncidentMetadataStep"), Model: record.AIMetadataModel, PromptVersion: record.AIMetadataPromptVersion, GeneratedAt: record.AIMetadataGeneratedAt},
+				{Number: 2, Name: s.localization.Text(language, "GermanPresentationStep"), Model: record.AIModel, PromptVersion: record.AIPromptVersion, GeneratedAt: record.AIGeneratedAt},
+			}
+			if language == "en" {
+				view.ProcessingSteps = append(view.ProcessingSteps, processingStepView{
+					Number: 3, Name: s.localization.Text(language, "EnglishTranslationStep"),
+					Model: record.AITranslationModel, PromptVersion: record.AITranslationPromptVersion, GeneratedAt: record.AITranslationGeneratedAt,
+				})
+			}
 		} else {
-			view.ProcessingSystem = s.localization.Text(language, "StagedPipeline")
+			view.ProcessingSystem = s.localization.Text(language, "V1FallbackPipeline")
 			view.ProcessingSteps = []processingStepView{{
 				Number: 1, Name: s.localization.Text(language, "GermanAnalysisStep"),
 				Model: record.AIModel, PromptVersion: record.AIPromptVersion, GeneratedAt: record.AIGeneratedAt,
@@ -250,6 +279,47 @@ func (s *Server) incidentForLanguage(record store.IncidentRecord, language strin
 	view.Title, view.Summary = record.TitleDE, excerpt(record.BodyDE, 190)
 	view.ShowOriginalMessage = record.HasIncident
 	return view
+}
+
+func (s *Server) metadataCodeLabel(language, group, code string) string {
+	if code == "" || code == "unknown" || code == "unclear" || code == "not_requested" {
+		return ""
+	}
+	keys := map[string]map[string]string{
+		"ReportKind":     {"incident": "ReportKindIncident", "follow_up": "ReportKindFollowUp", "missing_person": "ReportKindMissingPerson", "wanted_person": "ReportKindWantedPerson", "public_warning": "ReportKindPublicWarning", "other": "ReportKindOther"},
+		"AssistanceType": {"witness_observations": "AssistanceWitnessObservations", "identify_person": "AssistanceIdentifyPerson", "locate_person": "AssistanceLocatePerson", "photo_video_material": "AssistancePhotoVideo", "vehicle_information": "AssistanceVehicleInformation", "property_information": "AssistancePropertyInformation", "other_information": "AssistanceOtherInformation"},
+		"DayPart":        {"morning": "DayPartMorning", "midday": "DayPartMidday", "afternoon": "DayPartAfternoon", "evening": "DayPartEvening", "night": "DayPartNight"},
+	}
+	key := keys[group][code]
+	if key == "" {
+		return ""
+	}
+	return s.localization.Text(language, key)
+}
+
+func (s *Server) formatIncidentTime(record store.IncidentRecord, language string) string {
+	if record.AIEventStartDate == "" {
+		return ""
+	}
+	startDate, err := time.ParseInLocation("2006-01-02", record.AIEventStartDate, s.location)
+	if err != nil {
+		return ""
+	}
+	dateText := formatIncidentDate(language, startDate)
+	start := dateText
+	if part := s.metadataCodeLabel(language, "DayPart", record.AIEventDayPart); part != "" {
+		start += ", " + part
+	} else if record.AIEventStartTime != "" {
+		start += ", " + record.AIEventStartTime
+	}
+	return start
+}
+
+func formatIncidentDate(language string, value time.Time) string {
+	if language == "de" {
+		return value.Format("02.") + " " + germanMonths[value.Month()] + " " + value.Format("2006")
+	}
+	return value.Format("02 January 2006")
 }
 
 func (s *Server) processingLabel(state, language string) string {
@@ -304,17 +374,24 @@ type basePage struct {
 }
 
 type incidentView struct {
-	Record              store.IncidentRecord
-	Title               string
-	Summary             string
-	ContentLanguage     string
-	ProcessingState     string
-	ProcessingLabel     string
-	CategoryLabel       string
-	AreaName            string
-	ProcessingSystem    string
-	ProcessingSteps     []processingStepView
-	ShowOriginalMessage bool
+	Record                    store.IncidentRecord
+	Title                     string
+	Summary                   string
+	ContentLanguage           string
+	ProcessingState           string
+	ProcessingLabel           string
+	CategoryLabel             string
+	AreaName                  string
+	EventLabel                string
+	EventText                 string
+	ReportKindLabel           string
+	PublicAssistance          bool
+	PublicAssistanceLabel     string
+	PublicAssistanceTypes     []string
+	PublicAssistanceTypesText string
+	ProcessingSystem          string
+	ProcessingSteps           []processingStepView
+	ShowOriginalMessage       bool
 }
 
 type processingStepView struct {

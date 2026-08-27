@@ -148,11 +148,12 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 			return err
 		}
 	}
+	processor := webProcessor(aiWorker)
 
 	webServer, err := web.NewWithOptions(database, logger, web.Options{
 		PageSize: cfg.PageSize, SourceMode: cfg.SourceMode, PresentationMode: cfg.PresentationMode,
 		PromptVersion: processing.PipelineVersion, SecureCookies: cfg.SecureCookies,
-		AdminEnabled: cfg.AdminEnabled, PublicHosts: cfg.PublicHosts, CanonicalOrigin: cfg.CanonicalOrigin, Processor: aiWorker,
+		AdminEnabled: cfg.AdminEnabled, PublicHosts: cfg.PublicHosts, CanonicalOrigin: cfg.CanonicalOrigin, Processor: processor,
 	})
 	if err != nil {
 		return err
@@ -188,6 +189,13 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 		}
 		return err
 	}
+}
+
+func webProcessor(worker *processing.PipelineWorker) web.ProcessingRequester {
+	if worker == nil {
+		return nil
+	}
+	return worker
 }
 
 func restoreFeedSuccessMetric(ctx context.Context, database *store.Store, metrics *observability.Metrics) error {

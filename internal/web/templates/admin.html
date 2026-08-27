@@ -23,7 +23,7 @@
     <div class="max-w-3xl">
       <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Operations</p>
       <h1 class="mt-1 font-serif text-4xl font-bold tracking-tight">AI processing</h1>
-      <p class="mt-3 text-muted">Registered LLM steps run in durable, model-grouped cycles. Priority admin cycles start after the active healthy cycle finishes.</p>
+      <p class="mt-3 text-muted">Metadata extraction, German presentation, and English translation run in durable, model-grouped cycles. Priority admin cycles start after the active healthy cycle finishes.</p>
     </div>
 
     {{if .Notice}}<div class="mt-6 rounded-md border px-4 py-3 font-semibold {{if .NoticeIsWarning}}border-alert/30 bg-alert-soft text-alert{{else}}border-civic/25 bg-paper text-civic{{end}}" role="status">{{.Notice}}</div>{{end}}
@@ -32,11 +32,11 @@
       <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Ollama configuration</p>
       <h2 id="model-heading" class="mt-1 font-serif text-2xl font-bold">Registered pipeline steps</h2>
       {{if not .Models.CatalogAvailable}}<p class="mt-3 font-bold text-alert">The Ollama catalog is unavailable. No LLM calls will start.</p>{{end}}
-      <div class="mt-4 grid gap-4 lg:grid-cols-2">
+      <div class="mt-4 grid gap-4 lg:grid-cols-3">
         {{range .Models.Steps}}
         {{$step := .}}
         <article class="rounded-lg border border-rule bg-paper p-5" data-step-card="{{.Key}}">
-          <p class="text-xs font-bold uppercase tracking-wider text-muted">Step {{if eq .Key "german_analysis"}}1{{else}}2{{end}}</p>
+          <p class="text-xs font-bold uppercase tracking-wider text-muted">Step {{.Number}}</p>
           <h3 class="mt-1 font-serif text-xl font-bold">{{.DisplayName}}</h3>
           <p class="mt-1 font-mono text-xs text-muted">{{.PromptVersion}}</p>
           <p class="mt-3 font-mono font-bold" data-step-model>{{if .Preferred}}{{.Preferred}}{{else}}Not configured{{end}}</p>
@@ -67,6 +67,7 @@
       <p class="mt-4 text-lg font-bold" data-worker-state>{{if .Runtime.Queue.ActiveCycle}}Cycle #{{.Runtime.Queue.ActiveCycle.ID}} · {{.Runtime.Queue.ActiveCycle.Kind}}{{else}}Idle{{end}}</p>
       <p class="mt-1 text-sm text-muted" data-active-step>{{if .Runtime.Queue.ActiveStepKey}}{{.Runtime.Queue.ActiveStepKey}} · {{.Runtime.Queue.ActiveModel}}{{else}}No active model{{end}}</p>
       <p class="mt-1 text-sm text-muted" data-cycle-elapsed>{{if .Runtime.Queue.ActiveCycle}}Elapsed time updates live{{else}}No active cycle{{end}}</p>
+      {{if .Runtime.Queue.ScheduledAfter}}<p class="mt-2 rounded-md border border-rule bg-newsprint/60 px-3 py-2 text-sm text-muted"><strong class="text-ink">Automatic v2 cutover:</strong> <time datetime="{{.Runtime.Queue.ScheduledAfter.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime "en" .Runtime.Queue.ScheduledAfter}}</time>. Earlier incidents remain on their completed presentation unless manually reprocessed.</p>{{end}}
       <dl class="mt-5 grid gap-3 sm:grid-cols-2">
         <div class="rounded-md border border-rule bg-white p-3"><dt class="text-xs font-bold uppercase text-muted">Active stage</dt><dd class="mt-1 text-xl font-bold" data-active-progress-text>{{.Runtime.Queue.ActiveStepCompleted}} / {{.Runtime.Queue.ActiveStepTotal}} incidents</dd><div class="mt-3 h-2 overflow-hidden rounded-full bg-newsprint"><div class="h-full bg-civic transition-all" data-active-step-progress style="width:0%"></div></div><p class="mt-2 text-xs text-muted">Completed in the current model batch.</p></div>
         <div class="rounded-md border border-rule bg-white p-3"><dt class="text-xs font-bold uppercase text-muted">Full pipeline</dt><dd class="mt-1 text-xl font-bold" data-progress-text>{{.Runtime.Queue.CycleCompleted}} / {{.Runtime.Queue.CycleTotal}} stage jobs</dd><div class="mt-3 h-2 overflow-hidden rounded-full bg-newsprint"><div class="h-full bg-civic transition-all" data-cycle-progress style="width:0%"></div></div><p class="mt-2 text-xs text-muted">All steps across the frozen incident set.</p></div>
@@ -96,7 +97,7 @@
     <section class="mt-10 grid gap-6 lg:grid-cols-3" aria-labelledby="process-heading">
       <div class="rounded-lg border border-rule bg-paper p-5">
         <h2 id="process-heading" class="font-serif text-xl font-bold">Process one incident now</h2>
-        <p class="mt-2 text-sm text-muted">Queue a complete two-stage rerun for one incident.</p>
+        <p class="mt-2 text-sm text-muted">Queue a complete three-stage v2 run for one incident, including a historical incident.</p>
         <form class="mt-4 flex flex-col gap-3" method="post" action="/api/admin/ai/process-now" data-confirm-processing data-confirm-description="Create or reset the current AI job for the entered incident." data-incident-input="incident-id">
           <input name="confirmed" type="hidden" value="false">
           <input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}">
@@ -110,7 +111,7 @@
       </div>
       <div class="rounded-lg border border-alert/25 bg-paper p-5">
         <h2 class="font-serif text-xl font-bold">Process all unprocessed incidents</h2>
-        <p class="mt-2 text-sm text-muted">Queue every incident that has no complete current staged presentation.</p>
+        <p class="mt-2 text-sm text-muted">Queue incidents with no valid completed presentation. Completed v1 and legacy presentations count as processed.</p>
         <form class="mt-4 flex flex-col gap-3" method="post" action="/api/admin/ai/process-all-now" data-confirm-processing data-confirm-description="Request immediate processing for all {{.Unprocessed.Total}} currently unprocessed incidents.">
           <input name="confirmed" type="hidden" value="false">
           <input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}">
@@ -121,7 +122,7 @@
       </div>
       <div class="rounded-lg border border-alert bg-alert-soft/30 p-5">
         <h2 class="font-serif text-xl font-bold">Reprocess everything</h2>
-        <p class="mt-2 text-sm text-muted">Freeze every current incident and rerun the full pipeline from German analysis. Older queued automatic work for these revisions is superseded.</p>
+        <p class="mt-2 text-sm text-muted">Freeze every current incident and upgrade it through the full v2 pipeline from metadata extraction. Older queued automatic work for these revisions is superseded.</p>
         <form class="mt-4 flex flex-col gap-3" method="post" action="/api/admin/ai/reprocess-all" data-confirm-processing data-confirm-description="Reprocess every current incident from the first pipeline step. Older queued scheduled and continuation work for these source revisions will be superseded.">
           <input name="confirmed" type="hidden" value="false">
           <input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}">
@@ -214,8 +215,12 @@
         <dl class="mt-5 grid gap-3 border-t border-rule/70 pt-4 text-xs text-muted sm:grid-cols-3">
           {{if .Record.AICategory}}<div><dt class="font-bold text-ink">Category</dt><dd class="mt-0.5">{{.CategoryLabel}} · <span class="font-mono">{{.Record.AICategory}}</span></dd></div>{{end}}
           {{if .Record.AIAreaName}}<div><dt class="font-bold text-ink">Area</dt><dd class="mt-0.5">{{.Record.AIAreaName}} · {{.Record.AIAreaType}}</dd></div>{{end}}
-          <div><dt class="font-bold text-ink">Model</dt><dd class="mt-0.5">{{.Record.AIModel}}</dd></div>
-          <div><dt class="font-bold text-ink">Prompt</dt><dd class="mt-0.5">{{.Record.AIPromptVersion}}</dd></div>
+          {{if .EventText}}<div><dt class="font-bold text-ink">{{.EventLabel}}</dt><dd class="mt-0.5">{{.EventText}}</dd></div>{{end}}
+          {{if .Record.AIReportKind}}<div><dt class="font-bold text-ink">Report kind</dt><dd class="mt-0.5">{{.ReportKindLabel}} · <span class="font-mono">{{.Record.AIReportKind}}</span></dd></div>{{end}}
+          {{if .Record.AIPublicAssistanceStatus}}<div><dt class="font-bold text-ink">Public assistance</dt><dd class="mt-0.5"><span class="font-mono">{{.Record.AIPublicAssistanceStatus}} / {{.Record.AIPublicAssistanceTypes}}</span>{{range .PublicAssistanceTypes}} · {{.}}{{end}}</dd></div>{{end}}
+          {{if .Record.AIMetadataModel}}<div><dt class="font-bold text-ink">Metadata provenance</dt><dd class="mt-0.5">{{.Record.AIMetadataModel}} · <span class="font-mono">{{.Record.AIMetadataPromptVersion}}</span></dd></div>{{end}}
+          {{if .Record.AIModel}}<div><dt class="font-bold text-ink">{{.PrimaryProvenanceLabel}}</dt><dd class="mt-0.5">{{.Record.AIModel}} · <span class="font-mono">{{.Record.AIPromptVersion}}</span></dd></div>{{end}}
+          {{if .Record.AITranslationModel}}<div><dt class="font-bold text-ink">English provenance</dt><dd class="mt-0.5">{{.Record.AITranslationModel}} · <span class="font-mono">{{.Record.AITranslationPromptVersion}}</span></dd></div>{{end}}
           {{if .Record.AIGeneratedAt}}<div><dt class="font-bold text-ink">Generated</dt><dd class="mt-0.5"><time datetime="{{.Record.AIGeneratedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime "en" .Record.AIGeneratedAt}}</time></dd></div>{{end}}
         </dl>
         {{end}}
@@ -229,7 +234,7 @@
         {{if $.AllowProcessing}}
         <div class="mt-6 border-t border-rule/70 pt-4">
           {{if .CanProcess}}
-          <form class="grid gap-2 sm:grid-cols-[repeat(2,minmax(0,1fr))_auto] sm:items-end" method="post" action="/api/admin/ai/process-now" data-confirm-processing data-confirm-description="Rerun the complete pipeline for incident #{{.Record.ID}}.">
+          <form class="grid gap-2 sm:grid-cols-[repeat(3,minmax(0,1fr))_auto] sm:items-end" method="post" action="/api/admin/ai/process-now" data-confirm-processing data-confirm-description="Rerun the complete pipeline for incident #{{.Record.ID}}.">
             <input name="confirmed" type="hidden" value="false">
             <input name="incident_id" type="hidden" value="{{.Record.ID}}">
             <input name="unprocessed_page" type="hidden" value="{{$.Page}}">

@@ -86,8 +86,8 @@ func (p fakeProcessingRequester) Status(ctx context.Context) (processing.Pipelin
 
 func defaultTestStepStatus(model string) []processing.StepModelStatus {
 	steps := make([]processing.StepModelStatus, 0, len(processing.RegisteredSteps()))
-	for _, step := range processing.RegisteredSteps() {
-		steps = append(steps, processing.StepModelStatus{Key: step.Key, DisplayName: step.DisplayName, PromptVersion: step.PromptVersion, Preferred: model, PreferredAvailable: model != ""})
+	for index, step := range processing.RegisteredSteps() {
+		steps = append(steps, processing.StepModelStatus{Number: index + 1, Key: step.Key, DisplayName: step.DisplayName, PromptVersion: step.PromptVersion, Preferred: model, PreferredAvailable: model != ""})
 	}
 	return steps
 }
@@ -146,5 +146,5 @@ func formRequest(method, target, body string) *http.Request {
 }
 
 func stagedModelForm(body string) string {
-	return body + "&model_german_analysis=qwen3.5%3A4b&model_english_translation=qwen3.5%3A4b"
+	return body + "&model_incident_metadata=qwen3.5%3A4b&model_german_presentation=qwen3.5%3A4b&model_english_translation=qwen3.5%3A4b"
 }

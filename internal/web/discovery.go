@@ -331,6 +331,7 @@ func (s *Server) renderTimelineMarkdown(response http.ResponseWriter, data timel
 			if incident.AreaName != "" {
 				fmt.Fprintf(&builder, "- %s: %s\n", markdownText(s.localization.Text(data.Lang, "Area")), markdownText(incident.AreaName))
 			}
+			writeIncidentMetadataMarkdown(&builder, s, data.Lang, incident)
 		}
 	}
 	if data.HasPrevious || data.HasNext {
@@ -362,6 +363,7 @@ func (s *Server) renderDetailMarkdown(response http.ResponseWriter, data detailP
 	if data.Incident.AreaName != "" {
 		fmt.Fprintf(&builder, "- %s: %s\n", markdownText(s.localization.Text(data.Lang, "Area")), markdownText(data.Incident.AreaName))
 	}
+	writeIncidentMetadataMarkdown(&builder, s, data.Lang, data.Incident)
 	sourceCopy := "LiveSourceCopy"
 	if data.Fixture {
 		sourceCopy = "FixtureSourceCopy"
@@ -369,6 +371,22 @@ func (s *Server) renderDetailMarkdown(response http.ResponseWriter, data detailP
 	fmt.Fprintf(&builder, "\n## %s\n\n%s\n\n", markdownText(s.localization.Text(data.Lang, "AuthoritativeSource")), markdownText(s.localization.Text(data.Lang, sourceCopy)))
 	fmt.Fprintf(&builder, "[%s](<%s>)\n", markdownText(s.localization.Text(data.Lang, "OpenOfficialSource")), markdownURL(data.Incident.Record.SourceURL))
 	_, _ = io.WriteString(response, builder.String())
+}
+
+func writeIncidentMetadataMarkdown(builder *strings.Builder, s *Server, language string, incident incidentView) {
+	if incident.EventText != "" {
+		fmt.Fprintf(builder, "- %s: %s\n", markdownText(incident.EventLabel), markdownText(incident.EventText))
+	}
+	if incident.ReportKindLabel != "" {
+		fmt.Fprintf(builder, "- %s: %s\n", markdownText(s.localization.Text(language, "ReportKind")), markdownText(incident.ReportKindLabel))
+	}
+	if incident.PublicAssistance {
+		value := incident.PublicAssistanceLabel
+		if len(incident.PublicAssistanceTypes) > 0 {
+			value += ": " + strings.Join(incident.PublicAssistanceTypes, ", ")
+		}
+		fmt.Fprintf(builder, "- %s: %s. %s\n", markdownText(s.localization.Text(language, "PublicAssistance")), markdownText(value), markdownText(s.localization.Text(language, "PublicAssistanceSourceCopy")))
+	}
 }
 
 func (s *Server) renderAboutMarkdown(response http.ResponseWriter, data aboutPage) {

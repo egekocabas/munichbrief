@@ -6,12 +6,15 @@
   <header class="border-b border-rule px-5 py-7 sm:px-8 sm:py-9">
     <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.7rem] font-extrabold uppercase tracking-[0.09em] text-muted">
       {{if .Incident.Record.Number}}<span class="text-alert">{{t .Lang "Report"}} {{.Incident.Record.Number}}</span>{{end}}
-      <time datetime="{{.Incident.Record.PublishedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime .Lang .Incident.Record.PublishedAt}}</time>
+      <span>{{t .Lang "Published"}}: <time datetime="{{.Incident.Record.PublishedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime .Lang .Incident.Record.PublishedAt}}</time></span>
     </div>
     {{if .Review}}<p class="mt-4 text-[0.68rem] font-extrabold uppercase tracking-[0.1em] text-civic data-[state=failed]:text-amber-700 data-[state=needs-review]:text-amber-700 data-[state=retrying]:text-amber-700 data-[state=running]:text-amber-700" data-state="{{.Incident.ProcessingState}}">{{.Incident.ProcessingLabel}}</p>{{end}}
-    {{if .Incident.CategoryLabel}}<dl class="mt-4 flex flex-wrap gap-2 text-xs">
-      <div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{t .Lang "Category"}}</dt><dd class="font-bold text-civic">{{.Incident.CategoryLabel}}</dd></div>
+    {{if or .Incident.CategoryLabel .Incident.AreaName .Incident.EventText .Incident.ReportKindLabel .Incident.PublicAssistance}}<dl class="mt-4 flex flex-wrap gap-2 text-xs">
+      {{if .Incident.CategoryLabel}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{t .Lang "Category"}}</dt><dd class="font-bold text-civic">{{.Incident.CategoryLabel}}</dd></div>{{end}}
       {{if .Incident.AreaName}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{t .Lang "Area"}}</dt><dd class="font-bold text-civic">{{.Incident.AreaName}}</dd></div>{{end}}
+      {{if .Incident.EventText}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{.Incident.EventLabel}}</dt><dd class="font-bold text-civic">{{.Incident.EventText}}</dd></div>{{end}}
+      {{if .Incident.ReportKindLabel}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{t .Lang "ReportKind"}}</dt><dd class="font-bold text-civic">{{.Incident.ReportKindLabel}}</dd></div>{{end}}
+      {{if .Incident.PublicAssistance}}<div class="inline-flex items-center gap-1.5 rounded-full border border-alert/30 bg-alert-soft px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-alert">{{t .Lang "PublicAssistance"}}</dt><dd class="font-bold text-alert">{{.Incident.PublicAssistanceLabel}}{{if .Incident.PublicAssistanceTypesText}} · {{.Incident.PublicAssistanceTypesText}}{{end}}</dd></div>{{end}}
     </dl>{{end}}
     <h1 class="mt-3 max-w-3xl font-serif text-3xl font-bold leading-[1.08] tracking-[-0.03em] text-ink sm:text-5xl" lang="{{.Incident.ContentLanguage}}">{{.Incident.Title}}</h1>
     <dl class="mt-6 grid gap-3 border-t border-rule/70 pt-4 text-sm text-muted sm:grid-cols-2">
@@ -27,6 +30,7 @@
       <p class="text-sm leading-relaxed text-muted sm:text-right">{{t .Lang "VerifySource"}}</p>
     </div>
     <div class="prose-copy mt-7 max-w-3xl" lang="{{.Incident.ContentLanguage}}"><h3 class="font-serif text-2xl font-bold leading-tight">{{.Incident.Title}}</h3><p class="mt-3 text-lg leading-relaxed text-muted">{{.Incident.Summary}}</p></div>
+    {{if .Incident.PublicAssistance}}<aside class="mt-6 rounded-md border border-alert/30 bg-alert-soft px-4 py-3" aria-label="{{t .Lang "PublicAssistance"}}"><p class="font-bold text-alert">{{.Incident.PublicAssistanceLabel}}</p>{{if .Incident.PublicAssistanceTypes}}<ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">{{range .Incident.PublicAssistanceTypes}}<li>{{.}}</li>{{end}}</ul>{{end}}<p class="mt-2 text-sm text-muted">{{t .Lang "PublicAssistanceSourceCopy"}}</p></aside>{{end}}
   </section>
 
   <section class="border-t border-rule bg-newsprint/35 px-5 py-7 sm:px-8" aria-labelledby="ai-processing-heading">
@@ -34,7 +38,7 @@
       <h2 id="ai-processing-heading" class="font-serif text-xl font-bold">{{t .Lang "AIProcessing"}}</h2>
       <span class="rounded-full border border-civic/20 bg-paper px-2.5 py-1 text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-civic">{{.Incident.ProcessingSystem}}</span>
     </div>
-    <ol class="mt-4 grid gap-3 {{if gt (len .Incident.ProcessingSteps) 1}}sm:grid-cols-2{{end}}">
+    <ol class="mt-4 grid gap-3 {{if gt (len .Incident.ProcessingSteps) 1}}sm:grid-cols-2{{end}} {{if gt (len .Incident.ProcessingSteps) 2}}lg:grid-cols-3{{end}}">
       {{range .Incident.ProcessingSteps}}<li class="rounded-md border border-rule bg-paper p-4">
         <p class="text-[0.65rem] font-extrabold uppercase tracking-[0.1em] text-alert">{{t $.Lang "Step"}} {{.Number}}</p>
         <h3 class="mt-1 font-serif text-lg font-bold text-ink">{{.Name}}</h3>

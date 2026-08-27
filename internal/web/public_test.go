@@ -200,7 +200,8 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	}
 	incidentID := records[0].ID
 	models := map[string]string{
-		processing.GermanAnalysisStep:     "qwen3.5:4b",
+		processing.IncidentMetadataStep:   "qwen3.5:4b",
+		processing.GermanPresentationStep: "qwen3.5:4b",
 		processing.EnglishTranslationStep: "translategemma:4b",
 	}
 	plans, err := processing.StepPlans(models)
@@ -216,37 +217,55 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	if err != nil || !found || cycle.ID != request.CycleID {
 		t.Fatalf("ActivateNextPipelineCycle() = %#v, found=%t, err=%v", cycle, found, err)
 	}
-	german, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 0, startedAt)
+	metadata, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 0, startedAt)
+	if err != nil || !found {
+		t.Fatalf("ClaimPipelineJob(metadata) = %#v, found=%t, err=%v", metadata, found, err)
+	}
+	if err := database.CompletePipelineJob(ctx, metadata, []store.PipelineValue{
+		{Kind: "category", Value: "traffic"},
+		{Kind: "area_name", Value: "Harras"},
+		{Kind: "area_type", Value: "neighbourhood"},
+		{Kind: "event_start_date", Value: "2026-08-24"},
+		{Kind: "event_start_time", Value: "22:30"},
+		{Kind: "report_kind", Value: "incident"},
+		{Kind: "public_assistance_status", Value: "requested"},
+		{Kind: "public_assistance_types", Value: `["photo_video_material","witness_observations"]`},
+	}, metadata.ModelIdentity, store.HashPipelineInput("metadata"), startedAt.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	advance, err := database.AdvancePipelineCycle(ctx, cycle, 3, startedAt.Add(2*time.Minute))
+	if err != nil || !advance.Advanced {
+		t.Fatalf("AdvancePipelineCycle(metadata) = %#v, err=%v", advance, err)
+	}
+	cycle.ActiveStep = 1
+	german, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 1, startedAt.Add(3*time.Minute))
 	if err != nil || !found {
 		t.Fatalf("ClaimPipelineJob(german) = %#v, found=%t, err=%v", german, found, err)
 	}
 	if err := database.CompletePipelineJob(ctx, german, []store.PipelineValue{
 		{Kind: "title_de", Value: "Unfall am Harras"},
 		{Kind: "summary_de", Value: "Am Harras kam es zu einem Verkehrsunfall."},
-		{Kind: "category", Value: "traffic"},
-		{Kind: "area_name", Value: "Harras"},
-		{Kind: "area_type", Value: "neighbourhood"},
 		{Kind: "privacy_status", Value: "safe"},
 		{Kind: "privacy_flags", Value: "[]"},
-	}, german.ModelIdentity, store.HashPipelineInput("de"), startedAt.Add(time.Minute)); err != nil {
+	}, german.ModelIdentity, store.HashPipelineInput("de"), startedAt.Add(4*time.Minute)); err != nil {
 		t.Fatal(err)
 	}
-	advance, err := database.AdvancePipelineCycle(ctx, cycle, 2, startedAt.Add(2*time.Minute))
+	advance, err = database.AdvancePipelineCycle(ctx, cycle, 3, startedAt.Add(5*time.Minute))
 	if err != nil || !advance.Advanced {
 		t.Fatalf("AdvancePipelineCycle(german) = %#v, err=%v", advance, err)
 	}
-	cycle.ActiveStep = 1
-	translation, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 1, startedAt.Add(3*time.Minute))
+	cycle.ActiveStep = 2
+	translation, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 2, startedAt.Add(6*time.Minute))
 	if err != nil || !found {
 		t.Fatalf("ClaimPipelineJob(translation) = %#v, found=%t, err=%v", translation, found, err)
 	}
 	if err := database.CompletePipelineJob(ctx, translation, []store.PipelineValue{
 		{Kind: "title_en", Value: "Crash at Harras"},
 		{Kind: "summary_en", Value: "A traffic crash occurred at Harras."},
-	}, translation.ModelIdentity, store.HashPipelineInput(translation.TitleDE, translation.SummaryDE), startedAt.Add(4*time.Minute)); err != nil {
+	}, translation.ModelIdentity, store.HashPipelineInput(translation.TitleDE, translation.SummaryDE), startedAt.Add(7*time.Minute)); err != nil {
 		t.Fatal(err)
 	}
-	advance, err = database.AdvancePipelineCycle(ctx, cycle, 2, startedAt.Add(5*time.Minute))
+	advance, err = database.AdvancePipelineCycle(ctx, cycle, 3, startedAt.Add(8*time.Minute))
 	if err != nil || !advance.Completed {
 		t.Fatalf("AdvancePipelineCycle(translation) = %#v, err=%v", advance, err)
 	}
@@ -254,7 +273,7 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	handler := testServer(t, database).Handler()
 	timeline := httptest.NewRecorder()
 	handler.ServeHTTP(timeline, englishRequest(http.MethodGet, "/en", nil))
-	for _, expected := range []string{"Category", "Traffic", "Area", "Harras", "Crash at Harras"} {
+	for _, expected := range []string{"Category", "Traffic", "Area", "Harras", "Crash at Harras", "Time stated in report", "24 August 2026, 22:30", "Police request public assistance", "Photo or video material"} {
 		if !strings.Contains(timeline.Body.String(), expected) {
 			t.Errorf("timeline body does not contain %q", expected)
 		}
@@ -263,9 +282,12 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	english := httptest.NewRecorder()
 	handler.ServeHTTP(english, englishRequest(http.MethodGet, "/en/incidents/"+formatID(incidentID), nil))
 	for _, expected := range []string{
-		"Category", "Traffic", "Area", "Harras", "Staged pipeline",
-		"German analysis", "qwen3.5:4b", processing.GermanAnalysisPromptVersion,
+		"Category", "Traffic", "Area", "Harras", "Metadata-first pipeline v2",
+		"Incident metadata", "qwen3.5:4b", processing.IncidentMetadataPromptVersion,
+		"German presentation", processing.GermanPresentationPromptVersion,
 		"English translation", "translategemma:4b", processing.EnglishTranslationPromptVersion,
+		"Time stated in report", "24 August 2026, 22:30", "Report kind", "Incident", "Police request public assistance",
+		`aria-label="Public assistance"`,
 	} {
 		if !strings.Contains(english.Body.String(), expected) {
 			t.Errorf("English detail body does not contain %q", expected)
@@ -274,7 +296,7 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 
 	germanDetail := httptest.NewRecorder()
 	handler.ServeHTTP(germanDetail, httptest.NewRequest(http.MethodGet, "/de/incidents/"+formatID(incidentID), nil))
-	for _, expected := range []string{"Kategorie", "Verkehr", "Gebiet", "Harras", "Deutsche Analyse", "qwen3.5:4b"} {
+	for _, expected := range []string{"Kategorie", "Verkehr", "Gebiet", "Harras", "Vorfallsmetadaten", "Deutsche Darstellung", "qwen3.5:4b", "Zeitangabe in der Meldung", "24. August 2026, 22:30", "Polizei bittet um Mithilfe"} {
 		if !strings.Contains(germanDetail.Body.String(), expected) {
 			t.Errorf("German detail body does not contain %q", expected)
 		}
@@ -283,6 +305,49 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 		if strings.Contains(germanDetail.Body.String(), unexpected) {
 			t.Errorf("German detail body unexpectedly contains %q", unexpected)
 		}
+	}
+
+	markdown := httptest.NewRecorder()
+	publicServer, err := NewWithOptions(database, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), Options{
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PromptVersion: processing.PipelineVersion,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	markdownRequest := englishRequest(http.MethodGet, "/en/incidents/"+formatID(incidentID), nil)
+	markdownRequest.Header.Set("Accept", "text/markdown")
+	publicServer.Handler().ServeHTTP(markdown, markdownRequest)
+	for _, expected := range []string{"Time stated in report: 24 August 2026, 22:30", "Report kind: Incident", "Public assistance: Police request public assistance", "official source"} {
+		if !strings.Contains(markdown.Body.String(), expected) {
+			t.Errorf("Markdown detail does not contain %q: %s", expected, markdown.Body.String())
+		}
+	}
+
+	admin := httptest.NewRecorder()
+	adminTestServer(t, database, nil).Handler().ServeHTTP(admin, httptest.NewRequest(http.MethodGet, "/admin", nil))
+	for _, expected := range []string{"Pipeline v2 presentation", "Time stated in report", "requested", "photo_video_material", processing.IncidentMetadataPromptVersion, processing.GermanPresentationPromptVersion} {
+		if !strings.Contains(admin.Body.String(), expected) {
+			t.Errorf("admin metadata review does not contain %q", expected)
+		}
+	}
+}
+
+func TestIncidentTimeFormattingSupportsClockDateAndDayPart(t *testing.T) {
+	server := testServer(t, fixtureStore(t))
+	cases := []struct {
+		name, language, expected string
+		record                   store.IncidentRecord
+	}{
+		{name: "clock time", language: "en", record: store.IncidentRecord{AIEventStartDate: "2026-08-24", AIEventStartTime: "21:05"}, expected: "24 August 2026, 21:05"},
+		{name: "date only", language: "de", record: store.IncidentRecord{AIEventStartDate: "2026-08-24"}, expected: "24. August 2026"},
+		{name: "day part", language: "en", record: store.IncidentRecord{AIEventStartDate: "2026-08-24", AIEventDayPart: "evening"}, expected: "24 August 2026, evening"},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			if actual := server.formatIncidentTime(test.record, test.language); actual != test.expected {
+				t.Fatalf("formatIncidentTime() = %q, want %q", actual, test.expected)
+			}
+		})
 	}
 }
 

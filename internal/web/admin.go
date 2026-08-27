@@ -102,14 +102,23 @@ func (s *Server) adminList(records []store.IncidentRecord, total, page, totalPag
 		presentationLabel := ""
 		if record.HasAI {
 			presentationLabel = "Legacy presentation retained"
-			if record.AIPromptVersion == processing.GermanAnalysisPromptVersion {
-				presentationLabel = "Staged presentation"
+			if record.AIPipelineVersion == processing.PipelineVersion {
+				presentationLabel = "Pipeline v2 presentation"
+			} else if record.AIPipelineVersion == store.PreviousPipelineVersion {
+				presentationLabel = "Pipeline v1 fallback"
 			}
 		}
+		primaryProvenanceLabel := "Presentation provenance"
+		if record.AIPipelineVersion == processing.PipelineVersion || record.AIPipelineVersion == store.PreviousPipelineVersion {
+			primaryProvenanceLabel = "German provenance"
+		}
+		publicView := s.incidentForLanguage(record, "en")
 		incidents = append(incidents, adminIncidentView{
 			Record: record, ProcessingState: strings.ReplaceAll(state, "_", "-"),
 			ProcessingLabel: adminProcessingLabel(state), PresentationLabel: presentationLabel,
-			CategoryLabel: processing.CategoryLabel(record.AICategory, "en"), CanProcess: state != "running" && state != "ready",
+			CategoryLabel: processing.CategoryLabel(record.AICategory, "en"), CanProcess: state != "running",
+			EventText: publicView.EventText, EventLabel: publicView.EventLabel, ReportKindLabel: publicView.ReportKindLabel,
+			PublicAssistanceTypes: publicView.PublicAssistanceTypes, PrimaryProvenanceLabel: primaryProvenanceLabel,
 		})
 	}
 	return adminIncidentList{
@@ -281,12 +290,17 @@ type adminIncidentList struct {
 }
 
 type adminIncidentView struct {
-	Record            store.IncidentRecord
-	ProcessingState   string
-	ProcessingLabel   string
-	PresentationLabel string
-	CategoryLabel     string
-	CanProcess        bool
+	Record                 store.IncidentRecord
+	ProcessingState        string
+	ProcessingLabel        string
+	PresentationLabel      string
+	CategoryLabel          string
+	EventText              string
+	EventLabel             string
+	ReportKindLabel        string
+	PublicAssistanceTypes  []string
+	PrimaryProvenanceLabel string
+	CanProcess             bool
 }
 
 func adminProcessingLabel(state string) string {

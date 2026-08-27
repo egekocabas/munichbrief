@@ -48,7 +48,7 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	if page.Code != http.StatusOK || page.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("admin page = %d/%q", page.Code, page.Header().Get("Cache-Control"))
 	}
-	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", "Installed and ready", "name=\"model_german_analysis\"", "name=\"model_english_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/status", "Confirm AI request", "/static/admin.js", "Active stage", "Full pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable"} {
+	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", "Installed and ready", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_english_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/status", "Confirm AI request", "/static/admin.js", "Active stage", "Full pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover"} {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("admin page does not contain %q", expected)
 		}
@@ -118,12 +118,12 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	}
 
 	preference := httptest.NewRecorder()
-	handler.ServeHTTP(preference, formRequest(http.MethodPost, "/api/admin/ai/step-model", "step=german_analysis&model=granite4%3A3b&unprocessed_page=1&all_page=1"))
-	if preference.Code != http.StatusSeeOther || !strings.Contains(preference.Header().Get("Location"), "step_model=german_analysis") {
+	handler.ServeHTTP(preference, formRequest(http.MethodPost, "/api/admin/ai/step-model", "step=german_presentation&model=granite4%3A3b&unprocessed_page=1&all_page=1"))
+	if preference.Code != http.StatusSeeOther || !strings.Contains(preference.Header().Get("Location"), "step_model=german_presentation") {
 		t.Fatalf("preferred model update = %d/%q", preference.Code, preference.Header().Get("Location"))
 	}
-	preferred, err := database.PreferredPipelineModels(ctx, []string{processing.GermanAnalysisStep})
-	if err != nil || preferred[processing.GermanAnalysisStep] != "granite4:3b" {
+	preferred, err := database.PreferredPipelineModels(ctx, []string{processing.GermanPresentationStep})
+	if err != nil || preferred[processing.GermanPresentationStep] != "granite4:3b" {
 		t.Fatalf("stored preferred model = %q/%v", preferred, err)
 	}
 }
