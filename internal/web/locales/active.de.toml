@@ -59,10 +59,10 @@ other = "Lokaler Prototyp"
 other = "Münchner Polizeimeldungen"
 
 [HeroTitle]
-other = "Aktuelle Meldungen aus München"
+other = "Aktuelle Vorfälle laut Münchner Polizei"
 
 [HeroCopy]
-other = "Offizielle Polizeimeldungen, aufgeteilt in einzelne Vorfälle und klar mit der maßgeblichen Quelle verknüpft."
+other = "Ein klarer Überblick über lokale Vorfälle, zusammengefasst aus offiziellen Polizeimeldungen."
 
 [FixtureIncidents]
 other = "Synthetische Meldungen"

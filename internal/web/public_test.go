@@ -565,7 +565,7 @@ func TestLocalizedRoutesAndLanguagePreference(t *testing.T) {
 	germanRequest := httptest.NewRequest(http.MethodGet, "/de", nil)
 	germanRequest.Header.Set("Accept-Language", "en")
 	handler.ServeHTTP(german, germanRequest)
-	if german.Header().Get("Content-Language") != "de" || !strings.Contains(german.Body.String(), "Aktuelle Meldungen aus München") {
+	if german.Header().Get("Content-Language") != "de" || !strings.Contains(german.Body.String(), "Aktuelle Vorfälle laut Münchner Polizei") {
 		t.Fatal("localized path did not override the browser language")
 	}
 

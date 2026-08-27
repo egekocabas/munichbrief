@@ -59,10 +59,10 @@ other = "Local prototype"
 other = "Munich Police releases"
 
 [HeroTitle]
-other = "Latest reports from Munich"
+other = "Latest incidents reported by Munich Police"
 
 [HeroCopy]
-other = "Official police releases split into individual incidents and clearly linked to the authoritative source."
+other = "A clear overview of local incidents, summarized from official police reports."
 
 [FixtureIncidents]
 other = "Synthetic reports"
