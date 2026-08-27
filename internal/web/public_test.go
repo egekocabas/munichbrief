@@ -291,9 +291,14 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	handler := testServer(t, database).Handler()
 	timeline := httptest.NewRecorder()
 	handler.ServeHTTP(timeline, englishRequest(http.MethodGet, "/en", nil))
-	for _, expected := range []string{"Category", "Traffic", "Area", "Harras", "Crash at Harras", "Time stated in report", "24 August 2026, 22:30", "Police request public assistance", "Photo or video material"} {
+	for _, expected := range []string{"Category", "Traffic", "Area", "Harras", "Crash at Harras", "Incident time", "24 August 2026, 22:30", "Public assistance needed"} {
 		if !strings.Contains(timeline.Body.String(), expected) {
 			t.Errorf("timeline body does not contain %q", expected)
+		}
+	}
+	for _, unexpected := range []string{"Police request public assistance", "Photo or video material", "Witness observations"} {
+		if strings.Contains(timeline.Body.String(), unexpected) {
+			t.Errorf("timeline body unexpectedly contains public assistance detail %q", unexpected)
 		}
 	}
 
@@ -304,17 +309,24 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 		"Incident metadata", "qwen3.5:4b", processing.IncidentMetadataPromptVersion,
 		"German presentation", processing.GermanPresentationPromptVersion,
 		"English translation", "translate:4b", processing.EnglishTranslationPromptVersion,
-		"Time stated in report", "24 August 2026, 22:30", "Report kind", "Incident", "Police request public assistance",
+		"Incident time", "24 August 2026, 22:30", "Report kind", "Incident", "Police request public assistance",
+		"AI-generated summary", "Verify important details against the latest official information.",
 		`aria-label="Public assistance"`,
 	} {
 		if !strings.Contains(english.Body.String(), expected) {
 			t.Errorf("English detail body does not contain %q", expected)
 		}
 	}
+	if count := strings.Count(english.Body.String(), ">Crash at Harras</"); count != 1 {
+		t.Errorf("English detail renders the incident heading %d times, want 1", count)
+	}
+	if strings.Contains(english.Body.String(), "Machine-generated") {
+		t.Error("English detail unexpectedly renders the redundant machine-generated label")
+	}
 
 	germanDetail := httptest.NewRecorder()
 	handler.ServeHTTP(germanDetail, httptest.NewRequest(http.MethodGet, "/de/incidents/"+formatID(incidentID), nil))
-	for _, expected := range []string{"Kategorie", "Verkehr", "Gebiet", "Harras", "Vorfallsmetadaten", "Deutsche Darstellung", "qwen3.5:4b", "Zeitangabe in der Meldung", "24. August 2026, 22:30", "Polizei bittet um Mithilfe"} {
+	for _, expected := range []string{"Kategorie", "Verkehr", "Gebiet", "Harras", "Vorfallsmetadaten", "Deutsche Darstellung", "qwen3.5:4b", "Vorfallszeit", "24. August 2026, 22:30", "Polizei bittet um Mithilfe", "KI-generierte Zusammenfassung", "Wichtige Angaben bitte anhand der aktuellen offiziellen Informationen prüfen."} {
 		if !strings.Contains(germanDetail.Body.String(), expected) {
 			t.Errorf("German detail body does not contain %q", expected)
 		}
@@ -335,7 +347,7 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	markdownRequest := englishRequest(http.MethodGet, "/en/incidents/"+formatID(incidentID), nil)
 	markdownRequest.Header.Set("Accept", "text/markdown")
 	publicServer.Handler().ServeHTTP(markdown, markdownRequest)
-	for _, expected := range []string{"Time stated in report: 24 August 2026, 22:30", "Report kind: Incident", "Public assistance: Police request public assistance", "official source"} {
+	for _, expected := range []string{"Incident time: 24 August 2026, 22:30", "Report kind: Incident", "Public assistance: Police request public assistance", "official source"} {
 		if !strings.Contains(markdown.Body.String(), expected) {
 			t.Errorf("Markdown detail does not contain %q: %s", expected, markdown.Body.String())
 		}
@@ -343,7 +355,7 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 
 	admin := httptest.NewRecorder()
 	adminTestServer(t, database, nil).Handler().ServeHTTP(admin, httptest.NewRequest(http.MethodGet, "/admin", nil))
-	for _, expected := range []string{"Pipeline v2 presentation", "Time stated in report", "requested", "photo_video_material", processing.IncidentMetadataPromptVersion, processing.GermanPresentationPromptVersion} {
+	for _, expected := range []string{"Pipeline v2 presentation", "Incident time", "requested", "photo_video_material", processing.IncidentMetadataPromptVersion, processing.GermanPresentationPromptVersion} {
 		if !strings.Contains(admin.Body.String(), expected) {
 			t.Errorf("admin metadata review does not contain %q", expected)
 		}
@@ -560,7 +572,7 @@ func TestLocalizedRoutesAndLanguagePreference(t *testing.T) {
 	germanRequest := httptest.NewRequest(http.MethodGet, "/de", nil)
 	germanRequest.Header.Set("Accept-Language", "en")
 	handler.ServeHTTP(german, germanRequest)
-	if german.Header().Get("Content-Language") != "de" || !strings.Contains(german.Body.String(), "Aktuelle Meldungen aus München") {
+	if german.Header().Get("Content-Language") != "de" || !strings.Contains(german.Body.String(), "Aktuelle Vorfälle laut Münchner Polizei") {
 		t.Fatal("localized path did not override the browser language")
 	}
 

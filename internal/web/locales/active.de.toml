@@ -20,16 +20,16 @@ other = "Zum Inhalt springen"
 other = "Wichtiger Hinweis"
 
 [NoticeLead]
-other = "Unabhängig und inoffiziell."
+other = "Unabhängig und nicht offiziell."
 
 [FixtureNotice]
 other = "Diese Ansicht enthält ausschließlich synthetische Testdaten."
 
 [LiveNotice]
-other = "Die Inhalte stammen aus offiziellen Meldungen."
+other = "KI wird eingesetzt, um offizielle Polizeimeldungen zusammenzufassen, zu kategorisieren und Angaben daraus zu extrahieren. Dabei können Fehler auftreten, und Meldungen können nachträglich aktualisiert werden."
 
 [AuthorityNotice]
-other = "Maßgeblich bleibt die offizielle Polizeimeldung; die Unschuldsvermutung gilt."
+other = "Maßgeblich sind die jeweils aktuellen offiziellen Informationen; es gilt die Unschuldsvermutung."
 
 [ReviewNotice]
 other = "Prüfmodus: Noch nicht anonymisierte Originaltexte können sichtbar sein. Nicht öffentlich bereitstellen."
@@ -59,16 +59,16 @@ other = "Lokaler Prototyp"
 other = "Münchner Polizeimeldungen"
 
 [HeroTitle]
-other = "Aktuelle Meldungen aus München"
+other = "Aktuelle Vorfälle laut Münchner Polizei"
 
 [HeroCopy]
-other = "Offizielle Polizeimeldungen, aufgeteilt in einzelne Vorfälle und klar mit der maßgeblichen Quelle verknüpft."
+other = "Ein klarer Überblick über lokale Vorfälle, zusammengefasst aus offiziellen Polizeimeldungen."
 
 [FixtureIncidents]
 other = "Synthetische Meldungen"
 
 [LatestIncidents]
-other = "Neueste Meldungen"
+other = "Neueste Vorfälle"
 
 [Reports]
 one = "{{.Count}} Meldung"
@@ -78,7 +78,7 @@ other = "{{.Count}} Meldungen"
 other = "{{.Shown}} angezeigt / {{.Total}} insgesamt"
 
 [Report]
-other = "Meldung"
+other = "Polizeimeldung"
 
 [SourceMetadata]
 other = "Quellendaten"
@@ -152,11 +152,14 @@ other = "Öffentliche Mithilfe"
 [PublicAssistanceRequested]
 other = "Polizei bittet um Mithilfe"
 
+[PublicAssistanceNeeded]
+other = "Öffentliche Mithilfe benötigt"
+
 [PublicAssistanceSourceCopy]
 other = "Hinweise, Kontaktwege und weitere Einzelheiten stehen ausschließlich in der offiziellen Quelle."
 
 [TimeStatedInReport]
-other = "Zeitangabe in der Meldung"
+other = "Vorfallszeit"
 
 [DayPartMorning]
 other = "morgens"
@@ -251,14 +254,11 @@ other = "Altsystem"
 [Generated]
 other = "Erstellt"
 
-[MachineGenerated]
-other = "Maschinell erstellt"
-
 [AISummary]
 other = "KI-generierte Zusammenfassung"
 
 [VerifySource]
-other = "Wichtige Angaben bitte anhand der offiziellen Quelle prüfen."
+other = "Wichtige Angaben bitte anhand der aktuellen offiziellen Informationen prüfen."
 
 [OriginalGerman]
 other = "Deutscher Originaltext"

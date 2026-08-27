@@ -26,10 +26,10 @@ other = "Independent and unofficial."
 other = "This view contains synthetic fixture data only."
 
 [LiveNotice]
-other = "Content is derived from official releases."
+other = "AI is used to summarize, categorize, and extract details from official police releases. Errors may occur, and releases may be updated after publication."
 
 [AuthorityNotice]
-other = "The official police release remains authoritative, and the presumption of innocence applies."
+other = "The latest official information remains authoritative, and the presumption of innocence applies."
 
 [ReviewNotice]
 other = "Review mode: original text that has not been anonymised may be visible. Do not expose publicly."
@@ -59,16 +59,16 @@ other = "Local prototype"
 other = "Munich Police releases"
 
 [HeroTitle]
-other = "Latest reports from Munich"
+other = "Latest incidents reported by Munich Police"
 
 [HeroCopy]
-other = "Official police releases split into individual incidents and clearly linked to the authoritative source."
+other = "A clear overview of local incidents, summarized from official police reports."
 
 [FixtureIncidents]
 other = "Synthetic reports"
 
 [LatestIncidents]
-other = "Latest reports"
+other = "Latest incidents"
 
 [Reports]
 one = "{{.Count}} report"
@@ -78,7 +78,7 @@ other = "{{.Count}} reports"
 other = "{{.Shown}} shown / {{.Total}} total"
 
 [Report]
-other = "Report"
+other = "Police report"
 
 [SourceMetadata]
 other = "Source metadata"
@@ -152,11 +152,14 @@ other = "Public assistance"
 [PublicAssistanceRequested]
 other = "Police request public assistance"
 
+[PublicAssistanceNeeded]
+other = "Public assistance needed"
+
 [PublicAssistanceSourceCopy]
 other = "Instructions, contact routes, and further details are available only in the official source."
 
 [TimeStatedInReport]
-other = "Time stated in report"
+other = "Incident time"
 
 [DayPartMorning]
 other = "morning"
@@ -251,14 +254,11 @@ other = "Legacy pipeline"
 [Generated]
 other = "Generated"
 
-[MachineGenerated]
-other = "Machine-generated"
-
 [AISummary]
 other = "AI-generated summary"
 
 [VerifySource]
-other = "Verify important details against the official source."
+other = "Verify important details against the latest official information."
 
 [OriginalGerman]
 other = "Original German text"
