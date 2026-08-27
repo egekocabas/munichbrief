@@ -53,6 +53,12 @@ func TestAboutHealthReadinessAndRequestHeaders(t *testing.T) {
 			t.Errorf("about response does not contain %q", expected)
 		}
 	}
+	if !strings.Contains(about.Body.String(), `<meta name="robots" content="noindex,nofollow,noarchive">`) {
+		t.Error("review page does not publish its noindex directive in HTML")
+	}
+	if !strings.Contains(about.Body.String(), `rel="icon" href="/static/favicon.svg" type="image/svg+xml"`) {
+		t.Error("about response does not link the MunichBrief favicon")
+	}
 	for _, expected := range []string{
 		`href="https://github.com/egekocabas/munichbrief"`, `target="_blank"`, `rel="noopener noreferrer"`,
 		`>About</a>`, `page-shell py-6 text-center`,
@@ -87,6 +93,7 @@ func TestAboutHealthReadinessAndRequestHeaders(t *testing.T) {
 		{path: "/static/app.css", contentType: "text/css; charset=utf-8", body: "--color-civic"},
 		{path: "/static/htmx.min.js", contentType: "text/javascript; charset=utf-8", body: "htmx"},
 		{path: "/static/admin.js", contentType: "text/javascript; charset=utf-8", body: "processing-confirmation"},
+		{path: "/static/favicon.svg", contentType: "image/svg+xml", body: `fill="#174b73"`},
 	} {
 		response := httptest.NewRecorder()
 		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, asset.path, nil))

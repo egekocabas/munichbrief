@@ -59,6 +59,13 @@
       name: {{ include "munichbrief.fullname" . }}
       port:
         name: http
+- path: /social
+  pathType: Prefix
+  backend:
+    service:
+      name: {{ include "munichbrief.fullname" . }}
+      port:
+        name: http
 - path: /healthz
   pathType: Exact
   backend:

@@ -3,6 +3,7 @@ package web
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"encoding/xml"
 	"log/slog"
 	"net/http"
@@ -128,9 +129,23 @@ func TestPublicDocumentsExposeCanonicalAndAlternateLinks(t *testing.T) {
 	timeline := httptest.NewRecorder()
 	server.Handler().ServeHTTP(timeline, publicDiscoveryRequest(http.MethodGet, "/en?page=1"))
 	for _, expected := range []string{
+		`<html lang="en" prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#">`,
+		`<meta name="robots" content="index,follow,max-image-preview:large">`,
 		`<link rel="canonical" href="https://munichbrief.de/en">`,
 		`<link rel="alternate" hreflang="de" href="https://munichbrief.de/de">`,
 		`<link rel="alternate" hreflang="en" href="https://munichbrief.de/en">`,
+		`<link rel="alternate" hreflang="x-default" href="https://munichbrief.de/de">`,
+		`<meta property="og:type" content="website">`,
+		`<meta property="og:title" content="MunichBrief">`,
+		`<meta property="og:url" content="https://munichbrief.de/en">`,
+		`<meta property="og:locale" content="en_GB">`,
+		`<meta property="og:locale:alternate" content="de_DE">`,
+		`<meta property="og:image" content="https://munichbrief.de/social/en/home">`,
+		`<meta property="og:image:secure_url" content="https://munichbrief.de/social/en/home">`,
+		`<meta property="og:image:width" content="1200">`,
+		`<meta property="og:image:height" content="630">`,
+		`<meta name="twitter:card" content="summary_large_image">`,
+		`<meta name="twitter:image" content="https://munichbrief.de/social/en/home">`,
 	} {
 		if !strings.Contains(timeline.Body.String(), expected) {
 			t.Errorf("timeline does not contain %q", expected)
@@ -139,6 +154,7 @@ func TestPublicDocumentsExposeCanonicalAndAlternateLinks(t *testing.T) {
 	for _, expected := range []string{
 		`<https://munichbrief.de/en>; rel="canonical"`,
 		`<https://munichbrief.de/de>; rel="alternate"; hreflang="de"`,
+		`<https://munichbrief.de/de>; rel="alternate"; hreflang="x-default"`,
 	} {
 		if !strings.Contains(timeline.Header().Get("Link"), expected) {
 			t.Errorf("Link header %q does not contain %q", timeline.Header().Get("Link"), expected)
@@ -147,6 +163,10 @@ func TestPublicDocumentsExposeCanonicalAndAlternateLinks(t *testing.T) {
 	if timeline.Header().Get("Content-Signal") != contentSignal || !strings.Contains(timeline.Header().Get("Vary"), "Accept") {
 		t.Errorf("public discovery headers = signal:%q vary:%q", timeline.Header().Get("Content-Signal"), timeline.Header().Get("Vary"))
 	}
+	timelineStructured := decodeStructuredData(t, timeline.Body.String())
+	if encoded, _ := json.Marshal(timelineStructured); !bytes.Contains(encoded, []byte(`"@type":"CollectionPage"`)) || !bytes.Contains(encoded, []byte(`"@type":"WebSite"`)) {
+		t.Errorf("timeline structured data = %s", encoded)
+	}
 
 	detail := httptest.NewRecorder()
 	server.Handler().ServeHTTP(detail, publicDiscoveryRequest(http.MethodGet, "/en/incidents/"+formatID(job.IncidentID)+"?page=2&tracking=x"))
@@ -154,12 +174,48 @@ func TestPublicDocumentsExposeCanonicalAndAlternateLinks(t *testing.T) {
 	if !strings.Contains(detail.Header().Get("Link"), "<"+canonical+">; rel=\"canonical\"") || strings.Contains(detail.Header().Get("Link"), "page=2") {
 		t.Errorf("detail Link header did not remove navigation query: %q", detail.Header().Get("Link"))
 	}
+	for _, expected := range []string{
+		`<meta name="description" content="Safe summary.">`,
+		`<meta property="og:type" content="article">`,
+		`<meta property="og:title" content="Safe title · MunichBrief">`,
+		`<meta property="og:image" content="https://munichbrief.de/social/en/incidents/` + formatID(job.IncidentID) + `">`,
+		`<meta name="twitter:title" content="Safe title · MunichBrief">`,
+		`<meta property="article:published_time" content="`,
+		`<meta property="article:modified_time" content="`,
+	} {
+		if !strings.Contains(detail.Body.String(), expected) {
+			t.Errorf("detail does not contain %q", expected)
+		}
+	}
+	detailStructured := decodeStructuredData(t, detail.Body.String())
+	if encoded, _ := json.Marshal(detailStructured); !bytes.Contains(encoded, []byte(`"@type":"Article"`)) || !bytes.Contains(encoded, []byte(`"headline":"Safe title"`)) || !bytes.Contains(encoded, []byte(`"isBasedOn":`)) {
+		t.Errorf("detail structured data = %s", encoded)
+	}
 
 	root := httptest.NewRecorder()
 	server.Handler().ServeHTTP(root, publicDiscoveryRequest(http.MethodGet, "/?tracking=x"))
 	if root.Code != http.StatusFound || !strings.Contains(root.Header().Get("Link"), `<https://munichbrief.de/en>; rel="canonical"`) || strings.Contains(root.Header().Get("Link"), "tracking") {
 		t.Errorf("root discovery redirect = %d/%q", root.Code, root.Header().Get("Link"))
 	}
+}
+
+func decodeStructuredData(t *testing.T, document string) map[string]any {
+	t.Helper()
+	const opening = `<script type="application/ld+json">`
+	start := strings.Index(document, opening)
+	if start < 0 {
+		t.Fatal("document has no JSON-LD script")
+	}
+	start += len(opening)
+	end := strings.Index(document[start:], `</script>`)
+	if end < 0 {
+		t.Fatal("JSON-LD script is not closed")
+	}
+	var result map[string]any
+	if err := json.Unmarshal([]byte(document[start:start+end]), &result); err != nil {
+		t.Fatalf("decode JSON-LD: %v", err)
+	}
+	return result
 }
 
 func TestTimelinePaginationPublishesPrevAndNextLinks(t *testing.T) {

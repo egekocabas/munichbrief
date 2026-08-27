@@ -16,6 +16,7 @@ type readerLanguage struct {
 	Code            string
 	DisplayName     string
 	Catalog         string
+	OpenGraphLocale string
 	Tag             language.Tag
 	Canonical       bool
 	SwitchMessageID string
@@ -27,7 +28,7 @@ type readerLanguage struct {
 
 var readerLanguages = []readerLanguage{
 	{
-		Code: "de", DisplayName: "Deutsch", Catalog: "locales/active.de.toml", Tag: language.German,
+		Code: "de", DisplayName: "Deutsch", Catalog: "locales/active.de.toml", OpenGraphLocale: "de_DE", Tag: language.German,
 		Canonical: true, SwitchMessageID: "SwitchToGerman", StepMessageID: "GermanPresentationStep",
 		FormatDate: func(value time.Time) string {
 			return value.Format("02.") + " " + germanMonths[value.Month()] + " " + value.Format("2006")
@@ -40,7 +41,7 @@ var readerLanguages = []readerLanguage{
 		},
 	},
 	{
-		Code: "en", DisplayName: "English", Catalog: "locales/active.en.toml", Tag: language.English,
+		Code: "en", DisplayName: "English", Catalog: "locales/active.en.toml", OpenGraphLocale: "en_GB", Tag: language.English,
 		SwitchMessageID: "SwitchToEnglish", StepMessageID: "EnglishTranslationStep",
 		FormatDate:     func(value time.Time) string { return value.Format("02 January 2006") },
 		FormatDay:      func(value time.Time) string { return value.Format("Monday, 02 January 2006") },
@@ -52,8 +53,8 @@ func validateReaderLanguages() error {
 	seen := make(map[string]struct{}, len(readerLanguages))
 	canonical := 0
 	for _, definition := range readerLanguages {
-		if definition.Code == "" || definition.DisplayName == "" || definition.Catalog == "" || definition.SwitchMessageID == "" || definition.StepMessageID == "" {
-			return errors.New("reader language registrations require code, name, catalog, switch message, and processing-step message")
+		if definition.Code == "" || definition.DisplayName == "" || definition.Catalog == "" || definition.OpenGraphLocale == "" || definition.SwitchMessageID == "" || definition.StepMessageID == "" {
+			return errors.New("reader language registrations require code, name, catalog, Open Graph locale, switch message, and processing-step message")
 		}
 		if definition.FormatDate == nil || definition.FormatDay == nil || definition.FormatDateTime == nil {
 			return fmt.Errorf("reader language %s requires date formatters", definition.Code)

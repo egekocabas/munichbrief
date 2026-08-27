@@ -79,6 +79,13 @@ func (s *Server) adminJavascript(response http.ResponseWriter, _ *http.Request) 
 	_, _ = response.Write(adminScript)
 }
 
+func (s *Server) favicon(response http.ResponseWriter, _ *http.Request) {
+	response.Header().Set("Content-Type", "image/svg+xml")
+	response.Header().Set("Cache-Control", "public, max-age=3600")
+	response.Header().Set("X-Content-Type-Options", "nosniff")
+	_, _ = response.Write(favicon)
+}
+
 func (s *Server) internalError(response http.ResponseWriter, request *http.Request, message string, err error) {
 	s.logger.ErrorContext(request.Context(), message, "error", err)
 	http.Error(response, "internal server error", http.StatusInternalServerError)
@@ -136,7 +143,7 @@ func isPublicPath(path string) bool {
 	if path == "/" || path == "/about" || path == "/healthz" || path == "/readyz" || path == "/robots.txt" || path == "/sitemap.xml" {
 		return true
 	}
-	for _, prefix := range []string{"/de", "/en", "/incidents", "/static"} {
+	for _, prefix := range []string{"/de", "/en", "/incidents", "/social", "/static"} {
 		if path == prefix || strings.HasPrefix(path, prefix+"/") {
 			return true
 		}

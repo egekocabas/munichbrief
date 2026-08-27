@@ -1,16 +1,39 @@
 {{define "layout"}}
 <!doctype html>
-<html lang="{{.Lang}}">
+<html lang="{{.Lang}}" prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="{{t .Lang "SiteDescription"}}">
+  <meta name="description" content="{{.Description}}">
+  <meta name="robots" content="{{.Robots}}">
   <meta name="htmx-config" content='{"allowEval":false,"selfRequestsOnly":true}'>
   <title>{{template "title" .}}</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <meta property="og:site_name" content="MunichBrief">
+  <meta property="og:type" content="{{.SocialType}}">
+  <meta property="og:title" content="{{.SocialTitle}}">
+  <meta property="og:description" content="{{.Description}}">
+  <meta property="og:url" content="{{.CanonicalURL}}">
+  <meta property="og:locale" content="{{.OpenGraphLocale}}">
+  {{range .OpenGraphLocaleAlternates}}<meta property="og:locale:alternate" content="{{.}}">{{end}}
+  <meta property="og:image" content="{{.SocialImageURL}}">
+  {{if .SocialImageSecureURL}}<meta property="og:image:secure_url" content="{{.SocialImageSecureURL}}">{{end}}
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="{{.SocialImageAlt}}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{.SocialTitle}}">
+  <meta name="twitter:description" content="{{.Description}}">
+  <meta name="twitter:image" content="{{.SocialImageURL}}">
+  <meta name="twitter:image:alt" content="{{.SocialImageAlt}}">
+  {{if .PublishedTime}}<meta property="article:published_time" content="{{.PublishedTime}}">{{end}}
+  {{if .ModifiedTime}}<meta property="article:modified_time" content="{{.ModifiedTime}}">{{end}}
   {{if .CanonicalURL}}<link rel="canonical" href="{{.CanonicalURL}}">{{end}}
   {{range .LanguageAlternates}}<link rel="alternate" hreflang="{{.Code}}" href="{{.URL}}">{{end}}
   {{if .PreviousCanonicalURL}}<link rel="prev" href="{{.PreviousCanonicalURL}}">{{end}}
   {{if .NextCanonicalURL}}<link rel="next" href="{{.NextCanonicalURL}}">{{end}}
+  {{if .StructuredData}}<script type="application/ld+json">{{.StructuredData}}</script>{{end}}
   <link rel="stylesheet" href="/static/app.css">
   <script defer src="/static/htmx.min.js"></script>
 </head>

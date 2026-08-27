@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
 	"net/http"
 	"net/url"
 	"sort"
@@ -65,15 +66,30 @@ func (s *Server) redirectLegacyIncident(response http.ResponseWriter, request *h
 
 func (s *Server) base(request *http.Request, language, canonicalRelativeURL string) basePage {
 	canonicalOrigin := s.canonicalOrigin(request)
+	languageDefinition, _ := readerLanguageByCode(language)
 	page := basePage{
 		Lang: language, HomeURL: "/" + language, AboutURL: "/" + language + "/about",
 		Description:     s.localization.Text(language, "SiteDescription"),
 		CanonicalOrigin: canonicalOrigin, CanonicalURL: canonicalOrigin + canonicalRelativeURL,
-		Fixture: s.options.SourceMode == "fixture", Review: s.options.PresentationMode == "review" && !s.isPublicRequest(request),
+		OpenGraphLocale: languageDefinition.OpenGraphLocale,
+		SocialTitle:     "MunichBrief", SocialType: "website",
+		SocialImageURL: canonicalOrigin + "/social/" + language + "/home",
+		SocialImageAlt: s.localization.Text(language, "SocialImageAlt"),
+		Fixture:        s.options.SourceMode == "fixture", Review: s.options.PresentationMode == "review" && !s.isPublicRequest(request),
+	}
+	page.Robots = "index,follow,max-image-preview:large"
+	if page.Review {
+		page.Robots = "noindex,nofollow,noarchive"
+	}
+	if strings.HasPrefix(page.SocialImageURL, "https://") {
+		page.SocialImageSecureURL = page.SocialImageURL
 	}
 	for _, definition := range readerLanguages {
 		relativeURL := localizedRelativeURL(canonicalRelativeURL, language, definition.Code)
 		page.LanguageAlternates = append(page.LanguageAlternates, languageLink{Code: definition.Code, URL: canonicalOrigin + relativeURL})
+		if definition.Code != language {
+			page.OpenGraphLocaleAlternates = append(page.OpenGraphLocaleAlternates, definition.OpenGraphLocale)
+		}
 		if definition.Code != language {
 			page.LanguageSwitches = append(page.LanguageSwitches, languageLink{
 				Code: definition.Code, URL: alternateLanguageURL(request.URL, language, definition.Code),
@@ -81,6 +97,10 @@ func (s *Server) base(request *http.Request, language, canonicalRelativeURL stri
 			})
 		}
 	}
+	fallback := canonicalReaderLanguage()
+	fallbackURL := localizedRelativeURL(canonicalRelativeURL, language, fallback.Code)
+	page.LanguageAlternates = append(page.LanguageAlternates, languageLink{Code: "x-default", URL: canonicalOrigin + fallbackURL})
+	page.StructuredData = structuredPageData(page, "CollectionPage")
 	return page
 }
 
@@ -194,6 +214,20 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 		}
 	}
 	view := s.incidentForLanguage(incident, base.Lang)
+	base.Description = excerpt(view.Summary, 160)
+	if base.Description == "" {
+		base.Description = s.localization.Text(language, "SiteDescription")
+	}
+	base.SocialTitle = view.Title + " · MunichBrief"
+	base.SocialType = "article"
+	base.SocialImageURL = fmt.Sprintf("%s/social/%s/incidents/%d", base.CanonicalOrigin, language, id)
+	if strings.HasPrefix(base.SocialImageURL, "https://") {
+		base.SocialImageSecureURL = base.SocialImageURL
+	}
+	base.SocialImageAlt = base.SocialTitle
+	base.PublishedTime = view.Record.PublishedAt.Format(time.RFC3339)
+	base.ModifiedTime = view.Record.UpdatedAt.Format(time.RFC3339)
+	base.StructuredData = structuredArticleData(base, view)
 	data := detailPage{basePage: base, Incident: view, BackURL: timelineURL(base.Lang, page), ShowOriginalSection: base.Review && view.Record.HasAI}
 	if scope.PublicOnly && wantsMarkdown(request.Header.Get("Accept")) {
 		s.prepareMarkdown(response, base)
@@ -215,6 +249,13 @@ func (s *Server) about(response http.ResponseWriter, request *http.Request) {
 	s.setLanguagePreference(response, language)
 	base := s.base(request, language, "/"+language+"/about")
 	base.HideAuthorityNotice = true
+	base.Description = s.localization.Text(language, "AboutIntro")
+	base.SocialTitle = s.localization.Text(language, "About") + " · MunichBrief"
+	base.SocialImageURL = base.CanonicalOrigin + "/social/" + language + "/about"
+	if strings.HasPrefix(base.SocialImageURL, "https://") {
+		base.SocialImageSecureURL = base.SocialImageURL
+	}
+	base.StructuredData = structuredPageData(base, "AboutPage")
 	if s.scope(request).PublicOnly && wantsMarkdown(request.Header.Get("Accept")) {
 		s.prepareMarkdown(response, base)
 		s.renderAboutMarkdown(response, aboutPage{basePage: base})
@@ -389,19 +430,84 @@ func (s *Server) groupByDay(incidents []store.IncidentRecord, language string) [
 }
 
 type basePage struct {
-	Lang                 string
-	HomeURL              string
-	AboutURL             string
-	Description          string
-	LanguageAlternates   []languageLink
-	LanguageSwitches     []languageLink
-	CanonicalOrigin      string
-	CanonicalURL         string
-	PreviousCanonicalURL string
-	NextCanonicalURL     string
-	Fixture              bool
-	Review               bool
-	HideAuthorityNotice  bool
+	Lang                      string
+	HomeURL                   string
+	AboutURL                  string
+	Description               string
+	OpenGraphLocale           string
+	OpenGraphLocaleAlternates []string
+	SocialTitle               string
+	SocialType                string
+	SocialImageURL            string
+	SocialImageSecureURL      string
+	SocialImageAlt            string
+	Robots                    string
+	PublishedTime             string
+	ModifiedTime              string
+	StructuredData            template.JS
+	LanguageAlternates        []languageLink
+	LanguageSwitches          []languageLink
+	CanonicalOrigin           string
+	CanonicalURL              string
+	PreviousCanonicalURL      string
+	NextCanonicalURL          string
+	Fixture                   bool
+	Review                    bool
+	HideAuthorityNotice       bool
+}
+
+func structuredPageData(page basePage, pageType string) template.JS {
+	websiteID := page.CanonicalOrigin + "/#website"
+	return structuredJSON(map[string]any{
+		"@context": "https://schema.org",
+		"@graph": []any{
+			map[string]any{
+				"@type": "WebSite", "@id": websiteID, "url": page.CanonicalOrigin,
+				"name": "MunichBrief", "inLanguage": []string{"de", "en"},
+			},
+			map[string]any{
+				"@type": pageType, "@id": page.CanonicalURL + "#webpage", "url": page.CanonicalURL,
+				"name": page.SocialTitle, "description": page.Description, "inLanguage": page.Lang,
+				"isPartOf": map[string]any{"@id": websiteID},
+			},
+		},
+	})
+}
+
+func structuredArticleData(page basePage, incident incidentView) template.JS {
+	websiteID := page.CanonicalOrigin + "/#website"
+	organizationID := page.CanonicalOrigin + "/#organization"
+	return structuredJSON(map[string]any{
+		"@context": "https://schema.org",
+		"@graph": []any{
+			map[string]any{
+				"@type": "WebSite", "@id": websiteID, "url": page.CanonicalOrigin,
+				"name": "MunichBrief", "inLanguage": []string{"de", "en"},
+			},
+			map[string]any{
+				"@type": "Organization", "@id": organizationID, "name": "MunichBrief",
+				"url": page.CanonicalOrigin + "/" + page.Lang + "/about",
+			},
+			map[string]any{
+				"@type": "Article", "@id": page.CanonicalURL + "#article", "url": page.CanonicalURL,
+				"headline": incident.Title, "description": page.Description, "image": page.SocialImageURL,
+				"datePublished": page.PublishedTime, "dateModified": page.ModifiedTime, "inLanguage": page.Lang,
+				"mainEntityOfPage": page.CanonicalURL, "isBasedOn": incident.Record.SourceURL,
+				"author": map[string]any{"@id": organizationID}, "publisher": map[string]any{"@id": organizationID},
+				"isPartOf": map[string]any{"@id": websiteID},
+			},
+		},
+	})
+}
+
+func structuredJSON(value any) template.JS {
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		panic(fmt.Sprintf("marshal structured data: %v", err))
+	}
+	// encoding/json escapes HTML-sensitive runes, making this safe to embed as
+	// a JSON-LD script while template.JS preserves the JSON object itself.
+	return template.JS(encoded)
 }
 
 type languageLink struct {
