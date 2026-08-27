@@ -64,6 +64,10 @@ jobs:
             type=semver,pattern={{version}},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
             type=semver,pattern={{major}}.{{minor}},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
           labels: |
+            org.opencontainers.image.url=https://github.com/egekocabas/munichbrief
+            org.opencontainers.image.documentation=https://github.com/egekocabas/munichbrief#readme
+            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.vendor=MunichBrief
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.created=${{ steps.build-time.outputs.value }}
 

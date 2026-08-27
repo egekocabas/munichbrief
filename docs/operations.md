@@ -186,7 +186,8 @@ writers on the PVC; `ReadWriteOnce` still permits multiple pods on one node.
   checks, frontend verification, Go builds, and Helm validation.
 - Trusted `main` commits publish `sha-<full-commit>` images to GHCR.
 - Published images expose their exact source commit and build time in the reader
-  footer and OCI image labels.
+  footer and carry OCI labels for source, project and documentation URLs,
+  license, vendor, version, revision, and creation time.
 - Tags matching `vMAJOR.MINOR.PATCH` additionally publish that exact tag and
   normalized semantic-version image tags.
 - The deployment repository pins the desired image by tag and digest.
