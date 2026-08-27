@@ -1,10 +1,12 @@
 package web
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"net/http/httptest"
+	"path"
 	"strings"
-
 	"testing"
 )
 
@@ -48,7 +50,7 @@ func TestAboutHealthReadinessAndRequestHeaders(t *testing.T) {
 			t.Errorf("content security policy does not contain %q", expected)
 		}
 	}
-	for _, expected := range []string{`src="/static/htmx.min.js"`, `hx-boost="true"`, `"allowEval":false`} {
+	for _, expected := range []string{`src="` + staticAssets["htmx.min.js"].path + `"`, `hx-boost="true"`, `"allowEval":false`} {
 		if !strings.Contains(about.Body.String(), expected) {
 			t.Errorf("about response does not contain %q", expected)
 		}
@@ -56,7 +58,7 @@ func TestAboutHealthReadinessAndRequestHeaders(t *testing.T) {
 	if !strings.Contains(about.Body.String(), `<meta name="robots" content="noindex,nofollow,noarchive">`) {
 		t.Error("review page does not publish its noindex directive in HTML")
 	}
-	if !strings.Contains(about.Body.String(), `rel="icon" href="/static/favicon.svg" type="image/svg+xml"`) {
+	if !strings.Contains(about.Body.String(), `rel="icon" href="`+staticAssets["favicon.svg"].path+`" type="image/svg+xml"`) {
 		t.Error("about response does not link the MunichBrief favicon")
 	}
 	for _, expected := range []string{
@@ -86,21 +88,41 @@ func TestAboutHealthReadinessAndRequestHeaders(t *testing.T) {
 	}
 
 	for _, asset := range []struct {
-		path        string
-		contentType string
-		body        string
+		name string
+		body string
 	}{
-		{path: "/static/app.css", contentType: "text/css; charset=utf-8", body: "--color-civic"},
-		{path: "/static/htmx.min.js", contentType: "text/javascript; charset=utf-8", body: "htmx"},
-		{path: "/static/theme.js", contentType: "text/javascript; charset=utf-8", body: "munichbrief-theme"},
-		{path: "/static/admin.js", contentType: "text/javascript; charset=utf-8", body: "processing-confirmation"},
-		{path: "/static/favicon.svg", contentType: "image/svg+xml", body: `fill="#174b73"`},
+		{name: "app.css", body: "--color-civic"},
+		{name: "htmx.min.js", body: "htmx"},
+		{name: "theme.js", body: "munichbrief-theme"},
+		{name: "admin.js", body: "processing-confirmation"},
+		{name: "favicon.svg", body: `fill="#174b73"`},
 	} {
-		response := httptest.NewRecorder()
-		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, asset.path, nil))
-		if response.Code != http.StatusOK || response.Header().Get("Content-Type") != asset.contentType || !strings.Contains(response.Header().Get("Cache-Control"), "public") || !strings.Contains(response.Body.String(), asset.body) {
-			t.Errorf("asset %s response = %d/%q/%q", asset.path, response.Code, response.Header().Get("Content-Type"), response.Header().Get("Cache-Control"))
+		registered := staticAssets[asset.name]
+		digest := sha256.Sum256(registered.content)
+		fingerprint := hex.EncodeToString(digest[:])[:12]
+		extension := path.Ext(asset.name)
+		expectedPath := "/static/" + strings.TrimSuffix(asset.name, extension) + "." + fingerprint + extension
+		if registered.path != expectedPath {
+			t.Errorf("asset %s path = %q, want %q", asset.name, registered.path, expectedPath)
 		}
+
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, registered.path, nil))
+		if response.Code != http.StatusOK || response.Header().Get("Content-Type") != registered.contentType || response.Header().Get("Cache-Control") != immutableAssetCacheControl || !strings.Contains(response.Body.String(), asset.body) {
+			t.Errorf("asset %s response = %d/%q/%q", registered.path, response.Code, response.Header().Get("Content-Type"), response.Header().Get("Cache-Control"))
+		}
+
+		base := strings.TrimSuffix(asset.name, extension)
+		for _, stalePath := range []string{"/static/" + asset.name, "/static/" + base + ".000000000000" + extension} {
+			stale := httptest.NewRecorder()
+			handler.ServeHTTP(stale, httptest.NewRequest(http.MethodGet, stalePath, nil))
+			if stale.Code != http.StatusNotFound {
+				t.Errorf("stale asset %s status = %d, want 404", stalePath, stale.Code)
+			}
+		}
+	}
+	if _, err := assetURL("missing.css"); err == nil {
+		t.Error("assetURL() accepted an unregistered asset")
 	}
 }
 

@@ -37,7 +37,7 @@ func TestTimelineAndDetailRenderFixtureData(t *testing.T) {
 		"20 shown / 28 total",
 		"Page 1 of 2",
 		"/en?page=2",
-		`src="/static/theme.js"`,
+		`src="` + staticAssets["theme.js"].path + `"`,
 		"data-theme-toggle",
 	} {
 		if !strings.Contains(timeline.Body.String(), expected) {
