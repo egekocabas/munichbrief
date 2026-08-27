@@ -78,7 +78,7 @@ other = "{{.Count}} reports"
 other = "{{.Shown}} shown / {{.Total}} total"
 
 [Report]
-other = "Report"
+other = "Police report"
 
 [SourceMetadata]
 other = "Source metadata"
