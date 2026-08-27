@@ -1,23 +1,39 @@
-{{define "title"}}{{t .Lang "About"}}{{end}}
+{{define "title"}}{{t .Lang "About"}} · MunichBrief{{end}}
 {{define "content"}}
-<article class="mx-auto max-w-4xl py-9 sm:py-12">
+<article class="mx-auto max-w-3xl py-9 sm:py-12">
   <header class="border-b border-rule pb-8">
     <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-alert">{{t .Lang "Methodology"}}</p>
     <h1 class="mt-2 max-w-3xl font-serif text-4xl font-bold leading-[1.06] tracking-[-0.035em] sm:text-5xl">{{t .Lang "AboutTitle"}}</h1>
     <p class="mt-5 max-w-3xl text-lg leading-relaxed text-muted">{{t .Lang "AboutIntro"}}</p>
   </header>
-  <div class="divide-y divide-rule">
-    <section class="grid gap-4 py-8 md:grid-cols-[12rem_minmax(0,1fr)] md:gap-10">
-      <h2 class="font-serif text-2xl font-bold">{{t .Lang "SourcePolicy"}}</h2>
-      <div class="prose-copy leading-7 text-muted"><p>{{t .Lang "SourcePolicyCopy"}}</p><p>{{t .Lang "SourceAuthorityCopy"}}</p></div>
+  <section class="py-8" aria-labelledby="release-to-incident-heading">
+    <h2 id="release-to-incident-heading" class="font-serif text-2xl font-bold sm:text-3xl">{{t .Lang "FromReleaseToIncident"}}</h2>
+    <ol class="mt-5 space-y-5 pl-5 leading-7 text-muted">
+      <li class="pl-1"><h3 class="inline font-bold text-ink">{{t .Lang "Discover"}}.</h3> {{t .Lang "DiscoverCopy"}}</li>
+      <li class="pl-1"><h3 class="inline font-bold text-ink">{{t .Lang "Organize"}}.</h3> {{t .Lang "OrganizeCopy"}}</li>
+      <li class="pl-1"><h3 class="inline font-bold text-ink">{{t .Lang "Summarize"}}.</h3> {{t .Lang "SummarizeCopy"}}</li>
+      <li class="pl-1"><h3 class="inline font-bold text-ink">{{t .Lang "TranslatePublish"}}.</h3> {{t .Lang "TranslatePublishCopy"}}</li>
+    </ol>
+  </section>
+  <div class="divide-y divide-rule border-t border-rule">
+    <section class="py-8">
+      <h2 class="font-serif text-2xl font-bold">{{t .Lang "AccuracyOfficialInformation"}}</h2>
+      <p class="mt-4 leading-7 text-muted">{{t .Lang "AccuracyOfficialInformationCopy"}}</p>
     </section>
-    <section class="grid gap-4 py-8 md:grid-cols-[12rem_minmax(0,1fr)] md:gap-10">
-      <h2 class="font-serif text-2xl font-bold">{{t .Lang "ProcessingRetention"}}</h2>
-      <div class="prose-copy leading-7 text-muted"><p>{{t .Lang "ProcessingCopy"}}</p><p>{{t .Lang "AICopy"}}</p><p>{{t .Lang "VisibilityCopy"}}</p></div>
+    <section class="py-8">
+      <h2 class="font-serif text-2xl font-bold">{{t .Lang "PrivacyDataHandling"}}</h2>
+      <div class="prose-copy mt-4 leading-7 text-muted"><p>{{t .Lang "PrivacyCopy"}}</p><p>{{t .Lang "DataHandlingCopy"}}</p></div>
     </section>
-    <section class="grid gap-4 py-8 md:grid-cols-[12rem_minmax(0,1fr)] md:gap-10">
-      <h2 class="font-serif text-2xl font-bold">{{t .Lang "PrivacyIndependence"}}</h2>
-      <div class="prose-copy leading-7 text-muted"><p>{{t .Lang "PrivacyCopy"}}</p><p>{{t .Lang "LegalCopy"}}</p></div>
+    <section class="py-8">
+      <h2 class="font-serif text-2xl font-bold">{{t .Lang "IndependenceLegalReview"}}</h2>
+      <p class="mt-4 leading-7 text-muted">{{t .Lang "IndependenceLegalReviewCopy"}}</p>
+    </section>
+    <section class="py-8">
+      <h2 class="font-serif text-2xl font-bold">{{t .Lang "ContactHeading"}}</h2>
+      <div class="prose-copy mt-4 leading-7 text-muted">
+        <p>{{t .Lang "ContactPublicLead"}} <a class="font-bold text-civic underline decoration-civic/30 underline-offset-4 hover:decoration-civic" href="https://github.com/egekocabas/munichbrief/issues" target="_blank" rel="noopener noreferrer">{{t .Lang "ContactIssueLink"}}</a>.</p>
+        <p>{{t .Lang "ContactPrivateLead"}} <a class="font-bold text-civic underline decoration-civic/30 underline-offset-4 hover:decoration-civic" href="mailto:ege.kocabas.dev@gmail.com">ege.kocabas.dev@gmail.com</a>.</p>
+      </div>
     </section>
   </div>
 </article>

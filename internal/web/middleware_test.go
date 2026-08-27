@@ -16,8 +16,23 @@ func TestAboutHealthReadinessAndRequestHeaders(t *testing.T) {
 	request := englishRequest(http.MethodGet, "/en/about", nil)
 	request.Header.Set("X-Request-ID", "test-request")
 	handler.ServeHTTP(about, request)
-	if about.Code != http.StatusOK || !strings.Contains(about.Body.String(), "What MunichBrief does") {
+	if about.Code != http.StatusOK || !strings.Contains(about.Body.String(), "How MunichBrief works") {
 		t.Fatalf("about response = %d/%q", about.Code, about.Body.String())
+	}
+	for _, expected := range []string{"From release to incident", "Translate and publish", "Accuracy and official information", "Privacy and data handling", "Independence and legal review", "Questions, corrections, or feedback", `href="https://github.com/egekocabas/munichbrief/issues"`, `href="mailto:ege.kocabas.dev@gmail.com"`} {
+		if !strings.Contains(about.Body.String(), expected) {
+			t.Errorf("about response does not contain structured section %q", expected)
+		}
+	}
+	for _, unexpected := range []string{`aria-label="Important notice"`, "automated deletion deadline", "approved AI"} {
+		if strings.Contains(about.Body.String(), unexpected) {
+			t.Errorf("about response unexpectedly contains %q", unexpected)
+		}
+	}
+	for _, unexpected := range []string{"sm:grid-cols-2", "rounded-lg border border-rule bg-paper"} {
+		if strings.Contains(about.Body.String(), unexpected) {
+			t.Errorf("about response unexpectedly contains card layout %q", unexpected)
+		}
 	}
 	if about.Header().Get("X-Request-ID") != "test-request" || about.Header().Get("X-Correlation-ID") != "test-request" {
 		t.Errorf("request headers = %q/%q", about.Header().Get("X-Request-ID"), about.Header().Get("X-Correlation-ID"))

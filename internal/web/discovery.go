@@ -390,13 +390,26 @@ func (s *Server) renderAboutMarkdown(response http.ResponseWriter, data aboutPag
 	var builder strings.Builder
 	writeMarkdownFrontMatter(&builder, s.localization.Text(data.Lang, "About"), data.basePage)
 	fmt.Fprintf(&builder, "# %s\n\n%s\n", markdownText(s.localization.Text(data.Lang, "AboutTitle")), markdownText(s.localization.Text(data.Lang, "AboutIntro")))
+	fmt.Fprintf(&builder, "\n## %s\n", markdownText(s.localization.Text(data.Lang, "FromReleaseToIncident")))
+	steps := []struct {
+		title string
+		copy  string
+	}{
+		{title: "Discover", copy: "DiscoverCopy"},
+		{title: "Organize", copy: "OrganizeCopy"},
+		{title: "Summarize", copy: "SummarizeCopy"},
+		{title: "TranslatePublish", copy: "TranslatePublishCopy"},
+	}
+	for index, step := range steps {
+		fmt.Fprintf(&builder, "\n%d. **%s**\n\n   %s\n", index+1, markdownText(s.localization.Text(data.Lang, step.title)), markdownText(s.localization.Text(data.Lang, step.copy)))
+	}
 	sections := []struct {
 		title string
 		copy  []string
 	}{
-		{title: "SourcePolicy", copy: []string{"SourcePolicyCopy", "SourceAuthorityCopy"}},
-		{title: "ProcessingRetention", copy: []string{"ProcessingCopy", "AICopy", "VisibilityCopy"}},
-		{title: "PrivacyIndependence", copy: []string{"PrivacyCopy", "LegalCopy"}},
+		{title: "AccuracyOfficialInformation", copy: []string{"AccuracyOfficialInformationCopy"}},
+		{title: "PrivacyDataHandling", copy: []string{"PrivacyCopy", "DataHandlingCopy"}},
+		{title: "IndependenceLegalReview", copy: []string{"IndependenceLegalReviewCopy"}},
 	}
 	for _, section := range sections {
 		fmt.Fprintf(&builder, "\n## %s\n", markdownText(s.localization.Text(data.Lang, section.title)))
@@ -404,5 +417,8 @@ func (s *Server) renderAboutMarkdown(response http.ResponseWriter, data aboutPag
 			fmt.Fprintf(&builder, "\n%s\n", markdownText(s.localization.Text(data.Lang, key)))
 		}
 	}
+	fmt.Fprintf(&builder, "\n## %s\n", markdownText(s.localization.Text(data.Lang, "ContactHeading")))
+	fmt.Fprintf(&builder, "\n%s [%s](https://github.com/egekocabas/munichbrief/issues).\n", markdownText(s.localization.Text(data.Lang, "ContactPublicLead")), markdownText(s.localization.Text(data.Lang, "ContactIssueLink")))
+	fmt.Fprintf(&builder, "\n%s [ege.kocabas.dev@gmail.com](mailto:ege.kocabas.dev@gmail.com).\n", markdownText(s.localization.Text(data.Lang, "ContactPrivateLead")))
 	_, _ = io.WriteString(response, builder.String())
 }

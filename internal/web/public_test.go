@@ -296,6 +296,9 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 			t.Errorf("timeline body does not contain %q", expected)
 		}
 	}
+	if !strings.Contains(timeline.Body.String(), "<title>MunichBrief</title>") {
+		t.Error("timeline does not render the concise MunichBrief document title")
+	}
 	for _, unexpected := range []string{"Police request public assistance", "Photo or video material", "Witness observations"} {
 		if strings.Contains(timeline.Body.String(), unexpected) {
 			t.Errorf("timeline body unexpectedly contains public assistance detail %q", unexpected)
@@ -305,12 +308,12 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	english := httptest.NewRecorder()
 	handler.ServeHTTP(english, englishRequest(http.MethodGet, "/en/incidents/"+formatID(incidentID), nil))
 	for _, expected := range []string{
-		"Category", "Traffic", "Area", "Harras", "Metadata-first pipeline v2",
+		"Category", "Traffic", "Area", "Harras", "Published in", "Metadata-first pipeline v2",
 		"Incident metadata", "qwen3.5:4b", processing.IncidentMetadataPromptVersion,
 		"German presentation", processing.GermanPresentationPromptVersion,
 		"English translation", "translate:4b", processing.EnglishTranslationPromptVersion,
-		"Incident time", "24 August 2026, 22:30", "Report kind", "Incident", "Police request public assistance",
-		"AI-generated summary", "Verify important details against the latest official information.",
+		"Incident time", "24 August 2026, 22:30", "Public assistance needed", "Police request public assistance", "Photo or video material",
+		"AI-generated summary", "Verify important details against the latest official information.", "Open official police release",
 		`aria-label="Public assistance"`,
 	} {
 		if !strings.Contains(english.Body.String(), expected) {
@@ -320,20 +323,52 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	if count := strings.Count(english.Body.String(), ">Crash at Harras</"); count != 1 {
 		t.Errorf("English detail renders the incident heading %d times, want 1", count)
 	}
+	if !strings.Contains(english.Body.String(), "<title>Crash at Harras · MunichBrief</title>") {
+		t.Error("English detail does not retain the incident-specific document title")
+	}
 	if strings.Contains(english.Body.String(), "Machine-generated") {
 		t.Error("English detail unexpectedly renders the redundant machine-generated label")
+	}
+	if strings.Contains(english.Body.String(), "Report kind") {
+		t.Error("English detail unexpectedly renders the report kind badge")
+	}
+	for _, redundantSourceCopy := range []string{"Authoritative source", "This is an unofficial presentation. The Bavarian Police release remains authoritative."} {
+		if strings.Contains(english.Body.String(), redundantSourceCopy) {
+			t.Errorf("English detail unexpectedly renders redundant source copy %q", redundantSourceCopy)
+		}
+	}
+	if source, processing := strings.Index(english.Body.String(), "Open official police release"), strings.Index(english.Body.String(), "AI processing"); source < 0 || processing < 0 || source > processing {
+		t.Error("English detail does not place the official release link before AI processing")
+	}
+	for _, assistanceDetail := range []string{"Police request public assistance", "Photo or video material", "Witness observations"} {
+		if count := strings.Count(english.Body.String(), assistanceDetail); count != 1 {
+			t.Errorf("English detail renders public assistance detail %q %d times, want 1", assistanceDetail, count)
+		}
 	}
 
 	germanDetail := httptest.NewRecorder()
 	handler.ServeHTTP(germanDetail, httptest.NewRequest(http.MethodGet, "/de/incidents/"+formatID(incidentID), nil))
-	for _, expected := range []string{"Kategorie", "Verkehr", "Gebiet", "Harras", "Vorfallsmetadaten", "Deutsche Darstellung", "qwen3.5:4b", "Vorfallszeit", "24. August 2026, 22:30", "Polizei bittet um Mithilfe", "KI-generierte Zusammenfassung", "Wichtige Angaben bitte anhand der aktuellen offiziellen Informationen prüfen."} {
+	for _, expected := range []string{"Kategorie", "Verkehr", "Gebiet", "Harras", "Veröffentlicht in", "Vorfallsmetadaten", "Deutsche Darstellung", "qwen3.5:4b", "Vorfallszeit", "24. August 2026, 22:30", "Öffentliche Mithilfe benötigt", "Polizei bittet um Mithilfe", "Foto- oder Videomaterial", "KI-generierte Zusammenfassung", "Wichtige Angaben bitte anhand der aktuellen offiziellen Informationen prüfen.", "Offizielle Polizeimeldung öffnen"} {
 		if !strings.Contains(germanDetail.Body.String(), expected) {
 			t.Errorf("German detail body does not contain %q", expected)
+		}
+	}
+	for _, assistanceDetail := range []string{"Polizei bittet um Mithilfe", "Foto- oder Videomaterial", "Zeugenbeobachtungen"} {
+		if count := strings.Count(germanDetail.Body.String(), assistanceDetail); count != 1 {
+			t.Errorf("German detail renders public assistance detail %q %d times, want 1", assistanceDetail, count)
 		}
 	}
 	for _, unexpected := range []string{"Englische Übersetzung", "translate:4b", processing.EnglishTranslationPromptVersion} {
 		if strings.Contains(germanDetail.Body.String(), unexpected) {
 			t.Errorf("German detail body unexpectedly contains %q", unexpected)
+		}
+	}
+	if strings.Contains(germanDetail.Body.String(), "Meldungsart") {
+		t.Error("German detail unexpectedly renders the report kind badge")
+	}
+	for _, redundantSourceCopy := range []string{"Maßgebliche Quelle", "Dies ist eine inoffizielle Darstellung. Maßgeblich bleibt die Meldung der Bayerischen Polizei."} {
+		if strings.Contains(germanDetail.Body.String(), redundantSourceCopy) {
+			t.Errorf("German detail unexpectedly renders redundant source copy %q", redundantSourceCopy)
 		}
 	}
 
@@ -458,7 +493,7 @@ func TestLiveTimelineFallbackAndIncidentAttribution(t *testing.T) {
 	}
 	detail := httptest.NewRecorder()
 	server.Handler().ServeHTTP(detail, englishRequest(http.MethodGet, "/en/incidents/"+formatID(incidentID), nil))
-	for _, expected := range []string{"Last processed", "Bavarian Police release remains authoritative", documents[0].SourceURL} {
+	for _, expected := range []string{"Last processed", "Open official police release", documents[0].SourceURL} {
 		if !strings.Contains(detail.Body.String(), expected) {
 			t.Errorf("live detail does not contain %q", expected)
 		}
@@ -557,7 +592,7 @@ func TestLocalizedRoutesAndLanguagePreference(t *testing.T) {
 
 	english := httptest.NewRecorder()
 	handler.ServeHTTP(english, httptest.NewRequest(http.MethodGet, "/en/about?page=2", nil))
-	if english.Code != http.StatusOK || english.Header().Get("Content-Language") != "en" || !strings.Contains(english.Body.String(), "What MunichBrief does") {
+	if english.Code != http.StatusOK || english.Header().Get("Content-Language") != "en" || !strings.Contains(english.Body.String(), "How MunichBrief works") {
 		t.Fatalf("English page = %d/%q", english.Code, english.Header().Get("Content-Language"))
 	}
 	if !strings.Contains(english.Body.String(), `href="/de/about?page=2"`) || !strings.Contains(english.Body.String(), `hreflang="de"`) {

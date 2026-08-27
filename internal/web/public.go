@@ -214,6 +214,7 @@ func (s *Server) about(response http.ResponseWriter, request *http.Request) {
 	}
 	s.setLanguagePreference(response, language)
 	base := s.base(request, language, "/"+language+"/about")
+	base.HideAuthorityNotice = true
 	if s.scope(request).PublicOnly && wantsMarkdown(request.Header.Get("Accept")) {
 		s.prepareMarkdown(response, base)
 		s.renderAboutMarkdown(response, aboutPage{basePage: base})
@@ -400,6 +401,7 @@ type basePage struct {
 	NextCanonicalURL     string
 	Fixture              bool
 	Review               bool
+	HideAuthorityNotice  bool
 }
 
 type languageLink struct {
