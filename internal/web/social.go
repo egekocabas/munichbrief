@@ -34,7 +34,6 @@ const (
 
 var (
 	socialInk   = color.RGBA{R: 20, G: 32, B: 43, A: 255}
-	socialMuted = color.RGBA{R: 94, G: 104, B: 115, A: 255}
 	socialCivic = color.RGBA{R: 23, G: 75, B: 115, A: 255}
 	socialAlert = color.RGBA{R: 163, G: 58, B: 48, A: 255}
 	socialPaper = color.RGBA{R: 255, G: 254, B: 250, A: 255}
