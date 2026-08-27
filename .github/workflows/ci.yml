@@ -71,7 +71,7 @@ jobs:
             echo "admin rendered without a Basic Auth reference" >&2
             exit 1
           fi
-          if helm template munichbrief charts/munichbrief --namespace munichbrief --values deploy/example-values.yaml --set admin.basicAuthMiddleware=munichbrief-munichbrief-admin-auth@kubernetescrd >/dev/null 2>&1; then
+          if helm template munichbrief charts/munichbrief --namespace munichbrief --set admin.enabled=true --set ingress.lan.enabled=true --set admin.basicAuthSecret=munichbrief-admin-basic-auth --set admin.basicAuthMiddleware=munichbrief-munichbrief-admin-auth@kubernetescrd >/dev/null 2>&1; then
             echo "admin rendered with both Basic Auth reference forms" >&2
             exit 1
           fi
