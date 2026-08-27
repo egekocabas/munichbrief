@@ -124,6 +124,30 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 		}
 		snapshot.Steps = append(snapshot.Steps, stat)
 	}
+	translationRows, err := s.db.QueryContext(ctx, `SELECT languages.language_code,
+		COALESCE(SUM(CASE WHEN translations.status='pending' AND translations.attempt_count=0 THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN translations.status='running' THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN translations.status='pending' AND translations.attempt_count>0 THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN translations.status='needs_review' THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN translations.status='failed' THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN translations.status='succeeded' THEN 1 ELSE 0 END),0)
+		FROM translation_language_cutovers languages
+		LEFT JOIN presentation_translations translations ON translations.language_code=languages.language_code
+		GROUP BY languages.language_code ORDER BY languages.language_code`)
+	if err != nil {
+		return snapshot, fmt.Errorf("read translation queue stats: %w", err)
+	}
+	for translationRows.Next() {
+		var stat TranslationQueueStats
+		if err := translationRows.Scan(&stat.Language, &stat.Pending, &stat.Running, &stat.Retrying, &stat.NeedsReview, &stat.Failed, &stat.Succeeded); err != nil {
+			translationRows.Close()
+			return snapshot, err
+		}
+		snapshot.Translations = append(snapshot.Translations, stat)
+	}
+	if err := translationRows.Close(); err != nil {
+		return snapshot, err
+	}
 	eventRows, err := s.db.QueryContext(ctx, `SELECT j.updated_at, c.id, ci.incident_id, j.step_key, j.status, COALESCE(j.failure_kind,'')
 		FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id=j.cycle_item_id
 		JOIN processing_cycles c ON c.id=ci.cycle_id WHERE j.status <> 'waiting'

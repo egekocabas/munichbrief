@@ -49,6 +49,7 @@ func TestPipelineFreezesTargetsGroupsStepsAndStartsNextCycleImmediately(t *testi
 	}
 	cycle.ActiveStep = 1
 	germanPresentations := 0
+	var completedRuns []int64
 	for {
 		job, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 1, now)
 		if err != nil {
@@ -58,6 +59,7 @@ func TestPipelineFreezesTargetsGroupsStepsAndStartsNextCycleImmediately(t *testi
 			break
 		}
 		germanPresentations++
+		completedRuns = append(completedRuns, job.PresentationRunID)
 		if job.InputValues["category"] != "other" {
 			t.Fatalf("German metadata input = %#v", job.InputValues)
 		}
@@ -68,14 +70,18 @@ func TestPipelineFreezesTargetsGroupsStepsAndStartsNextCycleImmediately(t *testi
 	if germanPresentations != 2 {
 		t.Fatalf("German presentations = %d, want 2", germanPresentations)
 	}
-	advance, err = database.AdvancePipelineCycle(ctx, cycle, 3, now)
-	if err != nil || !advance.Advanced {
-		t.Fatalf("advance to translation = %#v/%v", advance, err)
+	advance, err = database.AdvancePipelineCycle(ctx, cycle, len(plans), now)
+	if err != nil || !advance.Completed {
+		t.Fatalf("complete canonical cycle = %#v/%v", advance, err)
 	}
-	cycle.ActiveStep = 2
+	for _, runID := range completedRuns {
+		if queued, err := database.QueueTranslationsForRun(ctx, runID, []TranslationPlan{{Language: "en", PromptVersion: "incident-translation-en-v1", Model: "translate:4b"}}, "scheduled", now); err != nil || queued != 1 {
+			t.Fatalf("queue translation for run %d = %d/%v", runID, queued, err)
+		}
+	}
 	translations := 0
 	for {
-		job, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 2, now)
+		job, found, err := database.ClaimTranslationJob(ctx, true, now)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -86,23 +92,19 @@ func TestPipelineFreezesTargetsGroupsStepsAndStartsNextCycleImmediately(t *testi
 		if job.TitleDE != "Titel" || job.SummaryDE != "Zusammenfassung." {
 			t.Fatalf("translation input = %q/%q", job.TitleDE, job.SummaryDE)
 		}
-		if err := database.CompletePipelineJob(ctx, job, []PipelineValue{{Kind: "title_en", Value: "Title"}, {Kind: "summary_en", Value: "Summary."}}, job.ModelIdentity, HashPipelineInput(job.TitleDE, job.SummaryDE), now); err != nil {
+		if err := database.CompleteTranslationJob(ctx, job, "Title", "Summary.", job.ModelIdentity, job.InputHash, now); err != nil {
 			t.Fatal(err)
 		}
 	}
 	if translations != 2 {
 		t.Fatalf("translations = %d, want 2", translations)
 	}
-	advance, err = database.AdvancePipelineCycle(ctx, cycle, 3, now)
-	if err != nil || !advance.Completed {
-		t.Fatalf("complete cycle = %#v/%v", advance, err)
-	}
 	next, found, err := database.ActivateNextPipelineCycle(ctx, "fixture", plans, true, now)
 	if err != nil || !found || next.ID == cycle.ID {
 		t.Fatalf("immediate next cycle = %#v/%t/%v", next, found, err)
 	}
-	snapshot, err := database.PipelineSnapshot(ctx, "fixture", []string{"incident_metadata", "german_presentation", "english_translation"}, now)
-	if err != nil || snapshot.CycleTotal != 3 {
+	snapshot, err := database.PipelineSnapshot(ctx, "fixture", []string{"incident_metadata", "german_presentation"}, now)
+	if err != nil || snapshot.CycleTotal != 2 {
 		t.Fatalf("next frozen snapshot = %#v/%v", snapshot, err)
 	}
 }
@@ -123,7 +125,7 @@ func TestManualCyclesCoalesceExactDuplicatesAndSupersedeQueuedAutomaticWork(t *t
 		t.Fatal(err)
 	}
 	condition, _ := sourceStatusCondition("fixture")
-	automaticID, count, err := createPipelineCycleTx(ctx, tx, "scheduled", "fixture", true, "", condition+" AND COALESCE(i.body_de,'')<>''", nil, plans, now)
+	automaticID, count, err := createPipelineCycleTx(ctx, tx, "scheduled", "fixture", true, "", condition+" AND COALESCE(i.body_de,'')<>''", nil, plans, "", now)
 	if err != nil || count != 1 {
 		t.Fatalf("create queued scheduled cycle = %d/%d/%v", automaticID, count, err)
 	}
@@ -131,7 +133,7 @@ func TestManualCyclesCoalesceExactDuplicatesAndSupersedeQueuedAutomaticWork(t *t
 		t.Fatal(err)
 	}
 
-	first, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, nil, true, now.Add(time.Second))
+	first, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, "translate:4b", nil, true, now.Add(time.Second))
 	if err != nil || first.Requested != 1 {
 		t.Fatalf("first manual request = %#v/%v", first, err)
 	}
@@ -142,13 +144,13 @@ func TestManualCyclesCoalesceExactDuplicatesAndSupersedeQueuedAutomaticWork(t *t
 	if automaticStatus != "superseded" {
 		t.Fatalf("queued automatic status = %q", automaticStatus)
 	}
-	duplicate, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, nil, true, now.Add(2*time.Second))
+	duplicate, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, "translate:4b", nil, true, now.Add(2*time.Second))
 	if err != nil || duplicate.CycleID != first.CycleID || duplicate.Requested != 0 || duplicate.Current != 1 {
 		t.Fatalf("duplicate manual request = %#v/%v, first=%#v", duplicate, err, first)
 	}
 	different := append([]PipelineStepPlan(nil), plans...)
 	different[1].Model = "other-translate:4b"
-	separate, err := database.CreateManualPipelineCycle(ctx, "fixture", different, nil, true, now.Add(3*time.Second))
+	separate, err := database.CreateManualPipelineCycle(ctx, "fixture", different, "translate:4b", nil, true, now.Add(3*time.Second))
 	if err != nil || separate.CycleID == first.CycleID {
 		t.Fatalf("different-model manual request = %#v/%v", separate, err)
 	}
@@ -168,7 +170,7 @@ func TestManualRequestDoesNotInterruptHealthyRunningScheduledCycle(t *testing.T)
 	if err != nil || !found {
 		t.Fatalf("activate scheduled cycle = %#v/%t/%v", cycle, found, err)
 	}
-	if _, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, nil, true, now.Add(time.Second)); err != nil {
+	if _, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, "translate:4b", nil, true, now.Add(time.Second)); err != nil {
 		t.Fatal(err)
 	}
 	var status string
@@ -230,7 +232,7 @@ func TestPipelineRecoveryAndSourceRevisionSupersession(t *testing.T) {
 	if itemStatus != "superseded" || runStatus != "superseded" {
 		t.Fatalf("stale item/run = %q/%q", itemStatus, runStatus)
 	}
-	snapshot, err := database.PipelineSnapshot(ctx, "fixture", []string{"german_analysis", "english_translation"}, now.Add(5*time.Minute))
+	snapshot, err := database.PipelineSnapshot(ctx, "fixture", []string{"incident_metadata", "german_presentation"}, now.Add(5*time.Minute))
 	if err != nil || snapshot.ScheduledCandidates != 1 {
 		t.Fatalf("revised source eligibility = %#v/%v", snapshot, err)
 	}

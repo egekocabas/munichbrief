@@ -46,13 +46,16 @@ func TestRunAIProcessQueuesNeverStartedIncident(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := database.EnsurePipelineSteps(ctx, processing.StepKeys(), now); err != nil {
+	if err := database.EnsurePipelineSteps(ctx, processing.ModelSettingKeys(), now); err != nil {
 		t.Fatal(err)
 	}
 	for _, step := range processing.StepKeys() {
 		if err := database.SetPipelineStepModel(ctx, step, "qwen3.5:4b", now); err != nil {
 			t.Fatal(err)
 		}
+	}
+	if err := database.SetPipelineStepModel(ctx, processing.TranslationModelStep, "qwen3.5:4b", now); err != nil {
+		t.Fatal(err)
 	}
 	if err := database.Close(); err != nil {
 		t.Fatal(err)
@@ -70,7 +73,7 @@ func TestRunAIProcessQueuesNeverStartedIncident(t *testing.T) {
 	}
 	defer database.Close()
 	stats, err := database.PipelineSnapshot(ctx, "fixture", processing.StepKeys(), time.Now())
-	if err != nil || len(stats.Steps) != 3 || stats.Steps[0].Queued != 1 {
+	if err != nil || len(stats.Steps) != 2 || stats.Steps[0].Queued != 1 {
 		t.Fatalf("stats = %#v, err=%v", stats, err)
 	}
 }

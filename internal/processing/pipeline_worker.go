@@ -18,7 +18,7 @@ type PipelineRepository interface {
 	PipelineStepSettings(context.Context) ([]store.StepSetting, error)
 	SetPipelineStepModel(context.Context, string, string, time.Time) error
 	PreferredPipelineModels(context.Context, []string) (map[string]string, error)
-	CreateManualPipelineCycle(context.Context, string, []store.PipelineStepPlan, *int64, bool, time.Time) (store.PipelineRequestResult, error)
+	CreateManualPipelineCycle(context.Context, string, []store.PipelineStepPlan, string, *int64, bool, time.Time) (store.PipelineRequestResult, error)
 	ActivateNextPipelineCycle(context.Context, string, []store.PipelineStepPlan, bool, time.Time) (store.PipelineCycle, bool, error)
 	RecoverPipeline(context.Context, time.Time) error
 	ClaimPipelineJob(context.Context, int64, int, time.Time) (store.PipelineJob, bool, error)
@@ -29,6 +29,44 @@ type PipelineRepository interface {
 	InterruptBlockedScheduledCycle(context.Context, int64, time.Time) (int64, error)
 	PipelineSnapshot(context.Context, string, []string, time.Time) (store.PipelineSnapshot, error)
 	PipelineStepModel(context.Context, int64, int) (string, string, error)
+	EnsureTranslationLanguages(context.Context, []string, time.Time) error
+	QueueTranslationsForRun(context.Context, int64, []store.TranslationPlan, string, time.Time) (int, error)
+	QueueIncidentTranslation(context.Context, int64, store.TranslationPlan, time.Time) (int, error)
+	QueueMissingTranslations(context.Context, string, []store.TranslationPlan, bool, time.Time) (int, error)
+	ClaimTranslationJob(context.Context, bool, time.Time) (store.TranslationJob, bool, error)
+	CompleteTranslationJob(context.Context, store.TranslationJob, string, string, string, string, time.Time) error
+	FailTranslationJob(context.Context, store.TranslationJob, string, string, *time.Time, time.Time, error) error
+	RecoverTranslations(context.Context, time.Time) error
+}
+
+func (w *PipelineWorker) RetryTranslation(ctx context.Context, incidentID int64, language, model string) (int, error) {
+	translation, found := TranslationByLanguage(language)
+	if !found {
+		return 0, store.ErrNotFound
+	}
+	if !w.catalog.Snapshot().Has(model) {
+		return 0, fmt.Errorf("%w: %s", ErrModelUnavailable, model)
+	}
+	queued, err := w.repository.QueueIncidentTranslation(ctx, incidentID, store.TranslationPlan{Language: language, PromptVersion: translation.PromptVersion, Model: model}, w.clock())
+	if err == nil && queued > 0 {
+		w.signal()
+	}
+	return queued, err
+}
+
+func (w *PipelineWorker) BackfillTranslations(ctx context.Context, language, model string) (int, error) {
+	translation, found := TranslationByLanguage(language)
+	if !found {
+		return 0, store.ErrNotFound
+	}
+	if !w.catalog.Snapshot().Has(model) {
+		return 0, fmt.Errorf("%w: %s", ErrModelUnavailable, model)
+	}
+	queued, err := w.repository.QueueMissingTranslations(ctx, w.sourceMode, []store.TranslationPlan{{Language: language, PromptVersion: translation.PromptVersion, Model: model}}, true, w.clock())
+	if err == nil && queued > 0 {
+		w.signal()
+	}
+	return queued, err
 }
 
 // PipelineObserver receives bounded operational state; incident text and model
@@ -56,10 +94,12 @@ type StepModelStatus struct {
 // PipelineModelStatus is the review-facing model configuration snapshot.
 type PipelineModelStatus struct {
 	Steps            []StepModelStatus `json:"steps"`
+	Translation      StepModelStatus   `json:"translation"`
 	Models           []string          `json:"models"`
 	CatalogAvailable bool              `json:"catalog_available"`
 	CatalogError     string            `json:"catalog_error,omitempty"`
 	Ready            bool              `json:"ready"`
+	TranslationReady bool              `json:"translation_ready"`
 }
 
 // PipelineRuntimeStatus combines model, schedule, worker, and queue readiness.
@@ -108,7 +148,14 @@ func NewPipelineWorker(repository PipelineRepository, providers StepGeneratorPro
 	if !schedule.Immediate && (schedule.Location == nil || schedule.Start < 0 || schedule.Start >= 24*time.Hour || schedule.End < 0 || schedule.End >= 24*time.Hour || schedule.Start == schedule.End) {
 		return nil, errors.New("a valid AI processing schedule is required")
 	}
-	if err := repository.EnsurePipelineSteps(context.Background(), StepKeys(), clock()); err != nil {
+	if err := repository.EnsurePipelineSteps(context.Background(), ModelSettingKeys(), clock()); err != nil {
+		return nil, err
+	}
+	languages := make([]string, 0, len(RegisteredTranslations()))
+	for _, translation := range RegisteredTranslations() {
+		languages = append(languages, translation.Language)
+	}
+	if err := repository.EnsureTranslationLanguages(context.Background(), languages, clock()); err != nil {
 		return nil, err
 	}
 	return &PipelineWorker{repository: repository, providers: providers, catalog: catalog, observer: observer, logger: logger, interval: interval, clock: clock, schedule: schedule, sourceMode: sourceMode, wake: make(chan struct{}, 1), available: true, circuits: make(map[string]time.Time)}, nil
@@ -133,7 +180,11 @@ func (w *PipelineWorker) RequestNow(ctx context.Context, sourceMode string, mode
 			return store.PipelineRequestResult{}, fmt.Errorf("%w: %s", ErrModelUnavailable, plan.Model)
 		}
 	}
-	result, err := w.repository.CreateManualPipelineCycle(ctx, sourceMode, plans, incidentID, reprocessAll, w.clock())
+	translationModel := models[TranslationModelStep]
+	if translationModel != "" && !snapshot.Has(translationModel) {
+		return store.PipelineRequestResult{}, fmt.Errorf("%w: %s", ErrModelUnavailable, translationModel)
+	}
+	result, err := w.repository.CreateManualPipelineCycle(ctx, sourceMode, plans, translationModel, incidentID, reprocessAll, w.clock())
 	if err == nil && result.Requested > 0 {
 		w.signal()
 	}
@@ -141,7 +192,7 @@ func (w *PipelineWorker) RequestNow(ctx context.Context, sourceMode string, mode
 }
 
 func (w *PipelineWorker) SetPreferredStepModel(ctx context.Context, stepKey, model string) error {
-	if _, found := StepByKey(stepKey); !found {
+	if _, found := StepByKey(stepKey); !found && stepKey != TranslationModelStep {
 		return store.ErrNotFound
 	}
 	snapshot := w.catalog.Snapshot()
@@ -175,6 +226,9 @@ func (w *PipelineWorker) ModelStatus(ctx context.Context) (PipelineModelStatus, 
 		status.Steps = append(status.Steps, item)
 		status.Ready = status.Ready && item.PreferredAvailable
 	}
+	translationModel := byKey[TranslationModelStep]
+	status.Translation = StepModelStatus{Key: TranslationModelStep, DisplayName: "Translations", PromptVersion: "per language", Preferred: translationModel, PreferredAvailable: translationModel != "" && catalog.Available() && catalog.Has(translationModel)}
+	status.TranslationReady = status.Translation.PreferredAvailable
 	return status, nil
 }
 
@@ -199,6 +253,9 @@ func (w *PipelineWorker) Status(ctx context.Context) (PipelineRuntimeStatus, err
 func (w *PipelineWorker) Run(ctx context.Context) {
 	if err := w.repository.RecoverPipeline(ctx, w.clock()); err != nil {
 		w.logger.Error("recover staged AI processing", "error", err)
+	}
+	if err := w.repository.RecoverTranslations(ctx, w.clock()); err != nil {
+		w.logger.Error("recover translations", "error", err)
 	}
 	w.processAvailable(ctx)
 	ticker := time.NewTicker(w.interval)
@@ -232,26 +289,61 @@ func (w *PipelineWorker) processAvailable(ctx context.Context) {
 		models, modelsErr := w.repository.PreferredPipelineModels(ctx, StepKeys())
 		plans, plansErr := StepPlans(models)
 		catalog := w.catalog.Snapshot()
-		scheduledReady := modelsErr == nil && plansErr == nil && catalog.Available()
-		if scheduledReady {
+		canonicalReady := modelsErr == nil && plansErr == nil && catalog.Available()
+		if canonicalReady {
 			for _, plan := range plans {
-				scheduledReady = scheduledReady && catalog.Has(plan.Model)
+				canonicalReady = canonicalReady && catalog.Has(plan.Model)
 			}
 		}
-		cycle, found, err := w.repository.ActivateNextPipelineCycle(ctx, w.sourceMode, plans, windowOpen && scheduledReady, now)
+		cycle, found, err := w.repository.ActivateNextPipelineCycle(ctx, w.sourceMode, plans, windowOpen && canonicalReady, now)
 		if err != nil {
 			w.logger.Error("activate staged AI cycle", "error", err)
 			return
 		}
-		if !found {
-			w.publishSnapshot(ctx)
+		if found && w.processCycle(ctx, cycle) {
+			continue
+		}
+
+		translationModels, translationErr := w.repository.PreferredPipelineModels(ctx, []string{TranslationModelStep})
+		translationModel := translationModels[TranslationModelStep]
+		if translationErr == nil && catalog.Available() && catalog.Has(translationModel) && windowOpen {
+			if _, err := w.repository.QueueMissingTranslations(ctx, w.sourceMode, translationPlans(translationModel), false, now); err != nil {
+				w.logger.Error("queue missing translations", "error", err)
+				return
+			}
+		}
+		translationJob, translationFound, err := w.repository.ClaimTranslationJob(ctx, windowOpen, now)
+		if err != nil {
+			w.logger.Error("claim translation job", "error", err)
 			return
 		}
-		if !w.processCycle(ctx, cycle) {
-			w.publishSnapshot(ctx)
-			return
+		if translationFound {
+			if !catalog.Has(translationJob.ModelIdentity) {
+				retry := now.Add(30 * time.Second)
+				if err := w.repository.FailTranslationJob(ctx, translationJob, "pending", string(ErrorConfiguration), &retry, now, fmt.Errorf("selected translation model is unavailable")); err != nil {
+					w.logger.Error("defer unavailable translation model", "translation_id", translationJob.ID, "error", err)
+				}
+				w.openCircuit(TranslationModelStep, translationJob.ModelIdentity, retry)
+				w.publishSnapshot(ctx)
+				return
+			}
+			if !w.processTranslationJob(ctx, translationJob) {
+				w.publishSnapshot(ctx)
+				return
+			}
+			continue
 		}
+		w.publishSnapshot(ctx)
+		return
 	}
+}
+
+func translationPlans(model string) []store.TranslationPlan {
+	plans := make([]store.TranslationPlan, 0, len(registeredTranslations))
+	for _, translation := range RegisteredTranslations() {
+		plans = append(plans, store.TranslationPlan{Language: translation.Language, PromptVersion: translation.PromptVersion, Model: model})
+	}
+	return plans
 }
 
 func (w *PipelineWorker) processCycle(ctx context.Context, cycle store.PipelineCycle) bool {
@@ -349,8 +441,25 @@ func (w *PipelineWorker) processJob(ctx context.Context, job store.PipelineJob) 
 		return w.handleJobFailure(ctx, job, errorOf(ErrorOutput, "%v", err))
 	}
 	completed := w.clock()
+	finalCanonical := job.StepKey == GermanPresentationStep
 	if err := w.repository.CompletePipelineJob(ctx, job, values, modelIdentity, inputHash, completed); err != nil {
 		return w.handleJobFailure(ctx, job, err)
+	}
+	if finalCanonical {
+		translationModel := job.TranslationModel
+		requestKind := "manual"
+		if job.CycleKind != "manual" {
+			requestKind = "scheduled"
+			models, err := w.repository.PreferredPipelineModels(ctx, []string{TranslationModelStep})
+			if err == nil && w.catalog.Snapshot().Has(models[TranslationModelStep]) {
+				translationModel = models[TranslationModelStep]
+			}
+		}
+		if translationModel != "" {
+			if _, err := w.repository.QueueTranslationsForRun(ctx, job.PresentationRunID, translationPlans(translationModel), requestKind, completed); err != nil {
+				w.logger.Error("queue presentation translations", "presentation_run_id", job.PresentationRunID, "error", err)
+			}
+		}
 	}
 	w.setAvailable(true)
 	w.closeCircuit(step.Key, job.ModelIdentity)
@@ -361,6 +470,75 @@ func (w *PipelineWorker) processJob(ctx context.Context, job store.PipelineJob) 
 	w.logger.Info("staged AI request completed", "cycle_id", job.CycleID, "job_id", job.ID, "incident_id", job.IncidentID, "step", step.Key, "model", modelIdentity, "duration", completed.Sub(started).Round(time.Millisecond))
 	w.publishSnapshot(ctx)
 	return true
+}
+
+func (w *PipelineWorker) processTranslationJob(ctx context.Context, job store.TranslationJob) bool {
+	translation, found := TranslationByLanguage(job.Language)
+	if !found || translation.PromptVersion != job.PromptVersion {
+		return w.handleTranslationFailure(ctx, job, errorOf(ErrorConfiguration, "unknown translation definition %q", job.Language))
+	}
+	started := w.clock()
+	if w.observer != nil {
+		w.observer.RecordPipelineAttempt(translation.Step.Key)
+	}
+	w.logger.Info("translation request started", "translation_id", job.ID, "incident_id", job.IncidentID, "language", job.Language, "model", job.ModelIdentity, "attempt", job.AttemptCount)
+	generator, err := w.providers.StepGenerator(job.ModelIdentity)
+	if err != nil {
+		return w.handleTranslationFailure(ctx, job, errorOf(ErrorConfiguration, "create translation generator: %v", err))
+	}
+	inputValues := map[string]string{"title_de": job.TitleDE, "summary_de": job.SummaryDE}
+	input := StepInput{Values: inputValues}
+	inputHash := store.HashPipelineInput("title_de", job.TitleDE, "summary_de", job.SummaryDE, "language", job.Language, job.PromptVersion, job.ModelIdentity)
+	output, modelIdentity, err := generator.GenerateStep(ctx, translation.Step, input)
+	if err != nil {
+		return w.handleTranslationFailure(ctx, job, err)
+	}
+	completed := w.clock()
+	title, summary := translation.Result(output)
+	if err := w.repository.CompleteTranslationJob(ctx, job, title, summary, modelIdentity, inputHash, completed); err != nil {
+		return w.handleTranslationFailure(ctx, job, err)
+	}
+	w.closeCircuit(TranslationModelStep, job.ModelIdentity)
+	if w.observer != nil {
+		w.observer.RecordPipelineSuccess(translation.Step.Key, completed)
+		w.observer.RecordPipelineDuration(translation.Step.Key, completed.Sub(started))
+	}
+	w.logger.Info("translation request completed", "translation_id", job.ID, "incident_id", job.IncidentID, "language", job.Language, "model", modelIdentity, "duration", completed.Sub(started).Round(time.Millisecond))
+	w.publishSnapshot(ctx)
+	return true
+}
+
+func (w *PipelineWorker) handleTranslationFailure(ctx context.Context, job store.TranslationJob, processingError error) bool {
+	kind := KindOf(processingError)
+	now := w.clock()
+	status := "pending"
+	var retryAt *time.Time
+	if (kind == ErrorOutput || kind == ErrorPrivacy) && job.AttemptCount >= contentMaxAttempts {
+		status = "needs_review"
+	} else {
+		delay := contentRetryDelay(job.AttemptCount)
+		if kind == ErrorTransient {
+			delay = transientRetryDelay(job.AttemptCount)
+		} else if kind == ErrorConfiguration {
+			delay = configurationRetryDelay(job.AttemptCount)
+		}
+		next := now.Add(jitter(delay, job.ID, job.AttemptCount))
+		retryAt = &next
+	}
+	if err := w.repository.FailTranslationJob(ctx, job, status, string(kind), retryAt, now, processingError); err != nil {
+		w.logger.Error("record translation failure", "translation_id", job.ID, "error", err)
+		return false
+	}
+	if kind == ErrorTransient || kind == ErrorConfiguration {
+		if retryAt != nil {
+			w.openCircuit(TranslationModelStep, job.ModelIdentity, *retryAt)
+		}
+	}
+	if w.observer != nil {
+		w.observer.RecordPipelineFailure("translation/"+job.Language, string(kind))
+	}
+	w.logger.Warn("translation request failed", "translation_id", job.ID, "incident_id", job.IncidentID, "language", job.Language, "failure_kind", kind, "status", status, "retry_at", retryAt)
+	return kind == ErrorOutput || kind == ErrorPrivacy
 }
 
 func stepInputAndHash(job store.PipelineJob, step StepDefinition) (StepInput, string) {

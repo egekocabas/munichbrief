@@ -17,10 +17,12 @@ const (
 	PipelineVersion        = store.PipelineVersion
 	IncidentMetadataStep   = "incident_metadata"
 	GermanPresentationStep = "german_presentation"
+	TranslationModelStep   = "translation"
+	EnglishLanguage        = "en"
 	// GermanAnalysisStep is retained as a source-compatible alias for callers
 	// migrating to the metadata-first pipeline.
 	GermanAnalysisStep     = GermanPresentationStep
-	EnglishTranslationStep = "english_translation"
+	EnglishTranslationStep = "translation/en"
 )
 
 type StepDefinition struct {
@@ -35,6 +37,16 @@ type StepDefinition struct {
 	Generator     func(StepInput) (StepInput, string, error)
 	Validator     func(StepInput, *StepOutput) error
 	OutputValues  func(StepOutput) ([]store.PipelineValue, error)
+}
+
+// TranslationDefinition describes one independently queued target language.
+// Translations are deliberately not ordered canonical pipeline stages.
+type TranslationDefinition struct {
+	Language      string
+	DisplayName   string
+	PromptVersion string
+	Step          StepDefinition
+	Result        func(StepOutput) (title, summary string)
 }
 
 // StepInput contains only values declared by a step's InputKinds contract.
@@ -159,11 +171,16 @@ var registeredSteps = []StepDefinition{
 		InputKinds: append([]string{"original_title", "incident_body"}, metadataOutputKinds...), OutputKinds: []string{"title_de", "summary_de"},
 		SystemPrompt: mustPromptByVersion(GermanPresentationPromptVersion).SystemPrompt, Schema: germanPresentationSchema,
 		Generator: generateGermanPresentationInput, Validator: validateGermanPresentation, OutputValues: germanPresentationValues},
-	{Key: EnglishTranslationStep, DisplayName: "English translation", Order: 2, PromptVersion: EnglishTranslationPromptVersion,
+}
+
+var registeredTranslations = []TranslationDefinition{{
+	Language: EnglishLanguage, DisplayName: "English", PromptVersion: EnglishTranslationPromptVersion,
+	Step: StepDefinition{Key: EnglishTranslationStep, DisplayName: "English translation", PromptVersion: EnglishTranslationPromptVersion,
 		InputKinds: []string{"title_de", "summary_de"}, OutputKinds: []string{"title_en", "summary_en"},
 		SystemPrompt: mustPromptByVersion(EnglishTranslationPromptVersion).SystemPrompt, Schema: englishTranslationSchema,
 		Generator: generateEnglishTranslationInput, Validator: func(_ StepInput, output *StepOutput) error { return validateEnglishTranslation(output) }, OutputValues: englishTranslationValues},
-}
+	Result: func(output StepOutput) (string, string) { return output.TitleEN, output.SummaryEN },
+}}
 
 func RegisteredSteps() []StepDefinition {
 	steps := make([]StepDefinition, len(registeredSteps))
@@ -195,6 +212,29 @@ func StepKeys() []string {
 		keys = append(keys, step.Key)
 	}
 	return keys
+}
+
+func ModelSettingKeys() []string {
+	return append(StepKeys(), TranslationModelStep)
+}
+
+func RegisteredTranslations() []TranslationDefinition {
+	translations := make([]TranslationDefinition, len(registeredTranslations))
+	for index, translation := range registeredTranslations {
+		translation.Step = cloneStepDefinition(translation.Step)
+		translations[index] = translation
+	}
+	return translations
+}
+
+func TranslationByLanguage(language string) (TranslationDefinition, bool) {
+	for _, translation := range registeredTranslations {
+		if translation.Language == language {
+			translation.Step = cloneStepDefinition(translation.Step)
+			return translation, true
+		}
+	}
+	return TranslationDefinition{}, false
 }
 
 func StepPlans(models map[string]string) ([]store.PipelineStepPlan, error) {

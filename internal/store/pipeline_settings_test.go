@@ -25,7 +25,7 @@ func TestPipelineStepSettingsValidateAndPersistModels(t *testing.T) {
 		// Migrations register all current steps before explicit initialization.
 		t.Fatalf("initial settings = %#v, err=%v", settings, err)
 	}
-	steps := []string{"incident_metadata", "german_presentation", "english_translation"}
+	steps := []string{"incident_metadata", "german_presentation", "translation"}
 	if err := database.EnsurePipelineSteps(ctx, steps, now); err != nil {
 		t.Fatal(err)
 	}
@@ -35,13 +35,13 @@ func TestPipelineStepSettingsValidateAndPersistModels(t *testing.T) {
 	if err := database.SetPipelineStepModel(ctx, "missing", "model", now); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("SetPipelineStepModel(missing) error = %v, want ErrNotFound", err)
 	}
-	for step, model := range map[string]string{"incident_metadata": " qwen:4b ", "german_presentation": "qwen:4b", "english_translation": "translate:4b"} {
+	for step, model := range map[string]string{"incident_metadata": " qwen:4b ", "german_presentation": "qwen:4b", "translation": "translate:4b"} {
 		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
 			t.Fatal(err)
 		}
 	}
 	models, err := database.PreferredPipelineModels(ctx, steps)
-	if err != nil || models["incident_metadata"] != "qwen:4b" || models["german_presentation"] != "qwen:4b" || models["english_translation"] != "translate:4b" {
+	if err != nil || models["incident_metadata"] != "qwen:4b" || models["german_presentation"] != "qwen:4b" || models["translation"] != "translate:4b" {
 		t.Fatalf("preferred models = %#v, err=%v", models, err)
 	}
 }

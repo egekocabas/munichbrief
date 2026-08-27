@@ -15,11 +15,14 @@ import (
 
 func TestRegisteredPipelineStepsAreStableAndOrdered(t *testing.T) {
 	steps := RegisteredSteps()
-	if len(steps) != 3 ||
+	if len(steps) != 2 ||
 		steps[0].Key != IncidentMetadataStep || steps[0].PromptVersion != IncidentMetadataPromptVersion ||
-		steps[1].Key != GermanPresentationStep || steps[1].PromptVersion != GermanPresentationPromptVersion ||
-		steps[2].Key != EnglishTranslationStep || steps[2].PromptVersion != EnglishTranslationPromptVersion {
+		steps[1].Key != GermanPresentationStep || steps[1].PromptVersion != GermanPresentationPromptVersion {
 		t.Fatalf("registered step identities = %v", StepKeys())
+	}
+	translations := RegisteredTranslations()
+	if len(translations) != 1 || translations[0].Language != EnglishLanguage || translations[0].PromptVersion != EnglishTranslationPromptVersion || translations[0].Result == nil {
+		t.Fatalf("registered translations = %#v", translations)
 	}
 	if PipelineVersion != "incident-pipeline-v2" {
 		t.Fatalf("pipeline version = %q", PipelineVersion)
@@ -202,7 +205,8 @@ func TestEnglishTranslationReceivesOnlyDeclaredGermanPresentation(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	step, _ := StepByKey(EnglishTranslationStep)
+	translation, _ := TranslationByLanguage(EnglishLanguage)
+	step := translation.Step
 	output, _, err := client.GenerateStep(context.Background(), step, StepInput{Values: map[string]string{
 		"original_title": "private original title", "incident_body": "private original body",
 		"title_de": "Sicherer Titel", "summary_de": "Sichere Zusammenfassung.",

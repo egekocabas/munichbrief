@@ -69,6 +69,11 @@ type IncidentRecord struct {
 	AITranslationModel         string
 	AITranslationPromptVersion string
 	AITranslationGeneratedAt   *time.Time
+	AITranslationStatus        string
+	AITranslationAttempts      int
+	AITranslationNextRetryAt   *time.Time
+	AITranslationFailureKind   string
+	AITranslationFallback      bool
 	AIPipelineVersion          string
 	AILegacy                   bool
 	HasAI                      bool

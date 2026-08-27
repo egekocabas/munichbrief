@@ -39,7 +39,8 @@ func TestLiveOllamaPrivacySafeMetadataFirstPresentation(t *testing.T) {
 	}
 	metadataStep, _ := StepByKey(IncidentMetadataStep)
 	germanStep, _ := StepByKey(GermanPresentationStep)
-	translationStep, _ := StepByKey(EnglishTranslationStep)
+	translationDefinition, _ := TranslationByLanguage(EnglishLanguage)
+	translationStep := translationDefinition.Step
 	publishedAt := "2026-08-27T10:00:00+02:00"
 
 	fixtures := []struct {

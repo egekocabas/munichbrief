@@ -12,7 +12,6 @@ func testPipelinePlans() []PipelineStepPlan {
 	return []PipelineStepPlan{
 		{Key: "incident_metadata", Order: 0, PromptVersion: "incident-metadata-v1", Model: "qwen:4b"},
 		{Key: "german_presentation", Order: 1, PromptVersion: "incident-presentation-de-v2", Model: "qwen:4b"},
-		{Key: "english_translation", Order: 2, PromptVersion: "incident-translation-en-v1", Model: "translate:4b"},
 	}
 }
 

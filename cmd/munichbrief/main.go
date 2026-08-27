@@ -85,7 +85,7 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 		return err
 	}
 	defer database.Close()
-	if err := database.EnsurePipelineSteps(ctx, processing.StepKeys(), time.Now()); err != nil {
+	if err := database.EnsurePipelineSteps(ctx, processing.ModelSettingKeys(), time.Now()); err != nil {
 		return err
 	}
 
@@ -237,7 +237,11 @@ func runAIProcess(ctx context.Context, logger *slog.Logger, cfg config.Config, a
 	if *incidentID > 0 {
 		selectedID = incidentID
 	}
-	result, err := database.CreateManualPipelineCycle(ctx, cfg.SourceMode, plans, selectedID, false, time.Now())
+	translationModel := ""
+	if translationModels, translationErr := database.PreferredPipelineModels(ctx, []string{processing.TranslationModelStep}); translationErr == nil {
+		translationModel = translationModels[processing.TranslationModelStep]
+	}
+	result, err := database.CreateManualPipelineCycle(ctx, cfg.SourceMode, plans, translationModel, selectedID, false, time.Now())
 	if err != nil {
 		return err
 	}

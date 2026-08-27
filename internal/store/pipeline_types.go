@@ -39,6 +39,7 @@ type PipelineCycle struct {
 	WindowAuthorized bool       `json:"window_authorized"`
 	StartedAt        *time.Time `json:"started_at,omitempty"`
 	CompletedAt      *time.Time `json:"completed_at,omitempty"`
+	TranslationModel string     `json:"translation_model,omitempty"`
 }
 
 // PipelineJob is a claimed unit of work with its frozen input provenance.
@@ -56,11 +57,47 @@ type PipelineJob struct {
 	PromptVersion     string
 	InputHash         string
 	AttemptCount      int
+	TranslationModel  string
 	InputValues       map[string]string
 	// TitleDE and SummaryDE remain populated for compatibility with operational
 	// callers while step execution consumes InputValues exclusively.
 	TitleDE   string
 	SummaryDE string
+}
+
+// TranslationPlan freezes one target language, prompt, and model for a job.
+type TranslationPlan struct {
+	Language      string
+	PromptVersion string
+	Model         string
+}
+
+// TranslationJob is an independently claimed translation of one accepted
+// canonical German presentation.
+type TranslationJob struct {
+	ID                int64
+	PresentationRunID int64
+	IncidentID        int64
+	Language          string
+	RequestKind       string
+	ModelIdentity     string
+	PromptVersion     string
+	InputHash         string
+	AttemptCount      int
+	TitleDE           string
+	SummaryDE         string
+}
+
+// TranslationQueueStats summarizes one target language independently from the
+// canonical pipeline stage statistics.
+type TranslationQueueStats struct {
+	Language    string `json:"language"`
+	Pending     int    `json:"pending"`
+	Running     int    `json:"running"`
+	Retrying    int    `json:"retrying"`
+	NeedsReview int    `json:"needs_review"`
+	Failed      int    `json:"failed"`
+	Succeeded   int    `json:"succeeded"`
 }
 
 // PipelineValue is one validated presentation field produced by a step.
@@ -149,19 +186,20 @@ func nullableString(value string) any {
 
 // PipelineSnapshot is an operational view of active, queued, and candidate work.
 type PipelineSnapshot struct {
-	ScheduledAfter      *time.Time       `json:"scheduled_after,omitempty"`
-	ActiveCycle         *PipelineCycle   `json:"active_cycle,omitempty"`
-	ActiveStepKey       string           `json:"active_step_key"`
-	ActiveModel         string           `json:"active_model"`
-	CurrentIncidentID   int64            `json:"current_incident_id,omitempty"`
-	ActiveStepCompleted int              `json:"active_step_completed"`
-	ActiveStepTotal     int              `json:"active_step_total"`
-	CycleCompleted      int              `json:"cycle_completed"`
-	CycleTotal          int              `json:"cycle_total"`
-	ManualCycles        int              `json:"manual_cycles"`
-	ContinuationCycles  int              `json:"continuation_cycles"`
-	ScheduledCandidates int              `json:"scheduled_candidates"`
-	ActiveSteps         []StepQueueStats `json:"active_steps"`
-	Steps               []StepQueueStats `json:"steps"`
-	RecentEvents        []PipelineEvent  `json:"recent_events"`
+	ScheduledAfter      *time.Time              `json:"scheduled_after,omitempty"`
+	ActiveCycle         *PipelineCycle          `json:"active_cycle,omitempty"`
+	ActiveStepKey       string                  `json:"active_step_key"`
+	ActiveModel         string                  `json:"active_model"`
+	CurrentIncidentID   int64                   `json:"current_incident_id,omitempty"`
+	ActiveStepCompleted int                     `json:"active_step_completed"`
+	ActiveStepTotal     int                     `json:"active_step_total"`
+	CycleCompleted      int                     `json:"cycle_completed"`
+	CycleTotal          int                     `json:"cycle_total"`
+	ManualCycles        int                     `json:"manual_cycles"`
+	ContinuationCycles  int                     `json:"continuation_cycles"`
+	ScheduledCandidates int                     `json:"scheduled_candidates"`
+	ActiveSteps         []StepQueueStats        `json:"active_steps"`
+	Steps               []StepQueueStats        `json:"steps"`
+	RecentEvents        []PipelineEvent         `json:"recent_events"`
+	Translations        []TranslationQueueStats `json:"translations"`
 }

@@ -17,7 +17,7 @@ func TestPipelineSnapshotSeparatesActiveWaitingWorkAndNewCandidates(t *testing.T
 	now := time.Date(2026, 8, 26, 1, 0, 0, 0, time.UTC)
 	insertPipelineDocuments(t, ctx, database, now, "one", "two")
 	plans := testPipelinePlans()
-	request, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, nil, true, now)
+	request, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, "translate:4b", nil, true, now)
 	if err != nil || request.Requested != 2 {
 		t.Fatalf("create manual cycle = %#v/%v", request, err)
 	}
@@ -34,18 +34,18 @@ func TestPipelineSnapshotSeparatesActiveWaitingWorkAndNewCandidates(t *testing.T
 		t.Fatal(err)
 	}
 
-	stepKeys := []string{"incident_metadata", "german_presentation", "english_translation"}
+	stepKeys := []string{"incident_metadata", "german_presentation"}
 	snapshot, err := database.PipelineSnapshot(ctx, "fixture", stepKeys, now.Add(time.Minute))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if snapshot.ActiveStepCompleted != 1 || snapshot.ActiveStepTotal != 2 || snapshot.CycleCompleted != 1 || snapshot.CycleTotal != 6 {
+	if snapshot.ActiveStepCompleted != 1 || snapshot.ActiveStepTotal != 2 || snapshot.CycleCompleted != 1 || snapshot.CycleTotal != 4 {
 		t.Fatalf("active progress = step %d/%d pipeline %d/%d", snapshot.ActiveStepCompleted, snapshot.ActiveStepTotal, snapshot.CycleCompleted, snapshot.CycleTotal)
 	}
 	if snapshot.ScheduledCandidates != 0 {
 		t.Fatalf("in-flight items reported as new candidates: %d", snapshot.ScheduledCandidates)
 	}
-	if len(snapshot.ActiveSteps) != 3 || len(snapshot.Steps) != 3 {
+	if len(snapshot.ActiveSteps) != 2 || len(snapshot.Steps) != 2 {
 		t.Fatalf("step stats lengths = active:%d all:%d", len(snapshot.ActiveSteps), len(snapshot.Steps))
 	}
 	if metadata := snapshot.ActiveSteps[0]; metadata.Queued != 1 || metadata.Succeeded != 1 || metadata.Waiting != 0 {
@@ -54,10 +54,7 @@ func TestPipelineSnapshotSeparatesActiveWaitingWorkAndNewCandidates(t *testing.T
 	if german := snapshot.ActiveSteps[1]; german.Waiting != 2 || german.ReadyAfterStage != 1 || german.Queued != 0 {
 		t.Fatalf("active German stats = %#v", german)
 	}
-	if translation := snapshot.ActiveSteps[2]; translation.Waiting != 2 || translation.ReadyAfterStage != 0 || translation.Queued != 0 {
-		t.Fatalf("active translation stats = %#v", translation)
-	}
-	if snapshot.Steps[0].Succeeded != 1 || snapshot.Steps[1].Waiting != 2 || snapshot.Steps[2].Waiting != 2 {
+	if snapshot.Steps[0].Succeeded != 1 || snapshot.Steps[1].Waiting != 2 {
 		t.Fatalf("all-cycle stats = %#v", snapshot.Steps)
 	}
 

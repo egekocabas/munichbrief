@@ -106,17 +106,17 @@ func TestMetricsExposeStagedPipelineState(t *testing.T) {
 	metrics := NewMetrics("test", time.Now())
 	metrics.RecordPipelineAttempt("incident_metadata")
 	metrics.RecordPipelineAttempt("german_presentation")
-	metrics.RecordPipelineAttempt("english_translation")
+	metrics.RecordPipelineAttempt("translation/en")
 	metrics.RecordPipelineSuccess("incident_metadata", time.Unix(4567, 0))
-	metrics.RecordPipelineFailure("english_translation", "output")
-	metrics.RecordPipelineDuration("english_translation", 1750*time.Millisecond)
+	metrics.RecordPipelineFailure("translation/en", "output")
+	metrics.RecordPipelineDuration("translation/en", 1750*time.Millisecond)
 	metrics.SetPipelineSnapshot(store.PipelineSnapshot{
 		ActiveCycle: &store.PipelineCycle{Kind: "manual", ActiveStep: 1},
 		Steps: []store.StepQueueStats{
 			{StepKey: "incident_metadata", Queued: 2, Succeeded: 3},
 			{StepKey: "german_presentation", Retrying: 1},
-			{StepKey: "english_translation", Running: 1, NeedsReview: 4},
 		},
+		Translations: []store.TranslationQueueStats{{Language: "en", Running: 1, NeedsReview: 4}},
 	})
 
 	recorder := httptest.NewRecorder()
@@ -125,11 +125,11 @@ func TestMetricsExposeStagedPipelineState(t *testing.T) {
 		`munichbrief_pipeline_attempts_total{step="incident_metadata"} 1`,
 		`munichbrief_pipeline_attempts_total{step="german_presentation"} 1`,
 		`munichbrief_pipeline_successes_total{step="incident_metadata"} 1`,
-		`munichbrief_pipeline_failures_total{step="english_translation"} 1`,
-		`munichbrief_pipeline_duration_seconds_sum{step="english_translation"} 1.750000`,
+		`munichbrief_pipeline_failures_total{step="translation/en"} 1`,
+		`munichbrief_pipeline_duration_seconds_sum{step="translation/en"} 1.750000`,
 		`munichbrief_pipeline_jobs{step="incident_metadata",state="queued"} 2`,
 		`munichbrief_pipeline_jobs{step="german_presentation",state="retrying"} 1`,
-		`munichbrief_pipeline_jobs{step="english_translation",state="needs_review"} 4`,
+		`munichbrief_pipeline_jobs{step="translation/en",state="needs_review"} 4`,
 		`munichbrief_pipeline_active_cycle{kind="manual"} 1`,
 		`munichbrief_pipeline_active_step{step="german_presentation"} 1`,
 		"munichbrief_last_processing_success_timestamp_seconds 4567",

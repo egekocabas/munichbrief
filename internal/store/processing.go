@@ -120,6 +120,7 @@ func (s *Store) queueAndClaimProcessingJob(ctx context.Context, operation, opera
 		insertArgs := []any{
 			sql.Named("operation", operation), sql.Named("model", modelIdentity),
 			sql.Named("now", formattedNow),
+			sql.Named("language", "de"), sql.Named("translation_language", "en"),
 		}
 		if structured {
 			readyCondition = publicReadyCondition
@@ -149,7 +150,7 @@ func (s *Store) queueAndClaimProcessingJob(ctx context.Context, operation, opera
 					WHERE j.operation = @operation AND j.status = 'pending'
 						AND j.manual_requested_at IS NULL AND j.source_hash = i.content_hash
 						AND (`+publicReadyCondition+`)
-				)`, sql.Named("operation", operation), sql.Named("prompt", promptVersion)); err != nil {
+				)`, sql.Named("operation", operation), sql.Named("prompt", promptVersion), sql.Named("language", "de"), sql.Named("translation_language", "en")); err != nil {
 				return ProcessingJob{}, false, fmt.Errorf("discard obsolete automatic processing jobs: %w", err)
 			}
 		}
@@ -274,6 +275,15 @@ func (s *Store) CompleteProcessingJob(
 			presentationRunID, derivation.kind, derivation.value, modelIdentity, promptVersion, formattedTime); err != nil {
 			return fmt.Errorf("store legacy %s presentation value: %w", derivation.kind, err)
 		}
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO presentation_translations(
+		presentation_run_id,language_code,request_kind,status,title,summary,model_identity,prompt_version,input_hash,
+		attempt_count,started_at,completed_at,created_at,updated_at
+	) VALUES(?,'en','imported','succeeded',?,?,?,?,?,0,?,?,?,?)`,
+		presentationRunID, presentation.TitleEN, presentation.SummaryEN, modelIdentity, promptVersion,
+		HashPipelineInput("title_de", presentation.TitleDE, "summary_de", presentation.SummaryDE, "language", "en", promptVersion, modelIdentity),
+		formattedTime, formattedTime, formattedTime, formattedTime); err != nil {
+		return fmt.Errorf("store legacy English translation: %w", err)
 	}
 
 	result, err := tx.ExecContext(ctx, `

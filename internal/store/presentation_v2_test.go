@@ -73,5 +73,14 @@ func insertCompletedPresentationRun(t *testing.T, ctx context.Context, database 
 			t.Fatal(err)
 		}
 	}
+	if title, ok := values["title_en"]; ok {
+		if _, err := database.db.ExecContext(ctx, `INSERT INTO presentation_translations(
+			presentation_run_id,language_code,request_kind,status,title,summary,model_identity,prompt_version,input_hash,
+			attempt_count,started_at,completed_at,created_at,updated_at
+		) VALUES(?,'en','imported','succeeded',?,?, 'translate:4b','incident-translation-en-v1','',0,?,?,?,?)`,
+			runID, title, values["summary_en"], formatTime(completed), formatTime(completed), formatTime(completed), formatTime(completed)); err != nil {
+			t.Fatal(err)
+		}
+	}
 	return runID
 }

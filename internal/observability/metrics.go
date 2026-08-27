@@ -160,7 +160,7 @@ func (m *Metrics) RecordProcessingDuration(duration time.Duration) {
 	m.processingDurationCount.Add(1)
 }
 
-var pipelineStepKeys = [...]string{"incident_metadata", "german_presentation", "english_translation"}
+var pipelineStepKeys = [...]string{"incident_metadata", "german_presentation", "translation/en"}
 
 func pipelineStepIndex(step string) (int, bool) {
 	for index, key := range pipelineStepKeys {
@@ -216,6 +216,18 @@ func (m *Metrics) SetPipelineSnapshot(snapshot store.PipelineSnapshot) {
 			continue
 		}
 		m.pipelineQueued[index].Store(int64(max(stats.Queued, 0)))
+		m.pipelineRunning[index].Store(int64(max(stats.Running, 0)))
+		m.pipelineRetrying[index].Store(int64(max(stats.Retrying, 0)))
+		m.pipelineReview[index].Store(int64(max(stats.NeedsReview, 0)))
+		m.pipelineFailed[index].Store(int64(max(stats.Failed, 0)))
+		m.pipelineSucceeded[index].Store(int64(max(stats.Succeeded, 0)))
+	}
+	for _, stats := range snapshot.Translations {
+		index, ok := pipelineStepIndex("translation/" + stats.Language)
+		if !ok {
+			continue
+		}
+		m.pipelineQueued[index].Store(int64(max(stats.Pending, 0)))
 		m.pipelineRunning[index].Store(int64(max(stats.Running, 0)))
 		m.pipelineRetrying[index].Store(int64(max(stats.Retrying, 0)))
 		m.pipelineReview[index].Store(int64(max(stats.NeedsReview, 0)))

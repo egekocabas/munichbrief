@@ -47,7 +47,7 @@ func (s *Store) ClaimPipelineJob(ctx context.Context, cycleID int64, stepOrder i
 	var job PipelineJob
 	var originalTitle, originalBody, publishedAt string
 	err = tx.QueryRowContext(ctx, `
-		SELECT j.id, c.id, c.kind, ci.id, ci.presentation_run_id, ci.incident_id, ci.source_hash,
+		SELECT j.id, c.id, c.kind, COALESCE(c.translation_model_identity, ''), ci.id, ci.presentation_run_id, ci.incident_id, ci.source_hash,
 			j.step_key, j.step_order, j.model_identity, j.prompt_version, j.input_hash, j.attempt_count,
 			i.title_de, COALESCE(i.body_de, ''), d.published_at
 		FROM processing_step_jobs j
@@ -58,7 +58,7 @@ func (s *Store) ClaimPipelineJob(ctx context.Context, cycleID int64, stepOrder i
 		WHERE c.id = ? AND c.status = 'running' AND j.step_order = ? AND j.status = 'pending'
 			AND (j.next_retry_at IS NULL OR j.next_retry_at <= ?) AND ci.source_hash = i.content_hash
 		ORDER BY d.published_at DESC, i.position ASC, j.id ASC LIMIT 1`, cycleID, stepOrder, formatted).Scan(
-		&job.ID, &job.CycleID, &job.CycleKind, &job.CycleItemID, &job.PresentationRunID, &job.IncidentID, &job.SourceHash,
+		&job.ID, &job.CycleID, &job.CycleKind, &job.TranslationModel, &job.CycleItemID, &job.PresentationRunID, &job.IncidentID, &job.SourceHash,
 		&job.StepKey, &job.StepOrder, &job.ModelIdentity, &job.PromptVersion, &job.InputHash, &job.AttemptCount,
 		&originalTitle, &originalBody, &publishedAt,
 	)
@@ -136,6 +136,19 @@ func (s *Store) CompletePipelineJob(ctx context.Context, job PipelineJob, values
 	}
 	if affected, _ := result.RowsAffected(); affected != 1 {
 		return errors.New("pipeline job is no longer running")
+	}
+	var laterStages int
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM processing_step_jobs
+		WHERE cycle_item_id=? AND step_order>?`, job.CycleItemID, job.StepOrder).Scan(&laterStages); err != nil {
+		return fmt.Errorf("inspect canonical stage completion: %w", err)
+	}
+	if laterStages == 0 {
+		if _, err := tx.ExecContext(ctx, `UPDATE presentation_runs SET status='complete', completed_at=? WHERE id=? AND status='processing'`, formatted, job.PresentationRunID); err != nil {
+			return fmt.Errorf("complete canonical presentation run: %w", err)
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE processing_cycle_items SET status='succeeded', updated_at=? WHERE id=? AND status='pending'`, formatted, job.CycleItemID); err != nil {
+			return fmt.Errorf("complete canonical cycle item: %w", err)
+		}
 	}
 	if err := tx.Commit(); err != nil {
 		return err

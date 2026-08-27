@@ -14,6 +14,7 @@ type PresentationScope struct {
 	Operation     string
 	ModelIdentity string
 	PromptVersion string
+	Language      string
 	PublicOnly    bool
 }
 
@@ -36,6 +37,19 @@ const latestPresentationRun = `(SELECT r.id
 	WHERE r.incident_id = i.id AND r.source_hash = i.content_hash AND r.status = 'complete'
 		AND ((@prompt = '` + PipelineVersion + `' AND (r.pipeline_version IN ('` + PipelineVersion + `', '` + PreviousPipelineVersion + `') OR r.legacy = 1))
 			OR r.pipeline_version LIKE 'legacy/' || @prompt || '/%')
+		AND (@language = 'de' OR EXISTS (
+			SELECT 1 FROM presentation_translations translated
+			WHERE translated.presentation_run_id = r.id AND translated.language_code = @language AND translated.status = 'succeeded'
+		))
+	ORDER BY CASE r.pipeline_version WHEN '` + PipelineVersion + `' THEN 0 WHEN '` + PreviousPipelineVersion + `' THEN 1 ELSE 2 END,
+		r.completed_at DESC, r.id DESC
+	LIMIT 1)`
+
+const latestCanonicalPresentationRun = `(SELECT r.id
+	FROM presentation_runs r
+	WHERE r.incident_id = i.id AND r.source_hash = i.content_hash AND r.status = 'complete'
+		AND ((@prompt = '` + PipelineVersion + `' AND (r.pipeline_version IN ('` + PipelineVersion + `', '` + PreviousPipelineVersion + `') OR r.legacy = 1))
+			OR r.pipeline_version LIKE 'legacy/' || @prompt || '/%')
 	ORDER BY CASE r.pipeline_version WHEN '` + PipelineVersion + `' THEN 0 WHEN '` + PreviousPipelineVersion + `' THEN 1 ELSE 2 END,
 		r.completed_at DESC, r.id DESC
 	LIMIT 1)`
@@ -43,8 +57,8 @@ const latestPresentationRun = `(SELECT r.id
 const scopedAIColumns = `
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'title_de' LIMIT 1), ''),
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
-				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'title_en' LIMIT 1), ''),
-				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_en' LIMIT 1), ''),
+				COALESCE((SELECT title FROM presentation_translations WHERE presentation_run_id = ` + latestPresentationRun + ` AND language_code = @translation_language AND status = 'succeeded' ORDER BY completed_at DESC, id DESC LIMIT 1), ''),
+				COALESCE((SELECT summary FROM presentation_translations WHERE presentation_run_id = ` + latestPresentationRun + ` AND language_code = @translation_language AND status = 'succeeded' ORDER BY completed_at DESC, id DESC LIMIT 1), ''),
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'category' LIMIT 1), ''),
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'area_name' LIMIT 1), ''),
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'area_type' LIMIT 1), ''),
@@ -60,26 +74,56 @@ const scopedAIColumns = `
 				COALESCE((SELECT model_identity FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
 				COALESCE((SELECT prompt_version FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
 				COALESCE((SELECT generated_at FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
-				COALESCE((SELECT model_identity FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_en' LIMIT 1), ''),
-				COALESCE((SELECT prompt_version FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_en' LIMIT 1), ''),
-				COALESCE((SELECT generated_at FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_en' LIMIT 1), ''),
+				COALESCE((SELECT model_identity FROM presentation_translations WHERE presentation_run_id = ` + latestPresentationRun + ` AND language_code = @translation_language AND status = 'succeeded' ORDER BY completed_at DESC, id DESC LIMIT 1), ''),
+				COALESCE((SELECT prompt_version FROM presentation_translations WHERE presentation_run_id = ` + latestPresentationRun + ` AND language_code = @translation_language AND status = 'succeeded' ORDER BY completed_at DESC, id DESC LIMIT 1), ''),
+				COALESCE((SELECT completed_at FROM presentation_translations WHERE presentation_run_id = ` + latestPresentationRun + ` AND language_code = @translation_language AND status = 'succeeded' ORDER BY completed_at DESC, id DESC LIMIT 1), ''),
 				COALESCE((SELECT pipeline_version FROM presentation_runs WHERE id = ` + latestPresentationRun + `), ''),
 				COALESCE((SELECT legacy FROM presentation_runs WHERE id = ` + latestPresentationRun + `), 0),
 				COALESCE((SELECT j.status FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id = j.cycle_item_id WHERE ci.incident_id = i.id AND ci.source_hash = i.content_hash ORDER BY j.updated_at DESC, j.id DESC LIMIT 1), ''),
 				COALESCE((SELECT j.attempt_count FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id = j.cycle_item_id WHERE ci.incident_id = i.id AND ci.source_hash = i.content_hash ORDER BY j.updated_at DESC, j.id DESC LIMIT 1), 0),
 				COALESCE((SELECT j.next_retry_at FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id = j.cycle_item_id WHERE ci.incident_id = i.id AND ci.source_hash = i.content_hash ORDER BY j.updated_at DESC, j.id DESC LIMIT 1), ''),
-				COALESCE((SELECT j.failure_kind FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id = j.cycle_item_id WHERE ci.incident_id = i.id AND ci.source_hash = i.content_hash ORDER BY j.updated_at DESC, j.id DESC LIMIT 1), '')`
+				COALESCE((SELECT j.failure_kind FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id = j.cycle_item_id WHERE ci.incident_id = i.id AND ci.source_hash = i.content_hash ORDER BY j.updated_at DESC, j.id DESC LIMIT 1), ''),
+				COALESCE((SELECT status FROM presentation_translations WHERE presentation_run_id = ` + latestCanonicalPresentationRun + ` AND language_code = @translation_language ORDER BY created_at DESC, id DESC LIMIT 1), ''),
+				COALESCE((SELECT attempt_count FROM presentation_translations WHERE presentation_run_id = ` + latestCanonicalPresentationRun + ` AND language_code = @translation_language ORDER BY created_at DESC, id DESC LIMIT 1), 0),
+				COALESCE((SELECT next_retry_at FROM presentation_translations WHERE presentation_run_id = ` + latestCanonicalPresentationRun + ` AND language_code = @translation_language ORDER BY created_at DESC, id DESC LIMIT 1), ''),
+				COALESCE((SELECT failure_kind FROM presentation_translations WHERE presentation_run_id = ` + latestCanonicalPresentationRun + ` AND language_code = @translation_language ORDER BY created_at DESC, id DESC LIMIT 1), ''),
+				CASE WHEN NOT EXISTS (
+					SELECT 1 FROM presentation_translations current_translation
+					WHERE current_translation.presentation_run_id = ` + latestCanonicalPresentationRun + `
+						AND current_translation.language_code=@translation_language AND current_translation.status='succeeded'
+				) AND EXISTS (
+					SELECT 1 FROM presentation_runs fallback_run
+					JOIN presentation_translations fallback_translation ON fallback_translation.presentation_run_id=fallback_run.id
+					WHERE fallback_run.incident_id=i.id AND fallback_run.source_hash=i.content_hash AND fallback_run.status='complete'
+						AND fallback_translation.language_code=@translation_language AND fallback_translation.status='succeeded'
+						AND ((@prompt = '` + PipelineVersion + `' AND (fallback_run.pipeline_version IN ('` + PipelineVersion + `', '` + PreviousPipelineVersion + `') OR fallback_run.legacy = 1))
+							OR fallback_run.pipeline_version LIKE 'legacy/' || @prompt || '/%')
+				) THEN 1 ELSE 0 END`
 
 const publicReadyCondition = `EXISTS (
 		SELECT 1 FROM presentation_runs r
 		WHERE r.incident_id = i.id AND r.source_hash = i.content_hash AND r.status = 'complete'
 			AND ((@prompt = '` + PipelineVersion + `' AND (r.pipeline_version IN ('` + PipelineVersion + `', '` + PreviousPipelineVersion + `') OR r.legacy = 1))
 				OR r.pipeline_version LIKE 'legacy/' || @prompt || '/%')
+			AND (@language = 'de' OR EXISTS (
+				SELECT 1 FROM presentation_translations translated
+				WHERE translated.presentation_run_id = r.id AND translated.language_code = @language AND translated.status = 'succeeded'
+			))
 )`
 
 func presentationArgs(scope PresentationScope) []any {
+	language := scope.Language
+	if language == "" {
+		language = "de"
+	}
+	translationLanguage := language
+	if translationLanguage == "de" {
+		translationLanguage = "en"
+	}
 	return []any{
 		sql.Named("prompt", scope.PromptVersion),
+		sql.Named("language", language),
+		sql.Named("translation_language", translationLanguage),
 		sql.Named("operation_prefix", "incident-presentation/"+scope.PromptVersion+"/"),
 	}
 }
@@ -149,7 +193,8 @@ func (s *Store) ListPresentationEntries(ctx context.Context, limit, offset int, 
 				'', '', '',
 				'', '', '',
 				'', '', '',
-				'', 0, '', 0, '', ''
+				'', 0, '', 0, '', '',
+				'', 0, '', '', 0
 			FROM source_documents d
 			WHERE ` + statusCondition + ` AND NOT EXISTS (
 				SELECT 1 FROM incidents i WHERE i.source_document_id = d.id
@@ -187,7 +232,9 @@ func (s *Store) ListPublicIncidentLinks(ctx context.Context, sourceMode string, 
 	scope.PublicOnly = true
 	query := `
 		SELECT i.id,
-			COALESCE((SELECT r.completed_at FROM presentation_runs r WHERE r.id = ` + latestPresentationRun + `), i.updated_at)
+			CASE WHEN @language = 'de' THEN
+				COALESCE((SELECT r.completed_at FROM presentation_runs r WHERE r.id = ` + latestPresentationRun + `), i.updated_at)
+			ELSE COALESCE((SELECT completed_at FROM presentation_translations WHERE presentation_run_id = ` + latestPresentationRun + ` AND language_code=@language AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1), i.updated_at) END
 		FROM incidents i
 		JOIN source_documents d ON d.id = i.source_document_id
 		WHERE ` + statusCondition + ` AND ` + publicReadyCondition + `
@@ -304,8 +351,8 @@ func (s *Store) GetPresentationIncident(ctx context.Context, id int64, scope Pre
 
 func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 	var record IncidentRecord
-	var publishedAt, updatedAt, aiMetadataGeneratedAt, aiGeneratedAt, aiTranslationGeneratedAt, nextRetryAt string
-	var aiLegacy int
+	var publishedAt, updatedAt, aiMetadataGeneratedAt, aiGeneratedAt, aiTranslationGeneratedAt, nextRetryAt, translationNextRetryAt string
+	var aiLegacy, translationFallback int
 	if err := row.Scan(
 		&record.ID, &record.SourceDocumentID, &record.HasIncident, &record.Number, &record.Position,
 		&record.TitleDE, &record.BodyDE, &record.ContentHash, &record.SourceTitle, &record.SourceURL,
@@ -319,6 +366,7 @@ func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 		&record.AITranslationModel, &record.AITranslationPromptVersion, &aiTranslationGeneratedAt,
 		&record.AIPipelineVersion, &aiLegacy,
 		&record.ProcessingStatus, &record.ProcessingAttempts, &nextRetryAt, &record.ProcessingFailureKind,
+		&record.AITranslationStatus, &record.AITranslationAttempts, &translationNextRetryAt, &record.AITranslationFailureKind, &translationFallback,
 	); err != nil {
 		return IncidentRecord{}, err
 	}
@@ -353,6 +401,7 @@ func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 		record.AITranslationGeneratedAt = &generatedAt
 	}
 	record.AILegacy = aiLegacy == 1
+	record.AITranslationFallback = translationFallback == 1
 	if nextRetryAt != "" {
 		next, err := time.Parse(time.RFC3339Nano, nextRetryAt)
 		if err != nil {
@@ -360,6 +409,13 @@ func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 		}
 		record.ProcessingNextRetryAt = &next
 	}
-	record.HasAI = record.AITitleDE != "" && record.AISummaryDE != "" && record.AITitleEN != "" && record.AISummaryEN != ""
+	if translationNextRetryAt != "" {
+		next, err := time.Parse(time.RFC3339Nano, translationNextRetryAt)
+		if err != nil {
+			return IncidentRecord{}, fmt.Errorf("parse translation retry time: %w", err)
+		}
+		record.AITranslationNextRetryAt = &next
+	}
+	record.HasAI = record.AITitleDE != "" && record.AISummaryDE != ""
 	return record, nil
 }

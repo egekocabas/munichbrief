@@ -83,7 +83,7 @@ func TestStagedMigrationMovesPreferenceAndPreservesLegacyPresentation(t *testing
 	for _, setting := range settings {
 		byStep[setting.StepKey] = setting.PreferredModel
 	}
-	if byStep["incident_metadata"] != "qwen:4b" || byStep["german_presentation"] != "qwen:4b" || byStep["english_translation"] != "" {
+	if byStep["incident_metadata"] != "qwen:4b" || byStep["german_presentation"] != "qwen:4b" || byStep["translation"] != "" || byStep["english_translation"] != "" {
 		t.Fatalf("migrated settings = %#v", byStep)
 	}
 	for table, query := range map[string]string{
@@ -106,7 +106,7 @@ func TestStagedMigrationMovesPreferenceAndPreservesLegacyPresentation(t *testing
 	if err != nil || !cutoverTime.After(time.Date(2026, 8, 25, 10, 0, 0, 0, time.UTC)) {
 		t.Fatalf("v2 cutover did not record migration time: %q, err=%v", cutover, err)
 	}
-	snapshot, err := database.PipelineSnapshot(ctx, "fixture", []string{"incident_metadata", "german_presentation", "english_translation"}, cutoverTime)
+	snapshot, err := database.PipelineSnapshot(ctx, "fixture", []string{"incident_metadata", "german_presentation"}, cutoverTime)
 	if err != nil || snapshot.ScheduledCandidates != 0 {
 		t.Fatalf("historical incidents crossed v2 cutover = %#v, err=%v", snapshot, err)
 	}
@@ -117,7 +117,7 @@ func TestStagedMigrationMovesPreferenceAndPreservesLegacyPresentation(t *testing
 	if _, err := database.db.ExecContext(ctx, `INSERT INTO incidents(id,source_document_id,incident_number,position,title_de,body_de,content_hash,created_at,updated_at) VALUES(2,2,'1',0,'New','New body','content-two',?,?)`, newAt, newAt); err != nil {
 		t.Fatal(err)
 	}
-	snapshot, err = database.PipelineSnapshot(ctx, "fixture", []string{"incident_metadata", "german_presentation", "english_translation"}, cutoverTime.Add(time.Second))
+	snapshot, err = database.PipelineSnapshot(ctx, "fixture", []string{"incident_metadata", "german_presentation"}, cutoverTime.Add(time.Second))
 	if err != nil || snapshot.ScheduledCandidates != 1 {
 		t.Fatalf("new incident was not v2 eligible = %#v, err=%v", snapshot, err)
 	}
@@ -129,8 +129,12 @@ func TestStagedMigrationMovesPreferenceAndPreservesLegacyPresentation(t *testing
 		record.AIModel != "qwen:4b" || record.AITranslationModel != "qwen:4b" {
 		t.Fatalf("legacy provenance = %#v", record)
 	}
+	var importedTranslations int
+	if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM presentation_translations WHERE presentation_run_id=(SELECT id FROM presentation_runs WHERE legacy=1 LIMIT 1) AND language_code='en' AND request_kind='imported' AND status='succeeded'`).Scan(&importedTranslations); err != nil || importedTranslations != 1 {
+		t.Fatalf("imported legacy translation = %d/%v", importedTranslations, err)
+	}
 	incidentID := int64(1)
-	request, err := database.CreateManualPipelineCycle(ctx, "fixture", testPipelinePlans(), &incidentID, false, time.Date(2026, 8, 25, 11, 0, 0, 0, time.UTC))
+	request, err := database.CreateManualPipelineCycle(ctx, "fixture", testPipelinePlans(), "translate:4b", &incidentID, false, time.Date(2026, 8, 25, 11, 0, 0, 0, time.UTC))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +154,7 @@ func TestStagedMigrationMovesPreferenceAndPreservesLegacyPresentation(t *testing
 	if err != nil || record.AITitleEN != "Legacy EN" {
 		t.Fatalf("partial replacement displaced legacy = %#v, err=%v", record, err)
 	}
-	advance, err := database.AdvancePipelineCycle(ctx, cycle, 3, time.Date(2026, 8, 25, 11, 0, 4, 0, time.UTC))
+	advance, err := database.AdvancePipelineCycle(ctx, cycle, len(testPipelinePlans()), time.Date(2026, 8, 25, 11, 0, 4, 0, time.UTC))
 	if err != nil || !advance.Advanced {
 		t.Fatalf("advance replacement = %#v/%v", advance, err)
 	}
@@ -162,23 +166,29 @@ func TestStagedMigrationMovesPreferenceAndPreservesLegacyPresentation(t *testing
 	if err := database.CompletePipelineJob(ctx, german, []PipelineValue{{Kind: "title_de", Value: "Staged DE"}, {Kind: "summary_de", Value: "Staged summary."}, {Kind: "privacy_status", Value: "safe"}, {Kind: "privacy_flags", Value: "[]"}}, german.ModelIdentity, HashPipelineInput("de"), time.Date(2026, 8, 25, 11, 0, 6, 0, time.UTC)); err != nil {
 		t.Fatal(err)
 	}
-	advance, err = database.AdvancePipelineCycle(ctx, cycle, 3, time.Date(2026, 8, 25, 11, 0, 7, 0, time.UTC))
-	if err != nil || !advance.Advanced {
-		t.Fatalf("advance to translation = %#v/%v", advance, err)
+	record, err = database.GetPresentationIncident(ctx, 1, PresentationScope{PromptVersion: PipelineVersion, Language: "de"})
+	if err != nil || record.AITitleDE != "Staged DE" {
+		t.Fatalf("German was not visible at canonical completion = %#v, err=%v", record, err)
 	}
-	cycle.ActiveStep = 2
-	translation, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 2, time.Date(2026, 8, 25, 11, 0, 8, 0, time.UTC))
+	englishFallback, err := database.GetPresentationIncident(ctx, 1, PresentationScope{PromptVersion: PipelineVersion, Language: "en"})
+	if err != nil || englishFallback.AITitleEN != "Legacy EN" {
+		t.Fatalf("English fallback while v2 translation is absent = %#v, err=%v", englishFallback, err)
+	}
+	advance, err = database.AdvancePipelineCycle(ctx, cycle, len(testPipelinePlans()), time.Date(2026, 8, 25, 11, 0, 7, 0, time.UTC))
+	if err != nil || !advance.Completed {
+		t.Fatalf("complete canonical replacement = %#v/%v", advance, err)
+	}
+	if queued, err := database.QueueTranslationsForRun(ctx, german.PresentationRunID, []TranslationPlan{{Language: "en", PromptVersion: "incident-translation-en-v1", Model: "translate:4b"}}, "manual", time.Date(2026, 8, 25, 11, 0, 8, 0, time.UTC)); err != nil || queued != 1 {
+		t.Fatalf("queue English replacement = %d/%v", queued, err)
+	}
+	translation, found, err := database.ClaimTranslationJob(ctx, false, time.Date(2026, 8, 25, 11, 0, 8, 0, time.UTC))
 	if err != nil || !found {
 		t.Fatalf("claim translation replacement = %#v/%t/%v", translation, found, err)
 	}
-	if err := database.CompletePipelineJob(ctx, translation, []PipelineValue{{Kind: "title_en", Value: "Staged EN"}, {Kind: "summary_en", Value: "Staged English summary."}}, translation.ModelIdentity, HashPipelineInput("en"), time.Date(2026, 8, 25, 11, 0, 9, 0, time.UTC)); err != nil {
+	if err := database.CompleteTranslationJob(ctx, translation, "Staged EN", "Staged English summary.", translation.ModelIdentity, translation.InputHash, time.Date(2026, 8, 25, 11, 0, 9, 0, time.UTC)); err != nil {
 		t.Fatal(err)
 	}
-	advance, err = database.AdvancePipelineCycle(ctx, cycle, 3, time.Date(2026, 8, 25, 11, 0, 10, 0, time.UTC))
-	if err != nil || !advance.Completed {
-		t.Fatalf("complete replacement = %#v/%v", advance, err)
-	}
-	record, err = database.GetPresentationIncident(ctx, 1, PresentationScope{PromptVersion: PipelineVersion})
+	record, err = database.GetPresentationIncident(ctx, 1, PresentationScope{PromptVersion: PipelineVersion, Language: "en"})
 	if err != nil || record.AITitleEN != "Staged EN" {
 		t.Fatalf("complete staged replacement = %#v, err=%v", record, err)
 	}
