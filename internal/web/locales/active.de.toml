@@ -254,14 +254,11 @@ other = "Altsystem"
 [Generated]
 other = "Erstellt"
 
-[MachineGenerated]
-other = "Maschinell erstellt"
-
 [AISummary]
 other = "KI-generierte Zusammenfassung"
 
 [VerifySource]
-other = "Wichtige Angaben bitte anhand der offiziellen Quelle prüfen."
+other = "Wichtige Angaben bitte anhand der aktuellen offiziellen Informationen prüfen."
 
 [OriginalGerman]
 other = "Deutscher Originaltext"

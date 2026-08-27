@@ -27,11 +27,8 @@
   {{if .Incident.Record.HasAI}}
   {{/* Accepted canonical or translated presentation shown to readers. */}}
   <section class="px-5 py-7 sm:px-8 sm:py-9" aria-labelledby="ai-summary-heading">
-    <div class="grid gap-2 border-l-3 border-civic pl-4 sm:grid-cols-[minmax(0,1fr)_15rem] sm:items-end">
-      <div><p class="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-civic">{{t .Lang "MachineGenerated"}}</p><h2 id="ai-summary-heading" class="mt-1 font-serif text-2xl font-bold">{{t .Lang "AISummary"}}</h2></div>
-      <p class="text-sm leading-relaxed text-muted sm:text-right">{{t .Lang "VerifySource"}}</p>
-    </div>
-    <div class="prose-copy mt-7 max-w-3xl" lang="{{.Incident.ContentLanguage}}"><p class="text-lg leading-relaxed text-muted">{{.Incident.Summary}}</p></div>
+    <h2 id="ai-summary-heading" class="border-l-3 border-civic pl-4 text-sm font-semibold leading-6 text-muted sm:text-base"><span class="font-extrabold text-civic">{{t .Lang "AISummary"}}.</span> {{t .Lang "VerifySource"}}</h2>
+    <div class="prose-copy mt-5 max-w-3xl" lang="{{.Incident.ContentLanguage}}"><p class="text-lg leading-relaxed text-muted">{{.Incident.Summary}}</p></div>
     {{if .Incident.PublicAssistance}}<aside class="mt-6 rounded-md border border-alert/30 bg-alert-soft px-4 py-3" aria-label="{{t .Lang "PublicAssistance"}}"><p class="font-bold text-alert">{{.Incident.PublicAssistanceLabel}}</p>{{if .Incident.PublicAssistanceTypes}}<ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">{{range .Incident.PublicAssistanceTypes}}<li>{{.}}</li>{{end}}</ul>{{end}}<p class="mt-2 text-sm text-muted">{{t .Lang "PublicAssistanceSourceCopy"}}</p></aside>{{end}}
   </section>
 

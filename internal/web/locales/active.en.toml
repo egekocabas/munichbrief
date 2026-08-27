@@ -254,14 +254,11 @@ other = "Legacy pipeline"
 [Generated]
 other = "Generated"
 
-[MachineGenerated]
-other = "Machine-generated"
-
 [AISummary]
 other = "AI-generated summary"
 
 [VerifySource]
-other = "Verify important details against the official source."
+other = "Verify important details against the latest official information."
 
 [OriginalGerman]
 other = "Original German text"

@@ -310,6 +310,7 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 		"German presentation", processing.GermanPresentationPromptVersion,
 		"English translation", "translate:4b", processing.EnglishTranslationPromptVersion,
 		"Time stated in report", "24 August 2026, 22:30", "Report kind", "Incident", "Police request public assistance",
+		"AI-generated summary", "Verify important details against the latest official information.",
 		`aria-label="Public assistance"`,
 	} {
 		if !strings.Contains(english.Body.String(), expected) {
@@ -319,10 +320,13 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	if count := strings.Count(english.Body.String(), ">Crash at Harras</"); count != 1 {
 		t.Errorf("English detail renders the incident heading %d times, want 1", count)
 	}
+	if strings.Contains(english.Body.String(), "Machine-generated") {
+		t.Error("English detail unexpectedly renders the redundant machine-generated label")
+	}
 
 	germanDetail := httptest.NewRecorder()
 	handler.ServeHTTP(germanDetail, httptest.NewRequest(http.MethodGet, "/de/incidents/"+formatID(incidentID), nil))
-	for _, expected := range []string{"Kategorie", "Verkehr", "Gebiet", "Harras", "Vorfallsmetadaten", "Deutsche Darstellung", "qwen3.5:4b", "Zeitangabe in der Meldung", "24. August 2026, 22:30", "Polizei bittet um Mithilfe"} {
+	for _, expected := range []string{"Kategorie", "Verkehr", "Gebiet", "Harras", "Vorfallsmetadaten", "Deutsche Darstellung", "qwen3.5:4b", "Zeitangabe in der Meldung", "24. August 2026, 22:30", "Polizei bittet um Mithilfe", "KI-generierte Zusammenfassung", "Wichtige Angaben bitte anhand der aktuellen offiziellen Informationen prüfen."} {
 		if !strings.Contains(germanDetail.Body.String(), expected) {
 			t.Errorf("German detail body does not contain %q", expected)
 		}
