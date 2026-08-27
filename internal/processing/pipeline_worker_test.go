@@ -81,7 +81,7 @@ func (g pipelineTestGenerator) GenerateStep(_ context.Context, step StepDefiniti
 	if translationCallback != nil {
 		translationCallback()
 	}
-	return StepOutput{TitleEN: "Safe title", SummaryEN: "Safe summary."}, g.model, nil
+	return StepOutput{Translation: &TranslatedPresentation{Title: "Safe title", Summary: "Safe summary."}}, g.model, nil
 }
 
 func (p *pipelineTestProvider) callCount(step string) int {

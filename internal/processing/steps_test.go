@@ -21,7 +21,7 @@ func TestRegisteredPipelineStepsAreStableAndOrdered(t *testing.T) {
 		t.Fatalf("registered step identities = %v", StepKeys())
 	}
 	translations := RegisteredTranslations()
-	if len(translations) != 1 || translations[0].Language != EnglishLanguage || translations[0].PromptVersion != EnglishTranslationPromptVersion || translations[0].Result == nil {
+	if len(translations) != 1 || translations[0].Language != EnglishLanguage || translations[0].PromptVersion != EnglishTranslationPromptVersion || translations[0].Step.OutputDecoder == nil {
 		t.Fatalf("registered translations = %#v", translations)
 	}
 	if PipelineVersion != "incident-pipeline-v2" {
@@ -211,8 +211,15 @@ func TestEnglishTranslationReceivesOnlyDeclaredGermanPresentation(t *testing.T) 
 		"original_title": "private original title", "incident_body": "private original body",
 		"title_de": "Sicherer Titel", "summary_de": "Sichere Zusammenfassung.",
 	}})
-	if err != nil || output.TitleEN != "Safe title" {
+	if err != nil || output.Translation == nil || output.Translation.Title != "Safe title" || output.Translation.Summary != "Safe summary." {
 		t.Fatalf("translation output = %#v, err=%v", output, err)
+	}
+}
+
+func TestEnglishTranslationRejectsUndeclaredOutputFields(t *testing.T) {
+	translation, _ := TranslationByLanguage(EnglishLanguage)
+	if _, err := translation.Step.OutputDecoder(`{"title_en":"Safe title","summary_en":"Safe summary.","extra":"refuse"}`); err == nil {
+		t.Fatal("English translation decoder accepted an undeclared field")
 	}
 }
 

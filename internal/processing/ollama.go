@@ -142,14 +142,13 @@ func (c *OllamaClient) GenerateStep(ctx context.Context, step StepDefinition, in
 		return StepOutput{}, "", err
 	}
 	var output StepOutput
-	decoder := json.NewDecoder(strings.NewReader(content))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&output); err != nil {
-		return StepOutput{}, "", errorOf(ErrorOutput, "decode structured %s output: %v", step.Key, err)
+	if step.OutputDecoder != nil {
+		output, err = step.OutputDecoder(content)
+	} else {
+		err = decodeStrictJSON(content, &output)
 	}
-	var trailing any
-	if err := decoder.Decode(&trailing); err != io.EOF {
-		return StepOutput{}, "", errorOf(ErrorOutput, "structured model output contains trailing content")
+	if err != nil {
+		return StepOutput{}, "", errorOf(ErrorOutput, "decode structured %s output: %v", step.Key, err)
 	}
 	if err := ValidateStepOutput(step, requestInput, &output); err != nil {
 		return StepOutput{}, "", err

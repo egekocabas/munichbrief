@@ -510,8 +510,10 @@ func (w *PipelineWorker) processTranslationJob(ctx context.Context, job store.Tr
 		return w.handleTranslationFailure(ctx, job, err)
 	}
 	completed := w.clock()
-	title, summary := translation.Result(output)
-	if err := w.repository.CompleteTranslationJob(ctx, job, title, summary, modelIdentity, inputHash, completed); err != nil {
+	if output.Translation == nil {
+		return w.handleTranslationFailure(ctx, job, errorOf(ErrorOutput, "translation returned no presentation"))
+	}
+	if err := w.repository.CompleteTranslationJob(ctx, job, output.Translation.Title, output.Translation.Summary, modelIdentity, inputHash, completed); err != nil {
 		return w.handleTranslationFailure(ctx, job, err)
 	}
 	w.closeCircuit(TranslationModelStep, job.ModelIdentity)

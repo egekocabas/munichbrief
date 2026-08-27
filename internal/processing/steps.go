@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"sort"
 	"strings"
 	"time"
@@ -35,6 +36,7 @@ type StepDefinition struct {
 	SystemPrompt  string
 	Schema        json.RawMessage
 	Generator     func(StepInput) (StepInput, string, error)
+	OutputDecoder func(string) (StepOutput, error)
 	Validator     func(StepInput, *StepOutput) error
 	OutputValues  func(StepOutput) ([]store.PipelineValue, error)
 }
@@ -46,7 +48,6 @@ type TranslationDefinition struct {
 	DisplayName   string
 	PromptVersion string
 	Step          StepDefinition
-	Result        func(StepOutput) (title, summary string)
 }
 
 // StepInput contains only values declared by a step's InputKinds contract.
@@ -85,21 +86,27 @@ func (i StepInput) clone() StepInput {
 }
 
 type StepOutput struct {
-	TitleDE                string   `json:"title_de,omitempty"`
-	SummaryDE              string   `json:"summary_de,omitempty"`
-	Category               string   `json:"category,omitempty"`
-	AreaName               *string  `json:"area_name"`
-	AreaType               *string  `json:"area_type"`
-	EventStartDate         *string  `json:"event_start_date"`
-	EventStartTime         *string  `json:"event_start_time"`
-	EventDayPart           *string  `json:"event_day_part"`
-	ReportKind             string   `json:"report_kind,omitempty"`
-	PublicAssistanceStatus string   `json:"public_assistance_status,omitempty"`
-	PublicAssistanceTypes  []string `json:"public_assistance_types,omitempty"`
-	TitleEN                string   `json:"title_en,omitempty"`
-	SummaryEN              string   `json:"summary_en,omitempty"`
-	PrivacyStatus          string   `json:"privacy_status,omitempty"`
-	PrivacyFlags           []string `json:"privacy_flags,omitempty"`
+	TitleDE                string                  `json:"title_de,omitempty"`
+	SummaryDE              string                  `json:"summary_de,omitempty"`
+	Category               string                  `json:"category,omitempty"`
+	AreaName               *string                 `json:"area_name"`
+	AreaType               *string                 `json:"area_type"`
+	EventStartDate         *string                 `json:"event_start_date"`
+	EventStartTime         *string                 `json:"event_start_time"`
+	EventDayPart           *string                 `json:"event_day_part"`
+	ReportKind             string                  `json:"report_kind,omitempty"`
+	PublicAssistanceStatus string                  `json:"public_assistance_status,omitempty"`
+	PublicAssistanceTypes  []string                `json:"public_assistance_types,omitempty"`
+	PrivacyStatus          string                  `json:"privacy_status,omitempty"`
+	PrivacyFlags           []string                `json:"privacy_flags,omitempty"`
+	Translation            *TranslatedPresentation `json:"-"`
+}
+
+// TranslatedPresentation is the normalized result returned by a translation
+// definition after decoding its structured model response.
+type TranslatedPresentation struct {
+	Title   string
+	Summary string
 }
 
 type StepGenerator interface {
@@ -176,10 +183,10 @@ var registeredSteps = []StepDefinition{
 var registeredTranslations = []TranslationDefinition{{
 	Language: EnglishLanguage, DisplayName: "English", PromptVersion: EnglishTranslationPromptVersion,
 	Step: StepDefinition{Key: EnglishTranslationStep, DisplayName: "English translation", PromptVersion: EnglishTranslationPromptVersion,
-		InputKinds: []string{"title_de", "summary_de"}, OutputKinds: []string{"title_en", "summary_en"},
+		InputKinds: []string{"title_de", "summary_de"}, OutputKinds: []string{"title", "summary"},
 		SystemPrompt: mustPromptByVersion(EnglishTranslationPromptVersion).SystemPrompt, Schema: englishTranslationSchema,
-		Generator: generateEnglishTranslationInput, Validator: func(_ StepInput, output *StepOutput) error { return validateEnglishTranslation(output) }, OutputValues: englishTranslationValues},
-	Result: func(output StepOutput) (string, string) { return output.TitleEN, output.SummaryEN },
+		Generator: translationInputGenerator(EnglishTranslationPromptVersion), OutputDecoder: translationOutputDecoder("title_en", "summary_en"),
+		Validator: func(_ StepInput, output *StepOutput) error { return validateTranslation(output) }},
 }}
 
 func RegisteredSteps() []StepDefinition {
@@ -329,15 +336,55 @@ func generateGermanPresentationInput(input StepInput) (StepInput, string, error)
 	return requestInput, promptUserMessage(GermanPresentationPromptVersion, string(encoded)), nil
 }
 
-func generateEnglishTranslationInput(input StepInput) (StepInput, string, error) {
-	encoded, err := json.Marshal(struct {
-		TitleDE   string `json:"title_de"`
-		SummaryDE string `json:"summary_de"`
-	}{input.Value("title_de"), input.Value("summary_de")})
-	if err != nil {
-		return StepInput{}, "", errorOf(ErrorOutput, "encode translation input: %v", err)
+func translationInputGenerator(promptVersion string) func(StepInput) (StepInput, string, error) {
+	return func(input StepInput) (StepInput, string, error) {
+		encoded, err := json.Marshal(struct {
+			TitleDE   string `json:"title_de"`
+			SummaryDE string `json:"summary_de"`
+		}{input.Value("title_de"), input.Value("summary_de")})
+		if err != nil {
+			return StepInput{}, "", errorOf(ErrorOutput, "encode translation input: %v", err)
+		}
+		return input, promptUserMessage(promptVersion, string(encoded)), nil
 	}
-	return input, promptUserMessage(EnglishTranslationPromptVersion, string(encoded)), nil
+}
+
+func translationOutputDecoder(titleField, summaryField string) func(string) (StepOutput, error) {
+	return func(content string) (StepOutput, error) {
+		var fields map[string]json.RawMessage
+		if err := decodeStrictJSON(content, &fields); err != nil {
+			return StepOutput{}, err
+		}
+		if len(fields) != 2 {
+			return StepOutput{}, errors.New("translation output must contain exactly title and summary")
+		}
+		var result TranslatedPresentation
+		title, titleFound := fields[titleField]
+		summary, summaryFound := fields[summaryField]
+		if !titleFound || !summaryFound {
+			return StepOutput{}, errors.New("translation output is missing its registered title or summary field")
+		}
+		if err := json.Unmarshal(title, &result.Title); err != nil {
+			return StepOutput{}, fmt.Errorf("decode translated title: %w", err)
+		}
+		if err := json.Unmarshal(summary, &result.Summary); err != nil {
+			return StepOutput{}, fmt.Errorf("decode translated summary: %w", err)
+		}
+		return StepOutput{Translation: &result}, nil
+	}
+}
+
+func decodeStrictJSON(content string, destination any) error {
+	decoder := json.NewDecoder(strings.NewReader(content))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(destination); err != nil {
+		return err
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); err != io.EOF {
+		return errors.New("structured model output contains trailing content")
+	}
+	return nil
 }
 
 func validateIncidentMetadata(input StepInput, output *StepOutput) error {
@@ -433,14 +480,17 @@ func validateGermanPresentation(_ StepInput, output *StepOutput) error {
 	return validatePublicText(output.TitleDE + "\n" + output.SummaryDE)
 }
 
-func validateEnglishTranslation(output *StepOutput) error {
-	if err := normalizeLimitedField("title_en", &output.TitleEN, 90); err != nil {
+func validateTranslation(output *StepOutput) error {
+	if output.Translation == nil {
+		return errorOf(ErrorOutput, "model output contains no translated presentation")
+	}
+	if err := normalizeLimitedField("translated title", &output.Translation.Title, 90); err != nil {
 		return err
 	}
-	if err := normalizeLimitedField("summary_en", &output.SummaryEN, 600); err != nil {
+	if err := normalizeLimitedField("translated summary", &output.Translation.Summary, 600); err != nil {
 		return err
 	}
-	return validatePublicText(output.TitleEN + "\n" + output.SummaryEN)
+	return validatePublicText(output.Translation.Title + "\n" + output.Translation.Summary)
 }
 
 func normalizeLimitedField(name string, value *string, limit int) error {
@@ -522,10 +572,6 @@ func germanPresentationValues(output StepOutput) ([]store.PipelineValue, error) 
 		return nil, fmt.Errorf("encode privacy flags: %w", err)
 	}
 	return []store.PipelineValue{{Kind: "title_de", Value: output.TitleDE}, {Kind: "summary_de", Value: output.SummaryDE}, {Kind: "privacy_status", Value: output.PrivacyStatus}, {Kind: "privacy_flags", Value: string(flags)}}, nil
-}
-
-func englishTranslationValues(output StepOutput) ([]store.PipelineValue, error) {
-	return []store.PipelineValue{{Kind: "title_en", Value: output.TitleEN}, {Kind: "summary_en", Value: output.SummaryEN}}, nil
 }
 
 func CategoryLabel(code, language string) string {
