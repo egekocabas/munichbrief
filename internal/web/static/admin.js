@@ -142,7 +142,8 @@
     if (events) {
       events.replaceChildren(...(queue.recent_events || []).map((event) => {
         const item = document.createElement("li");
-        item.textContent = `Cycle #${event.cycle_id} · incident #${event.incident_id} · ${event.step_key} · ${event.status}${event.failure_kind ? ` (${event.failure_kind})` : ""}`;
+        const context = event.cycle_id ? `Cycle #${event.cycle_id}` : "Independent";
+        item.textContent = `${context} · incident #${event.incident_id} · ${event.step_key} · ${event.status}${event.failure_kind ? ` (${event.failure_kind})` : ""}`;
         return item;
       }));
       if (!events.childElementCount) {

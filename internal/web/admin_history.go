@@ -40,8 +40,8 @@ func (s *Server) adminHistory(response http.ResponseWriter, request *http.Reques
 	if len(page.Entries) > 0 {
 		first := page.Entries[0]
 		last := page.Entries[len(page.Entries)-1]
-		data.NewerURL = pipelineHistoryURL("after", store.PipelineHistoryCursor{UpdatedAt: first.UpdatedAt, JobID: first.JobID})
-		data.OlderURL = pipelineHistoryURL("before", store.PipelineHistoryCursor{UpdatedAt: last.UpdatedAt, JobID: last.JobID})
+		data.NewerURL = pipelineHistoryURL("after", store.PipelineHistoryCursor{UpdatedAt: first.UpdatedAt, Kind: first.Kind, JobID: first.JobID})
+		data.OlderURL = pipelineHistoryURL("before", store.PipelineHistoryCursor{UpdatedAt: last.UpdatedAt, Kind: last.Kind, JobID: last.JobID})
 	}
 	response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	response.Header().Set("Cache-Control", "private, no-store")
@@ -72,21 +72,30 @@ func requestedPipelineHistoryCursor(request *http.Request, name string) (*store.
 		return nil, err
 	}
 	parts := strings.Split(string(decoded), ":")
-	if len(parts) != 2 {
+	if len(parts) != 2 && len(parts) != 3 {
 		return nil, errors.New("invalid cursor fields")
 	}
 	nanoseconds, err := strconv.ParseInt(parts[0], 10, 64)
 	if err != nil {
 		return nil, err
 	}
-	jobID, err := strconv.ParseInt(parts[1], 10, 64)
+	kind := "cycle"
+	jobIDPart := parts[1]
+	if len(parts) == 3 {
+		kind = parts[1]
+		jobIDPart = parts[2]
+	}
+	if kind != "cycle" && kind != "translation" {
+		return nil, errors.New("invalid cursor kind")
+	}
+	jobID, err := strconv.ParseInt(jobIDPart, 10, 64)
 	if err != nil || jobID < 1 {
 		return nil, errors.New("invalid cursor job")
 	}
-	return &store.PipelineHistoryCursor{UpdatedAt: time.Unix(0, nanoseconds).UTC(), JobID: jobID}, nil
+	return &store.PipelineHistoryCursor{UpdatedAt: time.Unix(0, nanoseconds).UTC(), Kind: kind, JobID: jobID}, nil
 }
 
 func pipelineHistoryURL(direction string, cursor store.PipelineHistoryCursor) string {
-	payload := strconv.FormatInt(cursor.UpdatedAt.UnixNano(), 10) + ":" + strconv.FormatInt(cursor.JobID, 10)
+	payload := strconv.FormatInt(cursor.UpdatedAt.UnixNano(), 10) + ":" + cursor.Kind + ":" + strconv.FormatInt(cursor.JobID, 10)
 	return "/admin/history?" + direction + "=" + base64.RawURLEncoding.EncodeToString([]byte(payload))
 }

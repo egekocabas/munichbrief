@@ -132,24 +132,29 @@ type StepQueueStats struct {
 // PipelineEvent is a sanitized recent transition for the review status view.
 type PipelineEvent struct {
 	At          time.Time `json:"at"`
+	Kind        string    `json:"kind"`
 	CycleID     int64     `json:"cycle_id"`
 	IncidentID  int64     `json:"incident_id"`
 	StepKey     string    `json:"step_key"`
+	Language    string    `json:"language,omitempty"`
 	Status      string    `json:"status"`
 	FailureKind string    `json:"failure_kind,omitempty"`
 }
 
-// PipelineHistoryEntry is the review-facing persisted state of one pipeline
-// step job. It intentionally excludes incident text, generated values, and
-// internal error messages.
+// PipelineHistoryEntry is the review-facing persisted state of one canonical
+// or translation job. It intentionally excludes incident text, generated
+// values, and internal error messages.
 type PipelineHistoryEntry struct {
 	JobID         int64
 	UpdatedAt     time.Time
+	Kind          string
 	CycleID       int64
 	CycleKind     string
 	CycleStatus   string
 	IncidentID    int64
 	StepKey       string
+	Language      string
+	RequestKind   string
 	Status        string
 	AttemptCount  int
 	FailureKind   string
@@ -161,6 +166,7 @@ type PipelineHistoryEntry struct {
 // pipeline history.
 type PipelineHistoryCursor struct {
 	UpdatedAt time.Time
+	Kind      string
 	JobID     int64
 }
 

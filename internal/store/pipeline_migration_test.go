@@ -75,6 +75,10 @@ func TestStagedMigrationMovesPreferenceAndPreservesLegacyPresentation(t *testing
 		t.Fatal(err)
 	}
 	defer database.Close()
+	var historyIndex int
+	if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='presentation_translations_history_idx'`).Scan(&historyIndex); err != nil || historyIndex != 1 {
+		t.Fatalf("translation history index = %d/%v", historyIndex, err)
+	}
 	settings, err := database.PipelineStepSettings(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -132,6 +136,15 @@ func TestStagedMigrationMovesPreferenceAndPreservesLegacyPresentation(t *testing
 	var importedTranslations int
 	if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM presentation_translations WHERE presentation_run_id=(SELECT id FROM presentation_runs WHERE legacy=1 LIMIT 1) AND language_code='en' AND request_kind='imported' AND status='succeeded'`).Scan(&importedTranslations); err != nil || importedTranslations != 1 {
 		t.Fatalf("imported legacy translation = %d/%v", importedTranslations, err)
+	}
+	history, err := database.ListPipelineHistory(ctx, "fixture", 100, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range history.Entries {
+		if entry.Kind == pipelineHistoryKindTranslation && entry.RequestKind == "imported" {
+			t.Fatalf("imported translation duplicated operational history: %#v", entry)
+		}
 	}
 	incidentID := int64(1)
 	request, err := database.CreateManualPipelineCycle(ctx, "fixture", testPipelinePlans(), "translate:4b", &incidentID, false, time.Date(2026, 8, 25, 11, 0, 0, 0, time.UTC))
