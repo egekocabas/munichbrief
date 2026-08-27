@@ -1,4 +1,4 @@
-{{define "title"}}{{.Incident.Title}}{{end}}
+{{define "title"}}{{.Incident.Title}} · MunichBrief{{end}}
 {{define "detail-official-source-link"}}<div class="mt-6 flex justify-end"><a class="inline-flex min-h-11 items-center justify-center rounded-md bg-civic px-4 text-sm font-extrabold text-white no-underline hover:bg-civic-dark" href="{{.Incident.Record.SourceURL}}" target="_blank" rel="noopener noreferrer">{{t .Lang "OpenOfficialPoliceRelease"}} <span class="ml-2" aria-hidden="true">↗</span></a></div>{{end}}
 {{define "content"}}
 <nav class="py-5 text-sm" aria-label="{{t .Lang "Breadcrumb"}}"><a class="font-bold text-civic no-underline hover:text-civic-dark" href="{{.BackURL}}"><span aria-hidden="true">←</span> {{t .Lang "Back"}}</a></nav>

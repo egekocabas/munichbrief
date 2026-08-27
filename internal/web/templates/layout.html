@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="{{t .Lang "SiteDescription"}}">
   <meta name="htmx-config" content='{"allowEval":false,"selfRequestsOnly":true}'>
-  <title>{{template "title" .}} · MunichBrief</title>
+  <title>{{template "title" .}}</title>
   {{if .CanonicalURL}}<link rel="canonical" href="{{.CanonicalURL}}">{{end}}
   {{range .LanguageAlternates}}<link rel="alternate" hreflang="{{.Code}}" href="{{.URL}}">{{end}}
   {{if .PreviousCanonicalURL}}<link rel="prev" href="{{.PreviousCanonicalURL}}">{{end}}

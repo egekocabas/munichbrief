@@ -296,6 +296,9 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 			t.Errorf("timeline body does not contain %q", expected)
 		}
 	}
+	if !strings.Contains(timeline.Body.String(), "<title>MunichBrief</title>") {
+		t.Error("timeline does not render the concise MunichBrief document title")
+	}
 	for _, unexpected := range []string{"Police request public assistance", "Photo or video material", "Witness observations"} {
 		if strings.Contains(timeline.Body.String(), unexpected) {
 			t.Errorf("timeline body unexpectedly contains public assistance detail %q", unexpected)
@@ -319,6 +322,9 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	}
 	if count := strings.Count(english.Body.String(), ">Crash at Harras</"); count != 1 {
 		t.Errorf("English detail renders the incident heading %d times, want 1", count)
+	}
+	if !strings.Contains(english.Body.String(), "<title>Crash at Harras · MunichBrief</title>") {
+		t.Error("English detail does not retain the incident-specific document title")
 	}
 	if strings.Contains(english.Body.String(), "Machine-generated") {
 		t.Error("English detail unexpectedly renders the redundant machine-generated label")
