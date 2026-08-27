@@ -22,8 +22,8 @@ Visit the live reader at [munichbrief.de](https://munichbrief.de).
 - Local-first Go application with server-rendered HTML and SQLite.
 - Deterministic fixture mode for offline development and tests.
 - Bounded, low-rate ingestion of RSS-linked official articles.
-- Metadata-first Ollama pipeline: structured incident extraction, a canonical
-  privacy-safe German presentation, then English translation.
+- Metadata-first Ollama processing: a two-stage canonical German pipeline plus
+  independent per-language translation jobs.
 - Fail-closed public presentation: retained source text is never rendered on a
   public host.
 - Protected operational review, structured logs, health checks, and Prometheus
@@ -69,8 +69,10 @@ flowchart LR
     RSS["Official Munich RSS feed"] --> Sync["Bounded synchronizer"]
     Sync --> Parser["Incident parser"]
     Parser --> DB[("SQLite")]
-	DB --> Pipeline["Metadata → German → English AI pipeline"]
+	DB --> Pipeline["Canonical: metadata → German"]
     Pipeline --> DB
+	DB --> Translation["Independent translation jobs"]
+	Translation --> DB
     DB --> Reader["German and English reader"]
     Reader --> Source["Authoritative source links"]
 ```

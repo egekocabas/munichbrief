@@ -37,25 +37,28 @@ The reader listens on `127.0.0.1:8080` and metrics listen separately on
 metrics listener provides `/metrics`.
 
 The AI worker automatically considers incidents created after the persisted v2
-cutover. It freezes a cycle, processes all metadata-extraction jobs, switches to
-German-presentation jobs, and then processes English-translation jobs. Older
+cutover. It freezes a canonical cycle, processes all metadata-extraction jobs,
+and switches to German-presentation jobs. Each German result becomes available
+immediately; its English job enters a separate durable queue. Older
 incidents retain completed v1 or legacy presentations unless an operator
 explicitly selects one or uses “Reprocess everything.” “Process all
 unprocessed” does not upgrade an incident with a valid completed presentation.
 The five-second AI interval is an idle queue check, while the ten-minute AI
 timeout bounds a single Ollama request. Unless immediate mode is enabled, new
 Ollama requests start only during the configured Europe/Berlin processing
-window; a frozen cycle is allowed to finish all stages after the window closes.
+window; a frozen canonical cycle is allowed to finish after the window closes.
 An explicit admin or `ai-process` request persists manual intent and bypasses
 only this window. Processing remains sequential and retains privacy validation,
 the circuit breaker, and normal retry delays. A command-line request is picked
 up by the running server on its next idle worker check.
 
-The protected admin dashboard stores one preferred model for every registered
-pipeline step. Fresh databases start unconfigured; upgraded databases migrate
-the former German preference to both incident metadata and German presentation;
-English remains independently configured. The dashboard displays the automatic
-v2 cutover. The server refreshes Ollama's
+The protected admin dashboard stores one preferred model for each canonical
+step and one shared preferred model for all registered translations. Fresh
+databases start unconfigured; upgraded databases migrate the former German
+preference to both canonical steps and rename the former English preference to
+the shared translation setting. A missing translation model pauses translations
+without pausing German processing. The dashboard displays the automatic v2
+cutover. The server refreshes Ollama's
 `/api/tags` every 30 seconds; scheduled processing pauses until all required
 models are installed, while priority manual cycles retain their per-step model
 choices. Catalog failure pauses all AI calls but does not affect reader
@@ -89,10 +92,12 @@ negotiate a privacy-safe Markdown representation through
 
 The optional `/admin` dashboard shows live cycle and per-step queue state,
 independently paginated incident lists, retained German originals, and both
-generated languages. It also shows raw and formatted metadata, per-stage
-provenance, the v1/v2/legacy presentation source, and the scheduling cutover.
-Its confirmed actions can create a full-pipeline cycle
-for one incident, every unprocessed incident, or every current incident. The
+generated languages. It also shows raw and formatted metadata, separate
+canonical and translation provenance and queue states, the v1/v2/legacy
+presentation source, and the scheduling cutover. Its confirmed actions can
+create a canonical cycle for one incident, every canonically unprocessed
+incident, or every current incident, retry one missing/failed translation
+immediately, or backfill one language's historical presentations. The
 application does not authenticate users itself: enable the dashboard only when
 the ingress protects `/admin*` and `/api/admin*`, and keep both prefixes absent
 from public ingress.

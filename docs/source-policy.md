@@ -54,6 +54,11 @@ case numbers, identifying descriptions, or instructions; readers are directed
 to the official source. Missing- and wanted-person input continues to use a
 generic identity-free replacement even when that reduces metadata completeness.
 
+Only an accepted privacy-safe German title and summary cross into a translation
+job. Translation records never contain retained source text, contact details,
+or identity data. A translation failure cannot expose the original or delay the
+canonical German presentation.
+
 The presumption of innocence applies. A generated summary never replaces the
 official source.
 

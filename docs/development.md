@@ -100,11 +100,11 @@ go test -timeout 25m \
 
 These review-mode screenshots use only the repository's synthetic fixture
 content. They demonstrate the localized incident-time and public-assistance
-presentation and the generic three-step admin controls.
+presentation and the two canonical steps with independent translation controls.
 
 ![Synthetic incident timing and public-assistance cards](screenshots/metadata-pipeline-v2-assistance.png)
 
-![Three registered pipeline steps in the admin view](screenshots/metadata-pipeline-v2-admin.png)
+![Canonical pipeline and translation controls in the admin view](screenshots/metadata-pipeline-v2-admin.png)
 
 ## Validation
 
