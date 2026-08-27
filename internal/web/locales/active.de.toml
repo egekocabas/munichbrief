@@ -352,3 +352,15 @@ other = "Unabhängigkeit und rechtliche Prüfung"
 
 [IndependenceLegalReviewCopy]
 other = "MunichBrief ist unabhängig von der Bayerischen Polizei. Technische Schutzmaßnahmen ersetzen keine rechtliche Prüfung. Aufbewahrung, Rechtsgrundlage, Daten zu Straftaten und anwendbare journalistische Ausnahmen erfordern eine fortlaufende Prüfung."
+
+[ContactHeading]
+other = "Fragen, Korrekturen oder Feedback"
+
+[ContactPublicLead]
+other = "Einen Fehler gefunden oder einen Vorschlag?"
+
+[ContactIssueLink]
+other = "Auf GitHub melden"
+
+[ContactPrivateLead]
+other = "Bei Anliegen zum Datenschutz oder anderen Themen, die nicht öffentlich geteilt werden sollten, schreiben Sie an"

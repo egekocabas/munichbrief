@@ -352,3 +352,15 @@ other = "Independence and legal review"
 
 [IndependenceLegalReviewCopy]
 other = "MunichBrief is independent from the Bavarian Police. Technical safeguards do not replace legal review. Retention, lawful basis, offence-related data, and applicable journalistic exceptions require ongoing review."
+
+[ContactHeading]
+other = "Questions, corrections, or feedback"
+
+[ContactPublicLead]
+other = "Found an error or have a suggestion?"
+
+[ContactIssueLink]
+other = "Open an issue on GitHub"
+
+[ContactPrivateLead]
+other = "For privacy-related concerns or anything that should not be shared publicly, email"

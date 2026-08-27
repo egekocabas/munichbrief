@@ -417,5 +417,8 @@ func (s *Server) renderAboutMarkdown(response http.ResponseWriter, data aboutPag
 			fmt.Fprintf(&builder, "\n%s\n", markdownText(s.localization.Text(data.Lang, key)))
 		}
 	}
+	fmt.Fprintf(&builder, "\n## %s\n", markdownText(s.localization.Text(data.Lang, "ContactHeading")))
+	fmt.Fprintf(&builder, "\n%s [%s](https://github.com/egekocabas/munichbrief/issues).\n", markdownText(s.localization.Text(data.Lang, "ContactPublicLead")), markdownText(s.localization.Text(data.Lang, "ContactIssueLink")))
+	fmt.Fprintf(&builder, "\n%s [ege.kocabas.dev@gmail.com](mailto:ege.kocabas.dev@gmail.com).\n", markdownText(s.localization.Text(data.Lang, "ContactPrivateLead")))
 	_, _ = io.WriteString(response, builder.String())
 }
