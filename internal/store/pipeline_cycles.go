@@ -159,11 +159,9 @@ func (s *Store) HasQueuedManualCycle(ctx context.Context) (bool, error) {
 	return count > 0, nil
 }
 
-// InterruptBlockedScheduledCycle closes a blocked scheduled cycle while moving
-// every unfinished item, its accepted outputs, and its remaining jobs into a
-// continuation cycle. The continuation retains the original window lease.
-// InterruptBlockedScheduledCycle yields automatic work to queued manual work
-// without losing unfinished targets; the remainder becomes a continuation cycle.
+// InterruptBlockedScheduledCycle yields automatic work to a queued manual cycle
+// without losing unfinished targets. The continuation retains its window lease,
+// accepted outputs, and remaining jobs.
 func (s *Store) InterruptBlockedScheduledCycle(ctx context.Context, cycleID int64, now time.Time) (int64, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -171,9 +169,9 @@ func (s *Store) InterruptBlockedScheduledCycle(ctx context.Context, cycleID int6
 	}
 	defer tx.Rollback()
 	formatted := formatTime(now.UTC())
-	var sourceMode, kind, status string
+	var kind, status string
 	var activeStep int
-	if err := tx.QueryRowContext(ctx, `SELECT source_mode, kind, status, active_step FROM processing_cycles WHERE id = ?`, cycleID).Scan(&sourceMode, &kind, &status, &activeStep); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT kind, status, active_step FROM processing_cycles WHERE id = ?`, cycleID).Scan(&kind, &status, &activeStep); err != nil {
 		return 0, err
 	}
 	if kind != "scheduled" || status != "running" {
@@ -391,6 +389,10 @@ func createPipelineCycleTx(ctx context.Context, tx *sql.Tx, kind, sourceMode str
 			return 0, 0, fmt.Errorf("scan pipeline target: %w", err)
 		}
 		targets = append(targets, value)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return 0, 0, fmt.Errorf("iterate pipeline cycle targets: %w", err)
 	}
 	if err := rows.Close(); err != nil {
 		return 0, 0, err

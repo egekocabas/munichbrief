@@ -31,10 +31,13 @@ func TestTranslationJobsAreIndependentAuditableAndManualRetriesBypassWindow(t *t
 	if err != nil || queued != 1 {
 		t.Fatalf("queue scheduled translation = %d/%v", queued, err)
 	}
-	if _, found, err := database.ClaimTranslationJob(ctx, false, now); err != nil || found {
+	if _, found, err := database.ClaimTranslationJob(ctx, false, nil, now); err != nil || found {
 		t.Fatalf("scheduled translation escaped closed window: found=%t err=%v", found, err)
 	}
-	job, found, err := database.ClaimTranslationJob(ctx, true, now)
+	if _, found, err := database.ClaimTranslationJob(ctx, true, []string{"translate:a"}, now); err != nil || found {
+		t.Fatalf("blocked translation model was claimed: found=%t err=%v", found, err)
+	}
+	job, found, err := database.ClaimTranslationJob(ctx, true, nil, now)
 	if err != nil || !found || job.ModelIdentity != "translate:a" || job.TitleDE != "Sicherer Titel" {
 		t.Fatalf("claim frozen translation = %#v/%t/%v", job, found, err)
 	}
@@ -46,7 +49,7 @@ func TestTranslationJobsAreIndependentAuditableAndManualRetriesBypassWindow(t *t
 	if err != nil || queued != 1 {
 		t.Fatalf("queue manual retry = %d/%v", queued, err)
 	}
-	retry, found, err := database.ClaimTranslationJob(ctx, false, now.Add(2*time.Minute))
+	retry, found, err := database.ClaimTranslationJob(ctx, false, nil, now.Add(2*time.Minute))
 	if err != nil || !found || retry.RequestKind != "manual" || retry.ModelIdentity != "translate:b" {
 		t.Fatalf("manual retry did not bypass window = %#v/%t/%v", retry, found, err)
 	}
@@ -63,6 +66,61 @@ func TestTranslationJobsAreIndependentAuditableAndManualRetriesBypassWindow(t *t
 	}
 	if queued, err := database.QueueIncidentTranslation(ctx, incidentID, TranslationPlan{Language: "en", PromptVersion: plan.PromptVersion, Model: "translate:c"}, now.Add(4*time.Minute)); err != nil || queued != 0 {
 		t.Fatalf("model change rewrote completed translation = %d/%v", queued, err)
+	}
+}
+
+func TestManualTranslationIgnoresUnrecognizedCompletedPipelines(t *testing.T) {
+	ctx := context.Background()
+	database, err := Open(ctx, filepath.Join(t.TempDir(), "translation-canonical-selection.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 27, 10, 30, 0, 0, time.UTC)
+	insertPipelineDocuments(t, ctx, database, now, "one")
+	var incidentID int64
+	var sourceHash string
+	if err := database.db.QueryRowContext(ctx, `SELECT id,content_hash FROM incidents LIMIT 1`).Scan(&incidentID, &sourceHash); err != nil {
+		t.Fatal(err)
+	}
+	canonicalRun := insertCompletedPresentationRun(t, ctx, database, incidentID, sourceHash, PipelineVersion, now, map[string]string{"title_de": "Canonical", "summary_de": "Canonical summary."})
+	insertCompletedPresentationRun(t, ctx, database, incidentID, sourceHash, "unrecognized-pipeline", now.Add(time.Minute), map[string]string{"title_de": "Unrecognized", "summary_de": "Must not be translated."})
+
+	queued, err := database.QueueIncidentTranslation(ctx, incidentID, TranslationPlan{Language: "en", PromptVersion: "incident-translation-en-v1", Model: "translate:4b"}, now.Add(2*time.Minute))
+	if err != nil || queued != 1 {
+		t.Fatalf("queue canonical translation = %d/%v", queued, err)
+	}
+	job, found, err := database.ClaimTranslationJob(ctx, false, nil, now.Add(2*time.Minute))
+	if err != nil || !found || job.PresentationRunID != canonicalRun || job.TitleDE != "Canonical" {
+		t.Fatalf("selected translation run = %#v/%t/%v", job, found, err)
+	}
+}
+
+func TestTranslationClaimSkipsOnlyModelsWithOpenCircuits(t *testing.T) {
+	ctx := context.Background()
+	database, err := Open(ctx, filepath.Join(t.TempDir(), "translation-blocked-model.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 27, 10, 45, 0, 0, time.UTC)
+	insertPipelineDocuments(t, ctx, database, now, "one")
+	var incidentID int64
+	var sourceHash string
+	if err := database.db.QueryRowContext(ctx, `SELECT id,content_hash FROM incidents LIMIT 1`).Scan(&incidentID, &sourceHash); err != nil {
+		t.Fatal(err)
+	}
+	runID := insertCompletedPresentationRun(t, ctx, database, incidentID, sourceHash, PipelineVersion, now, map[string]string{"title_de": "Titel", "summary_de": "Zusammenfassung."})
+	plans := []TranslationPlan{
+		{Language: "en", PromptVersion: "incident-translation-en-v1", Model: "translate:unavailable"},
+		{Language: "test", PromptVersion: "incident-translation-test-v1", Model: "translate:ready"},
+	}
+	if queued, err := database.QueueTranslationsForRun(ctx, runID, plans, "manual", now); err != nil || queued != 2 {
+		t.Fatalf("queue translation models = %d/%v", queued, err)
+	}
+	job, found, err := database.ClaimTranslationJob(ctx, false, []string{"translate:unavailable"}, now)
+	if err != nil || !found || job.ModelIdentity != "translate:ready" {
+		t.Fatalf("claim around blocked model = %#v/%t/%v", job, found, err)
 	}
 }
 

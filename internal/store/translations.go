@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+// EnsureTranslationLanguages records the first automatic-enablement time for
+// each registered language without moving an existing language's cutover.
 func (s *Store) EnsureTranslationLanguages(ctx context.Context, languages []string, now time.Time) error {
 	formatted := formatTime(now.UTC())
 	for _, language := range languages {
@@ -70,8 +72,9 @@ func (s *Store) QueueIncidentTranslation(ctx context.Context, incidentID int64, 
 	err := s.db.QueryRowContext(ctx, `SELECT r.id FROM presentation_runs r
 		JOIN incidents i ON i.id=r.incident_id
 		WHERE i.id=? AND r.source_hash=i.content_hash AND r.status='complete'
+		AND (r.pipeline_version IN (?,?) OR r.legacy=1)
 		ORDER BY CASE r.pipeline_version WHEN ? THEN 0 WHEN ? THEN 1 ELSE 2 END,
-			r.completed_at DESC,r.id DESC LIMIT 1`, incidentID, PipelineVersion, PreviousPipelineVersion).Scan(&runID)
+			r.completed_at DESC,r.id DESC LIMIT 1`, incidentID, PipelineVersion, PreviousPipelineVersion, PipelineVersion, PreviousPipelineVersion).Scan(&runID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, ErrNotFound
 	}
@@ -114,8 +117,10 @@ func (s *Store) QueueMissingTranslations(ctx context.Context, sourceMode string,
 			JOIN incidents i ON i.id=r.incident_id
 			JOIN source_documents d ON d.id=i.source_document_id
 			WHERE ` + condition + ` AND r.source_hash=i.content_hash AND r.status='complete'
+			AND (r.pipeline_version IN ('` + PipelineVersion + `','` + PreviousPipelineVersion + `') OR r.legacy=1)
 			AND r.id=(SELECT candidate.id FROM presentation_runs candidate
 				WHERE candidate.incident_id=i.id AND candidate.source_hash=i.content_hash AND candidate.status='complete'
+				AND (candidate.pipeline_version IN ('` + PipelineVersion + `','` + PreviousPipelineVersion + `') OR candidate.legacy=1)
 				ORDER BY CASE candidate.pipeline_version WHEN '` + PipelineVersion + `' THEN 0 WHEN '` + PreviousPipelineVersion + `' THEN 1 ELSE 2 END,
 				candidate.completed_at DESC, candidate.id DESC LIMIT 1)` + cutoverCondition +
 			` ORDER BY r.completed_at, r.id`
@@ -139,6 +144,10 @@ func (s *Store) QueueMissingTranslations(ctx context.Context, sourceMode string,
 				return 0, err
 			}
 			candidates = append(candidates, item)
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return 0, fmt.Errorf("iterate %s translation candidates: %w", plan.Language, err)
 		}
 		if err := rows.Close(); err != nil {
 			return 0, err
@@ -189,7 +198,10 @@ func queueTranslationTx(ctx context.Context, tx *sql.Tx, runID int64, title, sum
 	return true, nil
 }
 
-func (s *Store) ClaimTranslationJob(ctx context.Context, allowScheduled bool, now time.Time) (TranslationJob, bool, error) {
+// ClaimTranslationJob atomically claims the next eligible translation while
+// skipping model identities whose worker circuit is open. Stale source
+// revisions are superseded before selection.
+func (s *Store) ClaimTranslationJob(ctx context.Context, allowScheduled bool, blockedModels []string, now time.Time) (TranslationJob, bool, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return TranslationJob{}, false, err
@@ -202,6 +214,14 @@ func (s *Store) ClaimTranslationJob(ctx context.Context, allowScheduled bool, no
 		)`, formatted, formatted); err != nil {
 		return TranslationJob{}, false, err
 	}
+	blockedCondition := ""
+	queryArgs := []any{formatted, boolInt(allowScheduled)}
+	if len(blockedModels) > 0 {
+		blockedCondition = ` AND t.model_identity NOT IN (` + strings.TrimSuffix(strings.Repeat("?,", len(blockedModels)), ",") + `)`
+		for _, model := range blockedModels {
+			queryArgs = append(queryArgs, model)
+		}
+	}
 	var job TranslationJob
 	err = tx.QueryRowContext(ctx, `SELECT t.id,t.presentation_run_id,r.incident_id,t.language_code,t.request_kind,
 		t.model_identity,t.prompt_version,t.input_hash,t.attempt_count,
@@ -209,9 +229,9 @@ func (s *Store) ClaimTranslationJob(ctx context.Context, allowScheduled bool, no
 		COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id=r.id AND kind='summary_de' LIMIT 1),'')
 		FROM presentation_translations t JOIN presentation_runs r ON r.id=t.presentation_run_id
 		WHERE t.status='pending' AND (t.next_retry_at IS NULL OR t.next_retry_at<=?)
-		AND (t.request_kind='manual' OR ?)
+		AND (t.request_kind='manual' OR ?)`+blockedCondition+`
 		ORDER BY CASE t.request_kind WHEN 'manual' THEN 0 WHEN 'scheduled' THEN 1 ELSE 2 END,t.created_at,t.id LIMIT 1`,
-		formatted, boolInt(allowScheduled)).Scan(&job.ID, &job.PresentationRunID, &job.IncidentID, &job.Language, &job.RequestKind,
+		queryArgs...).Scan(&job.ID, &job.PresentationRunID, &job.IncidentID, &job.Language, &job.RequestKind,
 		&job.ModelIdentity, &job.PromptVersion, &job.InputHash, &job.AttemptCount, &job.TitleDE, &job.SummaryDE)
 	if errors.Is(err, sql.ErrNoRows) {
 		if err := tx.Commit(); err != nil {
@@ -237,6 +257,8 @@ func (s *Store) ClaimTranslationJob(ctx context.Context, allowScheduled bool, no
 	return job, true, nil
 }
 
+// CompleteTranslationJob publishes validated translated text only if the
+// claimed attempt is still running.
 func (s *Store) CompleteTranslationJob(ctx context.Context, job TranslationJob, title, summary, modelIdentity, inputHash string, now time.Time) error {
 	formatted := formatTime(now.UTC())
 	result, err := s.db.ExecContext(ctx, `UPDATE presentation_translations SET status='succeeded',title=?,summary=?,
@@ -251,6 +273,8 @@ func (s *Store) CompleteTranslationJob(ctx context.Context, job TranslationJob, 
 	return nil
 }
 
+// FailTranslationJob applies a retry or terminal review transition only to the
+// currently running attempt and stores a sanitized error message.
 func (s *Store) FailTranslationJob(ctx context.Context, job TranslationJob, status, failureKind string, retryAt *time.Time, now time.Time, processingError error) error {
 	if status != "pending" && status != "needs_review" && status != "failed" {
 		return errors.New("invalid translation failure status")
@@ -272,6 +296,7 @@ func (s *Store) FailTranslationJob(ctx context.Context, job TranslationJob, stat
 	return nil
 }
 
+// RecoverTranslations makes attempts interrupted by worker shutdown claimable.
 func (s *Store) RecoverTranslations(ctx context.Context, now time.Time) error {
 	formatted := formatTime(now.UTC())
 	_, err := s.db.ExecContext(ctx, `UPDATE presentation_translations SET status='pending',next_retry_at=?,failure_kind='transient',

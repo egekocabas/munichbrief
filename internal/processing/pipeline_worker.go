@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -33,12 +35,14 @@ type PipelineRepository interface {
 	QueueTranslationsForRun(context.Context, int64, []store.TranslationPlan, string, time.Time) (int, error)
 	QueueIncidentTranslation(context.Context, int64, store.TranslationPlan, time.Time) (int, error)
 	QueueMissingTranslations(context.Context, string, []store.TranslationPlan, bool, time.Time) (int, error)
-	ClaimTranslationJob(context.Context, bool, time.Time) (store.TranslationJob, bool, error)
+	ClaimTranslationJob(context.Context, bool, []string, time.Time) (store.TranslationJob, bool, error)
 	CompleteTranslationJob(context.Context, store.TranslationJob, string, string, string, string, time.Time) error
 	FailTranslationJob(context.Context, store.TranslationJob, string, string, *time.Time, time.Time, error) error
 	RecoverTranslations(context.Context, time.Time) error
 }
 
+// RetryTranslation queues one immediate translation attempt for the incident's
+// newest supported canonical presentation.
 func (w *PipelineWorker) RetryTranslation(ctx context.Context, incidentID int64, language, model string) (int, error) {
 	translation, found := TranslationByLanguage(language)
 	if !found {
@@ -54,6 +58,8 @@ func (w *PipelineWorker) RetryTranslation(ctx context.Context, incidentID int64,
 	return queued, err
 }
 
+// BackfillTranslations explicitly queues historical canonical presentations,
+// bypassing the language's automatic-enablement cutover.
 func (w *PipelineWorker) BackfillTranslations(ctx context.Context, language, model string) (int, error) {
 	translation, found := TranslationByLanguage(language)
 	if !found {
@@ -191,6 +197,7 @@ func (w *PipelineWorker) RequestNow(ctx context.Context, sourceMode string, mode
 	return result, err
 }
 
+// SetPreferredStepModel changes the model used when future work is frozen.
 func (w *PipelineWorker) SetPreferredStepModel(ctx context.Context, stepKey, model string) error {
 	if _, found := StepByKey(stepKey); !found && stepKey != TranslationModelStep {
 		return store.ErrNotFound
@@ -206,6 +213,7 @@ func (w *PipelineWorker) SetPreferredStepModel(ctx context.Context, stepKey, mod
 	return nil
 }
 
+// ModelStatus reports canonical and translation readiness independently.
 func (w *PipelineWorker) ModelStatus(ctx context.Context) (PipelineModelStatus, error) {
 	settings, err := w.repository.PipelineStepSettings(ctx)
 	if err != nil {
@@ -232,6 +240,7 @@ func (w *PipelineWorker) ModelStatus(ctx context.Context) (PipelineModelStatus, 
 	return status, nil
 }
 
+// Status combines persisted queue state with current catalog and window state.
 func (w *PipelineWorker) Status(ctx context.Context) (PipelineRuntimeStatus, error) {
 	models, err := w.ModelStatus(ctx)
 	if err != nil {
@@ -304,6 +313,9 @@ func (w *PipelineWorker) processAvailable(ctx context.Context) {
 			continue
 		}
 
+		// Canonical work is always checked first. Reaching this point means it is
+		// absent or waiting, so one translation may run before canonical work is
+		// checked again at the next job boundary.
 		translationModels, translationErr := w.repository.PreferredPipelineModels(ctx, []string{TranslationModelStep})
 		translationModel := translationModels[TranslationModelStep]
 		if translationErr == nil && catalog.Available() && catalog.Has(translationModel) && windowOpen {
@@ -312,7 +324,7 @@ func (w *PipelineWorker) processAvailable(ctx context.Context) {
 				return
 			}
 		}
-		translationJob, translationFound, err := w.repository.ClaimTranslationJob(ctx, windowOpen, now)
+		translationJob, translationFound, err := w.repository.ClaimTranslationJob(ctx, windowOpen, w.blockedTranslationModels(now), now)
 		if err != nil {
 			w.logger.Error("claim translation job", "error", err)
 			return
@@ -339,8 +351,9 @@ func (w *PipelineWorker) processAvailable(ctx context.Context) {
 }
 
 func translationPlans(model string) []store.TranslationPlan {
-	plans := make([]store.TranslationPlan, 0, len(registeredTranslations))
-	for _, translation := range RegisteredTranslations() {
+	translations := RegisteredTranslations()
+	plans := make([]store.TranslationPlan, 0, len(translations))
+	for _, translation := range translations {
 		plans = append(plans, store.TranslationPlan{Language: translation.Language, PromptVersion: translation.PromptVersion, Model: model})
 	}
 	return plans
@@ -446,6 +459,9 @@ func (w *PipelineWorker) processJob(ctx context.Context, job store.PipelineJob) 
 		return w.handleJobFailure(ctx, job, err)
 	}
 	if finalCanonical {
+		// German publication is already committed. Translation enqueueing is a
+		// separate best-effort action so its failure cannot roll back canonical
+		// availability.
 		translationModel := job.TranslationModel
 		requestKind := "manual"
 		if job.CycleKind != "manual" {
@@ -595,6 +611,22 @@ func (w *PipelineWorker) circuitOpen(step, model string, now time.Time) bool {
 	until := w.circuits[pipelineCircuitKey(step, model)]
 	w.mu.RUnlock()
 	return now.Before(until)
+}
+
+// blockedTranslationModels returns only translation models whose systemic
+// failure backoff is still active. Other manual overrides remain claimable.
+func (w *PipelineWorker) blockedTranslationModels(now time.Time) []string {
+	prefix := TranslationModelStep + "\x00"
+	w.mu.RLock()
+	models := make([]string, 0, len(w.circuits))
+	for key, until := range w.circuits {
+		if strings.HasPrefix(key, prefix) && now.Before(until) {
+			models = append(models, strings.TrimPrefix(key, prefix))
+		}
+	}
+	w.mu.RUnlock()
+	sort.Strings(models)
+	return models
 }
 
 func (w *PipelineWorker) openCircuit(step, model string, until time.Time) {

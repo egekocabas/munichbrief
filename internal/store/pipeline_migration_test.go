@@ -181,7 +181,7 @@ func TestStagedMigrationMovesPreferenceAndPreservesLegacyPresentation(t *testing
 	if queued, err := database.QueueTranslationsForRun(ctx, german.PresentationRunID, []TranslationPlan{{Language: "en", PromptVersion: "incident-translation-en-v1", Model: "translate:4b"}}, "manual", time.Date(2026, 8, 25, 11, 0, 8, 0, time.UTC)); err != nil || queued != 1 {
 		t.Fatalf("queue English replacement = %d/%v", queued, err)
 	}
-	translation, found, err := database.ClaimTranslationJob(ctx, false, time.Date(2026, 8, 25, 11, 0, 8, 0, time.UTC))
+	translation, found, err := database.ClaimTranslationJob(ctx, false, nil, time.Date(2026, 8, 25, 11, 0, 8, 0, time.UTC))
 	if err != nil || !found {
 		t.Fatalf("claim translation replacement = %#v/%t/%v", translation, found, err)
 	}

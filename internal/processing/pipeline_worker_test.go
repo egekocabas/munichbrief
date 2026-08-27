@@ -481,6 +481,48 @@ func TestPipelineWorkerTransientFailureOpensPerStepModelCircuit(t *testing.T) {
 	}
 }
 
+func TestTranslationTransientFailureBacksOffFailedModel(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "translation-circuit.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 27, 4, 0, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "one")
+	if err := database.EnsurePipelineSteps(ctx, ModelSettingKeys(), now); err != nil {
+		t.Fatal(err)
+	}
+	for step, model := range pipelineTestModels() {
+		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	provider := &pipelineTestProvider{fail: func(step string, _ int) error {
+		if step == EnglishTranslationStep {
+			return errorOf(ErrorTransient, "synthetic translation endpoint outage")
+		}
+		return nil
+	}}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker.processAvailable(ctx)
+	if provider.callCount(EnglishTranslationStep) != 1 || len(worker.blockedTranslationModels(now)) != 1 {
+		t.Fatalf("translation circuit = calls:%d blocked:%v", provider.callCount(EnglishTranslationStep), worker.blockedTranslationModels(now))
+	}
+	worker.processAvailable(ctx)
+	if provider.callCount(EnglishTranslationStep) != 1 {
+		t.Fatalf("open translation circuit made %d model calls", provider.callCount(EnglishTranslationStep))
+	}
+	now = now.Add(time.Minute)
+	worker.processAvailable(ctx)
+	if provider.callCount(EnglishTranslationStep) != 2 {
+		t.Fatalf("expired translation circuit calls = %d, want 2", provider.callCount(EnglishTranslationStep))
+	}
+}
+
 func pipelineTestModels() map[string]string {
 	return map[string]string{
 		IncidentMetadataStep: "qwen:4b", GermanPresentationStep: "qwen:4b", TranslationModelStep: "translate:4b",

@@ -88,11 +88,12 @@ func (s *Store) ClaimPipelineJob(ctx context.Context, cycleID int64, stepOrder i
 		}
 		job.InputValues[kind] = value
 	}
+	if err := valueRows.Err(); err != nil {
+		valueRows.Close()
+		return PipelineJob{}, false, fmt.Errorf("iterate pipeline inputs: %w", err)
+	}
 	if err := valueRows.Close(); err != nil {
 		return PipelineJob{}, false, err
-	}
-	if err := valueRows.Err(); err != nil {
-		return PipelineJob{}, false, fmt.Errorf("iterate pipeline inputs: %w", err)
 	}
 	job.TitleDE, job.SummaryDE = job.InputValues["title_de"], job.InputValues["summary_de"]
 	job.AttemptCount++

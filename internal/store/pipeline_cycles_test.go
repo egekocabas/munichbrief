@@ -81,7 +81,7 @@ func TestPipelineFreezesTargetsGroupsStepsAndStartsNextCycleImmediately(t *testi
 	}
 	translations := 0
 	for {
-		job, found, err := database.ClaimTranslationJob(ctx, true, now)
+		job, found, err := database.ClaimTranslationJob(ctx, true, nil, now)
 		if err != nil {
 			t.Fatal(err)
 		}

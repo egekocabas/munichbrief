@@ -145,6 +145,10 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 		}
 		snapshot.Translations = append(snapshot.Translations, stat)
 	}
+	if err := translationRows.Err(); err != nil {
+		translationRows.Close()
+		return snapshot, fmt.Errorf("iterate translation queue stats: %w", err)
+	}
 	if err := translationRows.Close(); err != nil {
 		return snapshot, err
 	}

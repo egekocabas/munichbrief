@@ -280,7 +280,7 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	if queued, err := database.QueueTranslationsForRun(ctx, german.PresentationRunID, []store.TranslationPlan{{Language: processing.EnglishLanguage, PromptVersion: processing.EnglishTranslationPromptVersion, Model: "translate:4b"}}, "manual", startedAt.Add(6*time.Minute)); err != nil || queued != 1 {
 		t.Fatalf("QueueTranslationsForRun() = %d, err=%v", queued, err)
 	}
-	translation, found, err := database.ClaimTranslationJob(ctx, false, startedAt.Add(6*time.Minute))
+	translation, found, err := database.ClaimTranslationJob(ctx, false, nil, startedAt.Add(6*time.Minute))
 	if err != nil || !found {
 		t.Fatalf("ClaimTranslationJob() = %#v, found=%t, err=%v", translation, found, err)
 	}
