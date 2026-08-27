@@ -89,6 +89,9 @@ other = "Meldung lesen"
 [OpenOfficialSource]
 other = "Offizielle Quelle öffnen"
 
+[OpenOfficialPoliceRelease]
+other = "Offizielle Polizeimeldung öffnen"
+
 [Newer]
 other = "Neuer"
 

@@ -89,6 +89,9 @@ other = "Read report"
 [OpenOfficialSource]
 other = "Open official source"
 
+[OpenOfficialPoliceRelease]
+other = "Open official police release"
+
 [Newer]
 other = "Newer"
 

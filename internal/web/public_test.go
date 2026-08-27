@@ -310,7 +310,7 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 		"German presentation", processing.GermanPresentationPromptVersion,
 		"English translation", "translate:4b", processing.EnglishTranslationPromptVersion,
 		"Incident time", "24 August 2026, 22:30", "Public assistance needed", "Police request public assistance", "Photo or video material",
-		"AI-generated summary", "Verify important details against the latest official information.",
+		"AI-generated summary", "Verify important details against the latest official information.", "Open official police release",
 		`aria-label="Public assistance"`,
 	} {
 		if !strings.Contains(english.Body.String(), expected) {
@@ -326,6 +326,14 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	if strings.Contains(english.Body.String(), "Report kind") {
 		t.Error("English detail unexpectedly renders the report kind badge")
 	}
+	for _, redundantSourceCopy := range []string{"Authoritative source", "This is an unofficial presentation. The Bavarian Police release remains authoritative."} {
+		if strings.Contains(english.Body.String(), redundantSourceCopy) {
+			t.Errorf("English detail unexpectedly renders redundant source copy %q", redundantSourceCopy)
+		}
+	}
+	if source, processing := strings.Index(english.Body.String(), "Open official police release"), strings.Index(english.Body.String(), "AI processing"); source < 0 || processing < 0 || source > processing {
+		t.Error("English detail does not place the official release link before AI processing")
+	}
 	for _, assistanceDetail := range []string{"Police request public assistance", "Photo or video material", "Witness observations"} {
 		if count := strings.Count(english.Body.String(), assistanceDetail); count != 1 {
 			t.Errorf("English detail renders public assistance detail %q %d times, want 1", assistanceDetail, count)
@@ -334,7 +342,7 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 
 	germanDetail := httptest.NewRecorder()
 	handler.ServeHTTP(germanDetail, httptest.NewRequest(http.MethodGet, "/de/incidents/"+formatID(incidentID), nil))
-	for _, expected := range []string{"Kategorie", "Verkehr", "Gebiet", "Harras", "Vorfallsmetadaten", "Deutsche Darstellung", "qwen3.5:4b", "Vorfallszeit", "24. August 2026, 22:30", "Öffentliche Mithilfe benötigt", "Polizei bittet um Mithilfe", "Foto- oder Videomaterial", "KI-generierte Zusammenfassung", "Wichtige Angaben bitte anhand der aktuellen offiziellen Informationen prüfen."} {
+	for _, expected := range []string{"Kategorie", "Verkehr", "Gebiet", "Harras", "Vorfallsmetadaten", "Deutsche Darstellung", "qwen3.5:4b", "Vorfallszeit", "24. August 2026, 22:30", "Öffentliche Mithilfe benötigt", "Polizei bittet um Mithilfe", "Foto- oder Videomaterial", "KI-generierte Zusammenfassung", "Wichtige Angaben bitte anhand der aktuellen offiziellen Informationen prüfen.", "Offizielle Polizeimeldung öffnen"} {
 		if !strings.Contains(germanDetail.Body.String(), expected) {
 			t.Errorf("German detail body does not contain %q", expected)
 		}
@@ -351,6 +359,11 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	}
 	if strings.Contains(germanDetail.Body.String(), "Meldungsart") {
 		t.Error("German detail unexpectedly renders the report kind badge")
+	}
+	for _, redundantSourceCopy := range []string{"Maßgebliche Quelle", "Dies ist eine inoffizielle Darstellung. Maßgeblich bleibt die Meldung der Bayerischen Polizei."} {
+		if strings.Contains(germanDetail.Body.String(), redundantSourceCopy) {
+			t.Errorf("German detail unexpectedly renders redundant source copy %q", redundantSourceCopy)
+		}
 	}
 
 	markdown := httptest.NewRecorder()
@@ -474,7 +487,7 @@ func TestLiveTimelineFallbackAndIncidentAttribution(t *testing.T) {
 	}
 	detail := httptest.NewRecorder()
 	server.Handler().ServeHTTP(detail, englishRequest(http.MethodGet, "/en/incidents/"+formatID(incidentID), nil))
-	for _, expected := range []string{"Last processed", "Bavarian Police release remains authoritative", documents[0].SourceURL} {
+	for _, expected := range []string{"Last processed", "Open official police release", documents[0].SourceURL} {
 		if !strings.Contains(detail.Body.String(), expected) {
 			t.Errorf("live detail does not contain %q", expected)
 		}
