@@ -78,6 +78,11 @@ The worker:
 5. Publishes each German presentation as soon as its stage-2 job succeeds and
    enqueues independent translations for that exact run.
 
+When a newer canonical run queues a language, pending translations for older
+runs of the same incident and source revision are superseded. Running attempts
+finish safely, while completed translations remain available for audit and
+reader fallback.
+
 Scheduled work starts inside the configured Europe/Berlin window. A frozen
 cycle may finish after the window closes. Explicit admin or CLI requests persist
 manual priority but retain validation, circuit breaking, and retry delays.

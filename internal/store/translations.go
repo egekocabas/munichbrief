@@ -26,7 +26,8 @@ func (s *Store) EnsureTranslationLanguages(ctx context.Context, languages []stri
 }
 
 // QueueTranslationsForRun creates independent jobs for one completed canonical
-// presentation. Existing active or equivalent successful work is preserved.
+// presentation. Existing active or equivalent successful work is preserved,
+// while pending translations for older canonical runs are superseded.
 func (s *Store) QueueTranslationsForRun(ctx context.Context, runID int64, plans []TranslationPlan, requestKind string, now time.Time) (int, error) {
 	if requestKind != "scheduled" && requestKind != "manual" && requestKind != "backfill" {
 		return 0, errors.New("invalid translation request kind")
@@ -178,6 +179,10 @@ func queueTranslationTx(ctx context.Context, tx *sql.Tx, runID int64, title, sum
 	if strings.TrimSpace(title) == "" || strings.TrimSpace(summary) == "" {
 		return false, errors.New("canonical German presentation is incomplete")
 	}
+	formatted := formatTime(now.UTC())
+	if err := supersedeOlderPendingTranslationsTx(ctx, tx, runID, plan.Language, formatted); err != nil {
+		return false, err
+	}
 	inputHash := HashPipelineInput("title_de", title, "summary_de", summary, "language", plan.Language, plan.PromptVersion, plan.Model)
 	var count int
 	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM presentation_translations
@@ -188,7 +193,6 @@ func queueTranslationTx(ctx context.Context, tx *sql.Tx, runID int64, title, sum
 	if count > 0 {
 		return false, nil
 	}
-	formatted := formatTime(now.UTC())
 	_, err := tx.ExecContext(ctx, `INSERT INTO presentation_translations(
 		presentation_run_id,language_code,request_kind,status,model_identity,prompt_version,input_hash,created_at,updated_at
 	) VALUES(?,?,?,'pending',?,?,?,?,?)`, runID, plan.Language, requestKind, plan.Model, plan.PromptVersion, inputHash, formatted, formatted)
@@ -196,6 +200,32 @@ func queueTranslationTx(ctx context.Context, tx *sql.Tx, runID int64, title, sum
 		return false, fmt.Errorf("queue %s translation: %w", plan.Language, err)
 	}
 	return true, nil
+}
+
+// supersedeOlderPendingTranslationsTx prevents a completed canonical rerun
+// from spending translation capacity on a presentation that can no longer be
+// selected ahead of the newly queued run. Running and completed attempts remain
+// untouched so in-flight workers and historical fallbacks stay valid.
+func supersedeOlderPendingTranslationsTx(ctx context.Context, tx *sql.Tx, runID int64, language, formatted string) error {
+	_, err := tx.ExecContext(ctx, `UPDATE presentation_translations
+		SET status='superseded',completed_at=?,updated_at=?
+		WHERE status='pending' AND language_code=? AND presentation_run_id IN (
+			SELECT older.id FROM presentation_runs older
+			JOIN presentation_runs current ON current.id=?
+			WHERE older.id<>current.id AND older.incident_id=current.incident_id
+			AND older.source_hash=current.source_hash AND older.status='complete'
+			AND (older.pipeline_version IN (?,?) OR older.legacy=1)
+			AND current.id=(SELECT candidate.id FROM presentation_runs candidate
+				WHERE candidate.incident_id=current.incident_id AND candidate.source_hash=current.source_hash
+				AND candidate.status='complete' AND (candidate.pipeline_version IN (?,?) OR candidate.legacy=1)
+				ORDER BY CASE candidate.pipeline_version WHEN ? THEN 0 WHEN ? THEN 1 ELSE 2 END,
+				candidate.completed_at DESC,candidate.id DESC LIMIT 1)
+		)`, formatted, formatted, language, runID,
+		PipelineVersion, PreviousPipelineVersion, PipelineVersion, PreviousPipelineVersion, PipelineVersion, PreviousPipelineVersion)
+	if err != nil {
+		return fmt.Errorf("supersede older pending %s translations: %w", language, err)
+	}
+	return nil
 }
 
 // ClaimTranslationJob atomically claims the next eligible translation while
