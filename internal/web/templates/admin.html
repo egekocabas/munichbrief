@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow,noarchive">
   <title>Operations · MunichBrief Admin</title>
+  <script src="/static/theme.js"></script>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/app.css">
   <script defer src="/static/admin.js"></script>
@@ -14,12 +15,16 @@
   <header class="border-b border-rule/90 bg-paper/95">
     <div class="page-shell flex min-h-16 items-center justify-between gap-4 py-3">
       <a class="inline-flex items-center gap-3 text-ink no-underline" href="/admin" aria-label="MunichBrief administration">
-        <span class="grid size-10 place-items-center rounded-[0.6rem_0.6rem_0.6rem_0.18rem] bg-civic font-serif text-xl font-bold text-white" aria-hidden="true">M</span>
+        <span class="grid size-10 place-items-center rounded-[0.6rem_0.6rem_0.6rem_0.18rem] bg-civic font-serif text-xl font-bold text-on-accent" aria-hidden="true">M</span>
         <span><strong class="block font-serif text-lg tracking-tight">MunichBrief</strong><small class="block text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted">Administration</small></span>
       </a>
       <nav class="flex flex-wrap items-center justify-end gap-2" aria-label="Administration">
         <a class="rounded-md border border-rule bg-white px-3 py-2 text-sm font-bold text-civic no-underline hover:bg-newsprint" href="/admin/history">Pipeline history</a>
         <a class="rounded-md border border-rule bg-white px-3 py-2 text-sm font-bold text-civic no-underline hover:bg-newsprint" href="/en">Open reader</a>
+        <button class="inline-flex size-9 items-center justify-center rounded-md border border-rule bg-white text-civic hover:border-civic/40 hover:bg-newsprint" type="button" data-theme-toggle aria-label="Dark mode" aria-pressed="false" title="Dark mode">
+          <svg class="theme-icon-moon size-5" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.4 15.5A8.8 8.8 0 0 1 8.5 3.6 9 9 0 1 0 20.4 15.5Z"/></svg>
+          <svg class="theme-icon-sun size-5" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0-5a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1Zm0 17a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1ZM3 11h1a1 1 0 1 1 0 2H3a1 1 0 1 1 0-2Zm17 0h1a1 1 0 1 1 0 2h-1a1 1 0 1 1 0-2ZM5.6 4.2l.7.7a1 1 0 0 1-1.4 1.4l-.7-.7a1 1 0 0 1 1.4-1.4Zm13.5 13.5.7.7a1 1 0 0 1-1.4 1.4l-.7-.7a1 1 0 0 1 1.4-1.4ZM18.4 4.2a1 1 0 0 1 1.4 1.4l-.7.7a1 1 0 0 1-1.4-1.4l.7-.7ZM6.3 17.7a1 1 0 0 1 0 1.4l-.7.7a1 1 0 0 1-1.4-1.4l.7-.7a1 1 0 0 1 1.4 0Z"/></svg>
+        </button>
       </nav>
     </div>
   </header>
@@ -56,7 +61,7 @@
               {{if not .PreferredAvailable}}<option value="" selected disabled>Choose an installed model</option>{{end}}
               {{range $.Models.Models}}<option value="{{.}}" {{if eq . $step.Preferred}}selected{{end}}>{{.}}</option>{{end}}
             </select>
-            <button class="rounded-md bg-civic px-4 py-2 font-bold text-white hover:bg-civic-dark" type="submit" {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>Save step model</button>
+            <button class="rounded-md bg-civic px-4 py-2 font-bold text-on-accent hover:bg-civic-dark" type="submit" {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>Save step model</button>
           </form>
           {{end}}
         </article>
@@ -73,7 +78,7 @@
             <input name="step" type="hidden" value="{{$translation.Key}}"><input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}"><input name="all_page" type="hidden" value="{{.AllPage}}">
             <label class="text-sm font-bold" for="preferred-translation">Preferred model</label>
             <select class="rounded-md border border-rule bg-white px-3 py-2" id="preferred-translation" name="model" required {{if or (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>{{if not $translation.PreferredAvailable}}<option value="" selected disabled>Choose an installed model</option>{{end}}{{range .Models.Models}}<option value="{{.}}" {{if eq . $translation.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>
-            <button class="rounded-md bg-civic px-4 py-2 font-bold text-white hover:bg-civic-dark" type="submit" {{if or (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>Save translation model</button>
+            <button class="rounded-md bg-civic px-4 py-2 font-bold text-on-accent hover:bg-civic-dark" type="submit" {{if or (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>Save translation model</button>
           </form>
           {{/* Each registered translation receives its own explicit historical backfill action. */}}
           {{range .TranslationLanguages}}{{$language := .}}
@@ -140,7 +145,7 @@
           <label class="text-sm font-bold" for="incident-id">Incident ID</label>
           <input class="rounded-md border border-rule bg-white px-3 py-2" id="incident-id" name="incident_id" type="number" min="1" step="1" required inputmode="numeric">
           {{range .Models.Steps}}{{$step := .}}<label class="text-sm font-bold" for="incident-model-{{.Key}}">{{.DisplayName}} model</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="incident-model-{{.Key}}" name="model_{{.Key}}" required {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>{{if not .PreferredAvailable}}<option value="" selected disabled>Choose an installed model</option>{{end}}{{range $.Models.Models}}<option value="{{.}}" {{if eq . $step.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>{{end}}{{$translation := .Models.Translation}}<label class="text-sm font-bold" for="incident-model-translation">Translation model (optional)</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="incident-model-translation" name="model_translation"><option value="">Do not queue translation yet</option>{{range .Models.Models}}<option value="{{.}}" {{if eq . $translation.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>
-          <button class="rounded-md bg-civic px-4 py-2 font-bold text-white hover:bg-civic-dark" type="submit" {{if or (not .ProcessingEnabled) (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>Process incident now</button>
+          <button class="rounded-md bg-civic px-4 py-2 font-bold text-on-accent hover:bg-civic-dark" type="submit" {{if or (not .ProcessingEnabled) (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>Process incident now</button>
           {{if not .ProcessingEnabled}}<p class="text-sm font-semibold text-alert">AI processing is disabled in this application instance.</p>{{end}}
         </form>
       </div>
@@ -163,7 +168,7 @@
           <input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}">
           <input name="all_page" type="hidden" value="{{.AllPage}}">
           {{range .Models.Steps}}{{$step := .}}<label class="text-sm font-bold" for="reprocess-model-{{.Key}}">{{.DisplayName}} model</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="reprocess-model-{{.Key}}" name="model_{{.Key}}" required {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>{{if not .PreferredAvailable}}<option value="" selected disabled>Choose an installed model</option>{{end}}{{range $.Models.Models}}<option value="{{.}}" {{if eq . $step.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>{{end}}{{$translation := .Models.Translation}}<label class="text-sm font-bold" for="reprocess-model-translation">Translation model (optional)</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="reprocess-model-translation" name="model_translation"><option value="">Do not queue translation yet</option>{{range .Models.Models}}<option value="{{.}}" {{if eq . $translation.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>
-          <button class="w-full rounded-md bg-alert px-4 py-2 font-bold text-white hover:opacity-90" type="submit" {{if or (not .ProcessingEnabled) (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>Reprocess everything</button>
+          <button class="w-full rounded-md bg-alert px-4 py-2 font-bold text-on-accent hover:opacity-90" type="submit" {{if or (not .ProcessingEnabled) (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>Reprocess everything</button>
         </form>
       </div>
     </section>
@@ -210,7 +215,7 @@
       </dl>
       <div class="mt-6 flex justify-end gap-3">
         <button class="rounded-md border border-rule bg-white px-4 py-2 font-bold text-ink hover:bg-newsprint" value="cancel">Cancel</button>
-        <button id="processing-confirmation-submit" class="rounded-md bg-civic px-4 py-2 font-bold text-white hover:bg-civic-dark" type="button">Confirm processing</button>
+        <button id="processing-confirmation-submit" class="rounded-md bg-civic px-4 py-2 font-bold text-on-accent hover:bg-civic-dark" type="button">Confirm processing</button>
       </div>
     </form>
   </dialog>
@@ -281,7 +286,7 @@
             <input name="unprocessed_page" type="hidden" value="{{$.Page}}">
             <input name="all_page" type="hidden" value="{{$.OtherPage}}">
             {{range $.Models.Steps}}{{$step := .}}<label class="grid gap-1 text-xs font-bold" for="incident-{{$incident.Record.ID}}-{{.Key}}"><span>{{.DisplayName}}</span><select class="rounded-md border border-rule bg-white px-2 py-2 text-sm" id="incident-{{$incident.Record.ID}}-{{.Key}}" name="model_{{.Key}}" required {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>{{if not .PreferredAvailable}}<option value="" selected disabled>Choose model</option>{{end}}{{range $.Models.Models}}<option value="{{.}}" {{if eq . $step.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select></label>{{end}}{{$translation := $.Models.Translation}}<label class="grid gap-1 text-xs font-bold" for="incident-{{$incident.Record.ID}}-translation"><span>Translation (optional)</span><select class="rounded-md border border-rule bg-white px-2 py-2 text-sm" id="incident-{{$incident.Record.ID}}-translation" name="model_translation"><option value="">Not yet</option>{{range $.Models.Models}}<option value="{{.}}" {{if eq . $translation.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select></label>
-            <button class="rounded-md bg-civic px-4 py-2 text-sm font-bold text-white hover:bg-civic-dark" type="submit" {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>Process now</button>
+            <button class="rounded-md bg-civic px-4 py-2 text-sm font-bold text-on-accent hover:bg-civic-dark" type="submit" {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>Process now</button>
           </form>
           {{else}}
           <button class="rounded-md border border-rule bg-newsprint px-4 py-2 text-sm font-bold text-muted" type="button" disabled aria-disabled="true">Processing in progress</button>

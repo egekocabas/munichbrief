@@ -92,6 +92,7 @@ func TestAboutHealthReadinessAndRequestHeaders(t *testing.T) {
 	}{
 		{path: "/static/app.css", contentType: "text/css; charset=utf-8", body: "--color-civic"},
 		{path: "/static/htmx.min.js", contentType: "text/javascript; charset=utf-8", body: "htmx"},
+		{path: "/static/theme.js", contentType: "text/javascript; charset=utf-8", body: "munichbrief-theme"},
 		{path: "/static/admin.js", contentType: "text/javascript; charset=utf-8", body: "processing-confirmation"},
 		{path: "/static/favicon.svg", contentType: "image/svg+xml", body: `fill="#174b73"`},
 	} {

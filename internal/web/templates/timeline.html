@@ -1,14 +1,14 @@
 {{define "title"}}MunichBrief{{end}}
 {{define "content"}}
 {{/* Timeline introduction and result count. */}}
-<section class="border-b border-rule py-8 sm:py-11">
+<section class="border-b border-rule pt-8 pb-5 sm:pt-11 sm:pb-4">
   <div class="grid items-end gap-6 md:grid-cols-[minmax(0,1fr)_auto]">
     <div class="max-w-3xl">
       <p class="mb-2 text-xs font-extrabold uppercase tracking-[0.16em] text-alert">{{if .Fixture}}{{t .Lang "HeroEyebrowFixture"}}{{else}}{{t .Lang "HeroEyebrowLive"}}{{end}}</p>
       <h1 class="font-serif text-4xl font-bold leading-[1.04] tracking-[-0.035em] text-ink sm:text-5xl">{{t .Lang "HeroTitle"}}</h1>
       <p class="mt-4 max-w-2xl text-base leading-relaxed text-muted sm:text-lg">{{t .Lang "HeroCopy"}}</p>
     </div>
-    <p class="mb-1 font-mono text-sm font-semibold tabular-nums text-muted">{{shownTotal .Lang .Shown .Total}}</p>
+    <p class="justify-self-end font-mono text-sm font-semibold tabular-nums text-muted">{{shownTotal .Lang .Shown .Total}}</p>
   </div>
 </section>
 
@@ -31,13 +31,11 @@
       <div class="grid min-w-0 gap-3">
         {{range .Incidents}}
         <article class="min-w-0 rounded-lg border border-rule bg-paper px-4 py-4 transition-colors hover:border-civic/35 sm:px-5 sm:py-5">
-          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.7rem] font-extrabold uppercase tracking-[0.09em] text-muted">
-            {{if .Record.HasIncident}}{{if .Record.Number}}<span class="text-alert">{{t $.Lang "Report"}} {{.Record.Number}}</span>{{end}}{{else}}<span class="text-alert">{{t $.Lang "SourceMetadata"}}</span>{{end}}
-            <span>{{t $.Lang "Published"}}: <time datetime="{{.Record.PublishedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime $.Lang .Record.PublishedAt}}</time></span>
-          </div>
+          {{if not .Record.HasIncident}}<div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.7rem] font-extrabold uppercase tracking-[0.09em] text-muted"><span class="text-alert">{{t $.Lang "SourceMetadata"}}</span></div>{{end}}
           {{if .Record.HasIncident}}
             {{if $.Review}}<p class="mt-3 text-[0.68rem] font-extrabold uppercase tracking-[0.1em] text-civic data-[state=failed]:text-amber-700 data-[state=needs-review]:text-amber-700 data-[state=retrying]:text-amber-700 data-[state=running]:text-amber-700" data-state="{{.ProcessingState}}">{{.ProcessingLabel}}</p>{{end}}
-            {{if or .CategoryLabel .AreaName .EventText .PublicAssistance}}<dl class="mt-3 flex flex-wrap gap-2 text-xs">
+            {{if or .Record.Number .CategoryLabel .AreaName .EventText .PublicAssistance}}<dl class="{{if $.Review}}mt-3 {{end}}flex flex-wrap items-center gap-2 text-xs">
+              {{if .Record.Number}}<div class="inline-flex items-center gap-1 text-[0.7rem] font-extrabold uppercase tracking-[0.09em] text-alert"><dt>{{t $.Lang "Report"}}:</dt><dd>{{.Record.Number}}</dd></div>{{end}}
               {{if .CategoryLabel}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{t $.Lang "Category"}}</dt><dd class="font-bold text-civic">{{.CategoryLabel}}</dd></div>{{end}}
               {{if .AreaName}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{t $.Lang "Area"}}</dt><dd class="font-bold text-civic">{{.AreaName}}</dd></div>{{end}}
               {{if .EventText}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{.EventLabel}}</dt><dd class="font-bold text-civic">{{.EventText}}</dd></div>{{end}}
