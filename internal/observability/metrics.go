@@ -45,17 +45,17 @@ type Metrics struct {
 	lastProcessingSuccess   atomic.Int64
 	processingDurationNanos atomic.Uint64
 	processingDurationCount atomic.Uint64
-	pipelineAttempts        [2]atomic.Uint64
-	pipelineSuccesses       [2]atomic.Uint64
-	pipelineFailures        [2]atomic.Uint64
-	pipelineDurationNanos   [2]atomic.Uint64
-	pipelineDurationCount   [2]atomic.Uint64
-	pipelineQueued          [2]atomic.Int64
-	pipelineRunning         [2]atomic.Int64
-	pipelineRetrying        [2]atomic.Int64
-	pipelineReview          [2]atomic.Int64
-	pipelineFailed          [2]atomic.Int64
-	pipelineSucceeded       [2]atomic.Int64
+	pipelineAttempts        [3]atomic.Uint64
+	pipelineSuccesses       [3]atomic.Uint64
+	pipelineFailures        [3]atomic.Uint64
+	pipelineDurationNanos   [3]atomic.Uint64
+	pipelineDurationCount   [3]atomic.Uint64
+	pipelineQueued          [3]atomic.Int64
+	pipelineRunning         [3]atomic.Int64
+	pipelineRetrying        [3]atomic.Int64
+	pipelineReview          [3]atomic.Int64
+	pipelineFailed          [3]atomic.Int64
+	pipelineSucceeded       [3]atomic.Int64
 	pipelineActiveCycle     atomic.Int64
 	pipelineActiveStep      atomic.Int64
 	pipelineActiveKind      [3]atomic.Int64
@@ -160,36 +160,61 @@ func (m *Metrics) RecordProcessingDuration(duration time.Duration) {
 	m.processingDurationCount.Add(1)
 }
 
-func pipelineStepIndex(step string) int {
-	if step == "english_translation" {
-		return 1
+var pipelineStepKeys = [...]string{"incident_metadata", "german_presentation", "english_translation"}
+
+func pipelineStepIndex(step string) (int, bool) {
+	for index, key := range pipelineStepKeys {
+		if step == key {
+			return index, true
+		}
 	}
-	return 0
+	return 0, false
 }
 
 func (m *Metrics) RecordPipelineAttempt(step string) {
-	m.pipelineAttempts[pipelineStepIndex(step)].Add(1)
+	if index, ok := pipelineStepIndex(step); ok {
+		m.pipelineAttempts[index].Add(1)
+	}
 }
 
 func (m *Metrics) RecordPipelineSuccess(step string, at time.Time) {
-	index := pipelineStepIndex(step)
+	index, ok := pipelineStepIndex(step)
+	if !ok {
+		return
+	}
 	m.pipelineSuccesses[index].Add(1)
 	m.lastProcessingSuccess.Store(at.Unix())
 }
 
 func (m *Metrics) RecordPipelineFailure(step, _ string) {
-	m.pipelineFailures[pipelineStepIndex(step)].Add(1)
+	if index, ok := pipelineStepIndex(step); ok {
+		m.pipelineFailures[index].Add(1)
+	}
 }
 
 func (m *Metrics) RecordPipelineDuration(step string, duration time.Duration) {
-	index := pipelineStepIndex(step)
+	index, ok := pipelineStepIndex(step)
+	if !ok {
+		return
+	}
 	m.pipelineDurationNanos[index].Add(uint64(max(duration.Nanoseconds(), 0)))
 	m.pipelineDurationCount[index].Add(1)
 }
 
 func (m *Metrics) SetPipelineSnapshot(snapshot store.PipelineSnapshot) {
+	for index := range pipelineStepKeys {
+		m.pipelineQueued[index].Store(0)
+		m.pipelineRunning[index].Store(0)
+		m.pipelineRetrying[index].Store(0)
+		m.pipelineReview[index].Store(0)
+		m.pipelineFailed[index].Store(0)
+		m.pipelineSucceeded[index].Store(0)
+	}
 	for _, stats := range snapshot.Steps {
-		index := pipelineStepIndex(stats.StepKey)
+		index, ok := pipelineStepIndex(stats.StepKey)
+		if !ok {
+			continue
+		}
 		m.pipelineQueued[index].Store(int64(max(stats.Queued, 0)))
 		m.pipelineRunning[index].Store(int64(max(stats.Running, 0)))
 		m.pipelineRetrying[index].Store(int64(max(stats.Retrying, 0)))
@@ -305,7 +330,7 @@ func (m *Metrics) write(writer io.Writer) {
 	fmt.Fprintln(writer, "# TYPE munichbrief_pipeline_duration_seconds summary")
 	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_jobs Staged AI jobs by registered step and bounded state.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_pipeline_jobs gauge")
-	for index, step := range []string{"german_analysis", "english_translation"} {
+	for index, step := range pipelineStepKeys {
 		fmt.Fprintf(writer, "munichbrief_pipeline_attempts_total{step=%q} %d\n", step, m.pipelineAttempts[index].Load())
 		fmt.Fprintf(writer, "munichbrief_pipeline_successes_total{step=%q} %d\n", step, m.pipelineSuccesses[index].Load())
 		fmt.Fprintf(writer, "munichbrief_pipeline_failures_total{step=%q} %d\n", step, m.pipelineFailures[index].Load())
@@ -322,7 +347,7 @@ func (m *Metrics) write(writer io.Writer) {
 	}
 	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_active_step Whether a registered step is active.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_pipeline_active_step gauge")
-	for index, step := range []string{"german_analysis", "english_translation"} {
+	for index, step := range pipelineStepKeys {
 		active := int64(0)
 		if m.pipelineActiveCycle.Load() == 1 && m.pipelineActiveStep.Load() == int64(index) {
 			active = 1

@@ -30,7 +30,7 @@ func (s *Store) CreateManualPipelineCycle(ctx context.Context, sourceMode string
 	} else if !reprocessAll {
 		condition += ` AND NOT EXISTS (
 			SELECT 1 FROM presentation_runs r WHERE r.incident_id = i.id AND r.source_hash = i.content_hash
-			AND r.pipeline_version = '` + PipelineVersion + `' AND r.status = 'complete'
+			AND r.status = 'complete'
 		)`
 	}
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -101,7 +101,9 @@ func (s *Store) ActivateNextPipelineCycle(ctx context.Context, sourceMode string
 		if err != nil {
 			return PipelineCycle{}, false, err
 		}
-		condition += ` AND COALESCE(i.body_de, '') <> '' AND NOT EXISTS (
+		condition += ` AND COALESCE(i.body_de, '') <> ''
+			AND julianday(i.created_at) > julianday((SELECT scheduled_after FROM pipeline_cutovers WHERE pipeline_version = '` + PipelineVersion + `'))
+			AND NOT EXISTS (
 			SELECT 1 FROM presentation_runs r WHERE r.incident_id = i.id AND r.source_hash = i.content_hash
 			AND r.pipeline_version = '` + PipelineVersion + `' AND r.status IN ('complete','failed')
 		)`

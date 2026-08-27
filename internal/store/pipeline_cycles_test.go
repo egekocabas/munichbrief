@@ -25,7 +25,7 @@ func TestPipelineFreezesTargetsGroupsStepsAndStartsNextCycleImmediately(t *testi
 	}
 	insertPipelineDocuments(t, ctx, database, now.Add(time.Minute), "three")
 
-	var germanIDs []int64
+	var metadataIDs []int64
 	for {
 		job, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 0, now)
 		if err != nil {
@@ -34,23 +34,48 @@ func TestPipelineFreezesTargetsGroupsStepsAndStartsNextCycleImmediately(t *testi
 		if !found {
 			break
 		}
-		germanIDs = append(germanIDs, job.IncidentID)
-		values := []PipelineValue{{Kind: "title_de", Value: "Titel"}, {Kind: "summary_de", Value: "Zusammenfassung."}, {Kind: "category", Value: "other"}, {Kind: "privacy_status", Value: "safe"}, {Kind: "privacy_flags", Value: "[]"}}
+		metadataIDs = append(metadataIDs, job.IncidentID)
+		values := []PipelineValue{{Kind: "category", Value: "other"}, {Kind: "report_kind", Value: "incident"}, {Kind: "public_assistance_status", Value: "not_requested"}, {Kind: "public_assistance_types", Value: "[]"}}
 		if err := database.CompletePipelineJob(ctx, job, values, job.ModelIdentity, HashPipelineInput(job.SourceHash), now); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if len(germanIDs) != 2 {
-		t.Fatalf("frozen German targets = %v, want two", germanIDs)
+	if len(metadataIDs) != 2 {
+		t.Fatalf("frozen metadata targets = %v, want two", metadataIDs)
 	}
-	advance, err := database.AdvancePipelineCycle(ctx, cycle, 2, now)
+	advance, err := database.AdvancePipelineCycle(ctx, cycle, 3, now)
+	if err != nil || !advance.Advanced {
+		t.Fatalf("advance to German presentation = %#v/%v", advance, err)
+	}
+	cycle.ActiveStep = 1
+	germanPresentations := 0
+	for {
+		job, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 1, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !found {
+			break
+		}
+		germanPresentations++
+		if job.InputValues["category"] != "other" {
+			t.Fatalf("German metadata input = %#v", job.InputValues)
+		}
+		if err := database.CompletePipelineJob(ctx, job, []PipelineValue{{Kind: "title_de", Value: "Titel"}, {Kind: "summary_de", Value: "Zusammenfassung."}, {Kind: "privacy_status", Value: "safe"}, {Kind: "privacy_flags", Value: "[]"}}, job.ModelIdentity, HashPipelineInput(job.SourceHash), now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if germanPresentations != 2 {
+		t.Fatalf("German presentations = %d, want 2", germanPresentations)
+	}
+	advance, err = database.AdvancePipelineCycle(ctx, cycle, 3, now)
 	if err != nil || !advance.Advanced {
 		t.Fatalf("advance to translation = %#v/%v", advance, err)
 	}
-	cycle.ActiveStep = 1
+	cycle.ActiveStep = 2
 	translations := 0
 	for {
-		job, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 1, now)
+		job, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 2, now)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -68,7 +93,7 @@ func TestPipelineFreezesTargetsGroupsStepsAndStartsNextCycleImmediately(t *testi
 	if translations != 2 {
 		t.Fatalf("translations = %d, want 2", translations)
 	}
-	advance, err = database.AdvancePipelineCycle(ctx, cycle, 2, now)
+	advance, err = database.AdvancePipelineCycle(ctx, cycle, 3, now)
 	if err != nil || !advance.Completed {
 		t.Fatalf("complete cycle = %#v/%v", advance, err)
 	}
@@ -76,8 +101,8 @@ func TestPipelineFreezesTargetsGroupsStepsAndStartsNextCycleImmediately(t *testi
 	if err != nil || !found || next.ID == cycle.ID {
 		t.Fatalf("immediate next cycle = %#v/%t/%v", next, found, err)
 	}
-	snapshot, err := database.PipelineSnapshot(ctx, "fixture", []string{"german_analysis", "english_translation"}, now)
-	if err != nil || snapshot.CycleTotal != 2 {
+	snapshot, err := database.PipelineSnapshot(ctx, "fixture", []string{"incident_metadata", "german_presentation", "english_translation"}, now)
+	if err != nil || snapshot.CycleTotal != 3 {
 		t.Fatalf("next frozen snapshot = %#v/%v", snapshot, err)
 	}
 }

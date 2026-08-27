@@ -45,6 +45,7 @@ type PipelineObserver interface {
 
 // StepModelStatus describes one step's configured and currently available model.
 type StepModelStatus struct {
+	Number             int    `json:"number"`
 	Key                string `json:"key"`
 	DisplayName        string `json:"display_name"`
 	PromptVersion      string `json:"prompt_version"`
@@ -168,9 +169,9 @@ func (w *PipelineWorker) ModelStatus(ctx context.Context) (PipelineModelStatus, 
 	if catalog.Err != nil {
 		status.CatalogError = catalog.Err.Error()
 	}
-	for _, step := range RegisteredSteps() {
+	for index, step := range RegisteredSteps() {
 		model := byKey[step.Key]
-		item := StepModelStatus{Key: step.Key, DisplayName: step.DisplayName, PromptVersion: step.PromptVersion, Preferred: model, PreferredAvailable: model != "" && catalog.Available() && catalog.Has(model)}
+		item := StepModelStatus{Number: index + 1, Key: step.Key, DisplayName: step.DisplayName, PromptVersion: step.PromptVersion, Preferred: model, PreferredAvailable: model != "" && catalog.Available() && catalog.Has(model)}
 		status.Steps = append(status.Steps, item)
 		status.Ready = status.Ready && item.PreferredAvailable
 	}
@@ -338,7 +339,7 @@ func (w *PipelineWorker) processJob(ctx context.Context, job store.PipelineJob) 
 	if err != nil {
 		return w.handleJobFailure(ctx, job, errorOf(ErrorConfiguration, "create step generator: %v", err))
 	}
-	input := StepInput{OriginalTitle: job.OriginalTitle, IncidentBody: job.OriginalBody, TitleDE: job.TitleDE, SummaryDE: job.SummaryDE}
+	input, inputHash := stepInputAndHash(job, step)
 	output, modelIdentity, err := generator.GenerateStep(ctx, step, input)
 	if err != nil {
 		return w.handleJobFailure(ctx, job, err)
@@ -346,10 +347,6 @@ func (w *PipelineWorker) processJob(ctx context.Context, job store.PipelineJob) 
 	values, err := PipelineValues(step.Key, output)
 	if err != nil {
 		return w.handleJobFailure(ctx, job, errorOf(ErrorOutput, "%v", err))
-	}
-	inputHash := store.HashPipelineInput(job.SourceHash, step.PromptVersion, job.ModelIdentity)
-	if step.Key == EnglishTranslationStep {
-		inputHash = store.HashPipelineInput(job.TitleDE, job.SummaryDE, step.PromptVersion, job.ModelIdentity)
 	}
 	completed := w.clock()
 	if err := w.repository.CompletePipelineJob(ctx, job, values, modelIdentity, inputHash, completed); err != nil {
@@ -364,6 +361,18 @@ func (w *PipelineWorker) processJob(ctx context.Context, job store.PipelineJob) 
 	w.logger.Info("staged AI request completed", "cycle_id", job.CycleID, "job_id", job.ID, "incident_id", job.IncidentID, "step", step.Key, "model", modelIdentity, "duration", completed.Sub(started).Round(time.Millisecond))
 	w.publishSnapshot(ctx)
 	return true
+}
+
+func stepInputAndHash(job store.PipelineJob, step StepDefinition) (StepInput, string) {
+	inputValues := make(map[string]string, len(step.InputKinds))
+	hashValues := make([]string, 0, len(step.InputKinds)*2+2)
+	for _, kind := range step.InputKinds {
+		value := job.InputValues[kind]
+		inputValues[kind] = value
+		hashValues = append(hashValues, kind, value)
+	}
+	hashValues = append(hashValues, step.PromptVersion, job.ModelIdentity)
+	return StepInput{Values: inputValues}, store.HashPipelineInput(hashValues...)
 }
 
 func (w *PipelineWorker) handleJobFailure(ctx context.Context, job store.PipelineJob, processingError error) bool {

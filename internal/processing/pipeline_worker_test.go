@@ -39,7 +39,7 @@ func (g pipelineTestGenerator) ModelIdentity() string { return g.model }
 
 func (g pipelineTestGenerator) GenerateStep(_ context.Context, step StepDefinition, input StepInput) (StepOutput, string, error) {
 	g.provider.mu.Lock()
-	g.provider.events = append(g.provider.events, step.Key+":"+g.model+":"+input.OriginalTitle)
+	g.provider.events = append(g.provider.events, step.Key+":"+g.model+":"+input.Value("original_title"))
 	if g.provider.calls == nil {
 		g.provider.calls = make(map[string]int)
 	}
@@ -50,20 +50,25 @@ func (g pipelineTestGenerator) GenerateStep(_ context.Context, step StepDefiniti
 		failure = g.provider.fail(step.Key, call)
 	}
 	callback := g.provider.onGerman
-	if step.Key == GermanAnalysisStep {
+	if step.Key == GermanPresentationStep {
 		g.provider.onGerman = nil
 	}
 	g.provider.mu.Unlock()
 	if failure != nil {
 		return StepOutput{}, "", failure
 	}
-	if step.Key == GermanAnalysisStep {
+	if step.Key == IncidentMetadataStep {
+		return StepOutput{
+			Category: "other", ReportKind: "incident", PublicAssistanceStatus: "not_requested", PublicAssistanceTypes: []string{},
+		}, g.model, nil
+	}
+	if step.Key == GermanPresentationStep {
 		if callback != nil {
 			callback()
 		}
-		return StepOutput{TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.", Category: "other", PrivacyStatus: "safe", PrivacyFlags: []string{}}, g.model, nil
+		return StepOutput{TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.", PrivacyStatus: "safe", PrivacyFlags: []string{}}, g.model, nil
 	}
-	if input.TitleDE != "Sicherer Titel" || input.SummaryDE != "Sichere Zusammenfassung." {
+	if input.Value("title_de") != "Sicherer Titel" || input.Value("summary_de") != "Sichere Zusammenfassung." {
 		return StepOutput{}, "", fmt.Errorf("translation received incomplete German presentation")
 	}
 	return StepOutput{TitleEN: "Safe title", SummaryEN: "Safe summary."}, g.model, nil
@@ -88,11 +93,10 @@ func TestPipelineWorkerGroupsModelsFreezesTargetsAndStartsNextCycle(t *testing.T
 	if err := database.EnsurePipelineSteps(ctx, StepKeys(), now); err != nil {
 		t.Fatal(err)
 	}
-	if err := database.SetPipelineStepModel(ctx, GermanAnalysisStep, "qwen:4b", now); err != nil {
-		t.Fatal(err)
-	}
-	if err := database.SetPipelineStepModel(ctx, EnglishTranslationStep, "translate:4b", now); err != nil {
-		t.Fatal(err)
+	for step, model := range pipelineTestModels() {
+		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
+			t.Fatal(err)
+		}
 	}
 	provider := &pipelineTestProvider{}
 	provider.onGerman = func() { insertWorkerDocument(t, ctx, database, now.Add(2*time.Second), "three") }
@@ -105,14 +109,17 @@ func TestPipelineWorkerGroupsModelsFreezesTargetsAndStartsNextCycle(t *testing.T
 	provider.mu.Lock()
 	events := append([]string(nil), provider.events...)
 	provider.mu.Unlock()
-	if len(events) != 6 {
+	if len(events) != 9 {
 		t.Fatalf("events = %v", events)
 	}
+	want := []struct{ step, model string }{
+		{IncidentMetadataStep, "qwen:4b"}, {IncidentMetadataStep, "qwen:4b"},
+		{GermanPresentationStep, "qwen:4b"}, {GermanPresentationStep, "qwen:4b"},
+		{EnglishTranslationStep, "translate:4b"}, {EnglishTranslationStep, "translate:4b"},
+		{IncidentMetadataStep, "qwen:4b"}, {GermanPresentationStep, "qwen:4b"}, {EnglishTranslationStep, "translate:4b"},
+	}
 	for index, event := range events {
-		wantStep, wantModel := GermanAnalysisStep, "qwen:4b"
-		if index == 2 || index == 3 || index == 5 {
-			wantStep, wantModel = EnglishTranslationStep, "translate:4b"
-		}
+		wantStep, wantModel := want[index].step, want[index].model
 		if event[:len(wantStep)+len(wantModel)+2] != wantStep+":"+wantModel+":" {
 			t.Fatalf("event %d = %q, want %s/%s grouped order", index, event, wantStep, wantModel)
 		}
@@ -135,7 +142,7 @@ func TestPipelineWorkerFinishesAuthorizedCycleAfterWindowButDoesNotStartAnother(
 	if err := database.EnsurePipelineSteps(ctx, StepKeys(), current); err != nil {
 		t.Fatal(err)
 	}
-	for step, model := range map[string]string{GermanAnalysisStep: "qwen:4b", EnglishTranslationStep: "translate:4b"} {
+	for step, model := range pipelineTestModels() {
 		if err := database.SetPipelineStepModel(ctx, step, model, current); err != nil {
 			t.Fatal(err)
 		}
@@ -150,7 +157,7 @@ func TestPipelineWorkerFinishesAuthorizedCycleAfterWindowButDoesNotStartAnother(
 		t.Fatal(err)
 	}
 	worker.processAvailable(ctx)
-	if len(provider.events) != 2 || provider.events[0][:len(GermanAnalysisStep)] != GermanAnalysisStep || provider.events[1][:len(EnglishTranslationStep)] != EnglishTranslationStep {
+	if len(provider.events) != 3 || provider.events[0][:len(IncidentMetadataStep)] != IncidentMetadataStep || provider.events[1][:len(GermanPresentationStep)] != GermanPresentationStep || provider.events[2][:len(EnglishTranslationStep)] != EnglishTranslationStep {
 		t.Fatalf("authorized cycle events = %v", provider.events)
 	}
 	snapshot, err := database.PipelineSnapshot(ctx, "fixture", StepKeys(), current)
@@ -168,12 +175,12 @@ func TestPipelineWorkerFinishesAuthorizedCycleAfterWindowButDoesNotStartAnother(
 			secondID = record.ID
 		}
 	}
-	models := map[string]string{GermanAnalysisStep: "qwen:4b", EnglishTranslationStep: "translate:4b"}
+	models := pipelineTestModels()
 	if _, err := worker.RequestNow(ctx, "fixture", models, &secondID, false); err != nil {
 		t.Fatal(err)
 	}
 	worker.processAvailable(ctx)
-	if len(provider.events) != 4 {
+	if len(provider.events) != 6 {
 		t.Fatalf("outside-window manual cycle did not run: %v", provider.events)
 	}
 }
@@ -214,13 +221,13 @@ func TestPipelineWorkerRetriesPrivacyFailurePerStepThenRequiresReview(t *testing
 	if err := database.EnsurePipelineSteps(ctx, StepKeys(), now); err != nil {
 		t.Fatal(err)
 	}
-	for step, model := range map[string]string{GermanAnalysisStep: "qwen:4b", EnglishTranslationStep: "translate:4b"} {
+	for step, model := range pipelineTestModels() {
 		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
 			t.Fatal(err)
 		}
 	}
 	provider := &pipelineTestProvider{fail: func(step string, _ int) error {
-		if step == GermanAnalysisStep {
+		if step == GermanPresentationStep {
 			return errorOf(ErrorPrivacy, "synthetic privacy uncertainty")
 		}
 		return nil
@@ -235,15 +242,60 @@ func TestPipelineWorkerRetriesPrivacyFailurePerStepThenRequiresReview(t *testing
 	now = now.Add(11 * time.Minute)
 	worker.processAvailable(ctx)
 
-	if provider.callCount(GermanAnalysisStep) != contentMaxAttempts || provider.callCount(EnglishTranslationStep) != 0 {
-		t.Fatalf("step calls = german:%d translation:%d", provider.callCount(GermanAnalysisStep), provider.callCount(EnglishTranslationStep))
+	if provider.callCount(IncidentMetadataStep) != 1 || provider.callCount(GermanPresentationStep) != contentMaxAttempts || provider.callCount(EnglishTranslationStep) != 0 {
+		t.Fatalf("step calls = metadata:%d german:%d translation:%d", provider.callCount(IncidentMetadataStep), provider.callCount(GermanPresentationStep), provider.callCount(EnglishTranslationStep))
 	}
 	snapshot, err := database.PipelineSnapshot(ctx, "fixture", StepKeys(), now)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if snapshot.ActiveCycle != nil || snapshot.ScheduledCandidates != 0 || len(snapshot.Steps) != 2 || snapshot.Steps[0].NeedsReview != 1 {
+	if snapshot.ActiveCycle != nil || snapshot.ScheduledCandidates != 0 || len(snapshot.Steps) != 3 || snapshot.Steps[1].NeedsReview != 1 {
 		t.Fatalf("privacy retry snapshot = %#v", snapshot)
+	}
+}
+
+func TestPipelineWorkerFailsClosedWhenMetadataRemainsInvalid(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "metadata-retry.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 25, 4, 0, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "metadata")
+	if err := database.EnsurePipelineSteps(ctx, StepKeys(), now); err != nil {
+		t.Fatal(err)
+	}
+	for step, model := range pipelineTestModels() {
+		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	provider := &pipelineTestProvider{fail: func(step string, _ int) error {
+		if step == IncidentMetadataStep {
+			return errorOf(ErrorOutput, "synthetic malformed metadata")
+		}
+		return nil
+	}}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker.processAvailable(ctx)
+	now = now.Add(2 * time.Minute)
+	worker.processAvailable(ctx)
+	now = now.Add(11 * time.Minute)
+	worker.processAvailable(ctx)
+
+	if provider.callCount(IncidentMetadataStep) != contentMaxAttempts || provider.callCount(GermanPresentationStep) != 0 || provider.callCount(EnglishTranslationStep) != 0 {
+		t.Fatalf("step calls = metadata:%d german:%d translation:%d", provider.callCount(IncidentMetadataStep), provider.callCount(GermanPresentationStep), provider.callCount(EnglishTranslationStep))
+	}
+	snapshot, err := database.PipelineSnapshot(ctx, "fixture", StepKeys(), now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snapshot.ActiveCycle != nil || len(snapshot.Steps) != 3 || snapshot.Steps[0].NeedsReview != 1 {
+		t.Fatalf("metadata fail-closed snapshot = %#v", snapshot)
 	}
 }
 
@@ -259,13 +311,13 @@ func TestPipelineWorkerTransientFailureOpensPerStepModelCircuit(t *testing.T) {
 	if err := database.EnsurePipelineSteps(ctx, StepKeys(), now); err != nil {
 		t.Fatal(err)
 	}
-	for step, model := range map[string]string{GermanAnalysisStep: "qwen:4b", EnglishTranslationStep: "translate:4b"} {
+	for step, model := range pipelineTestModels() {
 		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
 			t.Fatal(err)
 		}
 	}
 	provider := &pipelineTestProvider{fail: func(step string, _ int) error {
-		if step == GermanAnalysisStep {
+		if step == GermanPresentationStep {
 			return errorOf(ErrorTransient, "synthetic endpoint outage")
 		}
 		return nil
@@ -275,17 +327,23 @@ func TestPipelineWorkerTransientFailureOpensPerStepModelCircuit(t *testing.T) {
 		t.Fatal(err)
 	}
 	worker.processAvailable(ctx)
-	if provider.callCount(GermanAnalysisStep) != 1 || !worker.circuitOpen(GermanAnalysisStep, "qwen:4b", now) {
-		t.Fatalf("first transient failure calls/circuit = %d/%t", provider.callCount(GermanAnalysisStep), worker.circuitOpen(GermanAnalysisStep, "qwen:4b", now))
+	if provider.callCount(IncidentMetadataStep) != 1 || provider.callCount(GermanPresentationStep) != 1 || !worker.circuitOpen(GermanPresentationStep, "qwen:4b", now) {
+		t.Fatalf("first transient failure calls/circuit = metadata:%d german:%d/%t", provider.callCount(IncidentMetadataStep), provider.callCount(GermanPresentationStep), worker.circuitOpen(GermanPresentationStep, "qwen:4b", now))
 	}
 	worker.processAvailable(ctx)
-	if provider.callCount(GermanAnalysisStep) != 1 {
-		t.Fatalf("open circuit made %d model calls", provider.callCount(GermanAnalysisStep))
+	if provider.callCount(GermanPresentationStep) != 1 {
+		t.Fatalf("open circuit made %d model calls", provider.callCount(GermanPresentationStep))
 	}
 	now = now.Add(time.Minute)
 	worker.processAvailable(ctx)
-	if provider.callCount(GermanAnalysisStep) != 2 {
-		t.Fatalf("expired circuit calls = %d, want 2", provider.callCount(GermanAnalysisStep))
+	if provider.callCount(GermanPresentationStep) != 2 {
+		t.Fatalf("expired circuit calls = %d, want 2", provider.callCount(GermanPresentationStep))
+	}
+}
+
+func pipelineTestModels() map[string]string {
+	return map[string]string{
+		IncidentMetadataStep: "qwen:4b", GermanPresentationStep: "qwen:4b", EnglishTranslationStep: "translate:4b",
 	}
 }
 
@@ -296,7 +354,9 @@ func insertWorkerDocument(t *testing.T, ctx context.Context, database *store.Sto
 		PublishedAt: now, FeedFingerprint: "feed-" + id, SourceHash: "source-" + id,
 		Incidents: []domain.Incident{{Number: "1", Position: 0, TitleDE: "Titel " + id, BodyDE: fmt.Sprintf("Text für %s in München.", id), ContentHash: "content-" + id}},
 	}
-	if err := database.UpsertDocuments(ctx, []domain.SourceDocument{document}, now); err != nil {
+	// created_at must be newer than the real migration-time v2 cutover; the
+	// document publication time still follows the deterministic worker clock.
+	if err := database.UpsertDocuments(ctx, []domain.SourceDocument{document}, time.Now().Add(time.Second)); err != nil {
 		t.Fatal(err)
 	}
 }

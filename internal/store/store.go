@@ -54,6 +54,15 @@ type IncidentRecord struct {
 	AICategory                 string
 	AIAreaName                 string
 	AIAreaType                 string
+	AIEventStartDate           string
+	AIEventStartTime           string
+	AIEventDayPart             string
+	AIReportKind               string
+	AIPublicAssistanceStatus   string
+	AIPublicAssistanceTypes    string
+	AIMetadataModel            string
+	AIMetadataPromptVersion    string
+	AIMetadataGeneratedAt      *time.Time
 	AIModel                    string
 	AIPromptVersion            string
 	AIGeneratedAt              *time.Time

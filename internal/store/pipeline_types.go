@@ -9,7 +9,9 @@ import (
 )
 
 // PipelineVersion identifies the persisted semantics of the staged pipeline.
-const PipelineVersion = "incident-pipeline-v1"
+const PipelineVersion = "incident-pipeline-v2"
+
+const PreviousPipelineVersion = "incident-pipeline-v1"
 
 var ErrPipelineUnconfigured = errors.New("AI pipeline models are not configured")
 
@@ -54,10 +56,11 @@ type PipelineJob struct {
 	PromptVersion     string
 	InputHash         string
 	AttemptCount      int
-	OriginalTitle     string
-	OriginalBody      string
-	TitleDE           string
-	SummaryDE         string
+	InputValues       map[string]string
+	// TitleDE and SummaryDE remain populated for compatibility with operational
+	// callers while step execution consumes InputValues exclusively.
+	TitleDE   string
+	SummaryDE string
 }
 
 // PipelineValue is one validated presentation field produced by a step.
@@ -146,6 +149,7 @@ func nullableString(value string) any {
 
 // PipelineSnapshot is an operational view of active, queued, and candidate work.
 type PipelineSnapshot struct {
+	ScheduledAfter      *time.Time       `json:"scheduled_after,omitempty"`
 	ActiveCycle         *PipelineCycle   `json:"active_cycle,omitempty"`
 	ActiveStepKey       string           `json:"active_step_key"`
 	ActiveModel         string           `json:"active_model"`

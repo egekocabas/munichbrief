@@ -9,19 +9,29 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/egekocabas/munichbrief/internal/store"
 )
 
 func TestRegisteredPipelineStepsAreStableAndOrdered(t *testing.T) {
 	steps := RegisteredSteps()
-	if len(steps) != 2 || steps[0].Key != GermanAnalysisStep || steps[0].PromptVersion != GermanAnalysisPromptVersion || steps[1].Key != EnglishTranslationStep || steps[1].PromptVersion != EnglishTranslationPromptVersion {
-		t.Fatalf("registered steps = %#v", steps)
+	if len(steps) != 3 ||
+		steps[0].Key != IncidentMetadataStep || steps[0].PromptVersion != IncidentMetadataPromptVersion ||
+		steps[1].Key != GermanPresentationStep || steps[1].PromptVersion != GermanPresentationPromptVersion ||
+		steps[2].Key != EnglishTranslationStep || steps[2].PromptVersion != EnglishTranslationPromptVersion {
+		t.Fatalf("registered step identities = %v", StepKeys())
 	}
-	if PipelineVersion != "incident-pipeline-v1" {
+	if PipelineVersion != "incident-pipeline-v2" {
 		t.Fatalf("pipeline version = %q", PipelineVersion)
 	}
-	for _, expected := range []string{"Du erstellst", "missing_wanted für Vermisstenmeldungen", "in Maxvorstadt", "other nur"} {
+	for _, expected := range []string{"Veröffentlichungszeit", "Wochentag", "relative Angaben", "öffentliche Mithilfe"} {
 		if !strings.Contains(steps[0].SystemPrompt, expected) {
-			t.Errorf("German analysis prompt does not contain %q", expected)
+			t.Errorf("metadata prompt does not contain %q", expected)
+		}
+	}
+	for _, forbidden := range []string{"Return only", "Write a", "Create a", "German title", "English summary"} {
+		if strings.Contains(steps[1].SystemPrompt, forbidden) {
+			t.Errorf("German presentation prompt contains English instruction %q", forbidden)
 		}
 	}
 }
@@ -30,46 +40,146 @@ func TestRegisteredStepsReturnsDeepCopy(t *testing.T) {
 	steps := RegisteredSteps()
 	steps[0].InputKinds[0] = "modified"
 	steps[0].Schema[0] = 'x'
-	resolved, _ := StepByKey(GermanAnalysisStep)
+	resolved, _ := StepByKey(IncidentMetadataStep)
 	if resolved.InputKinds[0] == "modified" || resolved.Schema[0] == 'x' {
 		t.Fatal("caller mutated the step registry")
 	}
 }
 
-func TestGermanAnalysisValidatesCategoryAreaAndPrivacy(t *testing.T) {
-	step, _ := StepByKey(GermanAnalysisStep)
-	area, areaType := "Maxvorstadt", "neighbourhood"
-	output := StepOutput{
-		TitleDE: "Zusammenstoß in Maxvorstadt", SummaryDE: "Zwei Fahrzeuge stießen in Maxvorstadt zusammen.",
-		Category: "traffic", AreaName: &area, AreaType: &areaType, PrivacyStatus: "safe", PrivacyFlags: []string{"age", "age"},
+func TestStepInputsAndHashesUseOnlyOrderedDeclaredValues(t *testing.T) {
+	step, _ := StepByKey(GermanPresentationStep)
+	job := store.PipelineJob{ModelIdentity: "qwen3.5:4b", InputValues: map[string]string{
+		"original_title": "Titel", "incident_body": "Text", "published_at": "must not be passed",
+		"category": "traffic", "report_kind": "incident",
+	}}
+	input, firstHash := stepInputAndHash(job, step)
+	if len(input.Values) != len(step.InputKinds) || input.Value("published_at") != "" {
+		t.Fatalf("German step received undeclared inputs: %#v", input.Values)
 	}
-	if err := ValidateStepOutput(step, StepInput{OriginalTitle: "Verkehrsunfall", IncidentBody: "In Maxvorstadt stießen zwei Fahrzeuge zusammen."}, &output); err != nil {
-		t.Fatalf("valid German analysis rejected: %v", err)
+	job.InputValues["published_at"] = "changed undeclared value"
+	_, unchangedHash := stepInputAndHash(job, step)
+	if unchangedHash != firstHash {
+		t.Fatal("undeclared input changed the German step hash")
 	}
-	if len(output.PrivacyFlags) != 1 || CategoryLabel(output.Category, "de") != "Verkehr" || CategoryLabel(output.Category, "en") != "Traffic" {
-		t.Fatalf("normalized output = %#v", output)
+	job.InputValues["category"] = "other"
+	_, changedHash := stepInputAndHash(job, step)
+	if changedHash == firstHash {
+		t.Fatal("metadata change did not invalidate the German step hash")
+	}
+}
+
+func TestMetadataInputIncludesPublicationClockWeekdayAndTimezone(t *testing.T) {
+	step, _ := StepByKey(IncidentMetadataStep)
+	input := StepInput{Values: map[string]string{
+		"original_title": "Mitteilung", "incident_body": "Am Montag geschah etwas in München.",
+		"published_at": "2026-08-27T10:15:00Z",
+	}}
+	generated, message, err := step.Generator(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{`"publication_local_datetime":"2026-08-27T12:15:00+02:00"`, `"publication_weekday":"Donnerstag"`, `"timezone":"Europe/Berlin"`} {
+		if !strings.Contains(message, expected) {
+			t.Errorf("metadata request omitted %s: %s", expected, message)
+		}
+	}
+	for _, expected := range []string{`"gestern":"2026-08-26"`, `"vorgestern":"2026-08-25"`, `"Montag":"2026-08-24"`, `"Mittwoch":"2026-08-26"`} {
+		if !strings.Contains(message, expected) {
+			t.Errorf("metadata request omitted reference day %s: %s", expected, message)
+		}
+	}
+	if generated.Value("publication_local_datetime") != "2026-08-27T12:15:00+02:00" {
+		t.Fatalf("generated publication context = %#v", generated.Values)
+	}
+}
+
+func TestIncidentMetadataAcceptsSupportedTemporalForms(t *testing.T) {
+	date, at, evening := "2026-08-24", "22:30", "evening"
+	cases := map[string]StepOutput{
+		"clock time": metadataOutput(&date, &at, nil),
+		"date only":  metadataOutput(&date, nil, nil),
+		"day part":   metadataOutput(&date, nil, &evening),
+		"unknown":    metadataOutput(nil, nil, nil),
+	}
+	step, _ := StepByKey(IncidentMetadataStep)
+	input := metadataInput("2026-08-25T12:00:00+02:00", "Am Montag, 24.08.2026, gegen 22:30 Uhr ereignete sich in München ein Vorfall.")
+	for name, output := range cases {
+		t.Run(name, func(t *testing.T) {
+			if err := ValidateStepOutput(step, input, &output); err != nil {
+				t.Fatalf("valid metadata rejected: %v", err)
+			}
+		})
+	}
+}
+
+func TestIncidentMetadataRejectsMalformedOrUngroundedValues(t *testing.T) {
+	validDate, badDate, at := "2026-08-24", "2026-02-30", "12:00"
+	area, areaType := "Schwabing", "district"
+	cases := map[string]StepOutput{
+		"invalid date": metadataOutput(&badDate, nil, nil),
+		"unsupported enum": func() StepOutput {
+			o := metadataOutput(&validDate, nil, nil)
+			o.ReportKind = "sometimes"
+			return o
+		}(),
+		"time without date": metadataOutput(nil, &at, nil),
+		"ungrounded area": func() StepOutput {
+			o := metadataOutput(&validDate, nil, nil)
+			o.AreaName, o.AreaType = &area, &areaType
+			return o
+		}(),
+	}
+	step, _ := StepByKey(IncidentMetadataStep)
+	input := metadataInput("2026-08-25T12:00:00+02:00", "Der Vorfall ereignete sich in München.")
+	for name, output := range cases {
+		t.Run(name, func(t *testing.T) {
+			if err := ValidateStepOutput(step, input, &output); KindOf(err) != ErrorOutput {
+				t.Fatalf("error = %v, kind %q", err, KindOf(err))
+			}
+		})
+	}
+}
+
+func TestIncidentMetadataValidatesPublicAssistanceConsistency(t *testing.T) {
+	step, _ := StepByKey(IncidentMetadataStep)
+	input := metadataInput("2026-08-25T12:00:00+02:00", "Die Polizei bittet Zeugen um Videos und Beobachtungen.")
+	output := metadataOutput(nil, nil, nil)
+	output.PublicAssistanceStatus = "requested"
+	output.PublicAssistanceTypes = []string{"witness_observations", "photo_video_material", "witness_observations"}
+	if err := ValidateStepOutput(step, input, &output); err != nil {
+		t.Fatalf("valid assistance rejected: %v", err)
+	}
+	if strings.Join(output.PublicAssistanceTypes, ",") != "photo_video_material,witness_observations" {
+		t.Fatalf("assistance types = %#v", output.PublicAssistanceTypes)
+	}
+	output.PublicAssistanceStatus = "not_requested"
+	if err := ValidateStepOutput(step, input, &output); KindOf(err) != ErrorOutput {
+		t.Fatalf("inconsistent assistance error = %v", err)
 	}
 
-	inferredArea, districtType := "Schwabing", "district"
-	output.AreaName, output.AreaType = &inferredArea, &districtType
-	if err := ValidateStepOutput(step, StepInput{IncidentBody: "Der Vorfall ereignete sich an der Leopoldstraße 1, 80802 München."}, &output); KindOf(err) != ErrorOutput {
-		t.Fatalf("inferred area error = %v, kind %q", err, KindOf(err))
+	unclear := metadataOutput(nil, nil, nil)
+	unclear.PublicAssistanceStatus = "unclear"
+	if err := ValidateStepOutput(step, input, &unclear); err != nil {
+		t.Fatalf("unclear assistance rejected: %v", err)
 	}
+}
 
-	output.AreaName, output.AreaType = nil, nil
-	output.Category = "unknown"
-	if err := ValidateStepOutput(step, StepInput{}, &output); KindOf(err) != ErrorOutput {
-		t.Fatalf("invalid category error = %v, kind %q", err, KindOf(err))
+func TestGermanPresentationValidatesPrivacyOnly(t *testing.T) {
+	step, _ := StepByKey(GermanPresentationStep)
+	output := StepOutput{TitleDE: "Sachlicher Titel", SummaryDE: "Eine sachliche Zusammenfassung.", PrivacyStatus: "safe", PrivacyFlags: []string{"age", "age"}}
+	if err := ValidateStepOutput(step, StepInput{}, &output); err != nil {
+		t.Fatalf("valid German presentation rejected: %v", err)
 	}
-
-	output.Category = "other"
+	if len(output.PrivacyFlags) != 1 || CategoryLabel("traffic", "de") != "Verkehr" {
+		t.Fatalf("normalized German output = %#v", output)
+	}
 	output.PrivacyFlags = []string{"uncertain"}
 	if err := ValidateStepOutput(step, StepInput{}, &output); KindOf(err) != ErrorPrivacy {
 		t.Fatalf("privacy uncertainty error = %v, kind %q", err, KindOf(err))
 	}
 }
 
-func TestEnglishTranslationReceivesOnlyAcceptedGermanPresentation(t *testing.T) {
+func TestEnglishTranslationReceivesOnlyDeclaredGermanPresentation(t *testing.T) {
 	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {
 		var payload chatRequest
 		if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
@@ -93,11 +203,24 @@ func TestEnglishTranslationReceivesOnlyAcceptedGermanPresentation(t *testing.T) 
 		t.Fatal(err)
 	}
 	step, _ := StepByKey(EnglishTranslationStep)
-	output, _, err := client.GenerateStep(context.Background(), step, StepInput{
-		OriginalTitle: "private original title", IncidentBody: "private original body",
-		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
-	})
+	output, _, err := client.GenerateStep(context.Background(), step, StepInput{Values: map[string]string{
+		"original_title": "private original title", "incident_body": "private original body",
+		"title_de": "Sicherer Titel", "summary_de": "Sichere Zusammenfassung.",
+	}})
 	if err != nil || output.TitleEN != "Safe title" {
 		t.Fatalf("translation output = %#v, err=%v", output, err)
+	}
+}
+
+func metadataInput(publishedAt, body string) StepInput {
+	return StepInput{Values: map[string]string{"original_title": "Mitteilung", "incident_body": body, "published_at": publishedAt}}
+}
+
+func metadataOutput(startDate, startTime, dayPart *string) StepOutput {
+	return StepOutput{
+		Category:       "other",
+		EventStartDate: startDate, EventStartTime: startTime,
+		EventDayPart: dayPart,
+		ReportKind:   "incident", PublicAssistanceStatus: "not_requested", PublicAssistanceTypes: []string{},
 	}
 }

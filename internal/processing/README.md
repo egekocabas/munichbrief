@@ -1,10 +1,12 @@
 # Processing pipeline
 
-The AI pipeline enriches stored incidents in two ordered stages:
+The AI pipeline enriches stored incidents in three ordered stages:
 
-1. `german_analysis` minimizes source text, creates a German presentation, and
-   assigns category and broad-area metadata.
-2. `english_translation` receives only the accepted German presentation and
+1. `incident_metadata` receives minimized source text and publication context,
+   then extracts validated language-neutral metadata.
+2. `german_presentation` receives the minimized source and accepted metadata,
+   then creates the canonical privacy-safe German presentation.
+3. `english_translation` receives only the accepted German presentation and
    creates its English counterpart.
 
 `steps.go` is the registry and validation boundary. A model response is not

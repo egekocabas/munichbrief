@@ -10,13 +10,17 @@ import (
 
 func testPipelinePlans() []PipelineStepPlan {
 	return []PipelineStepPlan{
-		{Key: "german_analysis", Order: 0, PromptVersion: "incident-analysis-de-v1", Model: "qwen:4b"},
-		{Key: "english_translation", Order: 1, PromptVersion: "incident-translation-en-v1", Model: "translate:4b"},
+		{Key: "incident_metadata", Order: 0, PromptVersion: "incident-metadata-v1", Model: "qwen:4b"},
+		{Key: "german_presentation", Order: 1, PromptVersion: "incident-presentation-de-v2", Model: "qwen:4b"},
+		{Key: "english_translation", Order: 2, PromptVersion: "incident-translation-en-v1", Model: "translate:4b"},
 	}
 }
 
 func insertPipelineDocuments(t *testing.T, ctx context.Context, database *Store, now time.Time, ids ...string) {
 	t.Helper()
+	if _, err := database.db.ExecContext(ctx, `UPDATE pipeline_cutovers SET scheduled_after='1970-01-01T00:00:00Z' WHERE pipeline_version=?`, PipelineVersion); err != nil {
+		t.Fatal(err)
+	}
 	documents := make([]domain.SourceDocument, 0, len(ids))
 	for index, id := range ids {
 		documents = append(documents, domain.SourceDocument{

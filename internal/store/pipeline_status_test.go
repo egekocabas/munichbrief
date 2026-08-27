@@ -29,39 +29,40 @@ func TestPipelineSnapshotSeparatesActiveWaitingWorkAndNewCandidates(t *testing.T
 	if err != nil || !found {
 		t.Fatalf("claim German job = %#v/%t/%v", job, found, err)
 	}
-	values := []PipelineValue{
-		{Kind: "title_de", Value: "Titel"}, {Kind: "summary_de", Value: "Zusammenfassung."},
-		{Kind: "category", Value: "other"}, {Kind: "privacy_status", Value: "safe"}, {Kind: "privacy_flags", Value: "[]"},
-	}
+	values := []PipelineValue{{Kind: "category", Value: "other"}, {Kind: "report_kind", Value: "incident"}, {Kind: "public_assistance_status", Value: "not_requested"}, {Kind: "public_assistance_types", Value: "[]"}}
 	if err := database.CompletePipelineJob(ctx, job, values, job.ModelIdentity, HashPipelineInput(job.SourceHash), now.Add(time.Minute)); err != nil {
 		t.Fatal(err)
 	}
 
-	snapshot, err := database.PipelineSnapshot(ctx, "fixture", []string{"german_analysis", "english_translation"}, now.Add(time.Minute))
+	stepKeys := []string{"incident_metadata", "german_presentation", "english_translation"}
+	snapshot, err := database.PipelineSnapshot(ctx, "fixture", stepKeys, now.Add(time.Minute))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if snapshot.ActiveStepCompleted != 1 || snapshot.ActiveStepTotal != 2 || snapshot.CycleCompleted != 1 || snapshot.CycleTotal != 4 {
+	if snapshot.ActiveStepCompleted != 1 || snapshot.ActiveStepTotal != 2 || snapshot.CycleCompleted != 1 || snapshot.CycleTotal != 6 {
 		t.Fatalf("active progress = step %d/%d pipeline %d/%d", snapshot.ActiveStepCompleted, snapshot.ActiveStepTotal, snapshot.CycleCompleted, snapshot.CycleTotal)
 	}
 	if snapshot.ScheduledCandidates != 0 {
 		t.Fatalf("in-flight items reported as new candidates: %d", snapshot.ScheduledCandidates)
 	}
-	if len(snapshot.ActiveSteps) != 2 || len(snapshot.Steps) != 2 {
+	if len(snapshot.ActiveSteps) != 3 || len(snapshot.Steps) != 3 {
 		t.Fatalf("step stats lengths = active:%d all:%d", len(snapshot.ActiveSteps), len(snapshot.Steps))
 	}
-	if german := snapshot.ActiveSteps[0]; german.Queued != 1 || german.Succeeded != 1 || german.Waiting != 0 {
+	if metadata := snapshot.ActiveSteps[0]; metadata.Queued != 1 || metadata.Succeeded != 1 || metadata.Waiting != 0 {
+		t.Fatalf("active metadata stats = %#v", metadata)
+	}
+	if german := snapshot.ActiveSteps[1]; german.Waiting != 2 || german.ReadyAfterStage != 1 || german.Queued != 0 {
 		t.Fatalf("active German stats = %#v", german)
 	}
-	if translation := snapshot.ActiveSteps[1]; translation.Waiting != 2 || translation.ReadyAfterStage != 1 || translation.Queued != 0 {
+	if translation := snapshot.ActiveSteps[2]; translation.Waiting != 2 || translation.ReadyAfterStage != 0 || translation.Queued != 0 {
 		t.Fatalf("active translation stats = %#v", translation)
 	}
-	if snapshot.Steps[0].Succeeded != 1 || snapshot.Steps[1].Waiting != 2 {
+	if snapshot.Steps[0].Succeeded != 1 || snapshot.Steps[1].Waiting != 2 || snapshot.Steps[2].Waiting != 2 {
 		t.Fatalf("all-cycle stats = %#v", snapshot.Steps)
 	}
 
 	insertPipelineDocuments(t, ctx, database, now.Add(2*time.Minute), "three")
-	snapshot, err = database.PipelineSnapshot(ctx, "fixture", []string{"german_analysis", "english_translation"}, now.Add(2*time.Minute))
+	snapshot, err = database.PipelineSnapshot(ctx, "fixture", stepKeys, now.Add(2*time.Minute))
 	if err != nil || snapshot.ScheduledCandidates != 1 {
 		t.Fatalf("new candidate outside frozen cycle = %#v/%v", snapshot, err)
 	}

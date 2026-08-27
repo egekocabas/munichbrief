@@ -10,10 +10,19 @@ import (
 
 func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKeys []string, now time.Time) (PipelineSnapshot, error) {
 	var snapshot PipelineSnapshot
+	var scheduledAfter string
+	if err := s.db.QueryRowContext(ctx, `SELECT scheduled_after FROM pipeline_cutovers WHERE pipeline_version = ?`, PipelineVersion).Scan(&scheduledAfter); err != nil {
+		return snapshot, fmt.Errorf("read pipeline cutover: %w", err)
+	}
+	cutover, err := time.Parse(time.RFC3339Nano, scheduledAfter)
+	if err != nil {
+		return snapshot, fmt.Errorf("parse pipeline cutover: %w", err)
+	}
+	snapshot.ScheduledAfter = &cutover
 	var cycle PipelineCycle
 	var authorized int
 	var started, completed string
-	err := s.db.QueryRowContext(ctx, `SELECT id, kind, status, active_step, window_authorized, COALESCE(started_at,''), COALESCE(completed_at,'') FROM processing_cycles WHERE status = 'running' LIMIT 1`).Scan(&cycle.ID, &cycle.Kind, &cycle.Status, &cycle.ActiveStep, &authorized, &started, &completed)
+	err = s.db.QueryRowContext(ctx, `SELECT id, kind, status, active_step, window_authorized, COALESCE(started_at,''), COALESCE(completed_at,'') FROM processing_cycles WHERE status = 'running' LIMIT 1`).Scan(&cycle.ID, &cycle.Kind, &cycle.Status, &cycle.ActiveStep, &authorized, &started, &completed)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return snapshot, err
 	}
@@ -53,8 +62,8 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 	if err != nil {
 		return snapshot, err
 	}
-	query := `SELECT COUNT(*) FROM incidents i JOIN source_documents d ON d.id=i.source_document_id WHERE ` + condition + ` AND COALESCE(i.body_de,'')<>'' AND NOT EXISTS (SELECT 1 FROM presentation_runs r WHERE r.incident_id=i.id AND r.source_hash=i.content_hash AND r.pipeline_version=? AND r.status IN ('processing','complete','failed'))`
-	if err := s.db.QueryRowContext(ctx, query, PipelineVersion).Scan(&snapshot.ScheduledCandidates); err != nil {
+	query := `SELECT COUNT(*) FROM incidents i JOIN source_documents d ON d.id=i.source_document_id WHERE ` + condition + ` AND COALESCE(i.body_de,'')<>'' AND julianday(i.created_at) > julianday((SELECT scheduled_after FROM pipeline_cutovers WHERE pipeline_version=?)) AND NOT EXISTS (SELECT 1 FROM presentation_runs r WHERE r.incident_id=i.id AND r.source_hash=i.content_hash AND r.pipeline_version=? AND r.status IN ('processing','complete','failed'))`
+	if err := s.db.QueryRowContext(ctx, query, PipelineVersion, PipelineVersion).Scan(&snapshot.ScheduledCandidates); err != nil {
 		return snapshot, fmt.Errorf("count scheduled pipeline candidates: %w", err)
 	}
 	for _, key := range stepKeys {

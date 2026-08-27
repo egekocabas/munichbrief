@@ -23,22 +23,29 @@ func TestOllamaClientRequestsStructuredPipelineStep(t *testing.T) {
 		if payload.Model != "qwen3.5:4b" || payload.Stream || payload.Think || payload.Options.NumCtx != 8192 {
 			t.Errorf("unexpected request options: %+v", payload)
 		}
-		step, _ := StepByKey(GermanAnalysisStep)
+		step, _ := StepByKey(IncidentMetadataStep)
 		if len(payload.Format) == 0 || len(payload.Messages) != 2 || payload.Messages[0].Content != step.SystemPrompt {
 			t.Errorf("request is missing the registered prompt, schema, or messages: %+v", payload)
+		}
+		for _, expected := range []string{`"publication_local_datetime":"2026-08-27T10:00:00+02:00"`, `"publication_weekday":"Donnerstag"`, `"timezone":"Europe/Berlin"`, `"gestern":"2026-08-26"`, `"Montag":"2026-08-24"`} {
+			if !strings.Contains(payload.Messages[1].Content, expected) {
+				t.Errorf("metadata request omitted %s: %s", expected, payload.Messages[1].Content)
+			}
 		}
 		var response bytes.Buffer
 		_ = json.NewEncoder(&response).Encode(chatResponse{
 			Model: "qwen3.5:4b",
 			Done:  true,
 			Message: chatMessage{Role: "assistant", Content: `{
-				"title_de":"Polizeieinsatz in der Altstadt",
-				"summary_de":"Am Abend fand in der Altstadt ein Polizeieinsatz statt. Die Absperrungen wurden später aufgehoben.",
 				"category":"police_operation",
 				"area_name":"Altstadt",
 				"area_type":"neighbourhood",
-				"privacy_status":"safe",
-				"privacy_flags":[]
+				"event_start_date":"2026-08-24",
+				"event_start_time":null,
+				"event_day_part":"evening",
+				"report_kind":"incident",
+				"public_assistance_status":"not_requested",
+				"public_assistance_types":[]
 			}`},
 		})
 		return &http.Response{
@@ -52,12 +59,12 @@ func TestOllamaClientRequestsStructuredPipelineStep(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewOllamaClient() error = %v", err)
 	}
-	step, _ := StepByKey(GermanAnalysisStep)
-	result, model, err := client.GenerateStep(context.Background(), step, StepInput{OriginalTitle: "Einsatz", IncidentBody: "Am Abend fand in der Altstadt ein Einsatz statt."})
+	step, _ := StepByKey(IncidentMetadataStep)
+	result, model, err := client.GenerateStep(context.Background(), step, StepInput{Values: map[string]string{"original_title": "Einsatz", "incident_body": "Am Montagabend fand in der Altstadt ein Einsatz statt.", "published_at": "2026-08-27T10:00:00+02:00"}})
 	if err != nil {
 		t.Fatalf("GenerateStep() error = %v", err)
 	}
-	if model != "qwen3.5:4b" || result.TitleDE != "Polizeieinsatz in der Altstadt" || result.Category != "police_operation" {
+	if model != "qwen3.5:4b" || result.EventStartDate == nil || *result.EventStartDate != "2026-08-24" || result.Category != "police_operation" {
 		t.Fatalf("result = %#v model=%q", result, model)
 	}
 }
@@ -92,8 +99,18 @@ func TestMissingPersonAppealIsReplacedWithIdentityFreeSource(t *testing.T) {
 			t.Errorf("minimized appeal contains %q: %s", privateValue, combined)
 		}
 	}
-	if !strings.Contains(body, "offizielle Quelle") {
+	if title != "Vermisstenmeldung" || !strings.Contains(body, "offizielle Quelle") {
 		t.Fatalf("minimized appeal does not direct readers to the official source: %s", body)
+	}
+}
+
+func TestWantedPersonAppealUsesDistinctIdentityFreeSource(t *testing.T) {
+	title, body := minimizeIncidentSource(
+		"Öffentlichkeitsfahndung nach Erika Mustermann",
+		"Die Polizei fahndet nach Erika Mustermann. Hinweise an 089/123456.",
+	)
+	if title != "Fahndungsaufruf" || strings.Contains(title+body, "Erika") || strings.Contains(title+body, "Mustermann") || strings.Contains(title+body, "089/123456") {
+		t.Fatalf("wanted-person source was not safely classified: %q / %q", title, body)
 	}
 }
 
@@ -111,7 +128,7 @@ func TestOllamaClientRejectsMalformedStepOutput(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewOllamaClient() error = %v", err)
 	}
-	step, _ := StepByKey(GermanAnalysisStep)
+	step, _ := StepByKey(GermanPresentationStep)
 	if _, _, err := client.GenerateStep(context.Background(), step, StepInput{OriginalTitle: "Titel", IncidentBody: "Text"}); err == nil {
 		t.Fatal("GenerateStep() error = nil, want invalid output error")
 	}
@@ -130,7 +147,7 @@ func TestOllamaClientClassifiesEndpointErrors(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			step, _ := StepByKey(GermanAnalysisStep)
+			step, _ := StepByKey(GermanPresentationStep)
 			_, _, err = client.GenerateStep(context.Background(), step, StepInput{OriginalTitle: "Titel", IncidentBody: "Text"})
 			if KindOf(err) != test.kind {
 				t.Fatalf("HTTP %d kind = %q, want %q", test.status, KindOf(err), test.kind)

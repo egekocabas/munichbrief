@@ -34,8 +34,10 @@ const (
 const latestPresentationRun = `(SELECT r.id
 	FROM presentation_runs r
 	WHERE r.incident_id = i.id AND r.source_hash = i.content_hash AND r.status = 'complete'
-		AND (@prompt = '` + PipelineVersion + `' OR r.pipeline_version LIKE 'legacy/' || @prompt || '/%')
-	ORDER BY (r.pipeline_version = '` + PipelineVersion + `') DESC, r.completed_at DESC, r.id DESC
+		AND ((@prompt = '` + PipelineVersion + `' AND (r.pipeline_version IN ('` + PipelineVersion + `', '` + PreviousPipelineVersion + `') OR r.legacy = 1))
+			OR r.pipeline_version LIKE 'legacy/' || @prompt || '/%')
+	ORDER BY CASE r.pipeline_version WHEN '` + PipelineVersion + `' THEN 0 WHEN '` + PreviousPipelineVersion + `' THEN 1 ELSE 2 END,
+		r.completed_at DESC, r.id DESC
 	LIMIT 1)`
 
 const scopedAIColumns = `
@@ -46,6 +48,15 @@ const scopedAIColumns = `
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'category' LIMIT 1), ''),
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'area_name' LIMIT 1), ''),
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'area_type' LIMIT 1), ''),
+				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'event_start_date' LIMIT 1), ''),
+				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'event_start_time' LIMIT 1), ''),
+				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'event_day_part' LIMIT 1), ''),
+				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'report_kind' LIMIT 1), ''),
+				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'public_assistance_status' LIMIT 1), ''),
+				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'public_assistance_types' LIMIT 1), ''),
+				COALESCE((SELECT model_identity FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'category' LIMIT 1), ''),
+				COALESCE((SELECT prompt_version FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'category' LIMIT 1), ''),
+				COALESCE((SELECT generated_at FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'category' LIMIT 1), ''),
 				COALESCE((SELECT model_identity FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
 				COALESCE((SELECT prompt_version FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
 				COALESCE((SELECT generated_at FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
@@ -62,13 +73,8 @@ const scopedAIColumns = `
 const publicReadyCondition = `EXISTS (
 		SELECT 1 FROM presentation_runs r
 		WHERE r.incident_id = i.id AND r.source_hash = i.content_hash AND r.status = 'complete'
-			AND (@prompt = '` + PipelineVersion + `' OR r.pipeline_version LIKE 'legacy/' || @prompt || '/%')
-)`
-
-const stagedReadyCondition = `EXISTS (
-		SELECT 1 FROM presentation_runs r
-		WHERE r.incident_id = i.id AND r.source_hash = i.content_hash
-			AND r.pipeline_version = '` + PipelineVersion + `' AND r.status = 'complete'
+			AND ((@prompt = '` + PipelineVersion + `' AND (r.pipeline_version IN ('` + PipelineVersion + `', '` + PreviousPipelineVersion + `') OR r.legacy = 1))
+				OR r.pipeline_version LIKE 'legacy/' || @prompt || '/%')
 )`
 
 func presentationArgs(scope PresentationScope) []any {
@@ -138,7 +144,12 @@ func (s *Store) ListPresentationEntries(ctx context.Context, limit, offset int, 
 			SELECT
 				0, d.id, 0, '', 0, d.title, '', '', d.title, d.source_url, d.external_id,
 				d.published_at, d.last_seen_at, d.fetch_status, COALESCE(d.error_message, ''),
-				'', '', '', '', '', '', '', '', '', '', '', '', '', '', 0, '', 0, '', ''
+				'', '', '', '', '', '', '',
+				'', '', '', '', '', '',
+				'', '', '',
+				'', '', '',
+				'', '', '',
+				'', 0, '', 0, '', ''
 			FROM source_documents d
 			WHERE ` + statusCondition + ` AND NOT EXISTS (
 				SELECT 1 FROM incidents i WHERE i.source_document_id = d.id
@@ -225,11 +236,7 @@ func (s *Store) ListAdminIncidents(ctx context.Context, limit, offset int, sourc
 	}
 	filterCondition := ""
 	if filter == AdminIncidentsUnprocessed {
-		readyCondition := publicReadyCondition
-		if scope.PromptVersion == PipelineVersion {
-			readyCondition = stagedReadyCondition
-		}
-		filterCondition = " AND NOT (" + readyCondition + ")"
+		filterCondition = " AND NOT (" + publicReadyCondition + ")"
 	}
 	args := presentationArgs(scope)
 
@@ -297,7 +304,7 @@ func (s *Store) GetPresentationIncident(ctx context.Context, id int64, scope Pre
 
 func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 	var record IncidentRecord
-	var publishedAt, updatedAt, aiGeneratedAt, aiTranslationGeneratedAt, nextRetryAt string
+	var publishedAt, updatedAt, aiMetadataGeneratedAt, aiGeneratedAt, aiTranslationGeneratedAt, nextRetryAt string
 	var aiLegacy int
 	if err := row.Scan(
 		&record.ID, &record.SourceDocumentID, &record.HasIncident, &record.Number, &record.Position,
@@ -305,6 +312,9 @@ func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 		&record.SourceExternalID, &publishedAt, &updatedAt, &record.FetchStatus, &record.ErrorMessage,
 		&record.AITitleDE, &record.AISummaryDE, &record.AITitleEN, &record.AISummaryEN,
 		&record.AICategory, &record.AIAreaName, &record.AIAreaType,
+		&record.AIEventStartDate, &record.AIEventStartTime, &record.AIEventDayPart,
+		&record.AIReportKind, &record.AIPublicAssistanceStatus, &record.AIPublicAssistanceTypes,
+		&record.AIMetadataModel, &record.AIMetadataPromptVersion, &aiMetadataGeneratedAt,
 		&record.AIModel, &record.AIPromptVersion, &aiGeneratedAt,
 		&record.AITranslationModel, &record.AITranslationPromptVersion, &aiTranslationGeneratedAt,
 		&record.AIPipelineVersion, &aiLegacy,
@@ -320,6 +330,13 @@ func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 	record.UpdatedAt, err = time.Parse(time.RFC3339Nano, updatedAt)
 	if err != nil {
 		return IncidentRecord{}, fmt.Errorf("parse update time: %w", err)
+	}
+	if aiMetadataGeneratedAt != "" {
+		generatedAt, err := time.Parse(time.RFC3339Nano, aiMetadataGeneratedAt)
+		if err != nil {
+			return IncidentRecord{}, fmt.Errorf("parse AI metadata generation time: %w", err)
+		}
+		record.AIMetadataGeneratedAt = &generatedAt
 	}
 	if aiGeneratedAt != "" {
 		generatedAt, err := time.Parse(time.RFC3339Nano, aiGeneratedAt)
