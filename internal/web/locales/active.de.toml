@@ -46,6 +46,9 @@ other = "Prüfmodus: Noch nicht anonymisierte Originaltexte können sichtbar sei
 [Footer]
 other = "MunichBrief ist unabhängig von der Bayerischen Polizei. Keine Analyse, Konten oder Werbung."
 
+[Built]
+other = "Gebaut"
+
 [Language]
 other = "Sprache"
 

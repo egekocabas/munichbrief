@@ -26,6 +26,28 @@ func TestDisabledAIUsesANilWebProcessor(t *testing.T) {
 	}
 }
 
+func TestInjectedBuildInfo(t *testing.T) {
+	previousCommit, previousTime := buildCommit, buildTime
+	t.Cleanup(func() {
+		buildCommit, buildTime = previousCommit, previousTime
+	})
+
+	buildCommit = "28c9a1265115c07d46e61fa26bd489e07acf95c4"
+	buildTime = "2026-08-24T19:02:00Z"
+	build, err := injectedBuildInfo()
+	if err != nil {
+		t.Fatalf("injectedBuildInfo() error = %v", err)
+	}
+	if build.Commit != buildCommit || !build.BuiltAt.Equal(time.Date(2026, time.August, 24, 19, 2, 0, 0, time.UTC)) {
+		t.Fatalf("injectedBuildInfo() = %#v", build)
+	}
+
+	buildTime = "not-a-time"
+	if _, err := injectedBuildInfo(); err == nil {
+		t.Fatal("injectedBuildInfo() accepted an invalid timestamp")
+	}
+}
+
 func TestRunAIProcessQueuesNeverStartedIncident(t *testing.T) {
 	ctx := context.Background()
 	databasePath := filepath.Join(t.TempDir(), "retry.db")

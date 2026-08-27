@@ -84,6 +84,36 @@ func TestTimelineAndDetailRenderFixtureData(t *testing.T) {
 	}
 }
 
+func TestReaderFooterShowsBuildProvenance(t *testing.T) {
+	database := fixtureStore(t)
+	commit := "28c9a1265115c07d46e61fa26bd489e07acf95c4"
+	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), Options{
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
+		PromptVersion: processing.PipelineVersion,
+		Build: BuildInfo{
+			Commit:  commit,
+			BuiltAt: time.Date(2026, time.August, 24, 19, 2, 0, 0, time.UTC),
+		},
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	response := httptest.NewRecorder()
+	server.Handler().ServeHTTP(response, englishRequest(http.MethodGet, "/en", nil))
+	for _, expected := range []string{
+		"Built (",
+		`href="https://github.com/egekocabas/munichbrief/commit/` + commit + `"`,
+		">28c9a12</a>)",
+		`datetime="2026-08-24T19:02:00Z"`,
+		"24.08.2026, 21:02 CET",
+	} {
+		if !strings.Contains(response.Body.String(), expected) {
+			t.Errorf("timeline footer does not contain %q", expected)
+		}
+	}
+}
+
 func TestTemplatesEscapeIncidentContent(t *testing.T) {
 	ctx := context.Background()
 	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "munichbrief.db"))

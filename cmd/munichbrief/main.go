@@ -24,7 +24,11 @@ import (
 	"github.com/egekocabas/munichbrief/internal/web"
 )
 
-var version = "dev"
+var (
+	version     = "dev"
+	buildCommit = "dev"
+	buildTime   = "dev"
+)
 
 const (
 	liveSyncInterval     = 6 * time.Hour
@@ -74,6 +78,10 @@ func run(ctx context.Context, logger *slog.Logger, arguments []string) error {
 }
 
 func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
+	build, err := injectedBuildInfo()
+	if err != nil {
+		return err
+	}
 	if cfg.PresentationMode == "review" {
 		logger.Warn("review presentation mode exposes stored original text and must remain access-restricted")
 	}
@@ -154,6 +162,7 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 		PageSize: cfg.PageSize, SourceMode: cfg.SourceMode, PresentationMode: cfg.PresentationMode,
 		PromptVersion: processing.PipelineVersion, SecureCookies: cfg.SecureCookies,
 		AdminEnabled: cfg.AdminEnabled, PublicHosts: cfg.PublicHosts, CanonicalOrigin: cfg.CanonicalOrigin, Processor: processor,
+		Build: build,
 	})
 	if err != nil {
 		return err
@@ -189,6 +198,22 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 		}
 		return err
 	}
+}
+
+func injectedBuildInfo() (web.BuildInfo, error) {
+	commit := strings.TrimSpace(buildCommit)
+	timestamp := strings.TrimSpace(buildTime)
+	if (commit == "" || commit == "dev") && (timestamp == "" || timestamp == "dev") {
+		return web.BuildInfo{}, nil
+	}
+	if commit == "" || commit == "dev" || timestamp == "" || timestamp == "dev" {
+		return web.BuildInfo{}, errors.New("build commit and build time must be provided together")
+	}
+	builtAt, err := time.Parse(time.RFC3339, timestamp)
+	if err != nil {
+		return web.BuildInfo{}, fmt.Errorf("parse build time: %w", err)
+	}
+	return web.BuildInfo{Commit: commit, BuiltAt: builtAt}, nil
 }
 
 func webProcessor(worker *processing.PipelineWorker) web.ProcessingRequester {

@@ -77,6 +77,12 @@ func (s *Server) base(request *http.Request, language, canonicalRelativeURL stri
 		SocialImageAlt: s.localization.Text(language, "SocialImageAlt"),
 		Fixture:        s.options.SourceMode == "fixture", Review: s.options.PresentationMode == "review" && !s.isPublicRequest(request),
 	}
+	if s.options.Build.Commit != "" {
+		page.BuildCommit = s.options.Build.Commit[:7]
+		page.BuildCommitURL = "https://github.com/egekocabas/munichbrief/commit/" + s.options.Build.Commit
+		page.BuildTime = s.options.Build.BuiltAt.Format(time.RFC3339)
+		page.BuildTimeLabel = s.options.Build.BuiltAt.In(s.location).Format("02.01.2006, 15:04") + " CET"
+	}
 	page.Robots = "index,follow,max-image-preview:large"
 	if page.Review {
 		page.Robots = "noindex,nofollow,noarchive"
@@ -454,6 +460,10 @@ type basePage struct {
 	Fixture                   bool
 	Review                    bool
 	HideAuthorityNotice       bool
+	BuildCommit               string
+	BuildCommitURL            string
+	BuildTime                 string
+	BuildTimeLabel            string
 }
 
 func structuredPageData(page basePage, pageType string) template.JS {

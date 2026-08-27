@@ -78,7 +78,10 @@
   </main>
   {{/* Shared reader footer. */}}
   <footer class="mt-12 border-t border-rule bg-paper">
-    <div class="page-shell py-6 text-center text-xs leading-relaxed text-muted"><p>{{t .Lang "Footer"}}</p></div>
+    <div class="page-shell py-6 text-center text-xs leading-relaxed text-muted">
+      <p>{{t .Lang "Footer"}}</p>
+      {{if .BuildCommit}}<p class="mt-2">{{t .Lang "Built"}} (<a class="font-mono font-bold text-civic hover:text-civic-dark" href="{{.BuildCommitURL}}">{{.BuildCommit}}</a>) <time datetime="{{.BuildTime}}">{{.BuildTimeLabel}}</time></p>{{end}}
+    </div>
   </footer>
 </body>
 </html>

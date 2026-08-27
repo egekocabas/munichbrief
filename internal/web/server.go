@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -85,7 +86,16 @@ type Options struct {
 	PublicHosts      []string
 	CanonicalOrigin  string
 	Processor        ProcessingRequester
+	Build            BuildInfo
 }
+
+// BuildInfo identifies the source revision and time used for a deployed build.
+type BuildInfo struct {
+	Commit  string
+	BuiltAt time.Time
+}
+
+var gitCommitPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
 
 // Server owns MunichBrief's HTTP route tree and parsed embedded templates.
 type Server struct {
@@ -123,6 +133,12 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 	}
 	if strings.TrimSpace(options.PromptVersion) == "" {
 		return nil, errors.New("presentation prompt version is required")
+	}
+	if (options.Build.Commit == "") != options.Build.BuiltAt.IsZero() {
+		return nil, errors.New("build commit and build time must be provided together")
+	}
+	if options.Build.Commit != "" && !gitCommitPattern.MatchString(options.Build.Commit) {
+		return nil, errors.New("build commit must be a full lowercase Git SHA")
 	}
 	if err := validateReaderLanguages(); err != nil {
 		return nil, fmt.Errorf("validate reader languages: %w", err)

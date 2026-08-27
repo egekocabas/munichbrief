@@ -46,6 +46,9 @@ other = "Review mode: original text that has not been anonymised may be visible.
 [Footer]
 other = "MunichBrief is independent from the Bavarian Police. No analytics, accounts, or advertising."
 
+[Built]
+other = "Built"
+
 [Language]
 other = "Language"
 
