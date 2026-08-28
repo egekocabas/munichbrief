@@ -43,6 +43,42 @@ other = "The latest official information remains authoritative, and the presumpt
 [ReviewNotice]
 other = "Review mode: original text that has not been anonymised may be visible. Do not expose publicly."
 
+[AIGeneratedContent]
+other = "AI-generated content"
+
+[AIFixtureLabelPreview]
+other = "Label preview — this synthetic fixture has not been AI-processed"
+
+[AIDisclosureTitle]
+other = "AI-generated content"
+
+[AIDisclosureFixtureCopy]
+other = "Local preview: this page uses synthetic fixture content."
+
+[AIDisclosureCopy]
+other = "MunichBrief uses locally operated AI to create headlines, summaries, translations, categories, and structured details such as the reported area and time, and whether the police are requesting public assistance, from official Munich Police reports. AI-generated or inferred information may contain errors or become outdated when the original report is updated. Each incident page identifies and links to its official police source; please consult that source for authoritative information. MunichBrief is an independent project and is not affiliated with the Bavarian Police. Everyone mentioned is presumed innocent unless proven guilty."
+
+[AIDisclosurePreferenceCopy]
+other = "Selecting “Got it” remembers this notice for 30 days."
+
+[AIDisclosureLearnMore]
+other = "More information about MunichBrief and how it works is available on the About page."
+
+[AIDisclosureGotIt]
+other = "Got it"
+
+[AITransparencyEU]
+other = "AI transparency and EU guidance"
+
+[AITransparencyEUCopy]
+other = "MunichBrief uses the EU Fully AI-Generated label because European Commission guidance expressly lists AI-generated news summaries as a use case. Visible labels and machine-readable provenance support transparency, but use of the icon does not by itself establish legal compliance or indicate that MunichBrief has signed the voluntary Code of Practice."
+
+[EUIconGuidance]
+other = "EU icon guidance"
+
+[EUCodePractice]
+other = "EU Code of Practice"
+
 [Footer]
 other = "MunichBrief is independent from the Bavarian Police. No analytics, accounts, or advertising."
 
@@ -354,7 +390,7 @@ other = "AI-generated summaries and extracted details may contain errors. Police
 other = "Privacy and data handling"
 
 [PrivacyCopy]
-other = "MunichBrief has no accounts, analytics, or advertising. A necessary cookie stores only the selected language for one year."
+other = "MunichBrief has no accounts, analytics, or advertising. A necessary cookie stores the selected language for one year. After you select “Got it”, a first-party preference cookie remembers the AI disclosure for 30 days. The selected colour theme is stored locally in your browser."
 
 [DataHandlingCopy]
 other = "Extracted German source text is stored locally. Restricted review mode can display originals and processing states for quality control; public mode does not display stored originals."

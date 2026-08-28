@@ -185,6 +185,7 @@ func (s *Server) prepareMarkdown(response http.ResponseWriter, page basePage) {
 	response.Header().Set("Content-Language", page.Lang)
 	response.Header().Set("Cache-Control", "private, no-store")
 	response.Header().Set("X-Content-Type-Options", "nosniff")
+	setAIResponseHeaders(response.Header(), page)
 	response.Header().Set("Content-Signal", contentSignal)
 	addVary(response.Header(), "Cookie", "Accept-Language", "Accept")
 	s.setDocumentLinks(response.Header(), page)
@@ -291,8 +292,22 @@ func markdownURL(value string) string {
 }
 
 func writeMarkdownFrontMatter(builder *strings.Builder, title string, page basePage) {
-	fmt.Fprintf(builder, "---\ntitle: %s\ndescription: %s\nlanguage: %s\ncanonical: %s\n---\n\n",
-		yamlQuoted(title+" · MunichBrief"), yamlQuoted(pageDescription(page)), yamlQuoted(page.Lang), yamlQuoted(page.CanonicalURL))
+	fmt.Fprintf(builder, "---\ntitle: %s\ndescription: %s\nlanguage: %s\ncanonical: %s\nai_generated: %t\nai_generated_state: %s\n",
+		yamlQuoted(title+" · MunichBrief"), yamlQuoted(pageDescription(page)), yamlQuoted(page.Lang), yamlQuoted(page.CanonicalURL),
+		page.AIGeneratedState != "false", yamlQuoted(page.AIGeneratedState))
+	if page.AIGeneratedState != "false" {
+		fmt.Fprintf(builder, "digital_source_type: %s\n", yamlQuoted(iptcTrainedAlgorithmicMedia))
+	}
+	if page.AIModel != "" {
+		fmt.Fprintf(builder, "ai_model: %s\n", yamlQuoted(page.AIModel))
+	}
+	if page.AIMetadataModel != "" {
+		fmt.Fprintf(builder, "ai_metadata_model: %s\n", yamlQuoted(page.AIMetadataModel))
+	}
+	if page.AITranslationModel != "" {
+		fmt.Fprintf(builder, "ai_translation_model: %s\n", yamlQuoted(page.AITranslationModel))
+	}
+	builder.WriteString("---\n\n")
 }
 
 func pageDescription(page basePage) string {
@@ -318,6 +333,9 @@ func (s *Server) renderTimelineMarkdown(response http.ResponseWriter, data timel
 		fmt.Fprintf(&builder, "\n## %s\n", markdownText(group.Label))
 		for _, incident := range group.Incidents {
 			link := fmt.Sprintf("%s/%s/incidents/%d", data.CanonicalOrigin, data.Lang, incident.Record.ID)
+			if incident.Record.HasAI {
+				fmt.Fprintf(&builder, "\n> **%s**\n", markdownText(s.localization.Text(data.Lang, "AIGeneratedContent")))
+			}
 			fmt.Fprintf(&builder, "\n### [%s](<%s>)\n\n", markdownText(incident.Title), markdownURL(link))
 			fmt.Fprintf(&builder, "%s\n\n", markdownText(incident.Summary))
 			fmt.Fprintf(&builder, "- %s: %s\n", markdownText(s.localization.Text(data.Lang, "PublishedWithin")), markdownText(incident.Record.SourceTitle))
@@ -350,6 +368,9 @@ func (s *Server) renderTimelineMarkdown(response http.ResponseWriter, data timel
 func (s *Server) renderDetailMarkdown(response http.ResponseWriter, data detailPage) {
 	var builder strings.Builder
 	writeMarkdownFrontMatter(&builder, data.Incident.Title, data.basePage)
+	if data.Incident.Record.HasAI {
+		fmt.Fprintf(&builder, "> **%s**\n\n", markdownText(s.localization.Text(data.Lang, "AIGeneratedContent")))
+	}
 	fmt.Fprintf(&builder, "# %s\n\n", markdownText(data.Incident.Title))
 	fmt.Fprintf(&builder, "%s\n\n", markdownText(data.Incident.Summary))
 	fmt.Fprintf(&builder, "- %s: %s\n", markdownText(s.localization.Text(data.Lang, "PublishedWithin")), markdownText(data.Incident.Record.SourceTitle))

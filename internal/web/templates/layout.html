@@ -1,11 +1,16 @@
 {{define "layout"}}
 <!doctype html>
-<html lang="{{.Lang}}" prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#">
+<html lang="{{.Lang}}" prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" data-ai-generated="{{.AIGeneratedState}}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="{{.Description}}">
   <meta name="robots" content="{{.Robots}}">
+  <meta name="ai-generated" content="{{.AIGeneratedState}}">
+  {{if .AIModel}}<meta name="ai-model" content="{{.AIModel}}">{{end}}
+  {{if .AIMetadataModel}}<meta name="ai-metadata-model" content="{{.AIMetadataModel}}">{{end}}
+  {{if .AITranslationModel}}<meta name="ai-translation-model" content="{{.AITranslationModel}}">{{end}}
+  {{if ne .AIGeneratedState "false"}}<meta name="digital-source-type" content="http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia">{{end}}
   <meta name="htmx-config" content='{"allowEval":false,"selfRequestsOnly":true,"includeIndicatorStyles":false}'>
   <title>{{template "title" .}}</title>
   <script src="{{assetURL "theme.js"}}"></script>
@@ -35,6 +40,7 @@
   {{if .PreviousCanonicalURL}}<link rel="prev" href="{{.PreviousCanonicalURL}}">{{end}}
   {{if .NextCanonicalURL}}<link rel="next" href="{{.NextCanonicalURL}}">{{end}}
   {{if .StructuredData}}<script type="application/ld+json">{{.StructuredData}}</script>{{end}}
+  {{if .AIContentMetadata}}<script id="ai-content-metadata" type="application/json">{{.AIContentMetadata}}</script>{{end}}
   <link rel="stylesheet" href="{{assetURL "app.css"}}">
   <script defer src="{{assetURL "htmx.min.js"}}"></script>
 </head>
@@ -64,15 +70,8 @@
     </div>
   </header>
   <main id="content" class="page-shell flex-1">
-    {{/* The About page contains the expanded disclosure instead of repeating this notice. */}}
-    {{if not .HideAuthorityNotice}}
-    <aside class="mt-4 border-l-3 border-alert bg-paper px-4 py-3 text-sm leading-relaxed text-muted" aria-label="{{t .Lang "NoticeLabel"}}">
-      <strong class="text-ink">{{t .Lang "NoticeLead"}}</strong>
-      {{if .Fixture}}{{t .Lang "FixtureNotice"}}{{else}}{{t .Lang "LiveNotice"}}{{end}}
-      {{t .Lang "AuthorityNotice"}}
-      {{if .Review}}<span class="mt-1 block font-bold text-alert">{{t .Lang "ReviewNotice"}}</span>{{end}}
-    </aside>
-    {{end}}
+    {{/* Review mode is an operational safety warning and is never dismissible. */}}
+    {{if .ShowReviewNotice}}<aside class="mt-4 border-l-3 border-alert bg-alert-soft px-4 py-3 text-sm font-bold leading-relaxed text-alert" aria-label="{{t .Lang "NoticeLabel"}}">{{t .Lang "ReviewNotice"}}</aside>{{end}}
     {{/* Page-specific reader content is rendered below the shared notice. */}}
     {{template "content" .}}
   </main>
@@ -83,6 +82,41 @@
       {{if .BuildCommit}}<p class="mt-2">{{t .Lang "Built"}} ({{if .BuildCommitURL}}<a class="font-mono font-bold text-civic hover:text-civic-dark" href="{{.BuildCommitURL}}">{{.BuildCommit}}</a>{{else}}<strong class="font-mono">{{.BuildCommit}}</strong>{{end}}) <time datetime="{{.BuildTime}}">{{.BuildTimeLabel}}</time></p>{{end}}
     </div>
   </footer>
+  {{if .ShowAIDisclosure}}
+  <aside id="ai-disclosure" class="ai-disclosure" aria-labelledby="ai-disclosure-title">
+    <div class="ai-disclosure-panel">
+      <div class="min-w-0 flex-1">
+        <div class="ai-disclosure-heading">
+          <div class="ai-disclosure-icon" aria-hidden="true">
+            <img src="{{aiLabelAssetURL}}" alt="">
+          </div>
+          <h2 id="ai-disclosure-title" class="font-serif text-lg font-bold text-ink">{{t .Lang "AIDisclosureTitle"}}</h2>
+        </div>
+        {{if .Fixture}}<p class="mt-1 text-sm font-bold text-alert">{{t .Lang "AIDisclosureFixtureCopy"}}</p>{{end}}
+        <p class="mt-1 text-sm leading-relaxed text-muted">{{t .Lang "AIDisclosureCopy"}}</p>
+        <p class="mt-1 text-xs leading-relaxed text-muted">{{t .Lang "AIDisclosurePreferenceCopy"}} <a class="font-bold text-civic hover:text-civic-dark" href="{{.AboutURL}}">{{t .Lang "AIDisclosureLearnMore"}}</a></p>
+      </div>
+      <form class="ai-disclosure-form" method="post" action="/ai-disclosure/acknowledge" hx-post="/ai-disclosure/acknowledge" hx-target="#ai-disclosure" hx-swap="delete">
+        <input type="hidden" name="return_to" value="{{.CurrentURL}}">
+        <button class="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-civic px-5 py-2 text-sm font-extrabold text-on-accent hover:bg-civic-dark" type="submit">{{t .Lang "AIDisclosureGotIt"}}</button>
+      </form>
+    </div>
+  </aside>
+  {{end}}
 </body>
 </html>
+{{end}}
+
+{{define "ai-generated-label"}}
+<span class="ai-generated-label" aria-label="{{t .Lang "AIGeneratedContent"}}">
+  <img src="{{aiLabelAssetURL}}" alt="">
+  <span class="sr-only">{{t .Lang "AIGeneratedContent"}}</span>
+</span>
+{{end}}
+
+{{define "fixture-ai-label-preview"}}
+<div class="mt-3 flex flex-wrap items-center gap-2">
+  <span class="ai-generated-label" aria-hidden="true"><img src="{{aiLabelAssetURL}}" alt=""></span>
+  <span class="text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-civic">{{t .Lang "AIFixtureLabelPreview"}}</span>
+</div>
 {{end}}

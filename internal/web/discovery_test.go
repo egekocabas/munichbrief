@@ -129,8 +129,12 @@ func TestPublicDocumentsExposeCanonicalAndAlternateLinks(t *testing.T) {
 	timeline := httptest.NewRecorder()
 	server.Handler().ServeHTTP(timeline, publicDiscoveryRequest(http.MethodGet, "/en?page=1"))
 	for _, expected := range []string{
-		`<html lang="en" prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#">`,
+		`<html lang="en" prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" data-ai-generated="true">`,
 		`<meta name="robots" content="index,follow,max-image-preview:large">`,
+		`<meta name="ai-generated" content="true">`,
+		`<meta name="digital-source-type" content="` + iptcTrainedAlgorithmicMedia + `">`,
+		`"ai_generated":true,"ai_generated_state":"true"`,
+		`data-ai-generated="true" data-ai-model="qwen3.5:4b"`,
 		`<link rel="canonical" href="https://munichbrief.de/en">`,
 		`<link rel="alternate" hreflang="de" href="https://munichbrief.de/de">`,
 		`<link rel="alternate" hreflang="en" href="https://munichbrief.de/en">`,
@@ -163,8 +167,11 @@ func TestPublicDocumentsExposeCanonicalAndAlternateLinks(t *testing.T) {
 	if timeline.Header().Get("Content-Signal") != contentSignal || !strings.Contains(timeline.Header().Get("Vary"), "Accept") {
 		t.Errorf("public discovery headers = signal:%q vary:%q", timeline.Header().Get("Content-Signal"), timeline.Header().Get("Vary"))
 	}
+	if timeline.Header().Get("X-AI-Generated") != "true" || timeline.Header().Get("X-IPTC-Digital-Source-Type") != iptcTrainedAlgorithmicMedia {
+		t.Errorf("timeline AI headers = generated:%q source:%q", timeline.Header().Get("X-AI-Generated"), timeline.Header().Get("X-IPTC-Digital-Source-Type"))
+	}
 	timelineStructured := decodeStructuredData(t, timeline.Body.String())
-	if encoded, _ := json.Marshal(timelineStructured); !bytes.Contains(encoded, []byte(`"@type":"CollectionPage"`)) || !bytes.Contains(encoded, []byte(`"@type":"WebSite"`)) {
+	if encoded, _ := json.Marshal(timelineStructured); !bytes.Contains(encoded, []byte(`"@type":"CollectionPage"`)) || !bytes.Contains(encoded, []byte(`"@type":"WebSite"`)) || !bytes.Contains(encoded, []byte(`"digitalSourceType":"`+schemaTrainedAlgorithmicMedia+`"`)) {
 		t.Errorf("timeline structured data = %s", encoded)
 	}
 
@@ -176,6 +183,10 @@ func TestPublicDocumentsExposeCanonicalAndAlternateLinks(t *testing.T) {
 	}
 	for _, expected := range []string{
 		`<meta name="description" content="Safe summary.">`,
+		`<meta name="ai-generated" content="true">`,
+		`<meta name="ai-model" content="qwen3.5:4b">`,
+		`"ai_generated":true,"ai_generated_state":"true","ai_model":"qwen3.5:4b"`,
+		`data-ai-generated="true" data-ai-model="qwen3.5:4b"`,
 		`<meta property="og:type" content="article">`,
 		`<meta property="og:title" content="Safe title · MunichBrief">`,
 		`<meta property="og:image" content="https://munichbrief.de/social/en/incidents/` + formatID(job.IncidentID) + `">`,
@@ -188,8 +199,11 @@ func TestPublicDocumentsExposeCanonicalAndAlternateLinks(t *testing.T) {
 		}
 	}
 	detailStructured := decodeStructuredData(t, detail.Body.String())
-	if encoded, _ := json.Marshal(detailStructured); !bytes.Contains(encoded, []byte(`"@type":"Article"`)) || !bytes.Contains(encoded, []byte(`"headline":"Safe title"`)) || !bytes.Contains(encoded, []byte(`"isBasedOn":`)) {
+	if encoded, _ := json.Marshal(detailStructured); !bytes.Contains(encoded, []byte(`"@type":"Article"`)) || !bytes.Contains(encoded, []byte(`"headline":"Safe title"`)) || !bytes.Contains(encoded, []byte(`"isBasedOn":`)) || !bytes.Contains(encoded, []byte(`"digitalSourceType":"`+schemaTrainedAlgorithmicMedia+`"`)) {
 		t.Errorf("detail structured data = %s", encoded)
+	}
+	if detail.Header().Get("X-AI-Generated") != "true" || detail.Header().Get("X-AI-Model") != "qwen3.5:4b" || detail.Header().Get("X-IPTC-Digital-Source-Type") != iptcTrainedAlgorithmicMedia {
+		t.Errorf("detail AI headers = generated:%q model:%q source:%q", detail.Header().Get("X-AI-Generated"), detail.Header().Get("X-AI-Model"), detail.Header().Get("X-IPTC-Digital-Source-Type"))
 	}
 
 	root := httptest.NewRecorder()

@@ -69,6 +69,7 @@ func (s *Server) base(request *http.Request, language, canonicalRelativeURL stri
 	languageDefinition, _ := readerLanguageByCode(language)
 	page := basePage{
 		Lang: language, HomeURL: "/" + language, AboutURL: "/" + language + "/about",
+		CurrentURL:      request.URL.RequestURI(),
 		Description:     s.localization.Text(language, "SiteDescription"),
 		CanonicalOrigin: canonicalOrigin, CanonicalURL: canonicalOrigin + canonicalRelativeURL,
 		OpenGraphLocale: languageDefinition.OpenGraphLocale,
@@ -76,6 +77,12 @@ func (s *Server) base(request *http.Request, language, canonicalRelativeURL stri
 		SocialImageURL: canonicalOrigin + "/social/" + language + "/home",
 		SocialImageAlt: s.localization.Text(language, "SocialImageAlt"),
 		Fixture:        s.options.SourceMode == "fixture", Review: s.options.PresentationMode == "review" && !s.isPublicRequest(request),
+	}
+	page.setAIMetadata("false", nil)
+	page.ShowAIDisclosure = !aiDisclosureAcknowledged(request)
+	page.ShowReviewNotice = page.Review
+	if page.Review && request.URL.Query().Get("show-ai-disclosure") == "1" {
+		page.ShowAIDisclosure = true
 	}
 	if s.options.Build.Commit != "" {
 		page.BuildCommit = s.options.Build.Commit
@@ -119,6 +126,7 @@ func (s *Server) prepareHTML(response http.ResponseWriter, request *http.Request
 	addVary(response.Header(), "Cookie", "Accept-Language")
 	response.Header().Set("Cache-Control", "private, no-store")
 	response.Header().Set("X-Content-Type-Options", "nosniff")
+	setAIResponseHeaders(response.Header(), page)
 	s.setDocumentLinks(response.Header(), page)
 	if s.scope(request).PublicOnly {
 		response.Header().Set("Content-Signal", contentSignal)
@@ -153,6 +161,8 @@ func (s *Server) timeline(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 	base := s.base(request, language, timelineURL(language, page))
+	base.setAIMetadata(aiGeneratedState(incidents), nil)
+	base.StructuredData = structuredPageData(base, "CollectionPage")
 	if page > 1 {
 		base.PreviousCanonicalURL = base.CanonicalOrigin + timelineURL(language, page-1)
 	}
@@ -234,6 +244,12 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 		base.SocialImageSecureURL = base.SocialImageURL
 	}
 	base.SocialImageAlt = base.SocialTitle
+	if view.Record.HasAI {
+		base.SocialImageAlt = s.localization.Text(language, "AIGeneratedContent") + ": " + base.SocialTitle
+	}
+	if view.Record.HasAI {
+		base.setAIMetadata("true", &view.Record)
+	}
 	base.PublishedTime = view.Record.PublishedAt.Format(time.RFC3339)
 	base.ModifiedTime = view.Record.UpdatedAt.Format(time.RFC3339)
 	base.StructuredData = structuredArticleData(base, view)
@@ -257,7 +273,8 @@ func (s *Server) about(response http.ResponseWriter, request *http.Request) {
 	}
 	s.setLanguagePreference(response, language)
 	base := s.base(request, language, "/"+language+"/about")
-	base.HideAuthorityNotice = true
+	base.ShowAIDisclosure = false
+	base.ShowReviewNotice = false
 	base.Description = s.localization.Text(language, "AboutIntro")
 	base.SocialTitle = s.localization.Text(language, "About") + " · MunichBrief"
 	base.SocialImageURL = base.CanonicalOrigin + "/social/" + language + "/about"
@@ -442,6 +459,7 @@ type basePage struct {
 	Lang                      string
 	HomeURL                   string
 	AboutURL                  string
+	CurrentURL                string
 	Description               string
 	OpenGraphLocale           string
 	OpenGraphLocaleAlternates []string
@@ -454,6 +472,11 @@ type basePage struct {
 	PublishedTime             string
 	ModifiedTime              string
 	StructuredData            template.JS
+	AIContentMetadata         template.JS
+	AIGeneratedState          string
+	AIModel                   string
+	AIMetadataModel           string
+	AITranslationModel        string
 	LanguageAlternates        []languageLink
 	LanguageSwitches          []languageLink
 	CanonicalOrigin           string
@@ -462,7 +485,8 @@ type basePage struct {
 	NextCanonicalURL          string
 	Fixture                   bool
 	Review                    bool
-	HideAuthorityNotice       bool
+	ShowAIDisclosure          bool
+	ShowReviewNotice          bool
 	BuildCommit               string
 	BuildCommitURL            string
 	BuildTime                 string
@@ -471,6 +495,14 @@ type basePage struct {
 
 func structuredPageData(page basePage, pageType string) template.JS {
 	websiteID := page.CanonicalOrigin + "/#website"
+	webPage := map[string]any{
+		"@type": pageType, "@id": page.CanonicalURL + "#webpage", "url": page.CanonicalURL,
+		"name": page.SocialTitle, "description": page.Description, "inLanguage": page.Lang,
+		"isPartOf": map[string]any{"@id": websiteID},
+	}
+	if page.AIGeneratedState != "false" {
+		webPage["digitalSourceType"] = schemaTrainedAlgorithmicMedia
+	}
 	return structuredJSON(map[string]any{
 		"@context": "https://schema.org",
 		"@graph": []any{
@@ -478,11 +510,7 @@ func structuredPageData(page basePage, pageType string) template.JS {
 				"@type": "WebSite", "@id": websiteID, "url": page.CanonicalOrigin,
 				"name": "MunichBrief", "inLanguage": []string{"de", "en"},
 			},
-			map[string]any{
-				"@type": pageType, "@id": page.CanonicalURL + "#webpage", "url": page.CanonicalURL,
-				"name": page.SocialTitle, "description": page.Description, "inLanguage": page.Lang,
-				"isPartOf": map[string]any{"@id": websiteID},
-			},
+			webPage,
 		},
 	})
 }
@@ -490,6 +518,17 @@ func structuredPageData(page basePage, pageType string) template.JS {
 func structuredArticleData(page basePage, incident incidentView) template.JS {
 	websiteID := page.CanonicalOrigin + "/#website"
 	organizationID := page.CanonicalOrigin + "/#organization"
+	article := map[string]any{
+		"@type": "Article", "@id": page.CanonicalURL + "#article", "url": page.CanonicalURL,
+		"headline": incident.Title, "description": page.Description, "image": page.SocialImageURL,
+		"datePublished": page.PublishedTime, "dateModified": page.ModifiedTime, "inLanguage": page.Lang,
+		"mainEntityOfPage": page.CanonicalURL, "isBasedOn": incident.Record.SourceURL,
+		"author": map[string]any{"@id": organizationID}, "publisher": map[string]any{"@id": organizationID},
+		"isPartOf": map[string]any{"@id": websiteID},
+	}
+	if incident.Record.HasAI {
+		article["digitalSourceType"] = schemaTrainedAlgorithmicMedia
+	}
 	return structuredJSON(map[string]any{
 		"@context": "https://schema.org",
 		"@graph": []any{
@@ -501,14 +540,7 @@ func structuredArticleData(page basePage, incident incidentView) template.JS {
 				"@type": "Organization", "@id": organizationID, "name": "MunichBrief",
 				"url": page.CanonicalOrigin + "/" + page.Lang + "/about",
 			},
-			map[string]any{
-				"@type": "Article", "@id": page.CanonicalURL + "#article", "url": page.CanonicalURL,
-				"headline": incident.Title, "description": page.Description, "image": page.SocialImageURL,
-				"datePublished": page.PublishedTime, "dateModified": page.ModifiedTime, "inLanguage": page.Lang,
-				"mainEntityOfPage": page.CanonicalURL, "isBasedOn": incident.Record.SourceURL,
-				"author": map[string]any{"@id": organizationID}, "publisher": map[string]any{"@id": organizationID},
-				"isPartOf": map[string]any{"@id": websiteID},
-			},
+			article,
 		},
 	})
 }

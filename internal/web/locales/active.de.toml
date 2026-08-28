@@ -43,6 +43,42 @@ other = "Maßgeblich sind die jeweils aktuellen offiziellen Informationen; es gi
 [ReviewNotice]
 other = "Prüfmodus: Noch nicht anonymisierte Originaltexte können sichtbar sein. Nicht öffentlich bereitstellen."
 
+[AIGeneratedContent]
+other = "KI-generierte Inhalte"
+
+[AIFixtureLabelPreview]
+other = "Labelvorschau – dieser synthetische Testinhalt wurde nicht mit KI verarbeitet"
+
+[AIDisclosureTitle]
+other = "KI-generierte Inhalte"
+
+[AIDisclosureFixtureCopy]
+other = "Lokale Vorschau: Diese Seite verwendet synthetische Testinhalte."
+
+[AIDisclosureCopy]
+other = "MunichBrief nutzt lokal betriebene KI, um aus offiziellen Meldungen der Münchner Polizei Überschriften, Zusammenfassungen, Übersetzungen, Kategorien und strukturierte Angaben zu erstellen, etwa zum gemeldeten Ort und Zeitpunkt sowie dazu, ob die Polizei um Mithilfe bittet. KI-generierte oder abgeleitete Angaben können Fehler enthalten oder veralten, wenn die ursprüngliche Meldung aktualisiert wird. Jede Vorfallsseite nennt und verlinkt ihre offizielle polizeiliche Quelle; maßgeblich sind die dort veröffentlichten Informationen. MunichBrief ist ein unabhängiges Projekt und steht in keiner Verbindung zur Bayerischen Polizei. Für alle genannten Personen gilt die Unschuldsvermutung, solange ihre Schuld nicht rechtskräftig festgestellt wurde."
+
+[AIDisclosurePreferenceCopy]
+other = "Mit „Verstanden“ wird dieser Hinweis 30 Tage lang ausgeblendet."
+
+[AIDisclosureLearnMore]
+other = "Weitere Informationen über MunichBrief und seine Funktionsweise finden Sie auf der Über-Seite."
+
+[AIDisclosureGotIt]
+other = "Verstanden"
+
+[AITransparencyEU]
+other = "KI-Transparenz und EU-Leitlinien"
+
+[AITransparencyEUCopy]
+other = "MunichBrief verwendet das EU-Label für vollständig KI-generierte Inhalte, weil die Leitlinien der Europäischen Kommission KI-generierte Nachrichtenzusammenfassungen ausdrücklich als Anwendungsfall nennen. Sichtbare Kennzeichnungen und maschinenlesbare Herkunftsangaben unterstützen die Transparenz; die Verwendung des Symbols allein stellt jedoch keine Rechtskonformität fest und bedeutet nicht, dass MunichBrief den freiwilligen Verhaltenskodex unterzeichnet hat."
+
+[EUIconGuidance]
+other = "EU-Leitlinien zu den Symbolen"
+
+[EUCodePractice]
+other = "EU-Verhaltenskodex"
+
 [Footer]
 other = "MunichBrief ist unabhängig von der Bayerischen Polizei. Keine Analyse, Konten oder Werbung."
 
@@ -354,7 +390,7 @@ other = "KI-generierte Zusammenfassungen und extrahierte Angaben können Fehler 
 other = "Datenschutz und Datenverarbeitung"
 
 [PrivacyCopy]
-other = "MunichBrief hat keine Konten, Analysefunktionen oder Werbung. Ein technisch notwendiges Cookie speichert ausschließlich die gewählte Sprache für ein Jahr."
+other = "MunichBrief hat keine Konten, Analysefunktionen oder Werbung. Ein technisch notwendiges Cookie speichert die gewählte Sprache für ein Jahr. Nach „Verstanden“ merkt sich ein Erstanbieter-Präferenzcookie den KI-Hinweis 30 Tage lang. Das gewählte Farbschema wird lokal im Browser gespeichert."
 
 [DataHandlingCopy]
 other = "Extrahierte deutsche Quelltexte werden lokal gespeichert. Im eingeschränkten Prüfmodus können Originaltexte und Verarbeitungszustände zur Qualitätskontrolle angezeigt werden; der öffentliche Modus zeigt keine gespeicherten Originaltexte."

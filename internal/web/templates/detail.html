@@ -3,7 +3,7 @@
 {{define "content"}}
 <nav class="py-5 text-sm" aria-label="{{t .Lang "Breadcrumb"}}"><a class="font-bold text-civic no-underline hover:text-civic-dark" href="{{.BackURL}}"><span aria-hidden="true">←</span> {{t .Lang "Back"}}</a></nav>
 
-<article class="mx-auto max-w-4xl overflow-hidden rounded-lg border border-rule bg-paper">
+<article class="mx-auto max-w-4xl overflow-hidden rounded-lg border border-rule bg-paper" data-ai-generated="{{.Incident.Record.HasAI}}"{{if .Incident.Record.HasAI}} data-ai-model="{{.Incident.Record.AIModel}}"{{if .Incident.Record.AIMetadataModel}} data-ai-metadata-model="{{.Incident.Record.AIMetadataModel}}"{{end}}{{if and (ne .Incident.ContentLanguage "de") .Incident.Record.AITranslationModel}} data-ai-translation-model="{{.Incident.Record.AITranslationModel}}"{{end}} data-digital-source-type="http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia"{{end}}>
   {{/* Publication context and language-neutral incident metadata. */}}
   <header class="border-b border-rule px-5 py-7 sm:px-8 sm:py-9">
     <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.7rem] font-extrabold uppercase tracking-[0.09em] text-muted">
@@ -17,6 +17,7 @@
       {{if .Incident.EventText}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{.Incident.EventLabel}}</dt><dd class="font-bold text-civic">{{.Incident.EventText}}</dd></div>{{end}}
       {{if .Incident.PublicAssistance}}<div class="inline-flex items-center rounded-full border border-alert/30 bg-alert-soft px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-alert">{{t .Lang "PublicAssistanceNeeded"}}</dt></div>{{end}}
     </dl>{{end}}
+    {{if .Incident.Record.HasAI}}<div class="mt-4">{{template "ai-generated-label" .}}</div>{{else if and .Review .Fixture}}{{/* Review-only fixture preview does not change machine-readable AI state. */}}{{template "fixture-ai-label-preview" .}}{{end}}
     <h1 class="mt-3 max-w-3xl font-serif text-3xl font-bold leading-[1.08] tracking-[-0.03em] text-ink sm:text-5xl" lang="{{.Incident.ContentLanguage}}">{{.Incident.Title}}</h1>
     <dl class="mt-6 grid gap-3 border-t border-rule/70 pt-4 text-sm text-muted sm:grid-cols-2">
       <div><dt class="font-bold text-ink">{{t .Lang "PublishedWithin"}}</dt><dd class="mt-0.5">{{.Incident.Record.SourceTitle}}</dd></div>

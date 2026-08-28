@@ -2,7 +2,7 @@ package web
 
 import (
 	"context"
-	_ "embed"
+	"embed"
 	"errors"
 	"fmt"
 	"html/template"
@@ -51,6 +51,12 @@ var favicon []byte
 
 //go:embed static/olympiapark-background.png
 var socialCardBackground []byte
+
+//go:embed static/eu-ai-*.svg
+var euAIAssetFiles embed.FS
+
+//go:embed static/eu-ai-generated-white-50.png
+var euAISocialLabel []byte
 
 type incidentStore interface {
 	ListPresentationEntries(context.Context, int, int, string, store.PresentationScope) ([]store.IncidentRecord, int, error)
@@ -162,13 +168,14 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 		return nil, fmt.Errorf("initialize localization: %w", err)
 	}
 	functions := template.FuncMap{
-		"assetURL":       assetURL,
-		"excerpt":        func(value string) string { return excerpt(value, 190) },
-		"formatDateTime": func(language string, value time.Time) string { return formatDateTime(language, value.In(location)) },
-		"incidentURL":    incidentURL,
-		"t":              translations.Text,
-		"tc":             translations.Count,
-		"shownTotal":     translations.ShownTotal,
+		"assetURL":        assetURL,
+		"aiLabelAssetURL": selectedAIGeneratedAssetURL,
+		"excerpt":         func(value string) string { return excerpt(value, 190) },
+		"formatDateTime":  func(language string, value time.Time) string { return formatDateTime(language, value.In(location)) },
+		"incidentURL":     incidentURL,
+		"t":               translations.Text,
+		"tc":              translations.Count,
+		"shownTotal":      translations.ShownTotal,
 	}
 	timeline, err := template.New("layout").Funcs(functions).Parse(layoutTemplate + timelineTemplate)
 	if err != nil {
@@ -205,6 +212,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /incidents/{id}", s.redirectLegacyIncident)
 	mux.HandleFunc("GET /robots.txt", s.robots)
 	mux.HandleFunc("GET /sitemap.xml", s.sitemap)
+	mux.HandleFunc("POST /ai-disclosure/acknowledge", s.acknowledgeAIDisclosure)
 	for _, language := range readerLanguages {
 		mux.HandleFunc("GET /"+language.Code, s.timeline)
 		mux.HandleFunc("GET /"+language.Code+"/incidents/{id}", s.detail)
