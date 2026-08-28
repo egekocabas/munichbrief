@@ -35,6 +35,20 @@ func TestAIDisclosureVisibilityAndComparisonAssets(t *testing.T) {
 	if strings.Contains(firstVisit.Body.String(), "Basic AI") || strings.Contains(firstVisit.Body.String(), "AI MODIFIED") {
 		t.Fatal("comparison includes an EU label category that does not match AI-generated news summaries")
 	}
+	body := firstVisit.Body.String()
+	latestPosition := strings.Index(body, ">Latest</p>")
+	comparisonPosition := strings.Index(body, "EU Fully AI-Generated label comparison")
+	if latestPosition < 0 || comparisonPosition < latestPosition {
+		t.Fatal("EU label comparison is not rendered under the Latest timeline heading")
+	}
+	for _, expected := range []string{
+		"Cyclist slightly injured in Maxvorstadt collision", "Theft and burglary", "Schwabing",
+		"Incident time", "Public assistance needed", "Visual preview only", "fixture-ai:3b",
+	} {
+		if !strings.Contains(body, expected) {
+			t.Errorf("public-style comparison card does not contain %q", expected)
+		}
+	}
 	for _, name := range euAIAssetNames {
 		asset := staticAssets[name]
 		if !strings.Contains(firstVisit.Body.String(), asset.path) {

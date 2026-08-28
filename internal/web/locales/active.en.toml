@@ -68,10 +68,13 @@ other = "Got it"
 other = "EU Fully AI-Generated label comparison"
 
 [AIComparisonCopy]
-other = "Temporary review preview using four synthetic incident cards. Compare the official Fully AI-Generated label in black, white, black 50%, and white 50% variants in the real timeline layout."
+other = "Temporary review preview using four database-backed synthetic incidents. Compare the official Fully AI-Generated label in black, white, black 50%, and white 50% variants with the same badges, metadata, typography, and source footer as the public timeline."
 
 [AIComparisonRecommendation]
 other = "The European Commission lists AI-generated news summaries as a use case for the Fully AI-Generated label. Only its four official visual variants are compared here."
+
+[AIComparisonPreviewOnly]
+other = "Visual preview only"
 
 [AITransparencyEU]
 other = "AI transparency and EU guidance"

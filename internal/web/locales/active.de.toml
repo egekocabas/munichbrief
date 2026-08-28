@@ -68,10 +68,13 @@ other = "Verstanden"
 other = "Vergleich des vollständig KI-generierten EU-Labels"
 
 [AIComparisonCopy]
-other = "Temporäre Prüfvorschau mit vier synthetischen Vorfallkarten. Verglichen wird das offizielle Label für vollständig KI-generierte Inhalte in Schwarz, Weiß, Schwarz 50 % und Weiß 50 % im echten Zeitleistenlayout."
+other = "Temporäre Prüfvorschau mit vier datenbankgestützten synthetischen Vorfällen. Verglichen wird das offizielle Label für vollständig KI-generierte Inhalte in Schwarz, Weiß, Schwarz 50 % und Weiß 50 % mit denselben Kennzeichnungen, Metadaten, Schriften und Quellenangaben wie in der öffentlichen Zeitleiste."
 
 [AIComparisonRecommendation]
 other = "Die Europäische Kommission nennt KI-generierte Nachrichtenzusammenfassungen ausdrücklich als Anwendungsfall für das Label „vollständig KI-generiert“. Hier werden ausschließlich dessen vier offizielle Darstellungsvarianten verglichen."
+
+[AIComparisonPreviewOnly]
+other = "Nur visuelle Vorschau"
 
 [AITransparencyEU]
 other = "KI-Transparenz und EU-Leitlinien"
