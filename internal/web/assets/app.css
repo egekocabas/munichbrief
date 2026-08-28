@@ -154,6 +154,22 @@
     height: 2.25rem;
   }
 
+  .ai-label-image-light {
+    display: block;
+  }
+
+  .ai-label-image-dark {
+    display: none;
+  }
+
+  :root[data-theme="dark"] .ai-label-image-light {
+    display: none;
+  }
+
+  :root[data-theme="dark"] .ai-label-image-dark {
+    display: block;
+  }
+
   .ai-disclosure {
     position: fixed;
     z-index: 40;

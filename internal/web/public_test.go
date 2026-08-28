@@ -354,22 +354,30 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	handler := testServer(t, database).Handler()
 	timeline := httptest.NewRecorder()
 	handler.ServeHTTP(timeline, englishRequest(http.MethodGet, "/en", nil))
+	timelineBody := timeline.Body.String()
 	for _, expected := range []string{"Category", "Traffic", "Area", "Harras", "Crash at Harras", "Incident time", "24 August 2026, 22:30", "Public assistance needed"} {
-		if !strings.Contains(timeline.Body.String(), expected) {
+		if !strings.Contains(timelineBody, expected) {
 			t.Errorf("timeline body does not contain %q", expected)
 		}
 	}
-	if !strings.Contains(timeline.Body.String(), "<title>MunichBrief</title>") {
+	if !strings.Contains(timelineBody, "<title>MunichBrief</title>") {
 		t.Error("timeline does not render the concise MunichBrief document title")
 	}
 	for _, unexpected := range []string{"Police request public assistance", "Photo or video material", "Witness observations"} {
-		if strings.Contains(timeline.Body.String(), unexpected) {
+		if strings.Contains(timelineBody, unexpected) {
 			t.Errorf("timeline body unexpectedly contains public assistance detail %q", unexpected)
 		}
+	}
+	timelineReport := strings.Index(timelineBody, ">Police report: ")
+	timelineLabel := strings.Index(timelineBody, `<span class="ai-generated-label"`)
+	timelineCategory := strings.Index(timelineBody, ">Category</dt>")
+	if timelineReport < 0 || timelineLabel < 0 || timelineCategory < 0 || timelineReport > timelineLabel || timelineLabel > timelineCategory {
+		t.Error("timeline does not keep the police report first and group generated metadata after the AI label")
 	}
 
 	english := httptest.NewRecorder()
 	handler.ServeHTTP(english, englishRequest(http.MethodGet, "/en/incidents/"+formatID(incidentID), nil))
+	englishBody := english.Body.String()
 	for _, expected := range []string{
 		"Category", "Traffic", "Area", "Harras", "Published in", "Metadata-first pipeline v2",
 		"Incident metadata", "qwen3.5:4b", processing.IncidentMetadataPromptVersion,
@@ -379,9 +387,15 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 		"AI-generated summary", "Verify important details against the latest official information.", "Open official police release",
 		`aria-label="Public assistance"`,
 	} {
-		if !strings.Contains(english.Body.String(), expected) {
+		if !strings.Contains(englishBody, expected) {
 			t.Errorf("English detail body does not contain %q", expected)
 		}
+	}
+	detailReport := strings.Index(englishBody, ">Police report ")
+	detailLabel := strings.Index(englishBody, `<span class="ai-generated-label"`)
+	detailCategory := strings.Index(englishBody, ">Category</dt>")
+	if detailReport < 0 || detailLabel < 0 || detailCategory < 0 || detailReport > detailLabel || detailLabel > detailCategory {
+		t.Error("detail does not keep the police report first and group generated metadata after the AI label")
 	}
 	if count := strings.Count(english.Body.String(), ">Crash at Harras</"); count != 1 {
 		t.Errorf("English detail renders the incident heading %d times, want 1", count)

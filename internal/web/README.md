@@ -23,10 +23,12 @@ directly to templates without applying the presentation rules. Template output
 must remain escaped; client-side code must not insert incident content as raw
 HTML.
 
-AI-generated reader output uses the centrally selected EU label returned by
-`selectedAIGeneratedAssetURL`. Do not choose label variants independently in a
-template. The disclosure scope, legal caveats, and machine-readable provenance
-map are documented in [EU AI transparency and compliance posture](../../docs/eu-ai-transparency.md).
+AI-generated reader output uses the centrally selected dark- and light-theme
+labels returned by `selectedAIGeneratedAssetURL` and
+`selectedAILightThemeAssetURL`. Do not choose label variants independently in
+a template. The disclosure scope, legal caveats, and machine-readable
+provenance map are documented in
+[EU AI transparency and compliance posture](../../docs/eu-ai-transparency.md).
 
 After changing templates or frontend sources, run `npm run build` and commit the
 generated files under `static/`. Add boundary tests for public-host routing,

@@ -88,7 +88,7 @@
       <div class="min-w-0 flex-1">
         <div class="ai-disclosure-heading">
           <div class="ai-disclosure-icon" aria-hidden="true">
-            <img src="{{aiLabelAssetURL}}" alt="">
+            {{template "ai-generated-label-images" .}}
           </div>
           <h2 id="ai-disclosure-title" class="font-serif text-lg font-bold text-ink">{{t .Lang "AIDisclosureTitle"}}</h2>
         </div>
@@ -107,16 +107,21 @@
 </html>
 {{end}}
 
+{{define "ai-generated-label-images"}}
+<img class="ai-label-image-light" src="{{aiLabelLightAssetURL}}" alt="">
+<img class="ai-label-image-dark" src="{{aiLabelAssetURL}}" alt="">
+{{end}}
+
 {{define "ai-generated-label"}}
 <span class="ai-generated-label" aria-label="{{t .Lang "AIGeneratedContent"}}">
-  <img src="{{aiLabelAssetURL}}" alt="">
+  {{template "ai-generated-label-images" .}}
   <span class="sr-only">{{t .Lang "AIGeneratedContent"}}</span>
 </span>
 {{end}}
 
 {{define "fixture-ai-label-preview"}}
 <div class="mt-3 flex flex-wrap items-center gap-2">
-  <span class="ai-generated-label" aria-hidden="true"><img src="{{aiLabelAssetURL}}" alt=""></span>
+  <span class="ai-generated-label" aria-hidden="true">{{template "ai-generated-label-images" .}}</span>
   <span class="text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-civic">{{t .Lang "AIFixtureLabelPreview"}}</span>
 </div>
 {{end}}
