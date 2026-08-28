@@ -613,6 +613,16 @@ func TestPublicHostUsesFailClosedPresentationAndRejectsAdmin(t *testing.T) {
 				}
 			}
 
+			acknowledgement := httptest.NewRecorder()
+			acknowledgementRequest := englishRequest(http.MethodPost, "/ai-disclosure/acknowledge", strings.NewReader("return_to=%2Fen"))
+			acknowledgementRequest.Host = publicHost
+			acknowledgementRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			acknowledgementRequest.Header.Set("HX-Request", "true")
+			handler.ServeHTTP(acknowledgement, acknowledgementRequest)
+			if acknowledgement.Code != http.StatusOK || len(acknowledgement.Result().Cookies()) != 1 {
+				t.Errorf("public disclosure acknowledgement = %d/%#v, want 200 and one cookie", acknowledgement.Code, acknowledgement.Result().Cookies())
+			}
+
 			for _, path := range []string{"/admin", "/admin/history", "/api/admin/ai/process-all-now", "/private"} {
 				response := httptest.NewRecorder()
 				request := httptest.NewRequest(http.MethodGet, path, nil)
