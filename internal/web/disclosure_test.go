@@ -33,16 +33,22 @@ func TestAIDisclosureVisibilityAndAssets(t *testing.T) {
 		t.Fatal("30-day disclosure is missing")
 	}
 	dockEnd := strings.Index(body[dockStart:], `</aside>`)
-	if dockEnd < 0 || !strings.Contains(body[dockStart:dockStart+dockEnd], staticAssets[selectedAIGeneratedAsset].path) {
-		t.Fatal("30-day disclosure does not use the selected EU Fully AI-Generated label")
+	if dockEnd < 0 || !strings.Contains(body[dockStart:dockStart+dockEnd], staticAssets[selectedAIGeneratedAsset].path) || !strings.Contains(body[dockStart:dockStart+dockEnd], staticAssets[selectedAILightThemeAsset].path) {
+		t.Fatal("30-day disclosure does not use the selected dark- and light-theme AI labels")
 	}
-	if !strings.Contains(body, "Label preview — this synthetic fixture has not been AI-processed") || strings.Count(body, staticAssets[selectedAIGeneratedAsset].path) < 2 {
-		t.Fatal("review fixture timeline does not show the selected label preview")
+	if !strings.Contains(body, "Label preview — this synthetic fixture has not been AI-processed") || strings.Count(body, staticAssets[selectedAIGeneratedAsset].path) < 2 || strings.Count(body, staticAssets[selectedAILightThemeAsset].path) < 2 {
+		t.Fatal("review fixture timeline does not show the theme-aware label preview")
 	}
 	for _, name := range euAIAssetNames {
 		if name != selectedAIGeneratedAsset && strings.Contains(body, staticAssets[name].path) {
 			t.Errorf("reader page references unselected label asset %s", name)
 		}
+	}
+	lightThemeAsset := staticAssets[selectedAILightThemeAsset]
+	lightThemeResponse := httptest.NewRecorder()
+	handler.ServeHTTP(lightThemeResponse, httptest.NewRequest(http.MethodGet, lightThemeAsset.path, nil))
+	if lightThemeResponse.Code != http.StatusOK || lightThemeResponse.Header().Get("Content-Type") != "image/svg+xml" {
+		t.Errorf("light-theme asset response = %d/%q", lightThemeResponse.Code, lightThemeResponse.Header().Get("Content-Type"))
 	}
 	for _, name := range euAIAssetNames {
 		asset := staticAssets[name]

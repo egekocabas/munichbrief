@@ -27,10 +27,12 @@ exception.
 
 The European Commission lists AI-generated news summaries as an example for the
 **Fully AI-Generated** label. Use of the Commission's icons is optional and does
-not establish compliance by itself. MunichBrief currently uses the official
-`eu-ai-generated-white-50.svg` variant. The other official variants remain in
-the repository for provenance and future review but are not rendered on reader
-pages.
+not establish compliance by itself. Dark mode uses the unchanged official
+`eu-ai-generated-white-50.svg` variant. Light mode uses
+`munichbrief-ai-generated-light.svg`, a clearly named derivative of that asset
+with a subtle grey pill and outline so the label remains distinguishable from
+the near-white page background. The original and the other official variants
+remain in the repository for provenance and future review.
 
 The Code of Practice on Transparency of AI-generated Content is voluntary.
 Article 50 itself is binding. MunichBrief does not claim to be a Code signatory,
@@ -100,4 +102,4 @@ and the deployed commit as implementation evidence.
 - [EU icons for labelling AI-generated content](https://digital-strategy.ec.europa.eu/en/policies/eu-icons-labelling-ai-generated-content)
 - [Code of Practice on Transparency of AI-generated Content](https://digital-strategy.ec.europa.eu/en/policies/code-practice-ai-generated-content)
 
-Last reviewed: 28 August 2026.
+Last reviewed: 29 August 2026.

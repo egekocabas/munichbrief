@@ -52,7 +52,7 @@ var favicon []byte
 //go:embed static/olympiapark-background.png
 var socialCardBackground []byte
 
-//go:embed static/eu-ai-*.svg
+//go:embed static/eu-ai-*.svg static/munichbrief-ai-generated-light.svg
 var euAIAssetFiles embed.FS
 
 //go:embed static/eu-ai-generated-white-50.png
@@ -168,14 +168,15 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 		return nil, fmt.Errorf("initialize localization: %w", err)
 	}
 	functions := template.FuncMap{
-		"assetURL":        assetURL,
-		"aiLabelAssetURL": selectedAIGeneratedAssetURL,
-		"excerpt":         func(value string) string { return excerpt(value, 190) },
-		"formatDateTime":  func(language string, value time.Time) string { return formatDateTime(language, value.In(location)) },
-		"incidentURL":     incidentURL,
-		"t":               translations.Text,
-		"tc":              translations.Count,
-		"shownTotal":      translations.ShownTotal,
+		"assetURL":             assetURL,
+		"aiLabelAssetURL":      selectedAIGeneratedAssetURL,
+		"aiLabelLightAssetURL": selectedAILightThemeAssetURL,
+		"excerpt":              func(value string) string { return excerpt(value, 190) },
+		"formatDateTime":       func(language string, value time.Time) string { return formatDateTime(language, value.In(location)) },
+		"incidentURL":          incidentURL,
+		"t":                    translations.Text,
+		"tc":                   translations.Count,
+		"shownTotal":           translations.ShownTotal,
 	}
 	timeline, err := template.New("layout").Funcs(functions).Parse(layoutTemplate + timelineTemplate)
 	if err != nil {

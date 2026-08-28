@@ -12,6 +12,7 @@ import (
 const (
 	immutableAssetCacheControl  = "public, max-age=31556952, immutable"
 	selectedAIGeneratedAsset    = "eu-ai-generated-white-50.svg"
+	selectedAILightThemeAsset   = "munichbrief-ai-generated-light.svg"
 	selectedAIGeneratedPNGAsset = "eu-ai-generated-white-50.png"
 )
 
@@ -47,6 +48,11 @@ func embeddedStaticAssets() []staticAsset {
 		}
 		assets = append(assets, staticAsset{name: name, contentType: "image/svg+xml", content: content})
 	}
+	lightThemeContent, err := euAIAssetFiles.ReadFile("static/" + selectedAILightThemeAsset)
+	if err != nil {
+		panic(fmt.Sprintf("read light-theme AI asset %q: %v", selectedAILightThemeAsset, err))
+	}
+	assets = append(assets, staticAsset{name: selectedAILightThemeAsset, contentType: "image/svg+xml", content: lightThemeContent})
 	return assets
 }
 
@@ -72,10 +78,16 @@ func assetURL(name string) (string, error) {
 	return asset.path, nil
 }
 
-// selectedAIGeneratedAssetURL centralizes the reviewed EU label choice so the
-// disclosure dock and every per-content label cannot silently diverge.
+// selectedAIGeneratedAssetURL returns the unchanged official label used in
+// dark mode and as the basis for the reviewed light-theme derivative.
 func selectedAIGeneratedAssetURL() (string, error) {
 	return assetURL(selectedAIGeneratedAsset)
+}
+
+// selectedAILightThemeAssetURL keeps the custom light-theme treatment shared
+// by the disclosure dock and every per-content label.
+func selectedAILightThemeAssetURL() (string, error) {
+	return assetURL(selectedAILightThemeAsset)
 }
 
 func serveStaticAsset(response http.ResponseWriter, request *http.Request) {
