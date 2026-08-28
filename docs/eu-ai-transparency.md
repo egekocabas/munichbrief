@@ -72,6 +72,11 @@ page contains the full explanation. Permanent labels remain attached to
 AI-generated content after the 30-day acknowledgement cookie suppresses the
 large disclosure.
 
+Fixture records are not AI presentations. Review mode nevertheless renders the
+selected icon beside an explicit visual-preview warning so developers can judge
+its production placement without changing stored data or machine-readable AI
+state. This preview is never rendered in public mode.
+
 ## Change-management checklist
 
 Review this posture whenever any of the following changes:

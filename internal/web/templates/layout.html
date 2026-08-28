@@ -113,3 +113,10 @@
   <span class="sr-only">{{t .Lang "AIGeneratedContent"}}</span>
 </span>
 {{end}}
+
+{{define "fixture-ai-label-preview"}}
+<div class="mt-3 flex flex-wrap items-center gap-2">
+  <span class="ai-generated-label" aria-hidden="true"><img src="{{aiLabelAssetURL}}" alt=""></span>
+  <span class="text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-civic">{{t .Lang "AIFixtureLabelPreview"}}</span>
+</div>
+{{end}}

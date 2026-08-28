@@ -46,6 +46,9 @@ other = "Review mode: original text that has not been anonymised may be visible.
 [AIGeneratedContent]
 other = "AI-generated content"
 
+[AIFixtureLabelPreview]
+other = "Label preview — this synthetic fixture has not been AI-processed"
+
 [AIDisclosureTitle]
 other = "AI-generated content"
 

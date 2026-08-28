@@ -41,7 +41,7 @@
               {{if .EventText}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{.EventLabel}}</dt><dd class="font-bold text-civic">{{.EventText}}</dd></div>{{end}}
               {{if .PublicAssistance}}<div class="inline-flex items-center rounded-full border border-alert/30 bg-alert-soft px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-alert">{{t $.Lang "PublicAssistanceNeeded"}}</dt></div>{{end}}
             </dl>{{end}}
-            {{if .Record.HasAI}}<div class="mt-3">{{template "ai-generated-label" $}}</div>{{end}}
+            {{if .Record.HasAI}}<div class="mt-3">{{template "ai-generated-label" $}}</div>{{else if and $.Review $.Fixture}}{{/* Review-only fixture preview does not change machine-readable AI state. */}}{{template "fixture-ai-label-preview" $}}{{end}}
             <h4 class="mt-3 font-serif text-xl font-bold leading-tight tracking-[-0.015em] sm:text-2xl"><a class="text-ink no-underline hover:text-civic" href="{{incidentURL $.Lang .Record.ID $.Page}}" lang="{{.ContentLanguage}}">{{.Title}}</a></h4>
             <p class="mt-2 leading-relaxed text-muted" lang="{{.ContentLanguage}}">{{.Summary}}</p>
             {{if .ShowOriginalMessage}}<p class="mt-3 border-l-2 border-amber-600 pl-3 text-sm text-amber-800">{{t $.Lang "OriginalShown"}}</p>{{end}}

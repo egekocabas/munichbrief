@@ -27,11 +27,20 @@ func TestAIDisclosureVisibilityAndAssets(t *testing.T) {
 	if len(euAIAssetNames) != 4 {
 		t.Fatalf("EU Fully AI-Generated asset count = %d, want 4", len(euAIAssetNames))
 	}
-	if !strings.Contains(firstVisit.Body.String(), staticAssets[selectedAIGeneratedAsset].path) {
-		t.Fatal("disclosure does not use the selected EU Fully AI-Generated label")
+	body := firstVisit.Body.String()
+	dockStart := strings.Index(body, `<aside id="ai-disclosure"`)
+	if dockStart < 0 {
+		t.Fatal("30-day disclosure is missing")
+	}
+	dockEnd := strings.Index(body[dockStart:], `</aside>`)
+	if dockEnd < 0 || !strings.Contains(body[dockStart:dockStart+dockEnd], staticAssets[selectedAIGeneratedAsset].path) {
+		t.Fatal("30-day disclosure does not use the selected EU Fully AI-Generated label")
+	}
+	if !strings.Contains(body, "Label preview — this synthetic fixture has not been AI-processed") || strings.Count(body, staticAssets[selectedAIGeneratedAsset].path) < 2 {
+		t.Fatal("review fixture timeline does not show the selected label preview")
 	}
 	for _, name := range euAIAssetNames {
-		if name != selectedAIGeneratedAsset && strings.Contains(firstVisit.Body.String(), staticAssets[name].path) {
+		if name != selectedAIGeneratedAsset && strings.Contains(body, staticAssets[name].path) {
 			t.Errorf("reader page references unselected label asset %s", name)
 		}
 	}
@@ -169,10 +178,10 @@ func TestAIGeneratedLabelsHTMLMarkdownAndSocialCard(t *testing.T) {
 	unprocessedRequest := englishRequest(http.MethodGet, "/en/incidents/"+formatID(unprocessedID), nil)
 	unprocessedRequest.AddCookie(&http.Cookie{Name: aiDisclosureCookieName, Value: aiDisclosureVersion})
 	review.ServeHTTP(unprocessed, unprocessedRequest)
-	if strings.Contains(unprocessed.Body.String(), staticAssets[selectedAIGeneratedAsset].path) {
-		t.Fatal("unprocessed original was labelled as AI-generated")
+	if !strings.Contains(unprocessed.Body.String(), staticAssets[selectedAIGeneratedAsset].path) || !strings.Contains(unprocessed.Body.String(), "Label preview — this synthetic fixture has not been AI-processed") {
+		t.Fatal("unprocessed review fixture does not contain the visual label preview")
 	}
-	if !strings.Contains(unprocessed.Body.String(), `<meta name="ai-generated" content="false">`) || unprocessed.Header().Get("X-AI-Generated") != "false" || unprocessed.Header().Get("X-AI-Model") != "" {
+	if !strings.Contains(unprocessed.Body.String(), `<meta name="ai-generated" content="false">`) || !strings.Contains(unprocessed.Body.String(), `data-ai-generated="false"`) || unprocessed.Header().Get("X-AI-Generated") != "false" || unprocessed.Header().Get("X-AI-Model") != "" {
 		t.Fatal("unprocessed original has incorrect machine-readable AI metadata")
 	}
 
@@ -245,7 +254,7 @@ func TestPublicModeDoesNotForceDisclosurePreview(t *testing.T) {
 	request.AddCookie(&http.Cookie{Name: aiDisclosureCookieName, Value: aiDisclosureVersion})
 	response := httptest.NewRecorder()
 	server.Handler().ServeHTTP(response, request)
-	if strings.Contains(response.Body.String(), `id="ai-disclosure"`) || strings.Contains(response.Body.String(), "EU AI label comparison") {
+	if strings.Contains(response.Body.String(), `id="ai-disclosure"`) || strings.Contains(response.Body.String(), "Label preview — this synthetic fixture has not been AI-processed") {
 		t.Fatal("public request exposed review-only preview UI")
 	}
 }
