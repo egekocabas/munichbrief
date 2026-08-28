@@ -24,10 +24,16 @@ func TestAIDisclosureVisibilityAndComparisonAssets(t *testing.T) {
 	if firstVisit.Code != http.StatusOK || !strings.Contains(firstVisit.Body.String(), `id="ai-disclosure"`) {
 		t.Fatalf("first visit disclosure = %d/%q", firstVisit.Code, firstVisit.Body.String())
 	}
-	for _, expected := range []string{"EU AI label comparison", "AI GENERATED is the recommended meaning"} {
+	for _, expected := range []string{"EU Fully AI-Generated label comparison", "AI-generated news summaries"} {
 		if !strings.Contains(firstVisit.Body.String(), expected) {
 			t.Errorf("comparison does not contain %q", expected)
 		}
+	}
+	if len(euAIAssetNames) != 4 {
+		t.Fatalf("EU Fully AI-Generated comparison asset count = %d, want 4", len(euAIAssetNames))
+	}
+	if strings.Contains(firstVisit.Body.String(), "Basic AI") || strings.Contains(firstVisit.Body.String(), "AI MODIFIED") {
+		t.Fatal("comparison includes an EU label category that does not match AI-generated news summaries")
 	}
 	for _, name := range euAIAssetNames {
 		asset := staticAssets[name]
@@ -72,6 +78,11 @@ func TestAIDisclosureVisibilityAndComparisonAssets(t *testing.T) {
 	}
 	if !strings.Contains(about.Body.String(), `<meta name="ai-generated" content="false">`) || !strings.Contains(about.Body.String(), `"ai_generated":false,"ai_generated_state":"false"`) || about.Header().Get("X-AI-Generated") != "false" {
 		t.Fatal("About page does not declare that its content is not AI-generated")
+	}
+	for _, expected := range []string{"AI transparency and EU guidance", "eu-icons-labelling-ai-generated-content", "code-practice-ai-generated-content"} {
+		if !strings.Contains(about.Body.String(), expected) {
+			t.Errorf("About page EU transparency section does not contain %q", expected)
+		}
 	}
 }
 

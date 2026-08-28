@@ -65,13 +65,25 @@ other = "How MunichBrief works"
 other = "Got it"
 
 [AIComparisonTitle]
-other = "EU AI label comparison"
+other = "EU Fully AI-Generated label comparison"
 
 [AIComparisonCopy]
-other = "Temporary review preview using twelve synthetic incident cards. Compare the three official label meanings and their black, white, and 50% variants in the real timeline layout."
+other = "Temporary review preview using four synthetic incident cards. Compare the official Fully AI-Generated label in black, white, black 50%, and white 50% variants in the real timeline layout."
 
 [AIComparisonRecommendation]
-other = "AI GENERATED is the recommended meaning for MunichBrief summaries; the other labels are included for visual comparison only."
+other = "The European Commission lists AI-generated news summaries as a use case for the Fully AI-Generated label. Only its four official visual variants are compared here."
+
+[AITransparencyEU]
+other = "AI transparency and EU guidance"
+
+[AITransparencyEUCopy]
+other = "MunichBrief uses the EU Fully AI-Generated label because European Commission guidance expressly lists AI-generated news summaries as a use case. Visible labels and machine-readable provenance support transparency, but use of the icon does not by itself establish legal compliance or indicate that MunichBrief has signed the voluntary Code of Practice."
+
+[EUIconGuidance]
+other = "EU icon guidance"
+
+[EUCodePractice]
+other = "EU Code of Practice"
 
 [Footer]
 other = "MunichBrief is independent from the Bavarian Police. No analytics, accounts, or advertising."

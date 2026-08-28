@@ -75,23 +75,11 @@ func (s *Server) aiLabelPreviewGroups(records []store.IncidentRecord, language s
 		name   string
 		assets []struct{ name, variant string }
 	}{
-		{name: "Basic AI", assets: []struct{ name, variant string }{
-			{name: "eu-ai-basic-black.svg", variant: "Black"},
-			{name: "eu-ai-basic-white.svg", variant: "White"},
-			{name: "eu-ai-basic-black-50.svg", variant: "Black 50%"},
-			{name: "eu-ai-basic-white-50.svg", variant: "White 50%"},
-		}},
 		{name: "AI GENERATED", assets: []struct{ name, variant string }{
 			{name: "eu-ai-generated-black.svg", variant: "Black"},
 			{name: "eu-ai-generated-white.svg", variant: "White"},
 			{name: "eu-ai-generated-black-50.svg", variant: "Black 50%"},
 			{name: "eu-ai-generated-white-50.svg", variant: "White 50%"},
-		}},
-		{name: "AI MODIFIED", assets: []struct{ name, variant string }{
-			{name: "eu-ai-modified-black.svg", variant: "Black"},
-			{name: "eu-ai-modified-white.svg", variant: "White"},
-			{name: "eu-ai-modified-black-50.svg", variant: "Black 50%"},
-			{name: "eu-ai-modified-white-50.svg", variant: "White 50%"},
 		}},
 	}
 	groups := make([]aiLabelPreviewGroup, 0, len(specifications))

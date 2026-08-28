@@ -19,18 +19,10 @@ type staticAsset struct {
 }
 
 var euAIAssetNames = []string{
-	"eu-ai-basic-black.svg",
-	"eu-ai-basic-black-50.svg",
-	"eu-ai-basic-white.svg",
-	"eu-ai-basic-white-50.svg",
 	"eu-ai-generated-black.svg",
 	"eu-ai-generated-black-50.svg",
 	"eu-ai-generated-white.svg",
 	"eu-ai-generated-white-50.svg",
-	"eu-ai-modified-black.svg",
-	"eu-ai-modified-black-50.svg",
-	"eu-ai-modified-white.svg",
-	"eu-ai-modified-white-50.svg",
 }
 
 var staticAssets = newStaticAssets(embeddedStaticAssets()...)

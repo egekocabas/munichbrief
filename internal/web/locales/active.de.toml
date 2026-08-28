@@ -65,13 +65,25 @@ other = "So funktioniert MunichBrief"
 other = "Verstanden"
 
 [AIComparisonTitle]
-other = "Vergleich der EU-KI-Kennzeichnungen"
+other = "Vergleich des vollständig KI-generierten EU-Labels"
 
 [AIComparisonCopy]
-other = "Temporäre Prüfvorschau mit zwölf synthetischen Vorfallkarten. Verglichen werden die drei offiziellen Bedeutungen sowie ihre schwarzen, weißen und zu 50 % transparenten Varianten im echten Zeitleistenlayout."
+other = "Temporäre Prüfvorschau mit vier synthetischen Vorfallkarten. Verglichen wird das offizielle Label für vollständig KI-generierte Inhalte in Schwarz, Weiß, Schwarz 50 % und Weiß 50 % im echten Zeitleistenlayout."
 
 [AIComparisonRecommendation]
-other = "AI GENERATED ist die empfohlene Bedeutung für MunichBrief-Zusammenfassungen; die übrigen Kennzeichnungen dienen ausschließlich dem visuellen Vergleich."
+other = "Die Europäische Kommission nennt KI-generierte Nachrichtenzusammenfassungen ausdrücklich als Anwendungsfall für das Label „vollständig KI-generiert“. Hier werden ausschließlich dessen vier offizielle Darstellungsvarianten verglichen."
+
+[AITransparencyEU]
+other = "KI-Transparenz und EU-Leitlinien"
+
+[AITransparencyEUCopy]
+other = "MunichBrief verwendet das EU-Label für vollständig KI-generierte Inhalte, weil die Leitlinien der Europäischen Kommission KI-generierte Nachrichtenzusammenfassungen ausdrücklich als Anwendungsfall nennen. Sichtbare Kennzeichnungen und maschinenlesbare Herkunftsangaben unterstützen die Transparenz; die Verwendung des Symbols allein stellt jedoch keine Rechtskonformität fest und bedeutet nicht, dass MunichBrief den freiwilligen Verhaltenskodex unterzeichnet hat."
+
+[EUIconGuidance]
+other = "EU-Leitlinien zu den Symbolen"
+
+[EUCodePractice]
+other = "EU-Verhaltenskodex"
 
 [Footer]
 other = "MunichBrief ist unabhängig von der Bayerischen Polizei. Keine Analyse, Konten oder Werbung."
