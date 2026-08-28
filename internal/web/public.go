@@ -69,6 +69,7 @@ func (s *Server) base(request *http.Request, language, canonicalRelativeURL stri
 	languageDefinition, _ := readerLanguageByCode(language)
 	page := basePage{
 		Lang: language, HomeURL: "/" + language, AboutURL: "/" + language + "/about",
+		CurrentURL:      request.URL.RequestURI(),
 		Description:     s.localization.Text(language, "SiteDescription"),
 		CanonicalOrigin: canonicalOrigin, CanonicalURL: canonicalOrigin + canonicalRelativeURL,
 		OpenGraphLocale: languageDefinition.OpenGraphLocale,
@@ -76,6 +77,11 @@ func (s *Server) base(request *http.Request, language, canonicalRelativeURL stri
 		SocialImageURL: canonicalOrigin + "/social/" + language + "/home",
 		SocialImageAlt: s.localization.Text(language, "SocialImageAlt"),
 		Fixture:        s.options.SourceMode == "fixture", Review: s.options.PresentationMode == "review" && !s.isPublicRequest(request),
+	}
+	page.ShowAIDisclosure = !aiDisclosureAcknowledged(request)
+	page.ShowReviewNotice = page.Review
+	if page.Review && request.URL.Query().Get("show-ai-disclosure") == "1" {
+		page.ShowAIDisclosure = true
 	}
 	if s.options.Build.Commit != "" {
 		page.BuildCommit = s.options.Build.Commit
@@ -164,6 +170,9 @@ func (s *Server) timeline(response http.ResponseWriter, request *http.Request) {
 		Shown:    len(incidents),
 		Previous: page - 1, Next: page + 1, HasPrevious: page > 1, HasNext: page < totalPages,
 	}
+	if base.Review && base.Fixture && page == 1 {
+		data.AILabelPreviewGroups = s.aiLabelPreviewGroups(incidents, language)
+	}
 	if scope.PublicOnly && wantsMarkdown(request.Header.Get("Accept")) {
 		s.prepareMarkdown(response, base)
 		s.renderTimelineMarkdown(response, data)
@@ -234,6 +243,9 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 		base.SocialImageSecureURL = base.SocialImageURL
 	}
 	base.SocialImageAlt = base.SocialTitle
+	if view.Record.HasAI {
+		base.SocialImageAlt = s.localization.Text(language, "AIGeneratedContent") + ": " + base.SocialTitle
+	}
 	base.PublishedTime = view.Record.PublishedAt.Format(time.RFC3339)
 	base.ModifiedTime = view.Record.UpdatedAt.Format(time.RFC3339)
 	base.StructuredData = structuredArticleData(base, view)
@@ -257,7 +269,8 @@ func (s *Server) about(response http.ResponseWriter, request *http.Request) {
 	}
 	s.setLanguagePreference(response, language)
 	base := s.base(request, language, "/"+language+"/about")
-	base.HideAuthorityNotice = true
+	base.ShowAIDisclosure = false
+	base.ShowReviewNotice = false
 	base.Description = s.localization.Text(language, "AboutIntro")
 	base.SocialTitle = s.localization.Text(language, "About") + " · MunichBrief"
 	base.SocialImageURL = base.CanonicalOrigin + "/social/" + language + "/about"
@@ -442,6 +455,7 @@ type basePage struct {
 	Lang                      string
 	HomeURL                   string
 	AboutURL                  string
+	CurrentURL                string
 	Description               string
 	OpenGraphLocale           string
 	OpenGraphLocaleAlternates []string
@@ -462,7 +476,8 @@ type basePage struct {
 	NextCanonicalURL          string
 	Fixture                   bool
 	Review                    bool
-	HideAuthorityNotice       bool
+	ShowAIDisclosure          bool
+	ShowReviewNotice          bool
 	BuildCommit               string
 	BuildCommitURL            string
 	BuildTime                 string
@@ -575,15 +590,16 @@ type processingStepView struct {
 
 type timelinePage struct {
 	basePage
-	Groups      []dayGroup
-	Shown       int
-	Page        int
-	TotalPages  int
-	Total       int
-	Previous    int
-	Next        int
-	HasPrevious bool
-	HasNext     bool
+	AILabelPreviewGroups []aiLabelPreviewGroup
+	Groups               []dayGroup
+	Shown                int
+	Page                 int
+	TotalPages           int
+	Total                int
+	Previous             int
+	Next                 int
+	HasPrevious          bool
+	HasNext              bool
 }
 
 type dayGroup struct {

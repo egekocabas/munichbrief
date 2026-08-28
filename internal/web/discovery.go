@@ -318,6 +318,9 @@ func (s *Server) renderTimelineMarkdown(response http.ResponseWriter, data timel
 		fmt.Fprintf(&builder, "\n## %s\n", markdownText(group.Label))
 		for _, incident := range group.Incidents {
 			link := fmt.Sprintf("%s/%s/incidents/%d", data.CanonicalOrigin, data.Lang, incident.Record.ID)
+			if incident.Record.HasAI {
+				fmt.Fprintf(&builder, "\n> **%s**\n", markdownText(s.localization.Text(data.Lang, "AIGeneratedContent")))
+			}
 			fmt.Fprintf(&builder, "\n### [%s](<%s>)\n\n", markdownText(incident.Title), markdownURL(link))
 			fmt.Fprintf(&builder, "%s\n\n", markdownText(incident.Summary))
 			fmt.Fprintf(&builder, "- %s: %s\n", markdownText(s.localization.Text(data.Lang, "PublishedWithin")), markdownText(incident.Record.SourceTitle))
@@ -350,6 +353,9 @@ func (s *Server) renderTimelineMarkdown(response http.ResponseWriter, data timel
 func (s *Server) renderDetailMarkdown(response http.ResponseWriter, data detailPage) {
 	var builder strings.Builder
 	writeMarkdownFrontMatter(&builder, data.Incident.Title, data.basePage)
+	if data.Incident.Record.HasAI {
+		fmt.Fprintf(&builder, "> **%s**\n\n", markdownText(s.localization.Text(data.Lang, "AIGeneratedContent")))
+	}
 	fmt.Fprintf(&builder, "# %s\n\n", markdownText(data.Incident.Title))
 	fmt.Fprintf(&builder, "%s\n\n", markdownText(data.Incident.Summary))
 	fmt.Fprintf(&builder, "- %s: %s\n", markdownText(s.localization.Text(data.Lang, "PublishedWithin")), markdownText(data.Incident.Record.SourceTitle))

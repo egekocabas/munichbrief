@@ -43,6 +43,36 @@ other = "Maßgeblich sind die jeweils aktuellen offiziellen Informationen; es gi
 [ReviewNotice]
 other = "Prüfmodus: Noch nicht anonymisierte Originaltexte können sichtbar sein. Nicht öffentlich bereitstellen."
 
+[AIGeneratedContent]
+other = "KI-generierte Inhalte"
+
+[AIDisclosureTitle]
+other = "KI-generierte Inhalte"
+
+[AIDisclosureFixtureCopy]
+other = "Lokale Vorschau: Diese Seite verwendet synthetische Testinhalte."
+
+[AIDisclosureCopy]
+other = "Lokale KI fasst offizielle Meldungen der Münchner Polizei zusammen, kategorisiert und übersetzt sie. Sie kann Fehler machen; Meldungen können nachträglich geändert werden. Prüfen Sie wichtige Angaben in der offiziellen Quelle. MunichBrief ist unabhängig von der Bayerischen Polizei; es gilt die Unschuldsvermutung."
+
+[AIDisclosurePreferenceCopy]
+other = "Mit „Verstanden“ wird dieser Hinweis 30 Tage lang ausgeblendet."
+
+[AIDisclosureLearnMore]
+other = "So funktioniert MunichBrief"
+
+[AIDisclosureGotIt]
+other = "Verstanden"
+
+[AIComparisonTitle]
+other = "Vergleich der EU-KI-Kennzeichnungen"
+
+[AIComparisonCopy]
+other = "Temporäre Prüfvorschau mit zwölf synthetischen Vorfallkarten. Verglichen werden die drei offiziellen Bedeutungen sowie ihre schwarzen, weißen und zu 50 % transparenten Varianten im echten Zeitleistenlayout."
+
+[AIComparisonRecommendation]
+other = "AI GENERATED ist die empfohlene Bedeutung für MunichBrief-Zusammenfassungen; die übrigen Kennzeichnungen dienen ausschließlich dem visuellen Vergleich."
+
 [Footer]
 other = "MunichBrief ist unabhängig von der Bayerischen Polizei. Keine Analyse, Konten oder Werbung."
 
@@ -354,7 +384,7 @@ other = "KI-generierte Zusammenfassungen und extrahierte Angaben können Fehler 
 other = "Datenschutz und Datenverarbeitung"
 
 [PrivacyCopy]
-other = "MunichBrief hat keine Konten, Analysefunktionen oder Werbung. Ein technisch notwendiges Cookie speichert ausschließlich die gewählte Sprache für ein Jahr."
+other = "MunichBrief hat keine Konten, Analysefunktionen oder Werbung. Ein technisch notwendiges Cookie speichert die gewählte Sprache für ein Jahr. Nach „Verstanden“ merkt sich ein Erstanbieter-Präferenzcookie den KI-Hinweis 30 Tage lang. Das gewählte Farbschema wird lokal im Browser gespeichert."
 
 [DataHandlingCopy]
 other = "Extrahierte deutsche Quelltexte werden lokal gespeichert. Im eingeschränkten Prüfmodus können Originaltexte und Verarbeitungszustände zur Qualitätskontrolle angezeigt werden; der öffentliche Modus zeigt keine gespeicherten Originaltexte."

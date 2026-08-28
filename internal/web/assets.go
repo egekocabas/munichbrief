@@ -18,13 +18,41 @@ type staticAsset struct {
 	content     []byte
 }
 
-var staticAssets = newStaticAssets(
-	staticAsset{name: "app.css", contentType: "text/css; charset=utf-8", content: stylesheet},
-	staticAsset{name: "htmx.min.js", contentType: "text/javascript; charset=utf-8", content: htmxScript},
-	staticAsset{name: "theme.js", contentType: "text/javascript; charset=utf-8", content: themeScript},
-	staticAsset{name: "admin.js", contentType: "text/javascript; charset=utf-8", content: adminScript},
-	staticAsset{name: "favicon.svg", contentType: "image/svg+xml", content: favicon},
-)
+var euAIAssetNames = []string{
+	"eu-ai-basic-black.svg",
+	"eu-ai-basic-black-50.svg",
+	"eu-ai-basic-white.svg",
+	"eu-ai-basic-white-50.svg",
+	"eu-ai-generated-black.svg",
+	"eu-ai-generated-black-50.svg",
+	"eu-ai-generated-white.svg",
+	"eu-ai-generated-white-50.svg",
+	"eu-ai-modified-black.svg",
+	"eu-ai-modified-black-50.svg",
+	"eu-ai-modified-white.svg",
+	"eu-ai-modified-white-50.svg",
+}
+
+var staticAssets = newStaticAssets(embeddedStaticAssets()...)
+
+func embeddedStaticAssets() []staticAsset {
+	assets := []staticAsset{
+		{name: "app.css", contentType: "text/css; charset=utf-8", content: stylesheet},
+		{name: "htmx.min.js", contentType: "text/javascript; charset=utf-8", content: htmxScript},
+		{name: "theme.js", contentType: "text/javascript; charset=utf-8", content: themeScript},
+		{name: "admin.js", contentType: "text/javascript; charset=utf-8", content: adminScript},
+		{name: "favicon.svg", contentType: "image/svg+xml", content: favicon},
+		{name: "eu-ai-generated-black.png", contentType: "image/png", content: euAISocialLabel},
+	}
+	for _, name := range euAIAssetNames {
+		content, err := euAIAssetFiles.ReadFile("static/" + name)
+		if err != nil {
+			panic(fmt.Sprintf("read embedded EU AI asset %q: %v", name, err))
+		}
+		assets = append(assets, staticAsset{name: name, contentType: "image/svg+xml", content: content})
+	}
+	return assets
+}
 
 func newStaticAssets(assets ...staticAsset) map[string]staticAsset {
 	result := make(map[string]staticAsset, len(assets)*2)

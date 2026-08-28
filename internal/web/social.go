@@ -41,14 +41,16 @@ var (
 
 type socialCardRenderer struct {
 	background  *image.RGBA
+	aiLabel     image.Image
 	boldFont    *opentype.Font
 	regularFont *opentype.Font
 	version     string
 }
 
 type socialCardSpec struct {
-	Eyebrow string
-	Title   string
+	Eyebrow     string
+	Title       string
+	AIGenerated bool
 }
 
 func newSocialCardRenderer() (*socialCardRenderer, error) {
@@ -58,6 +60,10 @@ func newSocialCardRenderer() (*socialCardRenderer, error) {
 	}
 	background := image.NewRGBA(image.Rect(0, 0, socialCardWidth, socialCardHeight))
 	xdraw.CatmullRom.Scale(background, background.Bounds(), source, source.Bounds(), draw.Src, nil)
+	aiLabel, err := png.Decode(bytes.NewReader(euAISocialLabel))
+	if err != nil {
+		return nil, fmt.Errorf("decode EU AI social label: %w", err)
+	}
 	boldFont, err := opentype.Parse(gobold.TTF)
 	if err != nil {
 		return nil, fmt.Errorf("parse bold font: %w", err)
@@ -66,8 +72,9 @@ func newSocialCardRenderer() (*socialCardRenderer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse regular font: %w", err)
 	}
-	digest := sha256.Sum256(socialCardBackground)
-	return &socialCardRenderer{background: background, boldFont: boldFont, regularFont: regularFont, version: fmt.Sprintf("%x", digest[:8])}, nil
+	versionInput := append(append([]byte{}, socialCardBackground...), euAISocialLabel...)
+	digest := sha256.Sum256(versionInput)
+	return &socialCardRenderer{background: background, aiLabel: aiLabel, boldFont: boldFont, regularFont: regularFont, version: fmt.Sprintf("%x", digest[:8])}, nil
 }
 
 func (r *socialCardRenderer) render(spec socialCardSpec) ([]byte, error) {
@@ -103,6 +110,9 @@ func (r *socialCardRenderer) render(spec socialCardSpec) ([]byte, error) {
 	drawRoundedRect(canvas, image.Rect(70, 55, 122, 107), 8, socialCivic)
 	drawCenteredText(canvas, logoFace, socialPaper, "M", image.Rect(70, 55, 122, 107), 94)
 	drawText(canvas, brandFace, socialInk, "MunichBrief", 141, 91)
+	if spec.AIGenerated {
+		xdraw.CatmullRom.Scale(canvas, image.Rect(899, 55, 1130, 129), r.aiLabel, r.aiLabel.Bounds(), draw.Over, nil)
+	}
 
 	titleY := 235
 	if strings.TrimSpace(spec.Eyebrow) != "" {
@@ -254,7 +264,7 @@ func (s *Server) socialIncident(response http.ResponseWriter, request *http.Requ
 		return
 	}
 	view := s.incidentForLanguage(incident, language)
-	s.writeSocialCard(response, request, socialCardSpec{Eyebrow: s.localization.Text(language, "SocialIncidentLabel"), Title: view.Title})
+	s.writeSocialCard(response, request, socialCardSpec{Eyebrow: s.localization.Text(language, "SocialIncidentLabel"), Title: view.Title, AIGenerated: view.Record.HasAI})
 }
 
 func socialCardLanguage(request *http.Request) (string, bool) {
@@ -264,7 +274,7 @@ func socialCardLanguage(request *http.Request) (string, bool) {
 }
 
 func (s *Server) writeSocialCard(response http.ResponseWriter, request *http.Request, spec socialCardSpec) {
-	digest := sha256.Sum256([]byte(s.socialCards.version + "\x00" + spec.Eyebrow + "\x00" + spec.Title))
+	digest := sha256.Sum256([]byte(s.socialCards.version + "\x00" + spec.Eyebrow + "\x00" + spec.Title + "\x00" + strconv.FormatBool(spec.AIGenerated)))
 	etag := fmt.Sprintf(`"%x"`, digest[:12])
 	response.Header().Set("Content-Type", "image/png")
 	response.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400")
