@@ -56,13 +56,13 @@ other = "KI-generierte Inhalte"
 other = "Lokale Vorschau: Diese Seite verwendet synthetische Testinhalte."
 
 [AIDisclosureCopy]
-other = "Lokale KI fasst offizielle Meldungen der Münchner Polizei zusammen, kategorisiert und übersetzt sie. Sie kann Fehler machen; Meldungen können nachträglich geändert werden. Prüfen Sie wichtige Angaben in der offiziellen Quelle. MunichBrief ist unabhängig von der Bayerischen Polizei; es gilt die Unschuldsvermutung."
+other = "MunichBrief nutzt lokal betriebene KI, um aus offiziellen Meldungen der Münchner Polizei Überschriften, Zusammenfassungen, Übersetzungen, Kategorien und strukturierte Angaben zu erstellen, etwa zum gemeldeten Ort und Zeitpunkt sowie dazu, ob die Polizei um Mithilfe bittet. KI-generierte oder abgeleitete Angaben können Fehler enthalten oder veralten, wenn die ursprüngliche Meldung aktualisiert wird. Jede Vorfallsseite nennt und verlinkt ihre offizielle polizeiliche Quelle; maßgeblich sind die dort veröffentlichten Informationen. MunichBrief ist ein unabhängiges Projekt und steht in keiner Verbindung zur Bayerischen Polizei. Für alle genannten Personen gilt die Unschuldsvermutung, solange ihre Schuld nicht rechtskräftig festgestellt wurde."
 
 [AIDisclosurePreferenceCopy]
 other = "Mit „Verstanden“ wird dieser Hinweis 30 Tage lang ausgeblendet."
 
 [AIDisclosureLearnMore]
-other = "So funktioniert MunichBrief"
+other = "Weitere Informationen über MunichBrief und seine Funktionsweise finden Sie auf der Über-Seite."
 
 [AIDisclosureGotIt]
 other = "Verstanden"

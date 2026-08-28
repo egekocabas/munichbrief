@@ -56,13 +56,13 @@ other = "AI-generated content"
 other = "Local preview: this page uses synthetic fixture content."
 
 [AIDisclosureCopy]
-other = "Local AI summarizes, categorizes, and translates official Munich Police releases. It can make mistakes, and releases can change. Verify important details in the official source. MunichBrief is independent from the Bavarian Police; the presumption of innocence applies."
+other = "MunichBrief uses locally operated AI to create headlines, summaries, translations, categories, and structured details such as the reported area and time, and whether the police are requesting public assistance, from official Munich Police reports. AI-generated or inferred information may contain errors or become outdated when the original report is updated. Each incident page identifies and links to its official police source; please consult that source for authoritative information. MunichBrief is an independent project and is not affiliated with the Bavarian Police. Everyone mentioned is presumed innocent unless proven guilty."
 
 [AIDisclosurePreferenceCopy]
 other = "Selecting “Got it” remembers this notice for 30 days."
 
 [AIDisclosureLearnMore]
-other = "How MunichBrief works"
+other = "More information about MunichBrief and how it works is available on the About page."
 
 [AIDisclosureGotIt]
 other = "Got it"
