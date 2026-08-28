@@ -15,7 +15,7 @@ import (
 	"github.com/egekocabas/munichbrief/internal/store"
 )
 
-func TestAIDisclosureVisibilityAndComparisonAssets(t *testing.T) {
+func TestAIDisclosureVisibilityAndAssets(t *testing.T) {
 	database := fixtureStore(t)
 	handler := testServer(t, database).Handler()
 
@@ -24,36 +24,19 @@ func TestAIDisclosureVisibilityAndComparisonAssets(t *testing.T) {
 	if firstVisit.Code != http.StatusOK || !strings.Contains(firstVisit.Body.String(), `id="ai-disclosure"`) {
 		t.Fatalf("first visit disclosure = %d/%q", firstVisit.Code, firstVisit.Body.String())
 	}
-	for _, expected := range []string{"EU Fully AI-Generated label comparison", "AI-generated news summaries"} {
-		if !strings.Contains(firstVisit.Body.String(), expected) {
-			t.Errorf("comparison does not contain %q", expected)
-		}
-	}
 	if len(euAIAssetNames) != 4 {
-		t.Fatalf("EU Fully AI-Generated comparison asset count = %d, want 4", len(euAIAssetNames))
+		t.Fatalf("EU Fully AI-Generated asset count = %d, want 4", len(euAIAssetNames))
 	}
-	if strings.Contains(firstVisit.Body.String(), "Basic AI") || strings.Contains(firstVisit.Body.String(), "AI MODIFIED") {
-		t.Fatal("comparison includes an EU label category that does not match AI-generated news summaries")
+	if !strings.Contains(firstVisit.Body.String(), staticAssets[selectedAIGeneratedAsset].path) {
+		t.Fatal("disclosure does not use the selected EU Fully AI-Generated label")
 	}
-	body := firstVisit.Body.String()
-	latestPosition := strings.Index(body, ">Latest</p>")
-	comparisonPosition := strings.Index(body, "EU Fully AI-Generated label comparison")
-	if latestPosition < 0 || comparisonPosition < latestPosition {
-		t.Fatal("EU label comparison is not rendered under the Latest timeline heading")
-	}
-	for _, expected := range []string{
-		"Cyclist slightly injured in Maxvorstadt collision", "Theft and burglary", "Schwabing",
-		"Incident time", "Public assistance needed", "Visual preview only", "fixture-ai:3b",
-	} {
-		if !strings.Contains(body, expected) {
-			t.Errorf("public-style comparison card does not contain %q", expected)
+	for _, name := range euAIAssetNames {
+		if name != selectedAIGeneratedAsset && strings.Contains(firstVisit.Body.String(), staticAssets[name].path) {
+			t.Errorf("reader page references unselected label asset %s", name)
 		}
 	}
 	for _, name := range euAIAssetNames {
 		asset := staticAssets[name]
-		if !strings.Contains(firstVisit.Body.String(), asset.path) {
-			t.Errorf("comparison does not contain %s", name)
-		}
 		response := httptest.NewRecorder()
 		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, asset.path, nil))
 		if response.Code != http.StatusOK || response.Header().Get("Content-Type") != "image/svg+xml" {
@@ -178,7 +161,7 @@ func TestAIGeneratedLabelsHTMLMarkdownAndSocialCard(t *testing.T) {
 	generatedRequest := englishRequest(http.MethodGet, "/en/incidents/"+formatID(incidentID), nil)
 	generatedRequest.AddCookie(&http.Cookie{Name: aiDisclosureCookieName, Value: aiDisclosureVersion})
 	review.ServeHTTP(generated, generatedRequest)
-	if !strings.Contains(generated.Body.String(), staticAssets["eu-ai-generated-black.svg"].path) || !strings.Contains(generated.Body.String(), "AI-generated content") {
+	if !strings.Contains(generated.Body.String(), staticAssets[selectedAIGeneratedAsset].path) || !strings.Contains(generated.Body.String(), "AI-generated content") {
 		t.Fatal("generated detail does not contain permanent AI label")
 	}
 
@@ -186,7 +169,7 @@ func TestAIGeneratedLabelsHTMLMarkdownAndSocialCard(t *testing.T) {
 	unprocessedRequest := englishRequest(http.MethodGet, "/en/incidents/"+formatID(unprocessedID), nil)
 	unprocessedRequest.AddCookie(&http.Cookie{Name: aiDisclosureCookieName, Value: aiDisclosureVersion})
 	review.ServeHTTP(unprocessed, unprocessedRequest)
-	if strings.Contains(unprocessed.Body.String(), staticAssets["eu-ai-generated-black.svg"].path) {
+	if strings.Contains(unprocessed.Body.String(), staticAssets[selectedAIGeneratedAsset].path) {
 		t.Fatal("unprocessed original was labelled as AI-generated")
 	}
 	if !strings.Contains(unprocessed.Body.String(), `<meta name="ai-generated" content="false">`) || unprocessed.Header().Get("X-AI-Generated") != "false" || unprocessed.Header().Get("X-AI-Model") != "" {
@@ -219,7 +202,7 @@ func TestAIGeneratedLabelsHTMLMarkdownAndSocialCard(t *testing.T) {
 	publicTimelineRequest := englishRequest(http.MethodGet, "/en", nil)
 	publicTimelineRequest.AddCookie(&http.Cookie{Name: aiDisclosureCookieName, Value: aiDisclosureVersion})
 	public.Handler().ServeHTTP(publicTimeline, publicTimelineRequest)
-	if !strings.Contains(publicTimeline.Body.String(), "Synthetic AI title") || !strings.Contains(publicTimeline.Body.String(), staticAssets["eu-ai-generated-black.svg"].path) {
+	if !strings.Contains(publicTimeline.Body.String(), "Synthetic AI title") || !strings.Contains(publicTimeline.Body.String(), staticAssets[selectedAIGeneratedAsset].path) {
 		t.Fatal("generated homepage headline does not contain permanent AI label")
 	}
 	socialResponse := httptest.NewRecorder()

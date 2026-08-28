@@ -11,6 +11,8 @@ import (
 
 const immutableAssetCacheControl = "public, max-age=31556952, immutable"
 
+const selectedAIGeneratedAsset = "eu-ai-generated-white-50.svg"
+
 type staticAsset struct {
 	name        string
 	path        string
@@ -34,7 +36,7 @@ func embeddedStaticAssets() []staticAsset {
 		{name: "theme.js", contentType: "text/javascript; charset=utf-8", content: themeScript},
 		{name: "admin.js", contentType: "text/javascript; charset=utf-8", content: adminScript},
 		{name: "favicon.svg", contentType: "image/svg+xml", content: favicon},
-		{name: "eu-ai-generated-black.png", contentType: "image/png", content: euAISocialLabel},
+		{name: "eu-ai-generated-white-50.png", contentType: "image/png", content: euAISocialLabel},
 	}
 	for _, name := range euAIAssetNames {
 		content, err := euAIAssetFiles.ReadFile("static/" + name)

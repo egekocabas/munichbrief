@@ -174,9 +174,6 @@ func (s *Server) timeline(response http.ResponseWriter, request *http.Request) {
 		Shown:    len(incidents),
 		Previous: page - 1, Next: page + 1, HasPrevious: page > 1, HasNext: page < totalPages,
 	}
-	if base.Review && base.Fixture && page == 1 {
-		data.AILabelPreviewGroups = s.aiLabelPreviewGroups(incidents, language)
-	}
 	if scope.PublicOnly && wantsMarkdown(request.Header.Get("Accept")) {
 		s.prepareMarkdown(response, base)
 		s.renderTimelineMarkdown(response, data)
@@ -610,16 +607,15 @@ type processingStepView struct {
 
 type timelinePage struct {
 	basePage
-	AILabelPreviewGroups []aiLabelPreviewGroup
-	Groups               []dayGroup
-	Shown                int
-	Page                 int
-	TotalPages           int
-	Total                int
-	Previous             int
-	Next                 int
-	HasPrevious          bool
-	HasNext              bool
+	Groups      []dayGroup
+	Shown       int
+	Page        int
+	TotalPages  int
+	Total       int
+	Previous    int
+	Next        int
+	HasPrevious bool
+	HasNext     bool
 }
 
 type dayGroup struct {

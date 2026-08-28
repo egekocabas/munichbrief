@@ -55,7 +55,7 @@ var socialCardBackground []byte
 //go:embed static/eu-ai-*.svg
 var euAIAssetFiles embed.FS
 
-//go:embed static/eu-ai-generated-black.png
+//go:embed static/eu-ai-generated-white-50.png
 var euAISocialLabel []byte
 
 type incidentStore interface {

@@ -143,18 +143,6 @@
     display: block;
   }
 
-  .ai-icon-dark {
-    display: none;
-  }
-
-  :root[data-theme="dark"] .ai-icon-light {
-    display: none;
-  }
-
-  :root[data-theme="dark"] .ai-icon-dark {
-    display: block;
-  }
-
   .ai-generated-label {
     display: inline-flex;
     min-height: 2.25rem;
@@ -164,13 +152,6 @@
   .ai-generated-label img {
     width: auto;
     height: 2.25rem;
-  }
-
-  .ai-preview-icon {
-    width: auto;
-    max-width: min(100%, 9rem);
-    height: 2.25rem;
-    object-fit: contain;
   }
 
   .ai-disclosure {
