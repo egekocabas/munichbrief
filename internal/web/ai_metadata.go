@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	iptcTrainedAlgorithmicMedia   = "http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia"
-	schemaTrainedAlgorithmicMedia = "https://schema.org/TrainedAlgorithmicMediaDigitalSource"
+	iptcTrainedAlgorithmicMedia              = "http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia"
+	iptcCompositeWithTrainedAlgorithmicMedia = "http://cv.iptc.org/newscodes/digitalsourcetype/compositeWithTrainedAlgorithmicMedia"
+	schemaTrainedAlgorithmicMedia            = "https://schema.org/TrainedAlgorithmicMediaDigitalSource"
 )
 
 type machineReadableAIMetadata struct {

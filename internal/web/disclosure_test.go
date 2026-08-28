@@ -207,7 +207,7 @@ func TestAIGeneratedLabelsHTMLMarkdownAndSocialCard(t *testing.T) {
 	}
 	socialResponse := httptest.NewRecorder()
 	public.Handler().ServeHTTP(socialResponse, englishRequest(http.MethodGet, "/social/en/incidents/"+formatID(incidentID), nil))
-	if socialResponse.Code != http.StatusOK || socialResponse.Header().Get("X-AI-Generated") != "true" || socialResponse.Header().Get("X-AI-Model") != "qwen3.5:4b" || socialResponse.Header().Get("X-IPTC-Digital-Source-Type") != iptcTrainedAlgorithmicMedia || !bytes.Contains(socialResponse.Body.Bytes(), []byte(iptcTrainedAlgorithmicMedia)) {
+	if socialResponse.Code != http.StatusOK || socialResponse.Header().Get("X-AI-Generated") != "true" || socialResponse.Header().Get("X-AI-Generated-Text") != "true" || socialResponse.Header().Get("X-AI-Generated-Background") != "true" || socialResponse.Header().Get("X-AI-Model") != "qwen3.5:4b" || socialResponse.Header().Get("X-IPTC-Digital-Source-Type") != iptcCompositeWithTrainedAlgorithmicMedia || !bytes.Contains(socialResponse.Body.Bytes(), []byte(iptcCompositeWithTrainedAlgorithmicMedia)) {
 		t.Fatal("generated social card does not expose HTTP and embedded XMP AI metadata")
 	}
 
@@ -227,8 +227,8 @@ func TestAIGeneratedLabelsHTMLMarkdownAndSocialCard(t *testing.T) {
 		t.Fatal("AI-labelled social card is identical to unlabelled card")
 	}
 	assertSocialCardDimensions(t, labelled)
-	if !bytes.Contains(labelled, []byte(iptcTrainedAlgorithmicMedia)) || bytes.Contains(plain, []byte(iptcTrainedAlgorithmicMedia)) {
-		t.Fatal("social card IPTC/XMP AI provenance is missing or applied to a non-AI card")
+	if !bytes.Contains(labelled, []byte(iptcCompositeWithTrainedAlgorithmicMedia)) || !bytes.Contains(plain, []byte(iptcCompositeWithTrainedAlgorithmicMedia)) {
+		t.Fatal("social card IPTC/XMP background provenance is missing")
 	}
 }
 

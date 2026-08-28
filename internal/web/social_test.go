@@ -27,12 +27,18 @@ func TestSocialCardsRenderURLSpecificPNGResponses(t *testing.T) {
 	if home.Code != http.StatusOK || home.Header().Get("Content-Type") != "image/png" || !strings.Contains(home.Header().Get("Cache-Control"), "public") || home.Header().Get("ETag") == "" {
 		t.Fatalf("home social card = %d/%q/%q/%q", home.Code, home.Header().Get("Content-Type"), home.Header().Get("Cache-Control"), home.Header().Get("ETag"))
 	}
+	if home.Header().Get("X-AI-Generated") != "false" || home.Header().Get("X-AI-Generated-Background") != "true" || home.Header().Get("X-IPTC-Digital-Source-Type") != iptcCompositeWithTrainedAlgorithmicMedia || !bytes.Contains(home.Body.Bytes(), []byte(iptcCompositeWithTrainedAlgorithmicMedia)) {
+		t.Fatal("home social card does not distinguish its AI-generated background from its non-AI text")
+	}
 	assertSocialCardDimensions(t, home.Body.Bytes())
 
 	detail := httptest.NewRecorder()
 	handler.ServeHTTP(detail, publicDiscoveryRequest(http.MethodGet, "/social/en/incidents/"+formatID(job.IncidentID)))
 	if detail.Code != http.StatusOK {
 		t.Fatalf("incident social card status = %d, want 200", detail.Code)
+	}
+	if detail.Header().Get("X-AI-Generated") != "true" || detail.Header().Get("X-AI-Generated-Text") != "true" || detail.Header().Get("X-AI-Generated-Background") != "true" || detail.Header().Get("X-IPTC-Digital-Source-Type") != iptcCompositeWithTrainedAlgorithmicMedia {
+		t.Fatal("incident social card AI provenance headers are incomplete")
 	}
 	assertSocialCardDimensions(t, detail.Body.Bytes())
 	if bytes.Equal(home.Body.Bytes(), detail.Body.Bytes()) {

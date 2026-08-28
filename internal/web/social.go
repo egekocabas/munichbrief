@@ -32,7 +32,7 @@ const (
 	socialTextLeft      = 70
 	socialTextMaxWidth  = 550
 	socialTextRightEdge = socialTextLeft + socialTextMaxWidth
-	socialCardXMP       = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:Iptc4xmpExt="http://iptc.org/std/Iptc4xmpExt/2008-02-29/" xmlns:xmp="http://ns.adobe.com/xap/1.0/" Iptc4xmpExt:DigitalSourceType="http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia" xmp:CreatorTool="MunichBrief"/></rdf:RDF></x:xmpmeta><?xpacket end="w"?>`
+	socialCardXMP       = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:Iptc4xmpExt="http://iptc.org/std/Iptc4xmpExt/2008-02-29/" xmlns:xmp="http://ns.adobe.com/xap/1.0/" Iptc4xmpExt:DigitalSourceType="` + iptcCompositeWithTrainedAlgorithmicMedia + `" xmp:CreatorTool="MunichBrief"/></rdf:RDF></x:xmpmeta><?xpacket end="w"?>`
 )
 
 var (
@@ -132,9 +132,8 @@ func (r *socialCardRenderer) render(spec socialCardSpec) ([]byte, error) {
 	if err := png.Encode(&output, canvas); err != nil {
 		return nil, fmt.Errorf("encode social card: %w", err)
 	}
-	if !spec.AIGenerated {
-		return output.Bytes(), nil
-	}
+	// The Olympiapark illustration was generated with AI. Embed provenance in
+	// every final card because decoding and re-encoding drops source PNG metadata.
 	return embedPNGXMP(output.Bytes(), []byte(socialCardXMP))
 }
 
@@ -316,8 +315,10 @@ func (s *Server) writeSocialCard(response http.ResponseWriter, request *http.Req
 	response.Header().Set("ETag", etag)
 	response.Header().Set("X-Content-Type-Options", "nosniff")
 	response.Header().Set("X-AI-Generated", strconv.FormatBool(spec.AIGenerated))
+	response.Header().Set("X-AI-Generated-Background", "true")
+	response.Header().Set("X-IPTC-Digital-Source-Type", iptcCompositeWithTrainedAlgorithmicMedia)
 	if spec.AIGenerated {
-		response.Header().Set("X-IPTC-Digital-Source-Type", iptcTrainedAlgorithmicMedia)
+		response.Header().Set("X-AI-Generated-Text", "true")
 	}
 	if spec.AIModel != "" {
 		response.Header().Set("X-AI-Model", safeMetadataHeader(spec.AIModel))

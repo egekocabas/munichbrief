@@ -45,13 +45,19 @@ and use of an EU icon must not be interpreted as adherence to the Code.
 | Permanent content label | The selected **AI GENERATED** icon appears immediately before every AI-generated homepage and incident headline. Unprocessed source text is not labelled as generated. |
 | Accessibility | The icon has an equivalent localized ARIA label and screen-reader text. Disclosure controls remain keyboard accessible and the dock avoids a backdrop or focus trap. |
 | Authoritative source | Each incident retains a link and attribution to the official police release; the About and disclosure copy state that the official source controls. |
-| Reshared images | Generated incident social cards contain a visible rendered form of the selected label. |
+| Reshared images | Generated incident social cards contain a visible rendered form of the selected label. Every social card embeds IPTC/XMP `compositeWithTrainedAlgorithmicMedia` provenance because its stylized Olympiapark background was generated with AI. Separate response headers preserve the distinction between an AI-generated background and AI-generated incident text. |
 | Machine-readable provenance | HTML metadata and `data-*` attributes, JSON-LD, Markdown front matter, response headers, API JSON, and IPTC/XMP social-card metadata expose AI status and available model identifiers. |
 | Material disclosure revisions | The acknowledgement cookie checks an exact disclosure version. A material wording or scope change must increment the version so the notice is shown again. |
 
 The machine-readable fields are additional interoperability signals. They do
 not guarantee that crawlers will honour the disclosure and do not by themselves
 satisfy any provider-side marking or detectability requirement.
+
+Provenance is attached to each final social-card PNG rather than only to the
+source background. The renderer decodes and re-encodes that background, which
+would discard source-file metadata. XMP metadata can itself be removed by
+downstream platforms and is therefore a disclosure signal, not a tamper-proof
+watermark or signed C2PA Content Credential.
 
 ## Publishing boundary
 
