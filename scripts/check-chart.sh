@@ -17,6 +17,7 @@ required_patterns=(
   'ReadWriteOnce'
   'path: /healthz'
   'path: /readyz'
+  'path: /ai-disclosure/acknowledge'
   'path: /robots.txt'
   'path: /sitemap.xml'
   'path: /social'
@@ -55,6 +56,12 @@ done
 public_root_count="$(awk 'NF >= 2 && $(NF - 1) == "path:" && $NF == "/" { getline; if ($1 == "pathType:" && $2 == "Exact") count++ } END { print count + 0 }' "$rendered_chart")"
 [[ "$public_root_count" -ge 1 ]] || {
   printf 'Rendered chart does not constrain the public root path to Exact\n' >&2
+  exit 1
+}
+
+disclosure_acknowledgement_count="$(awk 'NF >= 2 && $(NF - 1) == "path:" && $NF == "/ai-disclosure/acknowledge" { getline; if ($1 == "pathType:" && $2 == "Exact") count++ } END { print count + 0 }' "$rendered_chart")"
+[[ "$disclosure_acknowledgement_count" -ge 1 ]] || {
+  printf 'Rendered chart does not expose the AI disclosure acknowledgement as an Exact path\n' >&2
   exit 1
 }
 

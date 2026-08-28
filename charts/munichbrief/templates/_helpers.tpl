@@ -17,6 +17,13 @@
       name: {{ include "munichbrief.fullname" . }}
       port:
         name: http
+- path: /ai-disclosure/acknowledge
+  pathType: Exact
+  backend:
+    service:
+      name: {{ include "munichbrief.fullname" . }}
+      port:
+        name: http
 - path: /robots.txt
   pathType: Exact
   backend:
