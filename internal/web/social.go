@@ -3,8 +3,10 @@ package web
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/binary"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"image"
 	"image/color"
 	"image/draw"
@@ -30,6 +32,7 @@ const (
 	socialTextLeft      = 70
 	socialTextMaxWidth  = 550
 	socialTextRightEdge = socialTextLeft + socialTextMaxWidth
+	socialCardXMP       = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:Iptc4xmpExt="http://iptc.org/std/Iptc4xmpExt/2008-02-29/" xmlns:xmp="http://ns.adobe.com/xap/1.0/" Iptc4xmpExt:DigitalSourceType="http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia" xmp:CreatorTool="MunichBrief"/></rdf:RDF></x:xmpmeta><?xpacket end="w"?>`
 )
 
 var (
@@ -51,6 +54,7 @@ type socialCardSpec struct {
 	Eyebrow     string
 	Title       string
 	AIGenerated bool
+	AIModel     string
 }
 
 func newSocialCardRenderer() (*socialCardRenderer, error) {
@@ -72,7 +76,7 @@ func newSocialCardRenderer() (*socialCardRenderer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse regular font: %w", err)
 	}
-	versionInput := append(append([]byte{}, socialCardBackground...), euAISocialLabel...)
+	versionInput := append(append(append([]byte{}, socialCardBackground...), euAISocialLabel...), socialCardXMP...)
 	digest := sha256.Sum256(versionInput)
 	return &socialCardRenderer{background: background, aiLabel: aiLabel, boldFont: boldFont, regularFont: regularFont, version: fmt.Sprintf("%x", digest[:8])}, nil
 }
@@ -128,7 +132,38 @@ func (r *socialCardRenderer) render(spec socialCardSpec) ([]byte, error) {
 	if err := png.Encode(&output, canvas); err != nil {
 		return nil, fmt.Errorf("encode social card: %w", err)
 	}
-	return output.Bytes(), nil
+	if !spec.AIGenerated {
+		return output.Bytes(), nil
+	}
+	return embedPNGXMP(output.Bytes(), []byte(socialCardXMP))
+}
+
+func embedPNGXMP(contents, packet []byte) ([]byte, error) {
+	if len(contents) < 8 || !bytes.Equal(contents[:8], []byte("\x89PNG\r\n\x1a\n")) {
+		return nil, errors.New("embed XMP: invalid PNG signature")
+	}
+	for offset := 8; offset+12 <= len(contents); {
+		length := int(binary.BigEndian.Uint32(contents[offset : offset+4]))
+		chunkEnd := offset + 12 + length
+		if chunkEnd > len(contents) {
+			return nil, errors.New("embed XMP: invalid PNG chunk length")
+		}
+		if string(contents[offset+4:offset+8]) == "IEND" {
+			payload := append([]byte("XML:com.adobe.xmp\x00\x00\x00\x00\x00"), packet...)
+			chunk := make([]byte, 12+len(payload))
+			binary.BigEndian.PutUint32(chunk[:4], uint32(len(payload)))
+			copy(chunk[4:8], "iTXt")
+			copy(chunk[8:8+len(payload)], payload)
+			binary.BigEndian.PutUint32(chunk[8+len(payload):], crc32.ChecksumIEEE(chunk[4:8+len(payload)]))
+			result := make([]byte, 0, len(contents)+len(chunk))
+			result = append(result, contents[:offset]...)
+			result = append(result, chunk...)
+			result = append(result, contents[offset:]...)
+			return result, nil
+		}
+		offset = chunkEnd
+	}
+	return nil, errors.New("embed XMP: PNG has no IEND chunk")
 }
 
 func (r *socialCardRenderer) face(parsed *opentype.Font, size float64) (xfont.Face, func(), error) {
@@ -264,7 +299,7 @@ func (s *Server) socialIncident(response http.ResponseWriter, request *http.Requ
 		return
 	}
 	view := s.incidentForLanguage(incident, language)
-	s.writeSocialCard(response, request, socialCardSpec{Eyebrow: s.localization.Text(language, "SocialIncidentLabel"), Title: view.Title, AIGenerated: view.Record.HasAI})
+	s.writeSocialCard(response, request, socialCardSpec{Eyebrow: s.localization.Text(language, "SocialIncidentLabel"), Title: view.Title, AIGenerated: view.Record.HasAI, AIModel: view.Record.AIModel})
 }
 
 func socialCardLanguage(request *http.Request) (string, bool) {
@@ -274,12 +309,19 @@ func socialCardLanguage(request *http.Request) (string, bool) {
 }
 
 func (s *Server) writeSocialCard(response http.ResponseWriter, request *http.Request, spec socialCardSpec) {
-	digest := sha256.Sum256([]byte(s.socialCards.version + "\x00" + spec.Eyebrow + "\x00" + spec.Title + "\x00" + strconv.FormatBool(spec.AIGenerated)))
+	digest := sha256.Sum256([]byte(s.socialCards.version + "\x00" + spec.Eyebrow + "\x00" + spec.Title + "\x00" + strconv.FormatBool(spec.AIGenerated) + "\x00" + spec.AIModel))
 	etag := fmt.Sprintf(`"%x"`, digest[:12])
 	response.Header().Set("Content-Type", "image/png")
 	response.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400")
 	response.Header().Set("ETag", etag)
 	response.Header().Set("X-Content-Type-Options", "nosniff")
+	response.Header().Set("X-AI-Generated", strconv.FormatBool(spec.AIGenerated))
+	if spec.AIGenerated {
+		response.Header().Set("X-IPTC-Digital-Source-Type", iptcTrainedAlgorithmicMedia)
+	}
+	if spec.AIModel != "" {
+		response.Header().Set("X-AI-Model", safeMetadataHeader(spec.AIModel))
+	}
 	if request.Header.Get("If-None-Match") == etag {
 		response.WriteHeader(http.StatusNotModified)
 		return

@@ -1,11 +1,16 @@
 {{define "layout"}}
 <!doctype html>
-<html lang="{{.Lang}}" prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#">
+<html lang="{{.Lang}}" prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" data-ai-generated="{{.AIGeneratedState}}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="{{.Description}}">
   <meta name="robots" content="{{.Robots}}">
+  <meta name="ai-generated" content="{{.AIGeneratedState}}">
+  {{if .AIModel}}<meta name="ai-model" content="{{.AIModel}}">{{end}}
+  {{if .AIMetadataModel}}<meta name="ai-metadata-model" content="{{.AIMetadataModel}}">{{end}}
+  {{if .AITranslationModel}}<meta name="ai-translation-model" content="{{.AITranslationModel}}">{{end}}
+  {{if ne .AIGeneratedState "false"}}<meta name="digital-source-type" content="http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia">{{end}}
   <meta name="htmx-config" content='{"allowEval":false,"selfRequestsOnly":true,"includeIndicatorStyles":false}'>
   <title>{{template "title" .}}</title>
   <script src="{{assetURL "theme.js"}}"></script>
@@ -35,6 +40,7 @@
   {{if .PreviousCanonicalURL}}<link rel="prev" href="{{.PreviousCanonicalURL}}">{{end}}
   {{if .NextCanonicalURL}}<link rel="next" href="{{.NextCanonicalURL}}">{{end}}
   {{if .StructuredData}}<script type="application/ld+json">{{.StructuredData}}</script>{{end}}
+  {{if .AIContentMetadata}}<script id="ai-content-metadata" type="application/json">{{.AIContentMetadata}}</script>{{end}}
   <link rel="stylesheet" href="{{assetURL "app.css"}}">
   <script defer src="{{assetURL "htmx.min.js"}}"></script>
 </head>

@@ -70,6 +70,9 @@ func TestAIDisclosureVisibilityAndComparisonAssets(t *testing.T) {
 	if strings.Contains(about.Body.String(), `id="ai-disclosure"`) || strings.Contains(about.Body.String(), "EU AI label comparison") {
 		t.Fatal("About page contains reader disclosure preview UI")
 	}
+	if !strings.Contains(about.Body.String(), `<meta name="ai-generated" content="false">`) || !strings.Contains(about.Body.String(), `"ai_generated":false,"ai_generated_state":"false"`) || about.Header().Get("X-AI-Generated") != "false" {
+		t.Fatal("About page does not declare that its content is not AI-generated")
+	}
 }
 
 func TestAIDisclosureAcknowledgementCookieAndRedirect(t *testing.T) {
@@ -161,6 +164,9 @@ func TestAIGeneratedLabelsHTMLMarkdownAndSocialCard(t *testing.T) {
 	if strings.Contains(unprocessed.Body.String(), staticAssets["eu-ai-generated-black.svg"].path) {
 		t.Fatal("unprocessed original was labelled as AI-generated")
 	}
+	if !strings.Contains(unprocessed.Body.String(), `<meta name="ai-generated" content="false">`) || unprocessed.Header().Get("X-AI-Generated") != "false" || unprocessed.Header().Get("X-AI-Model") != "" {
+		t.Fatal("unprocessed original has incorrect machine-readable AI metadata")
+	}
 
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	public, err := NewWithOptions(database, logger, Options{
@@ -176,12 +182,25 @@ func TestAIGeneratedLabelsHTMLMarkdownAndSocialCard(t *testing.T) {
 	if !strings.Contains(markdown.Body.String(), "> **AI-generated content**") {
 		t.Fatalf("Markdown disclosure missing: %s", markdown.Body.String())
 	}
+	for _, expected := range []string{
+		"ai_generated: true", `ai_generated_state: "true"`, `ai_model: "qwen3.5:4b"`,
+		`digital_source_type: "` + iptcTrainedAlgorithmicMedia + `"`,
+	} {
+		if !strings.Contains(markdown.Body.String(), expected) {
+			t.Errorf("Markdown machine-readable disclosure does not contain %q", expected)
+		}
+	}
 	publicTimeline := httptest.NewRecorder()
 	publicTimelineRequest := englishRequest(http.MethodGet, "/en", nil)
 	publicTimelineRequest.AddCookie(&http.Cookie{Name: aiDisclosureCookieName, Value: aiDisclosureVersion})
 	public.Handler().ServeHTTP(publicTimeline, publicTimelineRequest)
 	if !strings.Contains(publicTimeline.Body.String(), "Synthetic AI title") || !strings.Contains(publicTimeline.Body.String(), staticAssets["eu-ai-generated-black.svg"].path) {
 		t.Fatal("generated homepage headline does not contain permanent AI label")
+	}
+	socialResponse := httptest.NewRecorder()
+	public.Handler().ServeHTTP(socialResponse, englishRequest(http.MethodGet, "/social/en/incidents/"+formatID(incidentID), nil))
+	if socialResponse.Code != http.StatusOK || socialResponse.Header().Get("X-AI-Generated") != "true" || socialResponse.Header().Get("X-AI-Model") != "qwen3.5:4b" || socialResponse.Header().Get("X-IPTC-Digital-Source-Type") != iptcTrainedAlgorithmicMedia || !bytes.Contains(socialResponse.Body.Bytes(), []byte(iptcTrainedAlgorithmicMedia)) {
+		t.Fatal("generated social card does not expose HTTP and embedded XMP AI metadata")
 	}
 
 	renderer, err := newSocialCardRenderer()
@@ -198,6 +217,10 @@ func TestAIGeneratedLabelsHTMLMarkdownAndSocialCard(t *testing.T) {
 	}
 	if bytes.Equal(plain, labelled) {
 		t.Fatal("AI-labelled social card is identical to unlabelled card")
+	}
+	assertSocialCardDimensions(t, labelled)
+	if !bytes.Contains(labelled, []byte(iptcTrainedAlgorithmicMedia)) || bytes.Contains(plain, []byte(iptcTrainedAlgorithmicMedia)) {
+		t.Fatal("social card IPTC/XMP AI provenance is missing or applied to a non-AI card")
 	}
 }
 
