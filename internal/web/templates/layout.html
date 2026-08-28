@@ -88,7 +88,7 @@
       <div class="min-w-0 flex-1">
         <div class="ai-disclosure-heading">
           <div class="ai-disclosure-icon" aria-hidden="true">
-            <img src="{{assetURL "eu-ai-generated-white-50.svg"}}" alt="">
+            <img src="{{aiLabelAssetURL}}" alt="">
           </div>
           <h2 id="ai-disclosure-title" class="font-serif text-lg font-bold text-ink">{{t .Lang "AIDisclosureTitle"}}</h2>
         </div>
@@ -109,7 +109,7 @@
 
 {{define "ai-generated-label"}}
 <span class="ai-generated-label" aria-label="{{t .Lang "AIGeneratedContent"}}">
-  <img src="{{assetURL "eu-ai-generated-white-50.svg"}}" alt="">
+  <img src="{{aiLabelAssetURL}}" alt="">
   <span class="sr-only">{{t .Lang "AIGeneratedContent"}}</span>
 </span>
 {{end}}

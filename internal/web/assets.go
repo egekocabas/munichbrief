@@ -9,9 +9,11 @@ import (
 	"strings"
 )
 
-const immutableAssetCacheControl = "public, max-age=31556952, immutable"
-
-const selectedAIGeneratedAsset = "eu-ai-generated-white-50.svg"
+const (
+	immutableAssetCacheControl  = "public, max-age=31556952, immutable"
+	selectedAIGeneratedAsset    = "eu-ai-generated-white-50.svg"
+	selectedAIGeneratedPNGAsset = "eu-ai-generated-white-50.png"
+)
 
 type staticAsset struct {
 	name        string
@@ -36,7 +38,7 @@ func embeddedStaticAssets() []staticAsset {
 		{name: "theme.js", contentType: "text/javascript; charset=utf-8", content: themeScript},
 		{name: "admin.js", contentType: "text/javascript; charset=utf-8", content: adminScript},
 		{name: "favicon.svg", contentType: "image/svg+xml", content: favicon},
-		{name: "eu-ai-generated-white-50.png", contentType: "image/png", content: euAISocialLabel},
+		{name: selectedAIGeneratedPNGAsset, contentType: "image/png", content: euAISocialLabel},
 	}
 	for _, name := range euAIAssetNames {
 		content, err := euAIAssetFiles.ReadFile("static/" + name)
@@ -68,6 +70,12 @@ func assetURL(name string) (string, error) {
 		return "", fmt.Errorf("unknown static asset %q", name)
 	}
 	return asset.path, nil
+}
+
+// selectedAIGeneratedAssetURL centralizes the reviewed EU label choice so the
+// disclosure dock and every per-content label cannot silently diverge.
+func selectedAIGeneratedAssetURL() (string, error) {
+	return assetURL(selectedAIGeneratedAsset)
 }
 
 func serveStaticAsset(response http.ResponseWriter, request *http.Request) {

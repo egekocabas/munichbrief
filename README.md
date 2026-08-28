@@ -134,6 +134,10 @@ Read [Source, privacy, and retention](docs/source-policy.md) before enabling liv
 ingestion or a public route. Report software vulnerabilities privately as
 described in [Security](SECURITY.md).
 
+For the AI Act transparency rationale, visible and machine-readable disclosure
+controls, operational review points, and legal-status limitations, read
+[EU AI transparency and compliance posture](docs/eu-ai-transparency.md).
+
 ## Contributing
 
 Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md), follow
