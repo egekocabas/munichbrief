@@ -129,6 +129,51 @@ func TestCategoryVerificationIsIndependentAuditableAndRunScoped(t *testing.T) {
 	}
 }
 
+func TestFailedCategoryVerificationFallsBackToOriginalCategory(t *testing.T) {
+	ctx := context.Background()
+	database, err := Open(ctx, filepath.Join(t.TempDir(), "failed-category-verification.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 9, 0, 0, 0, time.UTC)
+	insertPipelineDocuments(t, ctx, database, now, "one")
+	var incidentID int64
+	var sourceHash string
+	if err := database.db.QueryRowContext(ctx, `SELECT id,content_hash FROM incidents LIMIT 1`).Scan(&incidentID, &sourceHash); err != nil {
+		t.Fatal(err)
+	}
+	runID := insertCompletedPresentationRun(t, ctx, database, incidentID, sourceHash, PipelineVersion, now, map[string]string{
+		"title_de": "Verkehrskontrolle", "summary_de": "Die Polizei kontrollierte mehrere Fahrzeuge.", "category": "traffic",
+	})
+	plan := CategoryVerificationPlan{PromptVersion: "incident-category-verification-v1", Model: "verify:failed"}
+	if queued, err := database.QueueCategoryVerificationForRun(ctx, runID, plan, "scheduled", false, now); err != nil || queued != 1 {
+		t.Fatalf("queue category verification = %d/%v", queued, err)
+	}
+	job, found, err := database.ClaimCategoryVerificationJob(ctx, true, nil, now)
+	if err != nil || !found {
+		t.Fatalf("claim category verification = %#v/%t/%v", job, found, err)
+	}
+	if err := database.FailCategoryVerificationJob(ctx, job, "needs_review", "output", nil, now.Add(time.Minute), errors.New("synthetic invalid output")); err != nil {
+		t.Fatal(err)
+	}
+
+	record, err := database.GetPresentationIncident(ctx, incidentID, PresentationScope{PromptVersion: PipelineVersion, Language: "de", PublicOnly: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if record.AICategory != "traffic" || record.AIOriginalCategory != "traffic" || record.AICategoryVerificationModel != "" || record.AICategoryVerificationGeneratedAt != nil {
+		t.Fatalf("failed verification changed reader category or provenance: %#v", record)
+	}
+	admin, err := database.ListAdminCategoryVerifications(ctx, []int64{incidentID})
+	if err != nil || len(admin) != 1 {
+		t.Fatalf("admin category verification = %#v/%v", admin, err)
+	}
+	if admin[0].Status != "needs_review" || admin[0].EffectiveCategory != "traffic" || admin[0].IsCorrect != nil || admin[0].Model != "verify:failed" {
+		t.Fatalf("failed verifier admin fallback = %#v", admin[0])
+	}
+}
+
 func TestCategoryVerificationBackfillRespectsCutoverAndIncludesTranslatedFallback(t *testing.T) {
 	ctx := context.Background()
 	database, err := Open(ctx, filepath.Join(t.TempDir(), "category-backfill.db"))

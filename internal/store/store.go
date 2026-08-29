@@ -67,11 +67,6 @@ type IncidentRecord struct {
 	AICategoryVerificationModel         string
 	AICategoryVerificationPromptVersion string
 	AICategoryVerificationGeneratedAt   *time.Time
-	AICategoryVerificationStatus        string
-	AICategoryVerificationAttempts      int
-	AICategoryVerificationNextRetryAt   *time.Time
-	AICategoryVerificationFailureKind   string
-	AICategoryVerificationCorrect       *bool
 	AIModel                             string
 	AIPromptVersion                     string
 	AIGeneratedAt                       *time.Time

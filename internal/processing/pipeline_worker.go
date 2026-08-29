@@ -252,7 +252,7 @@ func (w *PipelineWorker) SetPreferredStepModel(ctx context.Context, stepKey, mod
 	return nil
 }
 
-// ModelStatus reports canonical and translation readiness independently.
+// ModelStatus reports canonical and post-processing readiness independently.
 func (w *PipelineWorker) ModelStatus(ctx context.Context) (PipelineModelStatus, error) {
 	settings, err := w.repository.PipelineStepSettings(ctx)
 	if err != nil {

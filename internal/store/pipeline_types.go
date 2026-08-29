@@ -176,8 +176,8 @@ type PipelineEvent struct {
 }
 
 // PipelineHistoryEntry is the review-facing persisted state of one canonical
-// or translation job. It intentionally excludes incident text, generated
-// values, and internal error messages.
+// or independent post-processing job. It intentionally excludes incident text,
+// generated values, and internal error messages.
 type PipelineHistoryEntry struct {
 	JobID         int64
 	UpdatedAt     time.Time

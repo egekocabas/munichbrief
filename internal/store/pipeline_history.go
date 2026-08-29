@@ -14,8 +14,8 @@ const (
 )
 
 // ListPipelineHistory returns a stable, reverse-chronological page of persisted
-// canonical and independent translation job states. Waiting canonical jobs are
-// omitted to match the dashboard preview.
+// canonical and independent post-processing job states. Waiting canonical jobs
+// are omitted to match the dashboard preview.
 func (s *Store) ListPipelineHistory(ctx context.Context, sourceMode string, limit int, before, after *PipelineHistoryCursor) (PipelineHistoryPage, error) {
 	var page PipelineHistoryPage
 	if limit < 1 {

@@ -106,9 +106,12 @@ func TestMetricsExposeStagedPipelineState(t *testing.T) {
 	metrics := NewMetrics("test", time.Now())
 	metrics.RecordPipelineAttempt("incident_metadata")
 	metrics.RecordPipelineAttempt("german_presentation")
+	metrics.RecordPipelineAttempt("category_verification")
 	metrics.RecordPipelineAttempt("translation/en")
 	metrics.RecordPipelineSuccess("incident_metadata", time.Unix(4567, 0))
+	metrics.RecordPipelineSuccess("category_verification", time.Unix(4568, 0))
 	metrics.RecordPipelineFailure("translation/en", "output")
+	metrics.RecordPipelineDuration("category_verification", 1250*time.Millisecond)
 	metrics.RecordPipelineDuration("translation/en", 1750*time.Millisecond)
 	metrics.SetPipelineSnapshot(store.PipelineSnapshot{
 		ActiveCycle: &store.PipelineCycle{Kind: "manual", ActiveStep: 1},
@@ -116,7 +119,8 @@ func TestMetricsExposeStagedPipelineState(t *testing.T) {
 			{StepKey: "incident_metadata", Queued: 2, Succeeded: 3},
 			{StepKey: "german_presentation", Retrying: 1},
 		},
-		Translations: []store.TranslationQueueStats{{Language: "en", Running: 1, NeedsReview: 4}},
+		CategoryVerification: store.CategoryVerificationQueueStats{Pending: 2, Running: 1, Retrying: 3, NeedsReview: 4, Failed: 5, Succeeded: 6},
+		Translations:         []store.TranslationQueueStats{{Language: "en", Running: 1, NeedsReview: 4}},
 	})
 
 	recorder := httptest.NewRecorder()
@@ -124,15 +128,24 @@ func TestMetricsExposeStagedPipelineState(t *testing.T) {
 	for _, expected := range []string{
 		`munichbrief_pipeline_attempts_total{step="incident_metadata"} 1`,
 		`munichbrief_pipeline_attempts_total{step="german_presentation"} 1`,
+		`munichbrief_pipeline_attempts_total{step="category_verification"} 1`,
 		`munichbrief_pipeline_successes_total{step="incident_metadata"} 1`,
+		`munichbrief_pipeline_successes_total{step="category_verification"} 1`,
 		`munichbrief_pipeline_failures_total{step="translation/en"} 1`,
+		`munichbrief_pipeline_duration_seconds_sum{step="category_verification"} 1.250000`,
 		`munichbrief_pipeline_duration_seconds_sum{step="translation/en"} 1.750000`,
 		`munichbrief_pipeline_jobs{step="incident_metadata",state="queued"} 2`,
 		`munichbrief_pipeline_jobs{step="german_presentation",state="retrying"} 1`,
+		`munichbrief_pipeline_jobs{step="category_verification",state="queued"} 2`,
+		`munichbrief_pipeline_jobs{step="category_verification",state="running"} 1`,
+		`munichbrief_pipeline_jobs{step="category_verification",state="retrying"} 3`,
+		`munichbrief_pipeline_jobs{step="category_verification",state="needs_review"} 4`,
+		`munichbrief_pipeline_jobs{step="category_verification",state="failed"} 5`,
+		`munichbrief_pipeline_jobs{step="category_verification",state="succeeded"} 6`,
 		`munichbrief_pipeline_jobs{step="translation/en",state="needs_review"} 4`,
 		`munichbrief_pipeline_active_cycle{kind="manual"} 1`,
 		`munichbrief_pipeline_active_step{step="german_presentation"} 1`,
-		"munichbrief_last_processing_success_timestamp_seconds 4567",
+		"munichbrief_last_processing_success_timestamp_seconds 4568",
 	} {
 		if !strings.Contains(recorder.Body.String(), expected) {
 			t.Errorf("metrics body does not contain %q", expected)
