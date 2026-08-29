@@ -21,7 +21,7 @@ func TestAboutHealthReadinessAndRequestHeaders(t *testing.T) {
 	if about.Code != http.StatusOK || !strings.Contains(about.Body.String(), "How MunichBrief works") {
 		t.Fatalf("about response = %d/%q", about.Code, about.Body.String())
 	}
-	for _, expected := range []string{"From release to incident", "Translate and publish", "Accuracy and official information", "Privacy and data handling", "Independence and legal review", "Questions, corrections, or feedback", `href="https://github.com/egekocabas/munichbrief/issues"`, `href="mailto:ege.kocabas.dev@gmail.com"`} {
+	for _, expected := range []string{"From release to incident", "Translate and publish", "Accuracy and official information", "Privacy and data handling", "Independence and legal review", "Questions, corrections, or feedback", `href="https://github.com/egekocabas/munichbrief/issues"`, `href="mailto:contact@munichbrief.de"`} {
 		if !strings.Contains(about.Body.String(), expected) {
 			t.Errorf("about response does not contain structured section %q", expected)
 		}
