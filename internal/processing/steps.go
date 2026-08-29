@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -21,10 +22,7 @@ const (
 	TranslationModelStep     = "translation"
 	CategoryVerificationStep = "category_verification"
 	EnglishLanguage          = "en"
-	// GermanAnalysisStep is retained as a source-compatible alias for callers
-	// migrating to the metadata-first pipeline.
-	GermanAnalysisStep     = GermanPresentationStep
-	EnglishTranslationStep = "translation/en"
+	EnglishTranslationStep   = "translation/en"
 )
 
 type StepDefinition struct {
@@ -87,33 +85,20 @@ func (i StepInput) clone() StepInput {
 }
 
 type StepOutput struct {
-	TitleDE                string                      `json:"title_de,omitempty"`
-	SummaryDE              string                      `json:"summary_de,omitempty"`
-	Category               string                      `json:"category,omitempty"`
-	AreaName               *string                     `json:"area_name"`
-	AreaType               *string                     `json:"area_type"`
-	EventStartDate         *string                     `json:"event_start_date"`
-	EventStartTime         *string                     `json:"event_start_time"`
-	EventDayPart           *string                     `json:"event_day_part"`
-	ReportKind             string                      `json:"report_kind,omitempty"`
-	PublicAssistanceStatus string                      `json:"public_assistance_status,omitempty"`
-	PublicAssistanceTypes  []string                    `json:"public_assistance_types,omitempty"`
-	PrivacyStatus          string                      `json:"privacy_status,omitempty"`
-	PrivacyFlags           []string                    `json:"privacy_flags,omitempty"`
-	Translation            *TranslatedPresentation     `json:"-"`
-	CategoryVerification   *CategoryVerificationResult `json:"-"`
-}
-
-type CategoryVerificationResult struct {
-	IsCorrect         bool
-	CorrectedCategory string
-}
-
-// TranslatedPresentation is the normalized result returned by a translation
-// definition after decoding its structured model response.
-type TranslatedPresentation struct {
-	Title   string
-	Summary string
+	Values                 map[string]string `json:"-"`
+	TitleDE                string            `json:"title_de,omitempty"`
+	SummaryDE              string            `json:"summary_de,omitempty"`
+	Category               string            `json:"category,omitempty"`
+	AreaName               *string           `json:"area_name"`
+	AreaType               *string           `json:"area_type"`
+	EventStartDate         *string           `json:"event_start_date"`
+	EventStartTime         *string           `json:"event_start_time"`
+	EventDayPart           *string           `json:"event_day_part"`
+	ReportKind             string            `json:"report_kind,omitempty"`
+	PublicAssistanceStatus string            `json:"public_assistance_status,omitempty"`
+	PublicAssistanceTypes  []string          `json:"public_assistance_types,omitempty"`
+	PrivacyStatus          string            `json:"privacy_status,omitempty"`
+	PrivacyFlags           []string          `json:"privacy_flags,omitempty"`
 }
 
 type StepGenerator interface {
@@ -200,7 +185,7 @@ var registeredTranslations = []TranslationDefinition{{
 		InputKinds: []string{"title_de", "summary_de"}, OutputKinds: []string{"title", "summary"},
 		SystemPrompt: mustPromptByVersion(EnglishTranslationPromptVersion).SystemPrompt, Schema: englishTranslationSchema,
 		Generator: translationInputGenerator(EnglishTranslationPromptVersion), OutputDecoder: translationOutputDecoder("title_en", "summary_en"),
-		Validator: func(_ StepInput, output *StepOutput) error { return validateTranslation(output) }},
+		Validator: func(_ StepInput, output *StepOutput) error { return validateTranslation(output) }, OutputValues: postProcessingOutputValues},
 }}
 
 var categoryVerificationDefinition = StepDefinition{
@@ -208,7 +193,7 @@ var categoryVerificationDefinition = StepDefinition{
 	InputKinds: []string{"title_de", "summary_de", "category"}, OutputKinds: []string{"is_correct", "corrected_category"},
 	SystemPrompt: mustPromptByVersion(CategoryVerificationPromptVersion).SystemPrompt, Schema: categoryVerificationSchema,
 	Generator: categoryVerificationInputGenerator, OutputDecoder: categoryVerificationOutputDecoder,
-	Validator: validateCategoryVerification,
+	Validator: validateCategoryVerification, OutputValues: postProcessingOutputValues,
 }
 
 func CategoryVerificationDefinition() StepDefinition {
@@ -248,7 +233,7 @@ func StepKeys() []string {
 }
 
 func ModelSettingKeys() []string {
-	return append(StepKeys(), TranslationModelStep, CategoryVerificationStep)
+	return append(StepKeys(), DefaultPostProcessorRegistry().ModelSettingKeys()...)
 }
 
 func RegisteredTranslations() []TranslationDefinition {
@@ -384,7 +369,7 @@ func translationOutputDecoder(titleField, summaryField string) func(string) (Ste
 		if len(fields) != 2 {
 			return StepOutput{}, errors.New("translation output must contain exactly title and summary")
 		}
-		var result TranslatedPresentation
+		var result struct{ Title, Summary string }
 		title, titleFound := fields[titleField]
 		summary, summaryFound := fields[summaryField]
 		if !titleFound || !summaryFound {
@@ -396,7 +381,7 @@ func translationOutputDecoder(titleField, summaryField string) func(string) (Ste
 		if err := json.Unmarshal(summary, &result.Summary); err != nil {
 			return StepOutput{}, fmt.Errorf("decode translated summary: %w", err)
 		}
-		return StepOutput{Translation: &result}, nil
+		return StepOutput{Values: map[string]string{"title": result.Title, "summary": result.Summary}}, nil
 	}
 }
 
@@ -427,7 +412,10 @@ func categoryVerificationOutputDecoder(content string) (StepOutput, error) {
 	if len(fields) != 2 {
 		return StepOutput{}, errors.New("category verification output must contain exactly is_correct and corrected_category")
 	}
-	var result CategoryVerificationResult
+	var result struct {
+		IsCorrect         bool
+		CorrectedCategory string
+	}
 	correct, correctFound := fields["is_correct"]
 	category, categoryFound := fields["corrected_category"]
 	if !correctFound || !categoryFound {
@@ -444,7 +432,46 @@ func categoryVerificationOutputDecoder(content string) (StepOutput, error) {
 		return StepOutput{}, fmt.Errorf("decode corrected category: unknown German category %q", result.CorrectedCategory)
 	}
 	result.CorrectedCategory = code
-	return StepOutput{CategoryVerification: &result}, nil
+	return StepOutput{Values: map[string]string{"is_correct": fmt.Sprintf("%t", result.IsCorrect), "corrected_category": result.CorrectedCategory}}, nil
+}
+
+func postProcessingOutputValues(output StepOutput) ([]store.PipelineValue, error) {
+	if len(output.Values) == 0 {
+		return nil, errorOf(ErrorOutput, "post-processing output values are empty")
+	}
+	kinds := make([]string, 0, len(output.Values))
+	for kind := range output.Values {
+		kinds = append(kinds, kind)
+	}
+	sort.Strings(kinds)
+	values := make([]store.PipelineValue, 0, len(kinds))
+	for _, kind := range kinds {
+		if strings.TrimSpace(output.Values[kind]) == "" {
+			return nil, errorOf(ErrorOutput, "post-processing output %s is empty", kind)
+		}
+		values = append(values, store.PipelineValue{Kind: kind, Value: output.Values[kind]})
+	}
+	return values, nil
+}
+
+func requireOutputKinds(values []store.PipelineValue, expected []string) error {
+	wanted := make(map[string]struct{}, len(expected))
+	for _, kind := range expected {
+		wanted[kind] = struct{}{}
+	}
+	if len(values) != len(wanted) {
+		return fmt.Errorf("post-processing output has %d values, want %d", len(values), len(wanted))
+	}
+	for _, value := range values {
+		if _, found := wanted[value.Kind]; !found {
+			return fmt.Errorf("post-processing output kind %q is not declared", value.Kind)
+		}
+		delete(wanted, value.Kind)
+	}
+	if len(wanted) != 0 {
+		return errors.New("post-processing output is missing a declared kind")
+	}
+	return nil
 }
 
 func categoryCodeForGermanLabel(label string) (string, bool) {
@@ -564,34 +591,39 @@ func validateGermanPresentation(_ StepInput, output *StepOutput) error {
 }
 
 func validateTranslation(output *StepOutput) error {
-	if output.Translation == nil {
+	title, titleFound := output.Values["title"]
+	summary, summaryFound := output.Values["summary"]
+	if !titleFound || !summaryFound {
 		return errorOf(ErrorOutput, "model output contains no translated presentation")
 	}
-	if err := normalizeLimitedField("translated title", &output.Translation.Title, 90); err != nil {
+	if err := normalizeLimitedField("translated title", &title, 90); err != nil {
 		return err
 	}
-	if err := normalizeLimitedField("translated summary", &output.Translation.Summary, 600); err != nil {
+	if err := normalizeLimitedField("translated summary", &summary, 600); err != nil {
 		return err
 	}
-	return validatePublicText(output.Translation.Title + "\n" + output.Translation.Summary)
+	output.Values["title"], output.Values["summary"] = title, summary
+	return validatePublicText(title + "\n" + summary)
 }
 
 func validateCategoryVerification(input StepInput, output *StepOutput) error {
-	if output.CategoryVerification == nil {
+	corrected, categoryFound := output.Values["corrected_category"]
+	isCorrect, verdictErr := strconv.ParseBool(output.Values["is_correct"])
+	if !categoryFound || verdictErr != nil {
 		return errorOf(ErrorOutput, "model output contains no category verification")
 	}
 	original, ok := categoryCodeForGermanLabel(input.Value("category"))
-	corrected := strings.TrimSpace(output.CategoryVerification.CorrectedCategory)
+	corrected = strings.TrimSpace(corrected)
 	if !ok {
 		return errorOf(ErrorOutput, "invalid input category")
 	}
 	if _, ok := categoryLabels[corrected]; !ok {
 		return errorOf(ErrorOutput, "invalid corrected category")
 	}
-	if output.CategoryVerification.IsCorrect != (corrected == original) {
+	if isCorrect != (corrected == original) {
 		return errorOf(ErrorOutput, "category verdict and corrected category are inconsistent")
 	}
-	output.CategoryVerification.CorrectedCategory = corrected
+	output.Values["corrected_category"] = corrected
 	return nil
 }
 

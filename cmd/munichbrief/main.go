@@ -151,7 +151,7 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 			Start:     cfg.AIWindowStart,
 			End:       cfg.AIWindowEnd,
 		}
-		aiWorker, err = processing.NewPipelineWorker(database, provider, catalog, metrics, logger, cfg.AIInterval, time.Now, schedule, cfg.SourceMode)
+		aiWorker, err = processing.NewPipelineWorker(database, provider, catalog, processing.DefaultPostProcessorRegistry(), metrics, logger, cfg.AIInterval, time.Now, schedule, cfg.SourceMode)
 		if err != nil {
 			return err
 		}
@@ -262,15 +262,21 @@ func runAIProcess(ctx context.Context, logger *slog.Logger, cfg config.Config, a
 	if *incidentID > 0 {
 		selectedID = incidentID
 	}
-	translationModel := ""
-	if translationModels, translationErr := database.PreferredPipelineModels(ctx, []string{processing.TranslationModelStep}); translationErr == nil {
-		translationModel = translationModels[processing.TranslationModelStep]
+	registry := processing.DefaultPostProcessorRegistry()
+	postModels, _ := database.PreferredPipelineModels(ctx, registry.ModelSettingKeys())
+	var postPlans []store.PostProcessingPlan
+	for _, definition := range registry.Definitions() {
+		model := postModels[definition.ModelSettingKey]
+		if model == "" {
+			continue
+		}
+		processorPlans, planErr := registry.Plans(definition.Key, nil, model)
+		if planErr != nil {
+			return planErr
+		}
+		postPlans = append(postPlans, processorPlans...)
 	}
-	categoryVerificationModel := ""
-	if verificationModels, verificationErr := database.PreferredPipelineModels(ctx, []string{processing.CategoryVerificationStep}); verificationErr == nil {
-		categoryVerificationModel = verificationModels[processing.CategoryVerificationStep]
-	}
-	result, err := database.CreateManualPipelineCycleWithPostProcessing(ctx, cfg.SourceMode, plans, translationModel, categoryVerificationModel, selectedID, false, time.Now())
+	result, err := database.CreateManualPipelineCycle(ctx, cfg.SourceMode, plans, postPlans, selectedID, false, time.Now())
 	if err != nil {
 		return err
 	}

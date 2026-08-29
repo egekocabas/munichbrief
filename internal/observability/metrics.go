@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -14,51 +16,42 @@ import (
 // Metrics stores fixed-cardinality counters and gauges using atomics so
 // instrumentation does not serialize request or worker paths.
 type Metrics struct {
-	version                 string
-	startedAt               time.Time
-	feedAttempts            atomic.Uint64
-	feedFailures            atomic.Uint64
-	feedNotModified         atomic.Uint64
-	itemsDiscovered         atomic.Uint64
-	articlesFetched         atomic.Uint64
-	articleFetchFailures    atomic.Uint64
-	parserFailures          atomic.Uint64
-	lastFeedSuccess         atomic.Int64
-	nextFeedSync            atomic.Int64
-	feedDurationNanos       atomic.Uint64
-	feedDurationCount       atomic.Uint64
-	httpResponses           [6]atomic.Uint64
-	sourceFeedResponses     [6]atomic.Uint64
-	sourcePageResponses     [6]atomic.Uint64
-	processingAttempts      atomic.Uint64
-	processingSuccesses     atomic.Uint64
-	processingFailures      atomic.Uint64
-	processingFailureKinds  [4]atomic.Uint64
-	processingQueued        atomic.Int64
-	processingRunning       atomic.Int64
-	processingRetrying      atomic.Int64
-	processingReview        atomic.Int64
-	processingFailed        atomic.Int64
-	processingOldestAge     atomic.Int64
-	processorAvailable      atomic.Int64
-	processingWindowOpen    atomic.Int64
-	lastProcessingSuccess   atomic.Int64
-	processingDurationNanos atomic.Uint64
-	processingDurationCount atomic.Uint64
-	pipelineAttempts        [4]atomic.Uint64
-	pipelineSuccesses       [4]atomic.Uint64
-	pipelineFailures        [4]atomic.Uint64
-	pipelineDurationNanos   [4]atomic.Uint64
-	pipelineDurationCount   [4]atomic.Uint64
-	pipelineQueued          [4]atomic.Int64
-	pipelineRunning         [4]atomic.Int64
-	pipelineRetrying        [4]atomic.Int64
-	pipelineReview          [4]atomic.Int64
-	pipelineFailed          [4]atomic.Int64
-	pipelineSucceeded       [4]atomic.Int64
-	pipelineActiveCycle     atomic.Int64
-	pipelineActiveStep      atomic.Int64
-	pipelineActiveKind      [3]atomic.Int64
+	version               string
+	startedAt             time.Time
+	feedAttempts          atomic.Uint64
+	feedFailures          atomic.Uint64
+	feedNotModified       atomic.Uint64
+	itemsDiscovered       atomic.Uint64
+	articlesFetched       atomic.Uint64
+	articleFetchFailures  atomic.Uint64
+	parserFailures        atomic.Uint64
+	lastFeedSuccess       atomic.Int64
+	nextFeedSync          atomic.Int64
+	feedDurationNanos     atomic.Uint64
+	feedDurationCount     atomic.Uint64
+	httpResponses         [6]atomic.Uint64
+	sourceFeedResponses   [6]atomic.Uint64
+	sourcePageResponses   [6]atomic.Uint64
+	processorAvailable    atomic.Int64
+	processingWindowOpen  atomic.Int64
+	lastProcessingSuccess atomic.Int64
+	pipelineMu            sync.RWMutex
+	pipeline              map[string]*pipelineStepMetrics
+	postCounters          map[postCounterKey]int64
+	pipelineActiveCycle   atomic.Int64
+	pipelineActiveStep    atomic.Value
+	pipelineActiveKind    [3]atomic.Int64
+}
+
+type pipelineStepMetrics struct {
+	attempts, successes, failures, durationNanos, durationCount atomic.Uint64
+	queued, running, retrying, review, failed, succeeded        atomic.Int64
+}
+
+type postCounterKey struct {
+	processor string
+	scope     string
+	counter   string
 }
 
 // NewMetrics creates an empty registry for one process instance.
@@ -66,7 +59,10 @@ func NewMetrics(version string, startedAt time.Time) *Metrics {
 	if version == "" {
 		version = "dev"
 	}
-	metrics := &Metrics{version: version, startedAt: startedAt}
+	metrics := &Metrics{version: version, startedAt: startedAt, pipeline: make(map[string]*pipelineStepMetrics), postCounters: make(map[postCounterKey]int64)}
+	metrics.pipelineActiveStep.Store("")
+	metrics.pipelineStep("incident_metadata")
+	metrics.pipelineStep("german_presentation")
 	metrics.processorAvailable.Store(1)
 	return metrics
 }
@@ -115,30 +111,6 @@ func (m *Metrics) ObserveSourceResponse(resource string, status int) {
 	target[responseClass(status)].Add(1)
 }
 
-func (m *Metrics) RecordProcessingAttempt() {
-	m.processingAttempts.Add(1)
-}
-
-func (m *Metrics) RecordProcessingSuccess(at time.Time) {
-	m.processingSuccesses.Add(1)
-	m.lastProcessingSuccess.Store(at.Unix())
-}
-
-func (m *Metrics) RecordProcessingFailure(kind string) {
-	m.processingFailures.Add(1)
-	index := map[string]int{"transient": 0, "configuration": 1, "output": 2, "privacy": 3}[kind]
-	m.processingFailureKinds[index].Add(1)
-}
-
-func (m *Metrics) SetProcessingStats(stats store.ProcessingStats) {
-	m.processingQueued.Store(int64(max(stats.Queued, 0)))
-	m.processingRunning.Store(int64(max(stats.Running, 0)))
-	m.processingRetrying.Store(int64(max(stats.Retrying, 0)))
-	m.processingReview.Store(int64(max(stats.NeedsReview, 0)))
-	m.processingFailed.Store(int64(max(stats.Failed, 0)))
-	m.processingOldestAge.Store(int64(max(stats.OldestPendingAge.Seconds(), 0)))
-}
-
 func (m *Metrics) SetProcessorAvailable(available bool) {
 	if available {
 		m.processorAvailable.Store(1)
@@ -155,104 +127,98 @@ func (m *Metrics) SetProcessingWindowOpen(open bool) {
 	m.processingWindowOpen.Store(0)
 }
 
-func (m *Metrics) RecordProcessingDuration(duration time.Duration) {
-	m.processingDurationNanos.Add(uint64(max(duration.Nanoseconds(), 0)))
-	m.processingDurationCount.Add(1)
+func (m *Metrics) pipelineStep(step string) *pipelineStepMetrics {
+	m.pipelineMu.RLock()
+	metrics := m.pipeline[step]
+	m.pipelineMu.RUnlock()
+	if metrics != nil {
+		return metrics
+	}
+	m.pipelineMu.Lock()
+	defer m.pipelineMu.Unlock()
+	if metrics = m.pipeline[step]; metrics == nil {
+		metrics = &pipelineStepMetrics{}
+		m.pipeline[step] = metrics
+	}
+	return metrics
 }
 
-var pipelineStepKeys = [...]string{"incident_metadata", "german_presentation", "category_verification", "translation/en"}
-
-func pipelineStepIndex(step string) (int, bool) {
-	for index, key := range pipelineStepKeys {
-		if step == key {
-			return index, true
-		}
+func (m *Metrics) pipelineSteps() []string {
+	m.pipelineMu.RLock()
+	steps := make([]string, 0, len(m.pipeline))
+	for step := range m.pipeline {
+		steps = append(steps, step)
 	}
-	return 0, false
+	m.pipelineMu.RUnlock()
+	sort.Strings(steps)
+	return steps
 }
 
 func (m *Metrics) RecordPipelineAttempt(step string) {
-	if index, ok := pipelineStepIndex(step); ok {
-		m.pipelineAttempts[index].Add(1)
-	}
+	m.pipelineStep(step).attempts.Add(1)
 }
 
 func (m *Metrics) RecordPipelineSuccess(step string, at time.Time) {
-	index, ok := pipelineStepIndex(step)
-	if !ok {
-		return
-	}
-	m.pipelineSuccesses[index].Add(1)
+	m.pipelineStep(step).successes.Add(1)
 	m.lastProcessingSuccess.Store(at.Unix())
 }
 
 func (m *Metrics) RecordPipelineFailure(step, _ string) {
-	if index, ok := pipelineStepIndex(step); ok {
-		m.pipelineFailures[index].Add(1)
-	}
+	m.pipelineStep(step).failures.Add(1)
 }
 
 func (m *Metrics) RecordPipelineDuration(step string, duration time.Duration) {
-	index, ok := pipelineStepIndex(step)
-	if !ok {
-		return
-	}
-	m.pipelineDurationNanos[index].Add(uint64(max(duration.Nanoseconds(), 0)))
-	m.pipelineDurationCount[index].Add(1)
+	metrics := m.pipelineStep(step)
+	metrics.durationNanos.Add(uint64(max(duration.Nanoseconds(), 0)))
+	metrics.durationCount.Add(1)
 }
 
 func (m *Metrics) SetPipelineSnapshot(snapshot store.PipelineSnapshot) {
-	for index := range pipelineStepKeys {
-		m.pipelineQueued[index].Store(0)
-		m.pipelineRunning[index].Store(0)
-		m.pipelineRetrying[index].Store(0)
-		m.pipelineReview[index].Store(0)
-		m.pipelineFailed[index].Store(0)
-		m.pipelineSucceeded[index].Store(0)
+	m.pipelineMu.Lock()
+	m.postCounters = make(map[postCounterKey]int64)
+	for _, stats := range snapshot.PostProcessing {
+		for counter, value := range stats.Counters {
+			m.postCounters[postCounterKey{processor: stats.ProcessorKey, scope: stats.ScopeKey, counter: counter}] = int64(max(value, 0))
+		}
+	}
+	m.pipelineMu.Unlock()
+	for _, step := range m.pipelineSteps() {
+		metrics := m.pipelineStep(step)
+		metrics.queued.Store(0)
+		metrics.running.Store(0)
+		metrics.retrying.Store(0)
+		metrics.review.Store(0)
+		metrics.failed.Store(0)
+		metrics.succeeded.Store(0)
 	}
 	for _, stats := range snapshot.Steps {
-		index, ok := pipelineStepIndex(stats.StepKey)
-		if !ok {
-			continue
-		}
-		m.pipelineQueued[index].Store(int64(max(stats.Queued, 0)))
-		m.pipelineRunning[index].Store(int64(max(stats.Running, 0)))
-		m.pipelineRetrying[index].Store(int64(max(stats.Retrying, 0)))
-		m.pipelineReview[index].Store(int64(max(stats.NeedsReview, 0)))
-		m.pipelineFailed[index].Store(int64(max(stats.Failed, 0)))
-		m.pipelineSucceeded[index].Store(int64(max(stats.Succeeded, 0)))
+		metrics := m.pipelineStep(stats.StepKey)
+		metrics.queued.Store(int64(max(stats.Queued, 0)))
+		metrics.running.Store(int64(max(stats.Running, 0)))
+		metrics.retrying.Store(int64(max(stats.Retrying, 0)))
+		metrics.review.Store(int64(max(stats.NeedsReview, 0)))
+		metrics.failed.Store(int64(max(stats.Failed, 0)))
+		metrics.succeeded.Store(int64(max(stats.Succeeded, 0)))
 	}
-	for _, stats := range snapshot.Translations {
-		index, ok := pipelineStepIndex("translation/" + stats.Language)
-		if !ok {
-			continue
-		}
-		m.pipelineQueued[index].Store(int64(max(stats.Pending, 0)))
-		m.pipelineRunning[index].Store(int64(max(stats.Running, 0)))
-		m.pipelineRetrying[index].Store(int64(max(stats.Retrying, 0)))
-		m.pipelineReview[index].Store(int64(max(stats.NeedsReview, 0)))
-		m.pipelineFailed[index].Store(int64(max(stats.Failed, 0)))
-		m.pipelineSucceeded[index].Store(int64(max(stats.Succeeded, 0)))
-	}
-	if index, ok := pipelineStepIndex("category_verification"); ok {
-		stats := snapshot.CategoryVerification
-		m.pipelineQueued[index].Store(int64(max(stats.Pending, 0)))
-		m.pipelineRunning[index].Store(int64(max(stats.Running, 0)))
-		m.pipelineRetrying[index].Store(int64(max(stats.Retrying, 0)))
-		m.pipelineReview[index].Store(int64(max(stats.NeedsReview, 0)))
-		m.pipelineFailed[index].Store(int64(max(stats.Failed, 0)))
-		m.pipelineSucceeded[index].Store(int64(max(stats.Succeeded, 0)))
+	for _, stats := range snapshot.PostProcessing {
+		metrics := m.pipelineStep(stats.ProcessorKey + "/" + stats.ScopeKey)
+		metrics.queued.Store(int64(max(stats.Pending, 0)))
+		metrics.running.Store(int64(max(stats.Running, 0)))
+		metrics.retrying.Store(int64(max(stats.Retrying, 0)))
+		metrics.review.Store(int64(max(stats.NeedsReview, 0)))
+		metrics.failed.Store(int64(max(stats.Failed, 0)))
+		metrics.succeeded.Store(int64(max(stats.Succeeded, 0)))
 	}
 	for index := range m.pipelineActiveKind {
 		m.pipelineActiveKind[index].Store(0)
 	}
 	if snapshot.ActiveCycle == nil {
 		m.pipelineActiveCycle.Store(0)
-		m.pipelineActiveStep.Store(-1)
+		m.pipelineActiveStep.Store("")
 		return
 	}
 	m.pipelineActiveCycle.Store(1)
-	m.pipelineActiveStep.Store(int64(snapshot.ActiveCycle.ActiveStep))
+	m.pipelineActiveStep.Store(snapshot.ActiveStepKey)
 	for index, kind := range []string{"scheduled", "manual", "continuation"} {
 		if snapshot.ActiveCycle.Kind == kind {
 			m.pipelineActiveKind[index].Store(1)
@@ -311,30 +277,9 @@ func (m *Metrics) write(writer io.Writer) {
 	writeResponseClasses(writer, "munichbrief_http_responses_total", "Reader HTTP responses by status class.", "", &m.httpResponses)
 	writeResponseClasses(writer, "munichbrief_source_http_responses_total", "Source HTTP responses by resource and status class.", "feed", &m.sourceFeedResponses)
 	writeResponseClasses(writer, "munichbrief_source_http_responses_total", "", "article", &m.sourcePageResponses)
-	writeCounter(writer, "munichbrief_processing_attempts_total", "AI presentation processing attempts.", m.processingAttempts.Load())
-	writeCounter(writer, "munichbrief_processing_successes_total", "AI presentations generated successfully.", m.processingSuccesses.Load())
-	writeCounter(writer, "munichbrief_processing_failures_total", "AI presentation processing failures.", m.processingFailures.Load())
-	writeDurationSummary(writer, "munichbrief_processing_duration_seconds", "AI processing attempt duration.", m.processingDurationNanos.Load(), m.processingDurationCount.Load())
 	fmt.Fprintln(writer, "# HELP munichbrief_last_processing_success_timestamp_seconds Unix timestamp of the last successful AI presentation.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_last_processing_success_timestamp_seconds gauge")
 	fmt.Fprintf(writer, "munichbrief_last_processing_success_timestamp_seconds %d\n", m.lastProcessingSuccess.Load())
-	fmt.Fprintln(writer, "# HELP munichbrief_processing_failures_by_kind_total AI processing failures by safe machine-readable category.")
-	fmt.Fprintln(writer, "# TYPE munichbrief_processing_failures_by_kind_total counter")
-	for index, kind := range []string{"transient", "configuration", "output", "privacy"} {
-		fmt.Fprintf(writer, "munichbrief_processing_failures_by_kind_total{kind=%q} %d\n", kind, m.processingFailureKinds[index].Load())
-	}
-	fmt.Fprintln(writer, "# HELP munichbrief_processing_jobs AI processing jobs by state.")
-	fmt.Fprintln(writer, "# TYPE munichbrief_processing_jobs gauge")
-	for state, value := range map[string]int64{
-		"queued": m.processingQueued.Load(), "running": m.processingRunning.Load(),
-		"retrying": m.processingRetrying.Load(), "needs_review": m.processingReview.Load(),
-		"failed": m.processingFailed.Load(),
-	} {
-		fmt.Fprintf(writer, "munichbrief_processing_jobs{state=%q} %d\n", state, value)
-	}
-	fmt.Fprintln(writer, "# HELP munichbrief_processing_oldest_job_age_seconds Age of the oldest pending AI processing job.")
-	fmt.Fprintln(writer, "# TYPE munichbrief_processing_oldest_job_age_seconds gauge")
-	fmt.Fprintf(writer, "munichbrief_processing_oldest_job_age_seconds %d\n", m.processingOldestAge.Load())
 	fmt.Fprintln(writer, "# HELP munichbrief_ai_processor_available Whether the AI processor circuit is closed and available.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_ai_processor_available gauge")
 	fmt.Fprintf(writer, "munichbrief_ai_processor_available %d\n", m.processorAvailable.Load())
@@ -351,16 +296,37 @@ func (m *Metrics) write(writer io.Writer) {
 	fmt.Fprintln(writer, "# TYPE munichbrief_pipeline_duration_seconds summary")
 	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_jobs AI jobs by canonical or independent processing step and bounded state.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_pipeline_jobs gauge")
-	for index, step := range pipelineStepKeys {
-		fmt.Fprintf(writer, "munichbrief_pipeline_attempts_total{step=%q} %d\n", step, m.pipelineAttempts[index].Load())
-		fmt.Fprintf(writer, "munichbrief_pipeline_successes_total{step=%q} %d\n", step, m.pipelineSuccesses[index].Load())
-		fmt.Fprintf(writer, "munichbrief_pipeline_failures_total{step=%q} %d\n", step, m.pipelineFailures[index].Load())
-		fmt.Fprintf(writer, "munichbrief_pipeline_duration_seconds_sum{step=%q} %.6f\n", step, float64(m.pipelineDurationNanos[index].Load())/float64(time.Second))
-		fmt.Fprintf(writer, "munichbrief_pipeline_duration_seconds_count{step=%q} %d\n", step, m.pipelineDurationCount[index].Load())
-		for state, value := range map[string]int64{"queued": m.pipelineQueued[index].Load(), "running": m.pipelineRunning[index].Load(), "retrying": m.pipelineRetrying[index].Load(), "needs_review": m.pipelineReview[index].Load(), "failed": m.pipelineFailed[index].Load(), "succeeded": m.pipelineSucceeded[index].Load()} {
+	for _, step := range m.pipelineSteps() {
+		metrics := m.pipelineStep(step)
+		fmt.Fprintf(writer, "munichbrief_pipeline_attempts_total{step=%q} %d\n", step, metrics.attempts.Load())
+		fmt.Fprintf(writer, "munichbrief_pipeline_successes_total{step=%q} %d\n", step, metrics.successes.Load())
+		fmt.Fprintf(writer, "munichbrief_pipeline_failures_total{step=%q} %d\n", step, metrics.failures.Load())
+		fmt.Fprintf(writer, "munichbrief_pipeline_duration_seconds_sum{step=%q} %.6f\n", step, float64(metrics.durationNanos.Load())/float64(time.Second))
+		fmt.Fprintf(writer, "munichbrief_pipeline_duration_seconds_count{step=%q} %d\n", step, metrics.durationCount.Load())
+		for state, value := range map[string]int64{"queued": metrics.queued.Load(), "running": metrics.running.Load(), "retrying": metrics.retrying.Load(), "needs_review": metrics.review.Load(), "failed": metrics.failed.Load(), "succeeded": metrics.succeeded.Load()} {
 			fmt.Fprintf(writer, "munichbrief_pipeline_jobs{step=%q,state=%q} %d\n", step, state, value)
 		}
 	}
+	fmt.Fprintln(writer, "# HELP munichbrief_post_processing_results Successful post-processing results matching a registered aggregate counter.")
+	fmt.Fprintln(writer, "# TYPE munichbrief_post_processing_results gauge")
+	m.pipelineMu.RLock()
+	counterKeys := make([]postCounterKey, 0, len(m.postCounters))
+	for key := range m.postCounters {
+		counterKeys = append(counterKeys, key)
+	}
+	sort.Slice(counterKeys, func(i, j int) bool {
+		if counterKeys[i].processor != counterKeys[j].processor {
+			return counterKeys[i].processor < counterKeys[j].processor
+		}
+		if counterKeys[i].scope != counterKeys[j].scope {
+			return counterKeys[i].scope < counterKeys[j].scope
+		}
+		return counterKeys[i].counter < counterKeys[j].counter
+	})
+	for _, key := range counterKeys {
+		fmt.Fprintf(writer, "munichbrief_post_processing_results{processor=%q,scope=%q,counter=%q} %d\n", key.processor, key.scope, key.counter, m.postCounters[key])
+	}
+	m.pipelineMu.RUnlock()
 	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_active_cycle Whether a staged processing cycle is active.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_pipeline_active_cycle gauge")
 	for index, kind := range []string{"scheduled", "manual", "continuation"} {
@@ -368,9 +334,10 @@ func (m *Metrics) write(writer io.Writer) {
 	}
 	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_active_step Whether a registered step is active.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_pipeline_active_step gauge")
-	for index, step := range pipelineStepKeys {
+	activeStep, _ := m.pipelineActiveStep.Load().(string)
+	for _, step := range m.pipelineSteps() {
 		active := int64(0)
-		if m.pipelineActiveCycle.Load() == 1 && m.pipelineActiveStep.Load() == int64(index) {
+		if m.pipelineActiveCycle.Load() == 1 && activeStep == step {
 			active = 1
 		}
 		fmt.Fprintf(writer, "munichbrief_pipeline_active_step{step=%q} %d\n", step, active)

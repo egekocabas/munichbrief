@@ -20,7 +20,7 @@ type PipelineRepository interface {
 	PipelineStepSettings(context.Context) ([]store.StepSetting, error)
 	SetPipelineStepModel(context.Context, string, string, time.Time) error
 	PreferredPipelineModels(context.Context, []string) (map[string]string, error)
-	CreateManualPipelineCycleWithPostProcessing(context.Context, string, []store.PipelineStepPlan, string, string, *int64, bool, time.Time) (store.PipelineRequestResult, error)
+	CreateManualPipelineCycle(context.Context, string, []store.PipelineStepPlan, []store.PostProcessingPlan, *int64, bool, time.Time) (store.PipelineRequestResult, error)
 	ActivateNextPipelineCycle(context.Context, string, []store.PipelineStepPlan, bool, time.Time) (store.PipelineCycle, bool, error)
 	RecoverPipeline(context.Context, time.Time) error
 	ClaimPipelineJob(context.Context, int64, int, time.Time) (store.PipelineJob, bool, error)
@@ -29,108 +29,48 @@ type PipelineRepository interface {
 	AdvancePipelineCycle(context.Context, store.PipelineCycle, int, time.Time) (store.AdvanceResult, error)
 	HasQueuedManualCycle(context.Context) (bool, error)
 	InterruptBlockedScheduledCycle(context.Context, int64, time.Time) (int64, error)
-	PipelineSnapshot(context.Context, string, []string, time.Time) (store.PipelineSnapshot, error)
+	PipelineSnapshot(context.Context, string, []string, []store.PostProcessingCounterSpec, time.Time) (store.PipelineSnapshot, error)
 	PipelineStepModel(context.Context, int64, int) (string, string, error)
-	EnsureTranslationLanguages(context.Context, []string, time.Time) error
-	QueueTranslationsForRun(context.Context, int64, []store.TranslationPlan, string, time.Time) (int, error)
-	QueueIncidentTranslation(context.Context, int64, store.TranslationPlan, time.Time) (int, error)
-	RequeueIncidentTranslations(context.Context, int64, []store.TranslationPlan, time.Time) (int, error)
-	QueueMissingTranslations(context.Context, string, []store.TranslationPlan, bool, time.Time) (int, error)
-	RequeueAllTranslations(context.Context, string, []store.TranslationPlan, time.Time) (int, error)
-	ClaimTranslationJob(context.Context, bool, []string, time.Time) (store.TranslationJob, bool, error)
-	CompleteTranslationJob(context.Context, store.TranslationJob, string, string, string, string, time.Time) error
-	FailTranslationJob(context.Context, store.TranslationJob, string, string, *time.Time, time.Time, error) error
-	RecoverTranslations(context.Context, time.Time) error
-	QueueCategoryVerificationForRun(context.Context, int64, store.CategoryVerificationPlan, string, bool, time.Time) (int, error)
-	QueueIncidentCategoryVerification(context.Context, int64, store.CategoryVerificationPlan, time.Time) (int, error)
-	QueueMissingCategoryVerifications(context.Context, string, store.CategoryVerificationPlan, bool, time.Time) (int, error)
-	RequeueAllCategoryVerifications(context.Context, string, store.CategoryVerificationPlan, time.Time) (int, error)
-	ClaimCategoryVerificationJob(context.Context, bool, []string, time.Time) (store.CategoryVerificationJob, bool, error)
-	CompleteCategoryVerificationJob(context.Context, store.CategoryVerificationJob, bool, string, string, string, time.Time) error
-	FailCategoryVerificationJob(context.Context, store.CategoryVerificationJob, string, string, *time.Time, time.Time, error) error
-	RecoverCategoryVerifications(context.Context, time.Time) error
+	EnsurePostProcessingScopes(context.Context, []store.PostProcessingScope, time.Time) error
+	QueuePostProcessingForRun(context.Context, int64, []store.PostProcessingPlan, string, bool, time.Time) (int, error)
+	QueueIncidentPostProcessing(context.Context, int64, []store.PostProcessingPlan, time.Time) (int, error)
+	QueuePostProcessingForAll(context.Context, string, []store.PostProcessingPlan, bool, time.Time) (int, error)
+	ClaimPostProcessingJob(context.Context, string, bool, []string, time.Time) (store.PostProcessingJob, bool, error)
+	CompletePostProcessingJob(context.Context, store.PostProcessingJob, []store.PipelineValue, string, string, time.Time) error
+	FailPostProcessingJob(context.Context, store.PostProcessingJob, string, string, *time.Time, time.Time, error) error
+	RecoverPostProcessing(context.Context, time.Time) error
+	CyclePostProcessingPlans(context.Context, int64) ([]store.PostProcessingPlan, error)
 }
 
-// RequestCategoryVerifications queues only category-verification work. A nil
-// incident ID targets every eligible presentation; completed checks are rerun.
-func (w *PipelineWorker) RequestCategoryVerifications(ctx context.Context, incidentID *int64, model string) (int, error) {
-	if !w.catalog.Snapshot().Has(model) {
-		return 0, fmt.Errorf("%w: %s", ErrModelUnavailable, model)
-	}
-	plan := store.CategoryVerificationPlan{PromptVersion: CategoryVerificationPromptVersion, Model: model}
-	var queued int
-	var err error
-	if incidentID == nil {
-		queued, err = w.repository.RequeueAllCategoryVerifications(ctx, w.sourceMode, plan, w.clock())
-	} else {
-		queued, err = w.repository.QueueIncidentCategoryVerification(ctx, *incidentID, plan, w.clock())
-	}
-	if err == nil && queued > 0 {
-		w.signal()
-	}
-	return queued, err
+// PostProcessingRequest describes one explicit processor-only request.
+type PostProcessingRequest struct {
+	ProcessorKey string
+	ScopeKeys    []string
+	IncidentID   *int64
+	Model        string
 }
 
-// RequestTranslations queues only translation work for the requested
-// languages. A nil incident ID targets every current eligible incident;
-// completed translations are deliberately rerun for this explicit action.
-func (w *PipelineWorker) RequestTranslations(ctx context.Context, incidentID *int64, languages []string, model string) (int, error) {
-	if !w.catalog.Snapshot().Has(model) {
-		return 0, fmt.Errorf("%w: %s", ErrModelUnavailable, model)
-	}
-	plans := make([]store.TranslationPlan, 0, len(languages))
-	seen := make(map[string]struct{}, len(languages))
-	for _, language := range languages {
-		translation, found := TranslationByLanguage(language)
-		if !found {
-			return 0, store.ErrNotFound
-		}
-		if _, duplicate := seen[language]; duplicate {
-			continue
-		}
-		seen[language] = struct{}{}
-		plans = append(plans, store.TranslationPlan{Language: language, PromptVersion: translation.PromptVersion, Model: model})
-	}
-	if len(plans) == 0 {
+// RequestPostProcessing queues a forced manual rerun for one incident or every
+// current eligible v2 presentation.
+func (w *PipelineWorker) RequestPostProcessing(ctx context.Context, request PostProcessingRequest) (int, error) {
+	definition, found := w.postProcessors.Definition(request.ProcessorKey)
+	if !found || !definition.Manual {
 		return 0, store.ErrNotFound
 	}
+	model := strings.TrimSpace(request.Model)
+	if !w.catalog.Snapshot().Has(model) {
+		return 0, fmt.Errorf("%w: %s", ErrModelUnavailable, model)
+	}
+	plans, err := w.postProcessors.Plans(request.ProcessorKey, request.ScopeKeys, model)
+	if err != nil {
+		return 0, err
+	}
 	var queued int
-	var err error
-	if incidentID == nil {
-		queued, err = w.repository.RequeueAllTranslations(ctx, w.sourceMode, plans, w.clock())
+	if request.IncidentID == nil {
+		queued, err = w.repository.QueuePostProcessingForAll(ctx, w.sourceMode, plans, true, w.clock())
 	} else {
-		queued, err = w.repository.RequeueIncidentTranslations(ctx, *incidentID, plans, w.clock())
+		queued, err = w.repository.QueueIncidentPostProcessing(ctx, *request.IncidentID, plans, w.clock())
 	}
-	if err == nil && queued > 0 {
-		w.signal()
-	}
-	return queued, err
-}
-
-func (w *PipelineWorker) RetryCategoryVerification(ctx context.Context, incidentID int64, model string) (int, error) {
-	if !w.catalog.Snapshot().Has(model) {
-		return 0, fmt.Errorf("%w: %s", ErrModelUnavailable, model)
-	}
-	queued, err := w.repository.QueueIncidentCategoryVerification(ctx, incidentID, store.CategoryVerificationPlan{
-		PromptVersion: CategoryVerificationPromptVersion, Model: model,
-	}, w.clock())
-	if err == nil && queued > 0 {
-		w.signal()
-	}
-	return queued, err
-}
-
-// RetryTranslation queues one immediate translation attempt for the incident's
-// newest supported canonical presentation.
-func (w *PipelineWorker) RetryTranslation(ctx context.Context, incidentID int64, language, model string) (int, error) {
-	translation, found := TranslationByLanguage(language)
-	if !found {
-		return 0, store.ErrNotFound
-	}
-	if !w.catalog.Snapshot().Has(model) {
-		return 0, fmt.Errorf("%w: %s", ErrModelUnavailable, model)
-	}
-	queued, err := w.repository.QueueIncidentTranslation(ctx, incidentID, store.TranslationPlan{Language: language, PromptVersion: translation.PromptVersion, Model: model}, w.clock())
 	if err == nil && queued > 0 {
 		w.signal()
 	}
@@ -161,15 +101,30 @@ type StepModelStatus struct {
 
 // PipelineModelStatus is the review-facing model configuration snapshot.
 type PipelineModelStatus struct {
-	Steps                     []StepModelStatus `json:"steps"`
-	Translation               StepModelStatus   `json:"translation"`
-	CategoryVerification      StepModelStatus   `json:"category_verification"`
-	Models                    []string          `json:"models"`
-	CatalogAvailable          bool              `json:"catalog_available"`
-	CatalogError              string            `json:"catalog_error,omitempty"`
-	Ready                     bool              `json:"ready"`
-	TranslationReady          bool              `json:"translation_ready"`
-	CategoryVerificationReady bool              `json:"category_verification_ready"`
+	Steps            []StepModelStatus          `json:"steps"`
+	PostProcessors   []PostProcessorModelStatus `json:"post_processors"`
+	Models           []string                   `json:"models"`
+	CatalogAvailable bool                       `json:"catalog_available"`
+	CatalogError     string                     `json:"catalog_error,omitempty"`
+	Ready            bool                       `json:"ready"`
+}
+
+type PostProcessorScopeStatus struct {
+	Key           string `json:"key"`
+	DisplayName   string `json:"display_name"`
+	StepKey       string `json:"step_key"`
+	PromptVersion string `json:"prompt_version"`
+}
+
+type PostProcessorModelStatus struct {
+	Key                string                     `json:"key"`
+	DisplayName        string                     `json:"display_name"`
+	Description        string                     `json:"description"`
+	ModelSettingKey    string                     `json:"model_setting_key"`
+	Manual             bool                       `json:"manual"`
+	Preferred          string                     `json:"preferred"`
+	PreferredAvailable bool                       `json:"preferred_available"`
+	Scopes             []PostProcessorScopeStatus `json:"scopes"`
 }
 
 // PipelineRuntimeStatus combines model, schedule, worker, and queue readiness.
@@ -185,26 +140,27 @@ type PipelineRuntimeStatus struct {
 // PipelineWorker serially executes persisted cycles. Database claims protect
 // correctness across restarts; the worker mutex protects only in-memory status.
 type PipelineWorker struct {
-	repository PipelineRepository
-	providers  StepGeneratorProvider
-	catalog    ModelCatalog
-	observer   PipelineObserver
-	logger     *slog.Logger
-	interval   time.Duration
-	clock      func() time.Time
-	schedule   Schedule
-	sourceMode string
-	wake       chan struct{}
-	mu         sync.RWMutex
-	available  bool
-	circuits   map[string]time.Time
+	repository     PipelineRepository
+	providers      StepGeneratorProvider
+	catalog        ModelCatalog
+	observer       PipelineObserver
+	logger         *slog.Logger
+	interval       time.Duration
+	clock          func() time.Time
+	schedule       Schedule
+	sourceMode     string
+	postProcessors *PostProcessorRegistry
+	wake           chan struct{}
+	mu             sync.RWMutex
+	available      bool
+	circuits       map[string]time.Time
 }
 
 // NewPipelineWorker validates dependencies and ensures all registered step
 // settings exist before any background processing begins.
-func NewPipelineWorker(repository PipelineRepository, providers StepGeneratorProvider, catalog ModelCatalog, observer PipelineObserver, logger *slog.Logger, interval time.Duration, clock func() time.Time, schedule Schedule, sourceMode string) (*PipelineWorker, error) {
-	if repository == nil || providers == nil || catalog == nil || logger == nil {
-		return nil, errors.New("pipeline repository, generator provider, catalog, and logger are required")
+func NewPipelineWorker(repository PipelineRepository, providers StepGeneratorProvider, catalog ModelCatalog, registry *PostProcessorRegistry, observer PipelineObserver, logger *slog.Logger, interval time.Duration, clock func() time.Time, schedule Schedule, sourceMode string) (*PipelineWorker, error) {
+	if repository == nil || providers == nil || catalog == nil || registry == nil || logger == nil {
+		return nil, errors.New("pipeline repository, generator provider, catalog, post-processor registry, and logger are required")
 	}
 	if interval <= 0 {
 		return nil, errors.New("pipeline interval must be positive")
@@ -218,17 +174,14 @@ func NewPipelineWorker(repository PipelineRepository, providers StepGeneratorPro
 	if !schedule.Immediate && (schedule.Location == nil || schedule.Start < 0 || schedule.Start >= 24*time.Hour || schedule.End < 0 || schedule.End >= 24*time.Hour || schedule.Start == schedule.End) {
 		return nil, errors.New("a valid AI processing schedule is required")
 	}
-	if err := repository.EnsurePipelineSteps(context.Background(), ModelSettingKeys(), clock()); err != nil {
+	settingKeys := append(StepKeys(), registry.ModelSettingKeys()...)
+	if err := repository.EnsurePipelineSteps(context.Background(), settingKeys, clock()); err != nil {
 		return nil, err
 	}
-	languages := make([]string, 0, len(RegisteredTranslations()))
-	for _, translation := range RegisteredTranslations() {
-		languages = append(languages, translation.Language)
-	}
-	if err := repository.EnsureTranslationLanguages(context.Background(), languages, clock()); err != nil {
+	if err := repository.EnsurePostProcessingScopes(context.Background(), registry.StoreScopes(), clock()); err != nil {
 		return nil, err
 	}
-	return &PipelineWorker{repository: repository, providers: providers, catalog: catalog, observer: observer, logger: logger, interval: interval, clock: clock, schedule: schedule, sourceMode: sourceMode, wake: make(chan struct{}, 1), available: true, circuits: make(map[string]time.Time)}, nil
+	return &PipelineWorker{repository: repository, providers: providers, catalog: catalog, postProcessors: registry, observer: observer, logger: logger, interval: interval, clock: clock, schedule: schedule, sourceMode: sourceMode, wake: make(chan struct{}, 1), available: true, circuits: make(map[string]time.Time)}, nil
 }
 
 // RequestNow queues manual work after verifying every requested model against
@@ -250,15 +203,25 @@ func (w *PipelineWorker) RequestNow(ctx context.Context, sourceMode string, mode
 			return store.PipelineRequestResult{}, fmt.Errorf("%w: %s", ErrModelUnavailable, plan.Model)
 		}
 	}
-	translationModel := models[TranslationModelStep]
-	if translationModel != "" && !snapshot.Has(translationModel) {
-		return store.PipelineRequestResult{}, fmt.Errorf("%w: %s", ErrModelUnavailable, translationModel)
+	var postPlans []store.PostProcessingPlan
+	for _, definition := range w.postProcessors.Definitions() {
+		if !definition.Manual {
+			continue
+		}
+		model := strings.TrimSpace(models[definition.ModelSettingKey])
+		if model == "" {
+			continue
+		}
+		if !snapshot.Has(model) {
+			return store.PipelineRequestResult{}, fmt.Errorf("%w: %s", ErrModelUnavailable, model)
+		}
+		processorPlans, err := w.postProcessors.Plans(definition.Key, nil, model)
+		if err != nil {
+			return store.PipelineRequestResult{}, err
+		}
+		postPlans = append(postPlans, processorPlans...)
 	}
-	categoryModel := models[CategoryVerificationStep]
-	if categoryModel != "" && !snapshot.Has(categoryModel) {
-		return store.PipelineRequestResult{}, fmt.Errorf("%w: %s", ErrModelUnavailable, categoryModel)
-	}
-	result, err := w.repository.CreateManualPipelineCycleWithPostProcessing(ctx, sourceMode, plans, translationModel, categoryModel, incidentID, reprocessAll, w.clock())
+	result, err := w.repository.CreateManualPipelineCycle(ctx, sourceMode, plans, postPlans, incidentID, reprocessAll, w.clock())
 	if err == nil && result.Requested > 0 {
 		w.signal()
 	}
@@ -267,8 +230,14 @@ func (w *PipelineWorker) RequestNow(ctx context.Context, sourceMode string, mode
 
 // SetPreferredStepModel changes the model used when future work is frozen.
 func (w *PipelineWorker) SetPreferredStepModel(ctx context.Context, stepKey, model string) error {
-	if _, found := StepByKey(stepKey); !found && stepKey != TranslationModelStep && stepKey != CategoryVerificationStep {
-		return store.ErrNotFound
+	if _, found := StepByKey(stepKey); !found {
+		registered := false
+		for _, definition := range w.postProcessors.Definitions() {
+			registered = registered || definition.ModelSettingKey == stepKey
+		}
+		if !registered {
+			return store.ErrNotFound
+		}
 	}
 	snapshot := w.catalog.Snapshot()
 	if !snapshot.Available() || !snapshot.Has(model) {
@@ -302,12 +271,14 @@ func (w *PipelineWorker) ModelStatus(ctx context.Context) (PipelineModelStatus, 
 		status.Steps = append(status.Steps, item)
 		status.Ready = status.Ready && item.PreferredAvailable
 	}
-	translationModel := byKey[TranslationModelStep]
-	status.Translation = StepModelStatus{Key: TranslationModelStep, DisplayName: "Translations", PromptVersion: "per language", Preferred: translationModel, PreferredAvailable: translationModel != "" && catalog.Available() && catalog.Has(translationModel)}
-	status.TranslationReady = status.Translation.PreferredAvailable
-	categoryModel := byKey[CategoryVerificationStep]
-	status.CategoryVerification = StepModelStatus{Key: CategoryVerificationStep, DisplayName: "Category verification", PromptVersion: CategoryVerificationPromptVersion, Preferred: categoryModel, PreferredAvailable: categoryModel != "" && catalog.Available() && catalog.Has(categoryModel)}
-	status.CategoryVerificationReady = status.CategoryVerification.PreferredAvailable
+	for _, definition := range w.postProcessors.Definitions() {
+		model := byKey[definition.ModelSettingKey]
+		item := PostProcessorModelStatus{Key: definition.Key, DisplayName: definition.DisplayName, Description: definition.Description, ModelSettingKey: definition.ModelSettingKey, Manual: definition.Manual, Preferred: model, PreferredAvailable: model != "" && catalog.Available() && catalog.Has(model)}
+		for _, scope := range definition.Scopes {
+			item.Scopes = append(item.Scopes, PostProcessorScopeStatus{Key: scope.Key, DisplayName: scope.DisplayName, StepKey: scope.Step.Key, PromptVersion: scope.Step.PromptVersion})
+		}
+		status.PostProcessors = append(status.PostProcessors, item)
+	}
 	return status, nil
 }
 
@@ -317,7 +288,7 @@ func (w *PipelineWorker) Status(ctx context.Context) (PipelineRuntimeStatus, err
 	if err != nil {
 		return PipelineRuntimeStatus{}, err
 	}
-	queue, err := w.repository.PipelineSnapshot(ctx, w.sourceMode, StepKeys(), w.clock())
+	queue, err := w.repository.PipelineSnapshot(ctx, w.sourceMode, StepKeys(), w.postProcessingCounterSpecs(), w.clock())
 	if err != nil {
 		return PipelineRuntimeStatus{}, err
 	}
@@ -334,11 +305,8 @@ func (w *PipelineWorker) Run(ctx context.Context) {
 	if err := w.repository.RecoverPipeline(ctx, w.clock()); err != nil {
 		w.logger.Error("recover staged AI processing", "error", err)
 	}
-	if err := w.repository.RecoverTranslations(ctx, w.clock()); err != nil {
-		w.logger.Error("recover translations", "error", err)
-	}
-	if err := w.repository.RecoverCategoryVerifications(ctx, w.clock()); err != nil {
-		w.logger.Error("recover category verifications", "error", err)
+	if err := w.repository.RecoverPostProcessing(ctx, w.clock()); err != nil {
+		w.logger.Error("recover post-processing", "error", err)
 	}
 	w.processAvailable(ctx)
 	ticker := time.NewTicker(w.interval)
@@ -387,81 +355,51 @@ func (w *PipelineWorker) processAvailable(ctx context.Context) {
 			continue
 		}
 
-		// Canonical work is always checked first. Category verification has the
-		// first independent slot so corrections converge before translations.
-		categoryModels, categoryModelsErr := w.repository.PreferredPipelineModels(ctx, []string{CategoryVerificationStep})
-		categoryModel := categoryModels[CategoryVerificationStep]
-		if categoryModelsErr == nil && catalog.Available() && catalog.Has(categoryModel) && windowOpen {
-			if _, err := w.repository.QueueMissingCategoryVerifications(ctx, w.sourceMode, store.CategoryVerificationPlan{PromptVersion: CategoryVerificationPromptVersion, Model: categoryModel}, false, now); err != nil {
-				w.logger.Error("queue missing category verifications", "error", err)
+		processedPostJob := false
+		for _, definition := range w.postProcessors.Definitions() {
+			preferred, preferredErr := w.repository.PreferredPipelineModels(ctx, []string{definition.ModelSettingKey})
+			model := preferred[definition.ModelSettingKey]
+			if definition.Automatic && preferredErr == nil && catalog.Available() && catalog.Has(model) && windowOpen {
+				plans, err := w.postProcessors.Plans(definition.Key, nil, model)
+				if err != nil {
+					w.logger.Error("build scheduled post-processing plans", "processor", definition.Key, "error", err)
+					return
+				}
+				if _, err := w.repository.QueuePostProcessingForAll(ctx, w.sourceMode, plans, false, now); err != nil {
+					w.logger.Error("queue missing post-processing", "processor", definition.Key, "error", err)
+					return
+				}
+			}
+			job, found, err := w.repository.ClaimPostProcessingJob(ctx, definition.Key, windowOpen, w.blockedModels(definition.Key, now), now)
+			if err != nil {
+				w.logger.Error("claim post-processing job", "processor", definition.Key, "error", err)
 				return
 			}
-		}
-		categoryJob, categoryFound, err := w.repository.ClaimCategoryVerificationJob(ctx, windowOpen, w.blockedModels(CategoryVerificationStep, now), now)
-		if err != nil {
-			w.logger.Error("claim category verification job", "error", err)
-			return
-		}
-		if categoryFound {
-			if !catalog.Has(categoryJob.ModelIdentity) {
-				retry := now.Add(30 * time.Second)
-				if err := w.repository.FailCategoryVerificationJob(ctx, categoryJob, "pending", string(ErrorConfiguration), &retry, now, fmt.Errorf("selected category verification model is unavailable")); err != nil {
-					w.logger.Error("defer unavailable category verification model", "verification_id", categoryJob.ID, "error", err)
-				}
-				w.openCircuit(CategoryVerificationStep, categoryJob.ModelIdentity, retry)
-				w.publishSnapshot(ctx)
+			if !found {
 				continue
 			}
-			if !w.processCategoryVerificationJob(ctx, categoryJob) {
-				w.publishSnapshot(ctx)
-				return
-			}
-			continue
-		}
-
-		// Reaching this point means canonical and category work are absent or
-		// waiting, so one translation may run before the next canonical check.
-		translationModels, translationErr := w.repository.PreferredPipelineModels(ctx, []string{TranslationModelStep})
-		translationModel := translationModels[TranslationModelStep]
-		if translationErr == nil && catalog.Available() && catalog.Has(translationModel) && windowOpen {
-			if _, err := w.repository.QueueMissingTranslations(ctx, w.sourceMode, translationPlans(translationModel), false, now); err != nil {
-				w.logger.Error("queue missing translations", "error", err)
-				return
-			}
-		}
-		translationJob, translationFound, err := w.repository.ClaimTranslationJob(ctx, windowOpen, w.blockedModels(TranslationModelStep, now), now)
-		if err != nil {
-			w.logger.Error("claim translation job", "error", err)
-			return
-		}
-		if translationFound {
-			if !catalog.Has(translationJob.ModelIdentity) {
+			processedPostJob = true
+			if !catalog.Has(job.ModelIdentity) {
 				retry := now.Add(30 * time.Second)
-				if err := w.repository.FailTranslationJob(ctx, translationJob, "pending", string(ErrorConfiguration), &retry, now, fmt.Errorf("selected translation model is unavailable")); err != nil {
-					w.logger.Error("defer unavailable translation model", "translation_id", translationJob.ID, "error", err)
+				if err := w.repository.FailPostProcessingJob(ctx, job, "pending", string(ErrorConfiguration), &retry, now, fmt.Errorf("selected post-processing model is unavailable")); err != nil {
+					w.logger.Error("defer unavailable post-processing model", "job_id", job.ID, "processor", job.ProcessorKey, "error", err)
 				}
-				w.openCircuit(TranslationModelStep, translationJob.ModelIdentity, retry)
+				w.openCircuit(job.ProcessorKey, job.ModelIdentity, retry)
+				w.publishSnapshot(ctx)
+				break
+			}
+			if !w.processPostProcessingJob(ctx, job) {
 				w.publishSnapshot(ctx)
 				return
 			}
-			if !w.processTranslationJob(ctx, translationJob) {
-				w.publishSnapshot(ctx)
-				return
-			}
+			break
+		}
+		if processedPostJob {
 			continue
 		}
 		w.publishSnapshot(ctx)
 		return
 	}
-}
-
-func translationPlans(model string) []store.TranslationPlan {
-	translations := RegisteredTranslations()
-	plans := make([]store.TranslationPlan, 0, len(translations))
-	for _, translation := range translations {
-		plans = append(plans, store.TranslationPlan{Language: translation.Language, PromptVersion: translation.PromptVersion, Model: model})
-	}
-	return plans
 }
 
 func (w *PipelineWorker) processCycle(ctx context.Context, cycle store.PipelineCycle) bool {
@@ -565,33 +503,36 @@ func (w *PipelineWorker) processJob(ctx context.Context, job store.PipelineJob) 
 	}
 	if finalCanonical {
 		// German publication is already committed. Independent enqueueing is
-		// best-effort so neither verifier nor translation failures can roll it back.
-		categoryModel := job.CategoryVerificationModel
-		categoryRequestKind := "manual"
-		if job.CycleKind != "manual" {
-			categoryRequestKind = "scheduled"
-			models, err := w.repository.PreferredPipelineModels(ctx, []string{CategoryVerificationStep})
-			if err == nil && w.catalog.Snapshot().Has(models[CategoryVerificationStep]) {
-				categoryModel = models[CategoryVerificationStep]
-			}
-		}
-		if categoryModel != "" {
-			if _, err := w.repository.QueueCategoryVerificationForRun(ctx, job.PresentationRunID, store.CategoryVerificationPlan{PromptVersion: CategoryVerificationPromptVersion, Model: categoryModel}, categoryRequestKind, false, completed); err != nil {
-				w.logger.Error("queue category verification", "presentation_run_id", job.PresentationRunID, "error", err)
-			}
-		}
-		translationModel := job.TranslationModel
+		// best-effort so post-processing cannot roll it back.
 		requestKind := "manual"
-		if job.CycleKind != "manual" {
+		postPlans, postErr := w.repository.CyclePostProcessingPlans(ctx, job.CycleID)
+		if job.CycleKind == "scheduled" {
 			requestKind = "scheduled"
-			models, err := w.repository.PreferredPipelineModels(ctx, []string{TranslationModelStep})
-			if err == nil && w.catalog.Snapshot().Has(models[TranslationModelStep]) {
-				translationModel = models[TranslationModelStep]
+			postPlans = nil
+			postErr = nil
+			for _, definition := range w.postProcessors.Definitions() {
+				if !definition.Automatic {
+					continue
+				}
+				models, err := w.repository.PreferredPipelineModels(ctx, []string{definition.ModelSettingKey})
+				if err != nil || !w.catalog.Snapshot().Has(models[definition.ModelSettingKey]) {
+					continue
+				}
+				plans, err := w.postProcessors.Plans(definition.Key, nil, models[definition.ModelSettingKey])
+				if err != nil {
+					postErr = err
+					break
+				}
+				postPlans = append(postPlans, plans...)
 			}
+		} else if postErr == nil {
+			postPlans, postErr = w.hydratePostProcessingPlans(postPlans)
 		}
-		if translationModel != "" {
-			if _, err := w.repository.QueueTranslationsForRun(ctx, job.PresentationRunID, translationPlans(translationModel), requestKind, completed); err != nil {
-				w.logger.Error("queue presentation translations", "presentation_run_id", job.PresentationRunID, "error", err)
+		if postErr != nil {
+			w.logger.Error("resolve post-processing plans", "cycle_id", job.CycleID, "error", postErr)
+		} else if len(postPlans) > 0 {
+			if _, err := w.repository.QueuePostProcessingForRun(ctx, job.PresentationRunID, postPlans, requestKind, false, completed); err != nil {
+				w.logger.Error("queue presentation post-processing", "presentation_run_id", job.PresentationRunID, "error", err)
 			}
 		}
 	}
@@ -606,44 +547,67 @@ func (w *PipelineWorker) processJob(ctx context.Context, job store.PipelineJob) 
 	return true
 }
 
-func (w *PipelineWorker) processCategoryVerificationJob(ctx context.Context, job store.CategoryVerificationJob) bool {
-	definition := CategoryVerificationDefinition()
-	if definition.PromptVersion != job.PromptVersion {
-		return w.handleCategoryVerificationFailure(ctx, job, errorOf(ErrorConfiguration, "unknown category verification prompt %q", job.PromptVersion))
+func (w *PipelineWorker) hydratePostProcessingPlans(plans []store.PostProcessingPlan) ([]store.PostProcessingPlan, error) {
+	for index, plan := range plans {
+		_, scope, found := w.postProcessors.Scope(plan.ProcessorKey, plan.ScopeKey)
+		if !found || scope.Step.PromptVersion != plan.PromptVersion {
+			return nil, fmt.Errorf("unknown frozen post-processing plan %s/%s", plan.ProcessorKey, plan.ScopeKey)
+		}
+		plans[index].InputKinds = append([]string(nil), scope.Step.InputKinds...)
 	}
+	return plans, nil
+}
+
+func (w *PipelineWorker) processPostProcessingJob(ctx context.Context, job store.PostProcessingJob) bool {
+	_, scope, found := w.postProcessors.Scope(job.ProcessorKey, job.ScopeKey)
+	if !found || scope.Step.PromptVersion != job.PromptVersion {
+		return w.handlePostProcessingFailure(ctx, job, errorOf(ErrorConfiguration, "unknown post-processing definition %s/%s", job.ProcessorKey, job.ScopeKey))
+	}
+	executionKey := job.ProcessorKey + "/" + job.ScopeKey
 	started := w.clock()
 	if w.observer != nil {
-		w.observer.RecordPipelineAttempt(CategoryVerificationStep)
+		w.observer.RecordPipelineAttempt(executionKey)
 	}
-	w.logger.Info("category verification started", "verification_id", job.ID, "incident_id", job.IncidentID, "model", job.ModelIdentity, "attempt", job.AttemptCount)
+	w.logger.Info("post-processing request started", "job_id", job.ID, "incident_id", job.IncidentID, "processor", job.ProcessorKey, "scope", job.ScopeKey, "model", job.ModelIdentity, "attempt", job.AttemptCount)
 	generator, err := w.providers.StepGenerator(job.ModelIdentity)
 	if err != nil {
-		return w.handleCategoryVerificationFailure(ctx, job, errorOf(ErrorConfiguration, "create category verification generator: %v", err))
+		return w.handlePostProcessingFailure(ctx, job, errorOf(ErrorConfiguration, "create post-processing generator: %v", err))
 	}
-	input := StepInput{Values: map[string]string{"title_de": job.TitleDE, "summary_de": job.SummaryDE, "category": job.InputCategory}}
-	inputHash := store.HashPipelineInput("title_de", job.TitleDE, "summary_de", job.SummaryDE, "category", job.InputCategory, job.PromptVersion, job.ModelIdentity)
-	output, modelIdentity, err := generator.GenerateStep(ctx, definition, input)
+	inputValues := make(map[string]string, len(scope.Step.InputKinds))
+	hashParts := []string{"processor", job.ProcessorKey, "scope", job.ScopeKey}
+	for _, kind := range scope.Step.InputKinds {
+		value := job.InputValues[kind]
+		inputValues[kind] = value
+		hashParts = append(hashParts, kind, value)
+	}
+	hashParts = append(hashParts, job.PromptVersion, job.ModelIdentity)
+	inputHash := store.HashPipelineInput(hashParts...)
+	output, modelIdentity, err := generator.GenerateStep(ctx, scope.Step, StepInput{Values: inputValues})
 	if err != nil {
-		return w.handleCategoryVerificationFailure(ctx, job, err)
+		return w.handlePostProcessingFailure(ctx, job, err)
 	}
-	if output.CategoryVerification == nil {
-		return w.handleCategoryVerificationFailure(ctx, job, errorOf(ErrorOutput, "category verification returned no result"))
+	values, err := scope.Step.OutputValues(output)
+	if err != nil {
+		return w.handlePostProcessingFailure(ctx, job, errorOf(ErrorOutput, "%v", err))
+	}
+	if err := requireOutputKinds(values, scope.Step.OutputKinds); err != nil {
+		return w.handlePostProcessingFailure(ctx, job, errorOf(ErrorOutput, "%v", err))
 	}
 	completed := w.clock()
-	if err := w.repository.CompleteCategoryVerificationJob(ctx, job, output.CategoryVerification.IsCorrect, output.CategoryVerification.CorrectedCategory, modelIdentity, inputHash, completed); err != nil {
-		return w.handleCategoryVerificationFailure(ctx, job, err)
+	if err := w.repository.CompletePostProcessingJob(ctx, job, values, modelIdentity, inputHash, completed); err != nil {
+		return w.handlePostProcessingFailure(ctx, job, err)
 	}
-	w.closeCircuit(CategoryVerificationStep, job.ModelIdentity)
+	w.closeCircuit(job.ProcessorKey, job.ModelIdentity)
 	if w.observer != nil {
-		w.observer.RecordPipelineSuccess(CategoryVerificationStep, completed)
-		w.observer.RecordPipelineDuration(CategoryVerificationStep, completed.Sub(started))
+		w.observer.RecordPipelineSuccess(executionKey, completed)
+		w.observer.RecordPipelineDuration(executionKey, completed.Sub(started))
 	}
-	w.logger.Info("category verification completed", "verification_id", job.ID, "incident_id", job.IncidentID, "model", modelIdentity, "correct", output.CategoryVerification.IsCorrect, "duration", completed.Sub(started).Round(time.Millisecond))
+	w.logger.Info("post-processing request completed", "job_id", job.ID, "incident_id", job.IncidentID, "processor", job.ProcessorKey, "scope", job.ScopeKey, "model", modelIdentity, "duration", completed.Sub(started).Round(time.Millisecond))
 	w.publishSnapshot(ctx)
 	return true
 }
 
-func (w *PipelineWorker) handleCategoryVerificationFailure(ctx context.Context, job store.CategoryVerificationJob, processingError error) bool {
+func (w *PipelineWorker) handlePostProcessingFailure(ctx context.Context, job store.PostProcessingJob, processingError error) bool {
 	kind := KindOf(processingError)
 	now := w.clock()
 	status := "pending"
@@ -660,90 +624,20 @@ func (w *PipelineWorker) handleCategoryVerificationFailure(ctx context.Context, 
 		next := now.Add(jitter(delay, job.ID, job.AttemptCount))
 		retryAt = &next
 	}
-	if err := w.repository.FailCategoryVerificationJob(ctx, job, status, string(kind), retryAt, now, processingError); err != nil {
-		w.logger.Error("record category verification failure", "verification_id", job.ID, "error", err)
+	if err := w.repository.FailPostProcessingJob(ctx, job, status, string(kind), retryAt, now, processingError); err != nil {
+		w.logger.Error("record post-processing failure", "job_id", job.ID, "error", err)
 		return false
 	}
 	if kind == ErrorTransient || kind == ErrorConfiguration {
 		if retryAt != nil {
-			w.openCircuit(CategoryVerificationStep, job.ModelIdentity, *retryAt)
+			w.openCircuit(job.ProcessorKey, job.ModelIdentity, *retryAt)
 		}
 	}
 	if w.observer != nil {
-		w.observer.RecordPipelineFailure(CategoryVerificationStep, string(kind))
+		executionKey := job.ProcessorKey + "/" + job.ScopeKey
+		w.observer.RecordPipelineFailure(executionKey, string(kind))
 	}
-	w.logger.Warn("category verification failed", "verification_id", job.ID, "incident_id", job.IncidentID, "failure_kind", kind, "status", status, "retry_at", retryAt)
-	return kind == ErrorOutput || kind == ErrorPrivacy
-}
-
-func (w *PipelineWorker) processTranslationJob(ctx context.Context, job store.TranslationJob) bool {
-	translation, found := TranslationByLanguage(job.Language)
-	if !found || translation.PromptVersion != job.PromptVersion {
-		return w.handleTranslationFailure(ctx, job, errorOf(ErrorConfiguration, "unknown translation definition %q", job.Language))
-	}
-	started := w.clock()
-	if w.observer != nil {
-		w.observer.RecordPipelineAttempt(translation.Step.Key)
-	}
-	w.logger.Info("translation request started", "translation_id", job.ID, "incident_id", job.IncidentID, "language", job.Language, "model", job.ModelIdentity, "attempt", job.AttemptCount)
-	generator, err := w.providers.StepGenerator(job.ModelIdentity)
-	if err != nil {
-		return w.handleTranslationFailure(ctx, job, errorOf(ErrorConfiguration, "create translation generator: %v", err))
-	}
-	inputValues := map[string]string{"title_de": job.TitleDE, "summary_de": job.SummaryDE}
-	input := StepInput{Values: inputValues}
-	inputHash := store.HashPipelineInput("title_de", job.TitleDE, "summary_de", job.SummaryDE, "language", job.Language, job.PromptVersion, job.ModelIdentity)
-	output, modelIdentity, err := generator.GenerateStep(ctx, translation.Step, input)
-	if err != nil {
-		return w.handleTranslationFailure(ctx, job, err)
-	}
-	completed := w.clock()
-	if output.Translation == nil {
-		return w.handleTranslationFailure(ctx, job, errorOf(ErrorOutput, "translation returned no presentation"))
-	}
-	if err := w.repository.CompleteTranslationJob(ctx, job, output.Translation.Title, output.Translation.Summary, modelIdentity, inputHash, completed); err != nil {
-		return w.handleTranslationFailure(ctx, job, err)
-	}
-	w.closeCircuit(TranslationModelStep, job.ModelIdentity)
-	if w.observer != nil {
-		w.observer.RecordPipelineSuccess(translation.Step.Key, completed)
-		w.observer.RecordPipelineDuration(translation.Step.Key, completed.Sub(started))
-	}
-	w.logger.Info("translation request completed", "translation_id", job.ID, "incident_id", job.IncidentID, "language", job.Language, "model", modelIdentity, "duration", completed.Sub(started).Round(time.Millisecond))
-	w.publishSnapshot(ctx)
-	return true
-}
-
-func (w *PipelineWorker) handleTranslationFailure(ctx context.Context, job store.TranslationJob, processingError error) bool {
-	kind := KindOf(processingError)
-	now := w.clock()
-	status := "pending"
-	var retryAt *time.Time
-	if (kind == ErrorOutput || kind == ErrorPrivacy) && job.AttemptCount >= contentMaxAttempts {
-		status = "needs_review"
-	} else {
-		delay := contentRetryDelay(job.AttemptCount)
-		if kind == ErrorTransient {
-			delay = transientRetryDelay(job.AttemptCount)
-		} else if kind == ErrorConfiguration {
-			delay = configurationRetryDelay(job.AttemptCount)
-		}
-		next := now.Add(jitter(delay, job.ID, job.AttemptCount))
-		retryAt = &next
-	}
-	if err := w.repository.FailTranslationJob(ctx, job, status, string(kind), retryAt, now, processingError); err != nil {
-		w.logger.Error("record translation failure", "translation_id", job.ID, "error", err)
-		return false
-	}
-	if kind == ErrorTransient || kind == ErrorConfiguration {
-		if retryAt != nil {
-			w.openCircuit(TranslationModelStep, job.ModelIdentity, *retryAt)
-		}
-	}
-	if w.observer != nil {
-		w.observer.RecordPipelineFailure("translation/"+job.Language, string(kind))
-	}
-	w.logger.Warn("translation request failed", "translation_id", job.ID, "incident_id", job.IncidentID, "language", job.Language, "failure_kind", kind, "status", status, "retry_at", retryAt)
+	w.logger.Warn("post-processing request failed", "job_id", job.ID, "incident_id", job.IncidentID, "processor", job.ProcessorKey, "scope", job.ScopeKey, "failure_kind", kind, "status", status, "retry_at", retryAt)
 	return kind == ErrorOutput || kind == ErrorPrivacy
 }
 
@@ -819,12 +713,6 @@ func (w *PipelineWorker) blockedModels(step string, now time.Time) []string {
 	return models
 }
 
-// blockedTranslationModels is retained for focused worker tests and callers
-// migrating to the generic independent-processor circuit helper.
-func (w *PipelineWorker) blockedTranslationModels(now time.Time) []string {
-	return w.blockedModels(TranslationModelStep, now)
-}
-
 func (w *PipelineWorker) openCircuit(step, model string, until time.Time) {
 	w.mu.Lock()
 	w.circuits[pipelineCircuitKey(step, model)] = until
@@ -850,10 +738,22 @@ func (w *PipelineWorker) publishSnapshot(ctx context.Context) {
 	if w.observer == nil {
 		return
 	}
-	snapshot, err := w.repository.PipelineSnapshot(ctx, w.sourceMode, StepKeys(), w.clock())
+	snapshot, err := w.repository.PipelineSnapshot(ctx, w.sourceMode, StepKeys(), w.postProcessingCounterSpecs(), w.clock())
 	if err != nil {
 		w.logger.Error("read staged pipeline snapshot", "error", err)
 		return
 	}
 	w.observer.SetPipelineSnapshot(snapshot)
+}
+
+func (w *PipelineWorker) postProcessingCounterSpecs() []store.PostProcessingCounterSpec {
+	var specs []store.PostProcessingCounterSpec
+	for _, definition := range w.postProcessors.Definitions() {
+		for _, scope := range definition.Scopes {
+			for _, counter := range definition.Counters {
+				specs = append(specs, store.PostProcessingCounterSpec{ProcessorKey: definition.Key, ScopeKey: scope.Key, CounterKey: counter.Key, OutputKind: counter.OutputKind, EqualsValue: counter.EqualsValue})
+			}
+		}
+	}
+	return specs
 }
