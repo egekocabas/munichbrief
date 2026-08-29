@@ -23,7 +23,8 @@ Visit the live reader at [munichbrief.de](https://munichbrief.de).
 - Deterministic fixture mode for offline development and tests.
 - Bounded, low-rate ingestion of RSS-linked official articles.
 - Metadata-first Ollama processing: a two-stage canonical German pipeline plus
-  independent category verification and per-language translation jobs.
+  independent public-assistance verification, category verification, and
+  per-language translation jobs.
 - Fail-closed public presentation: retained source text is never rendered on a
   public host.
 - Protected operational review, structured logs, health checks, and Prometheus
@@ -71,6 +72,8 @@ flowchart LR
     Parser --> DB[("SQLite")]
     DB --> Pipeline["Canonical: metadata → German"]
     Pipeline --> DB
+    DB --> Assistance["Independent public-assistance verification"]
+    Assistance --> DB
     DB --> Category["Independent category verification"]
     Category --> DB
     DB --> Translation["Independent translation jobs"]
