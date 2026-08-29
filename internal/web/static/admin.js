@@ -22,10 +22,13 @@
       const incidentInput = document.getElementById(incidentInputID);
       if (incidentInput instanceof HTMLInputElement) message += ` Incident ID: ${incidentInput.value}.`;
     }
-    const models = [...form.querySelectorAll('select[name^="model_"]')]
+    const selections = [...form.querySelectorAll('select[name="language"], select[name="model"], select[name^="model_"]')]
       .filter((field) => field instanceof HTMLSelectElement && field.value)
-      .map((field) => `${field.name.replace("model_", "")}: ${field.value}`);
-    if (models.length) message += ` Models: ${models.join(", ")}.`;
+      .map((field) => {
+        const label = field.labels?.[0]?.textContent?.trim() || field.name.replace("model_", "").replaceAll("_", " ");
+        return `${label}: ${field.selectedOptions[0]?.textContent?.trim() || field.value}`;
+      });
+    if (selections.length) message += ` Selections: ${selections.join(", ")}.`;
     description.textContent = message;
     request.textContent = `${form.method.toUpperCase()} ${new URL(form.action).pathname}`;
     dialog.showModal();
