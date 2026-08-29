@@ -231,6 +231,17 @@ func validatePostProcessingPlan(plan PostProcessingPlan) error {
 
 func postProcessingInputValuesTx(ctx context.Context, tx *sql.Tx, runID int64, kinds []string) (map[string]string, error) {
 	values := make(map[string]string, len(kinds))
+	present := make(map[string]bool, len(kinds))
+	var originalTitle, incidentBody string
+	if err := tx.QueryRowContext(ctx, `SELECT i.title_de,COALESCE(i.body_de,'') FROM presentation_runs r
+		JOIN incidents i ON i.id=r.incident_id AND i.content_hash=r.source_hash WHERE r.id=?`, runID).Scan(&originalTitle, &incidentBody); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	values["original_title"], values["incident_body"] = originalTitle, incidentBody
+	present["original_title"], present["incident_body"] = true, true
 	rows, err := tx.QueryContext(ctx, `SELECT kind,value FROM presentation_values WHERE presentation_run_id=?`, runID)
 	if err != nil {
 		return nil, err
@@ -242,12 +253,13 @@ func postProcessingInputValuesTx(ctx context.Context, tx *sql.Tx, runID int64, k
 			return nil, err
 		}
 		values[kind] = value
+		present[kind] = true
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 	for _, kind := range kinds {
-		if strings.TrimSpace(values[kind]) == "" {
+		if !present[kind] || kind != "incident_body" && strings.TrimSpace(values[kind]) == "" {
 			return nil, ErrNotFound
 		}
 	}
@@ -279,14 +291,16 @@ func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string,
 		}
 	}
 	var job PostProcessingJob
+	var originalTitle, incidentBody string
 	err = tx.QueryRowContext(ctx, `SELECT job.id,job.presentation_run_id,r.incident_id,job.processor_key,job.scope_key,job.request_kind,
-		job.model_identity,job.prompt_version,job.input_hash,job.attempt_count
+		job.model_identity,job.prompt_version,job.input_hash,job.attempt_count,i.title_de,COALESCE(i.body_de,'')
 		FROM post_processing_jobs job JOIN presentation_runs r ON r.id=job.presentation_run_id
+		JOIN incidents i ON i.id=r.incident_id AND i.content_hash=r.source_hash
 		WHERE job.processor_key=? AND job.status='pending' AND (job.next_retry_at IS NULL OR job.next_retry_at<=?)
 		AND (job.request_kind='manual' OR ?)`+blockedCondition+`
 		ORDER BY CASE job.request_kind WHEN 'manual' THEN 0 WHEN 'scheduled' THEN 1 ELSE 2 END,job.created_at,job.id LIMIT 1`, args...).Scan(
 		&job.ID, &job.PresentationRunID, &job.IncidentID, &job.ProcessorKey, &job.ScopeKey, &job.RequestKind,
-		&job.ModelIdentity, &job.PromptVersion, &job.InputHash, &job.AttemptCount,
+		&job.ModelIdentity, &job.PromptVersion, &job.InputHash, &job.AttemptCount, &originalTitle, &incidentBody,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		if err := tx.Commit(); err != nil {
@@ -297,7 +311,7 @@ func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string,
 	if err != nil {
 		return PostProcessingJob{}, false, err
 	}
-	job.InputValues = make(map[string]string)
+	job.InputValues = map[string]string{"original_title": originalTitle, "incident_body": incidentBody}
 	rows, err := tx.QueryContext(ctx, `SELECT kind,value FROM presentation_values WHERE presentation_run_id=?`, job.PresentationRunID)
 	if err != nil {
 		return PostProcessingJob{}, false, err

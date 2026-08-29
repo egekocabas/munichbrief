@@ -16,13 +16,14 @@ import (
 )
 
 const (
-	PipelineVersion          = store.PipelineVersion
-	IncidentMetadataStep     = "incident_metadata"
-	GermanPresentationStep   = "german_presentation"
-	TranslationModelStep     = "translation"
-	CategoryVerificationStep = "category_verification"
-	EnglishLanguage          = "en"
-	EnglishTranslationStep   = "translation/en"
+	PipelineVersion                  = store.PipelineVersion
+	IncidentMetadataStep             = "incident_metadata"
+	GermanPresentationStep           = "german_presentation"
+	TranslationModelStep             = "translation"
+	PublicAssistanceVerificationStep = "public_assistance_verification"
+	CategoryVerificationStep         = "category_verification"
+	EnglishLanguage                  = "en"
+	EnglishTranslationStep           = "translation/en"
 )
 
 type StepDefinition struct {
@@ -163,6 +164,14 @@ var categoryVerificationSchema = json.RawMessage(`{
   },"required":["is_correct","corrected_category"],"additionalProperties":false
 }`)
 
+var publicAssistanceVerificationSchema = json.RawMessage(`{
+  "type":"object","properties":{
+    "is_correct":{"type":"boolean"},
+    "corrected_public_assistance_status":{"type":"string","enum":["requested","not_requested","unclear"]},
+    "corrected_public_assistance_types":{"type":"array","maxItems":7,"uniqueItems":true,"items":{"type":"string","enum":["witness_observations","identify_person","locate_person","photo_video_material","vehicle_information","property_information","other_information"]}}
+  },"required":["is_correct","corrected_public_assistance_status","corrected_public_assistance_types"],"additionalProperties":false
+}`)
+
 var metadataOutputKinds = []string{
 	"category", "area_name", "area_type", "event_start_date", "event_start_time",
 	"event_day_part", "report_kind", "public_assistance_status", "public_assistance_types",
@@ -194,6 +203,19 @@ var categoryVerificationDefinition = StepDefinition{
 	SystemPrompt: mustPromptByVersion(CategoryVerificationPromptVersion).SystemPrompt, Schema: categoryVerificationSchema,
 	Generator: categoryVerificationInputGenerator, OutputDecoder: categoryVerificationOutputDecoder,
 	Validator: validateCategoryVerification, OutputValues: postProcessingOutputValues,
+}
+
+var publicAssistanceVerificationDefinition = StepDefinition{
+	Key: PublicAssistanceVerificationStep, DisplayName: "Public assistance verification", PromptVersion: PublicAssistanceVerificationPromptVersion,
+	InputKinds:   []string{"original_title", "incident_body", "public_assistance_status", "public_assistance_types"},
+	OutputKinds:  []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"},
+	SystemPrompt: mustPromptByVersion(PublicAssistanceVerificationPromptVersion).SystemPrompt, Schema: publicAssistanceVerificationSchema,
+	Generator: publicAssistanceVerificationInputGenerator, OutputDecoder: publicAssistanceVerificationOutputDecoder,
+	Validator: validatePublicAssistanceVerification, OutputValues: postProcessingOutputValues,
+}
+
+func PublicAssistanceVerificationDefinition() StepDefinition {
+	return cloneStepDefinition(publicAssistanceVerificationDefinition)
 }
 
 func CategoryVerificationDefinition() StepDefinition {
@@ -385,6 +407,77 @@ func translationOutputDecoder(titleField, summaryField string) func(string) (Ste
 	}
 }
 
+func publicAssistanceVerificationInputGenerator(input StepInput) (StepInput, string, error) {
+	status := strings.TrimSpace(input.Value("public_assistance_status"))
+	if !assistanceStatuses[status] {
+		return StepInput{}, "", errorOf(ErrorOutput, "invalid public assistance verification input status")
+	}
+	var types []string
+	if err := json.Unmarshal([]byte(input.Value("public_assistance_types")), &types); err != nil {
+		return StepInput{}, "", errorOf(ErrorOutput, "decode public assistance verification input types: %v", err)
+	}
+	types, err := normalizeAssistanceTypes(types)
+	if err != nil || (status == "requested") != (len(types) > 0) {
+		return StepInput{}, "", errorOf(ErrorOutput, "invalid public assistance verification input types")
+	}
+	typesJSON, err := json.Marshal(types)
+	if err != nil {
+		return StepInput{}, "", errorOf(ErrorOutput, "encode public assistance verification input types: %v", err)
+	}
+	requestInput := StepInput{Values: map[string]string{
+		"original_title": input.Value("original_title"), "incident_body": input.Value("incident_body"),
+		"public_assistance_status": status, "public_assistance_types": string(typesJSON),
+	}}
+	encoded, err := json.Marshal(struct {
+		OriginalTitle          string   `json:"original_title"`
+		IncidentBody           string   `json:"incident_body"`
+		PublicAssistanceStatus string   `json:"public_assistance_status"`
+		PublicAssistanceTypes  []string `json:"public_assistance_types"`
+	}{requestInput.Value("original_title"), requestInput.Value("incident_body"), status, types})
+	if err != nil {
+		return StepInput{}, "", errorOf(ErrorOutput, "encode public assistance verification input: %v", err)
+	}
+	return requestInput, promptUserMessage(PublicAssistanceVerificationPromptVersion, string(encoded)), nil
+}
+
+func publicAssistanceVerificationOutputDecoder(content string) (StepOutput, error) {
+	var fields map[string]json.RawMessage
+	if err := decodeStrictJSON(content, &fields); err != nil {
+		return StepOutput{}, err
+	}
+	if len(fields) != 3 {
+		return StepOutput{}, errors.New("public assistance verification output must contain exactly is_correct, corrected_public_assistance_status, and corrected_public_assistance_types")
+	}
+	var result struct {
+		IsCorrect bool
+		Status    string
+		Types     []string
+	}
+	correct, correctFound := fields["is_correct"]
+	status, statusFound := fields["corrected_public_assistance_status"]
+	types, typesFound := fields["corrected_public_assistance_types"]
+	if !correctFound || !statusFound || !typesFound {
+		return StepOutput{}, errors.New("public assistance verification output is missing a required field")
+	}
+	if err := json.Unmarshal(correct, &result.IsCorrect); err != nil {
+		return StepOutput{}, fmt.Errorf("decode public assistance verification verdict: %w", err)
+	}
+	if err := json.Unmarshal(status, &result.Status); err != nil {
+		return StepOutput{}, fmt.Errorf("decode corrected public assistance status: %w", err)
+	}
+	if err := json.Unmarshal(types, &result.Types); err != nil {
+		return StepOutput{}, fmt.Errorf("decode corrected public assistance types: %w", err)
+	}
+	encodedTypes, err := json.Marshal(result.Types)
+	if err != nil {
+		return StepOutput{}, fmt.Errorf("encode corrected public assistance types: %w", err)
+	}
+	return StepOutput{Values: map[string]string{
+		"is_correct": fmt.Sprintf("%t", result.IsCorrect), "corrected_public_assistance_status": result.Status,
+		"corrected_public_assistance_types": string(encodedTypes),
+	}}, nil
+}
+
 func categoryVerificationInputGenerator(input StepInput) (StepInput, string, error) {
 	category, found := categoryLabels[input.Value("category")]
 	if !found {
@@ -521,11 +614,23 @@ func validateIncidentMetadata(input StepInput, output *StepOutput) error {
 	if err := validateTemporalMetadata(input, output); err != nil {
 		return err
 	}
-	seen := map[string]bool{}
-	normalized := make([]string, 0, len(output.PublicAssistanceTypes))
-	for _, kind := range output.PublicAssistanceTypes {
+	normalized, err := normalizeAssistanceTypes(output.PublicAssistanceTypes)
+	if err != nil {
+		return errorOf(ErrorOutput, "%v", err)
+	}
+	output.PublicAssistanceTypes = normalized
+	if (output.PublicAssistanceStatus == "requested") != (len(normalized) > 0) {
+		return errorOf(ErrorOutput, "public assistance status and types are inconsistent")
+	}
+	return nil
+}
+
+func normalizeAssistanceTypes(values []string) ([]string, error) {
+	seen := make(map[string]bool, len(values))
+	normalized := make([]string, 0, len(values))
+	for _, kind := range values {
 		if !assistanceTypes[kind] {
-			return errorOf(ErrorOutput, "invalid public assistance type")
+			return nil, errors.New("invalid public assistance type")
 		}
 		if !seen[kind] {
 			seen[kind] = true
@@ -533,11 +638,7 @@ func validateIncidentMetadata(input StepInput, output *StepOutput) error {
 		}
 	}
 	sort.Strings(normalized)
-	output.PublicAssistanceTypes = normalized
-	if (output.PublicAssistanceStatus == "requested") != (len(normalized) > 0) {
-		return errorOf(ErrorOutput, "public assistance status and types are inconsistent")
-	}
-	return nil
+	return normalized, nil
 }
 
 func validateTemporalMetadata(_ StepInput, output *StepOutput) error {
@@ -604,6 +705,46 @@ func validateTranslation(output *StepOutput) error {
 	}
 	output.Values["title"], output.Values["summary"] = title, summary
 	return validatePublicText(title + "\n" + summary)
+}
+
+func validatePublicAssistanceVerification(input StepInput, output *StepOutput) error {
+	isCorrect, verdictErr := strconv.ParseBool(output.Values["is_correct"])
+	correctedStatus := strings.TrimSpace(output.Values["corrected_public_assistance_status"])
+	if verdictErr != nil || !assistanceStatuses[correctedStatus] {
+		return errorOf(ErrorOutput, "model output contains no valid public assistance verification")
+	}
+	var correctedTypes []string
+	if err := json.Unmarshal([]byte(output.Values["corrected_public_assistance_types"]), &correctedTypes); err != nil {
+		return errorOf(ErrorOutput, "decode corrected public assistance types: %v", err)
+	}
+	var err error
+	correctedTypes, err = normalizeAssistanceTypes(correctedTypes)
+	if err != nil || (correctedStatus == "requested") != (len(correctedTypes) > 0) {
+		return errorOf(ErrorOutput, "corrected public assistance status and types are inconsistent")
+	}
+	originalStatus := strings.TrimSpace(input.Value("public_assistance_status"))
+	if !assistanceStatuses[originalStatus] {
+		return errorOf(ErrorOutput, "invalid input public assistance status")
+	}
+	var originalTypes []string
+	if err := json.Unmarshal([]byte(input.Value("public_assistance_types")), &originalTypes); err != nil {
+		return errorOf(ErrorOutput, "decode input public assistance types: %v", err)
+	}
+	originalTypes, err = normalizeAssistanceTypes(originalTypes)
+	if err != nil || (originalStatus == "requested") != (len(originalTypes) > 0) {
+		return errorOf(ErrorOutput, "input public assistance status and types are inconsistent")
+	}
+	unchanged := correctedStatus == originalStatus && strings.Join(correctedTypes, "\x00") == strings.Join(originalTypes, "\x00")
+	if isCorrect != unchanged {
+		return errorOf(ErrorOutput, "public assistance verdict and corrected values are inconsistent")
+	}
+	encodedTypes, err := json.Marshal(correctedTypes)
+	if err != nil {
+		return errorOf(ErrorOutput, "encode corrected public assistance types: %v", err)
+	}
+	output.Values["corrected_public_assistance_status"] = correctedStatus
+	output.Values["corrected_public_assistance_types"] = string(encodedTypes)
+	return nil
 }
 
 func validateCategoryVerification(input StepInput, output *StepOutput) error {

@@ -115,6 +115,12 @@ func (g pipelineTestGenerator) GenerateStep(_ context.Context, step StepDefiniti
 		}
 		return StepOutput{TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.", PrivacyStatus: "safe", PrivacyFlags: []string{}}, g.model, nil
 	}
+	if step.Key == PublicAssistanceVerificationStep {
+		if !strings.HasPrefix(input.Value("original_title"), "Titel ") || !strings.HasPrefix(input.Value("incident_body"), "Text für ") || input.Value("public_assistance_status") != "not_requested" || input.Value("public_assistance_types") != "[]" || input.Value("title_de") != "" || input.Value("summary_de") != "" {
+			return StepOutput{}, "", fmt.Errorf("public assistance verifier received invalid inputs")
+		}
+		return StepOutput{Values: map[string]string{"is_correct": "true", "corrected_public_assistance_status": "not_requested", "corrected_public_assistance_types": "[]"}}, g.model, nil
+	}
 	if step.Key == CategoryVerificationStep {
 		if input.Value("title_de") != "Sicherer Titel" || input.Value("summary_de") != "Sichere Zusammenfassung." || input.Value("category") != "other" || input.Value("incident_body") != "" {
 			return StepOutput{}, "", fmt.Errorf("category verifier received invalid inputs")
@@ -186,7 +192,7 @@ func TestPipelineWorkerGroupsModelsFreezesTargetsAndStartsNextCycle(t *testing.T
 	}
 }
 
-func TestPipelineWorkerPrioritizesCategoryVerificationBeforeTranslation(t *testing.T) {
+func TestPipelineWorkerPrioritizesPublicAssistanceThenCategoryBeforeTranslation(t *testing.T) {
 	ctx := context.Background()
 	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-category-priority.db"))
 	if err != nil {
@@ -206,8 +212,11 @@ func TestPipelineWorkerPrioritizesCategoryVerificationBeforeTranslation(t *testi
 	if err := database.SetPipelineStepModel(ctx, CategoryVerificationStep, "verify:4b", now); err != nil {
 		t.Fatal(err)
 	}
+	if err := database.SetPipelineStepModel(ctx, PublicAssistanceVerificationStep, "assist:4b", now); err != nil {
+		t.Fatal(err)
+	}
 	provider := &pipelineTestProvider{}
-	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b", "verify:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"assist:4b", "qwen:4b", "translate:4b", "verify:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,9 +224,10 @@ func TestPipelineWorkerPrioritizesCategoryVerificationBeforeTranslation(t *testi
 	provider.mu.Lock()
 	events := append([]string(nil), provider.events...)
 	provider.mu.Unlock()
-	want := []string{IncidentMetadataStep, GermanPresentationStep, CategoryVerificationStep, EnglishTranslationStep}
+	want := []string{IncidentMetadataStep, GermanPresentationStep, PublicAssistanceVerificationStep, CategoryVerificationStep, EnglishTranslationStep}
 	if len(events) != len(want) {
-		t.Fatalf("events = %v", events)
+		status, _ := worker.Status(ctx)
+		t.Fatalf("events = %v; models=%#v queue=%#v", events, status.Models.PostProcessors, status.Queue.PostProcessing)
 	}
 	for index, step := range want {
 		if !strings.HasPrefix(events[index], step+":") {
@@ -286,7 +296,7 @@ func TestInjectedPostProcessorUsesGenericSchedulingManualExecutionStatusAndHisto
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(status.Models.PostProcessors) != 3 || len(status.Queue.PostProcessing) != 3 {
+	if len(status.Models.PostProcessors) != 4 || len(status.Queue.PostProcessing) != 4 {
 		t.Fatalf("injected processor status = %#v / %#v", status.Models.PostProcessors, status.Queue.PostProcessing)
 	}
 	records, _, err := database.ListIncidents(ctx, 1, 0)
@@ -478,7 +488,7 @@ func TestMissingTranslationModelDoesNotBlockCanonicalGerman(t *testing.T) {
 		t.Fatalf("English was visible without a translation: %v", err)
 	}
 	status, err := worker.ModelStatus(ctx)
-	if err != nil || !status.Ready || len(status.PostProcessors) != 2 || status.PostProcessors[1].PreferredAvailable {
+	if err != nil || !status.Ready || len(status.PostProcessors) != 3 || status.PostProcessors[2].PreferredAvailable {
 		t.Fatalf("split model readiness = %#v/%v", status, err)
 	}
 }
@@ -566,8 +576,80 @@ func TestTranslationFailureDoesNotChangeCanonicalCompletion(t *testing.T) {
 		t.Fatalf("failed English translation became public: %v", err)
 	}
 	snapshot, err := database.PipelineSnapshot(ctx, "fixture", StepKeys(), nil, now)
-	if err != nil || len(snapshot.PostProcessing) != 2 || snapshot.PostProcessing[1].NeedsReview != 1 {
+	var translationStats *store.PostProcessingQueueStats
+	for index := range snapshot.PostProcessing {
+		if snapshot.PostProcessing[index].ProcessorKey == TranslationModelStep {
+			translationStats = &snapshot.PostProcessing[index]
+		}
+	}
+	if err != nil || len(snapshot.PostProcessing) != 3 || translationStats == nil || translationStats.NeedsReview != 1 {
 		t.Fatalf("translation failure snapshot = %#v, err=%v", snapshot.PostProcessing, err)
+	}
+}
+
+func TestPublicAssistanceVerificationFailureDoesNotBlockOtherProcessors(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "public-assistance-failure.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 17, 0, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "one")
+	if err := database.EnsurePipelineSteps(ctx, ModelSettingKeys(), now); err != nil {
+		t.Fatal(err)
+	}
+	for step, model := range pipelineTestModels() {
+		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for step, model := range map[string]string{PublicAssistanceVerificationStep: "assist:4b", CategoryVerificationStep: "verify:4b"} {
+		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	provider := &pipelineTestProvider{fail: func(step string, _ int) error {
+		if step == PublicAssistanceVerificationStep {
+			return errorOf(ErrorOutput, "synthetic malformed assistance verification")
+		}
+		return nil
+	}}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"assist:4b", "qwen:4b", "translate:4b", "verify:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker.processAvailable(ctx)
+	now = now.Add(2 * time.Minute)
+	worker.processAvailable(ctx)
+	now = now.Add(11 * time.Minute)
+	worker.processAvailable(ctx)
+
+	if provider.callCount(PublicAssistanceVerificationStep) != 3 || provider.callCount(CategoryVerificationStep) != 1 || provider.callCount(EnglishTranslationStep) != 1 {
+		t.Fatalf("independent processor calls = assistance:%d category:%d translation:%d", provider.callCount(PublicAssistanceVerificationStep), provider.callCount(CategoryVerificationStep), provider.callCount(EnglishTranslationStep))
+	}
+	records, _, err := database.ListIncidents(ctx, 1, 0)
+	if err != nil || len(records) != 1 {
+		t.Fatalf("incidents = %d, err=%v", len(records), err)
+	}
+	for _, language := range []string{"de", "en"} {
+		record, err := database.GetPresentationIncident(ctx, records[0].ID, store.PresentationScope{Language: language, TranslationLanguage: language, PublicOnly: true})
+		if err != nil {
+			t.Fatalf("%s publication blocked by assistance verifier: %v", language, err)
+		}
+		if record.AIPublicAssistanceStatus != "not_requested" || record.AIPublicAssistanceTypes != "[]" {
+			t.Fatalf("%s fallback assistance = %s/%s", language, record.AIPublicAssistanceStatus, record.AIPublicAssistanceTypes)
+		}
+	}
+	snapshot, err := database.PipelineSnapshot(ctx, "fixture", StepKeys(), nil, now)
+	var assistanceStats *store.PostProcessingQueueStats
+	for index := range snapshot.PostProcessing {
+		if snapshot.PostProcessing[index].ProcessorKey == PublicAssistanceVerificationStep {
+			assistanceStats = &snapshot.PostProcessing[index]
+		}
+	}
+	if err != nil || assistanceStats == nil || assistanceStats.NeedsReview != 1 {
+		t.Fatalf("assistance failure snapshot = %#v, err=%v", snapshot.PostProcessing, err)
 	}
 }
 

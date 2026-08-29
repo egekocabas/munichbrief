@@ -59,6 +59,25 @@ type AdminCategoryVerification struct {
 	FailureKind       string
 }
 
+// AdminPublicAssistanceVerification combines the latest durable attempt with
+// the latest successful effective result for one current canonical presentation.
+type AdminPublicAssistanceVerification struct {
+	IncidentID        int64
+	PresentationRunID int64
+	OriginalStatus    string
+	OriginalTypes     string
+	EffectiveStatus   string
+	EffectiveTypes    string
+	IsCorrect         *bool
+	Model             string
+	PromptVersion     string
+	GeneratedAt       *time.Time
+	Status            string
+	Attempts          int
+	NextRetryAt       *time.Time
+	FailureKind       string
+}
+
 const (
 	AdminIncidentsAll         AdminIncidentFilter = "all"
 	AdminIncidentsUnprocessed AdminIncidentFilter = "unprocessed"
@@ -87,11 +106,18 @@ const scopedAIColumns = `
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'event_start_time' LIMIT 1), ''),
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'event_day_part' LIMIT 1), ''),
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'report_kind' LIMIT 1), ''),
+				COALESCE((SELECT value.value FROM post_processing_jobs job JOIN post_processing_values value ON value.job_id=job.id WHERE job.presentation_run_id = ` + latestPresentationRun + ` AND job.processor_key='public_assistance_verification' AND job.scope_key='default' AND job.status='succeeded' AND value.kind='corrected_public_assistance_status' ORDER BY job.completed_at DESC,job.id DESC LIMIT 1),
+					(SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'public_assistance_status' LIMIT 1), ''),
+				COALESCE((SELECT value.value FROM post_processing_jobs job JOIN post_processing_values value ON value.job_id=job.id WHERE job.presentation_run_id = ` + latestPresentationRun + ` AND job.processor_key='public_assistance_verification' AND job.scope_key='default' AND job.status='succeeded' AND value.kind='corrected_public_assistance_types' ORDER BY job.completed_at DESC,job.id DESC LIMIT 1),
+					(SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'public_assistance_types' LIMIT 1), ''),
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'public_assistance_status' LIMIT 1), ''),
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'public_assistance_types' LIMIT 1), ''),
 				COALESCE((SELECT model_identity FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'category' LIMIT 1), ''),
 				COALESCE((SELECT prompt_version FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'category' LIMIT 1), ''),
 				COALESCE((SELECT generated_at FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'category' LIMIT 1), ''),
+				COALESCE((SELECT model_identity FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='public_assistance_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1), ''),
+				COALESCE((SELECT prompt_version FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='public_assistance_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1), ''),
+				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='public_assistance_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1), ''),
 				COALESCE((SELECT model_identity FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='category_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1), ''),
 				COALESCE((SELECT prompt_version FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='category_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1), ''),
 				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='category_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1), ''),
@@ -197,6 +223,8 @@ func (s *Store) ListPresentationEntries(ctx context.Context, limit, offset int, 
 				d.published_at, d.last_seen_at, d.fetch_status, COALESCE(d.error_message, ''),
 				'', '', '', '', '', '', '', '',
 				'', '', '', '', '', '',
+				'', '',
+				'', '', '',
 				'', '', '',
 				'', '', '',
 				'', '', '',
@@ -243,10 +271,12 @@ func (s *Store) ListPublicIncidentLinks(ctx context.Context, sourceMode string, 
 			CASE WHEN @language = 'de' THEN
 				COALESCE(NULLIF(MAX(
 					COALESCE((SELECT r.completed_at FROM presentation_runs r WHERE r.id = ` + latestPresentationRun + `),''),
+					COALESCE((SELECT completed_at FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='public_assistance_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),''),
 					COALESCE((SELECT completed_at FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='category_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),'')
 				),''), i.updated_at)
 			ELSE COALESCE(NULLIF(MAX(
 				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='translation' AND scope_key=@language AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),''),
+				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='public_assistance_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),''),
 				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='category_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),'')
 			),''), i.updated_at) END
 		FROM incidents i
@@ -507,6 +537,80 @@ func (s *Store) ListAdminCategoryVerifications(ctx context.Context, incidentIDs 
 	return results, rows.Err()
 }
 
+// ListAdminPublicAssistanceVerifications loads verifier state for the newest
+// current canonical presentation of each requested incident in one bounded query.
+func (s *Store) ListAdminPublicAssistanceVerifications(ctx context.Context, incidentIDs []int64) ([]AdminPublicAssistanceVerification, error) {
+	if len(incidentIDs) == 0 {
+		return nil, nil
+	}
+	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(incidentIDs)), ",")
+	args := make([]any, 0, len(incidentIDs))
+	for _, id := range incidentIDs {
+		args = append(args, id)
+	}
+	query := `WITH requested(incident_id) AS (SELECT id FROM incidents WHERE id IN (` + placeholders + `)),
+		selected_runs AS (
+			SELECT requested.incident_id, (SELECT r.id FROM presentation_runs r JOIN incidents i ON i.id=r.incident_id
+				WHERE r.incident_id=requested.incident_id AND r.source_hash=i.content_hash AND r.status='complete'
+				AND r.pipeline_version='` + PipelineVersion + `' AND r.legacy=0
+				ORDER BY r.completed_at DESC,r.id DESC LIMIT 1) AS run_id
+			FROM requested
+		)
+	SELECT selected.incident_id,COALESCE(selected.run_id,0),
+		COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id=selected.run_id AND kind='public_assistance_status' LIMIT 1),''),
+		COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id=selected.run_id AND kind='public_assistance_types' LIMIT 1),''),
+		COALESCE((SELECT value.value FROM post_processing_jobs job JOIN post_processing_values value ON value.job_id=job.id WHERE job.presentation_run_id=selected.run_id AND job.processor_key='public_assistance_verification' AND job.scope_key='default' AND job.status='succeeded' AND value.kind='corrected_public_assistance_status' ORDER BY job.completed_at DESC,job.id DESC LIMIT 1),
+			(SELECT value FROM presentation_values WHERE presentation_run_id=selected.run_id AND kind='public_assistance_status' LIMIT 1),''),
+		COALESCE((SELECT value.value FROM post_processing_jobs job JOIN post_processing_values value ON value.job_id=job.id WHERE job.presentation_run_id=selected.run_id AND job.processor_key='public_assistance_verification' AND job.scope_key='default' AND job.status='succeeded' AND value.kind='corrected_public_assistance_types' ORDER BY job.completed_at DESC,job.id DESC LIMIT 1),
+			(SELECT value FROM presentation_values WHERE presentation_run_id=selected.run_id AND kind='public_assistance_types' LIMIT 1),''),
+		COALESCE((SELECT value.value FROM post_processing_jobs job JOIN post_processing_values value ON value.job_id=job.id WHERE job.presentation_run_id=selected.run_id AND job.processor_key='public_assistance_verification' AND job.scope_key='default' AND job.status='succeeded' AND value.kind='is_correct' ORDER BY job.completed_at DESC,job.id DESC LIMIT 1),''),
+		COALESCE((SELECT model_identity FROM post_processing_jobs WHERE presentation_run_id=selected.run_id AND processor_key='public_assistance_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),
+			(SELECT model_identity FROM post_processing_jobs WHERE presentation_run_id=selected.run_id AND processor_key='public_assistance_verification' AND scope_key='default' ORDER BY created_at DESC,id DESC LIMIT 1),''),
+		COALESCE((SELECT prompt_version FROM post_processing_jobs WHERE presentation_run_id=selected.run_id AND processor_key='public_assistance_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),
+			(SELECT prompt_version FROM post_processing_jobs WHERE presentation_run_id=selected.run_id AND processor_key='public_assistance_verification' AND scope_key='default' ORDER BY created_at DESC,id DESC LIMIT 1),''),
+		COALESCE((SELECT completed_at FROM post_processing_jobs WHERE presentation_run_id=selected.run_id AND processor_key='public_assistance_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),''),
+		COALESCE((SELECT status FROM post_processing_jobs WHERE presentation_run_id=selected.run_id AND processor_key='public_assistance_verification' AND scope_key='default' ORDER BY created_at DESC,id DESC LIMIT 1),''),
+		COALESCE((SELECT attempt_count FROM post_processing_jobs WHERE presentation_run_id=selected.run_id AND processor_key='public_assistance_verification' AND scope_key='default' ORDER BY created_at DESC,id DESC LIMIT 1),0),
+		COALESCE((SELECT next_retry_at FROM post_processing_jobs WHERE presentation_run_id=selected.run_id AND processor_key='public_assistance_verification' AND scope_key='default' ORDER BY created_at DESC,id DESC LIMIT 1),''),
+		COALESCE((SELECT failure_kind FROM post_processing_jobs WHERE presentation_run_id=selected.run_id AND processor_key='public_assistance_verification' AND scope_key='default' ORDER BY created_at DESC,id DESC LIMIT 1),'')
+	FROM selected_runs selected ORDER BY selected.incident_id`
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list admin public assistance verifications: %w", err)
+	}
+	defer rows.Close()
+	results := make([]AdminPublicAssistanceVerification, 0, len(incidentIDs))
+	for rows.Next() {
+		var result AdminPublicAssistanceVerification
+		var correct, generatedAt, nextRetryAt string
+		if err := rows.Scan(&result.IncidentID, &result.PresentationRunID, &result.OriginalStatus, &result.OriginalTypes,
+			&result.EffectiveStatus, &result.EffectiveTypes, &correct, &result.Model, &result.PromptVersion, &generatedAt,
+			&result.Status, &result.Attempts, &nextRetryAt, &result.FailureKind); err != nil {
+			return nil, fmt.Errorf("scan admin public assistance verification: %w", err)
+		}
+		if correct != "" {
+			value := correct == "true"
+			result.IsCorrect = &value
+		}
+		if generatedAt != "" {
+			value, err := time.Parse(time.RFC3339Nano, generatedAt)
+			if err != nil {
+				return nil, fmt.Errorf("parse public assistance verification generation time: %w", err)
+			}
+			result.GeneratedAt = &value
+		}
+		if nextRetryAt != "" {
+			value, err := time.Parse(time.RFC3339Nano, nextRetryAt)
+			if err != nil {
+				return nil, fmt.Errorf("parse public assistance verification retry time: %w", err)
+			}
+			result.NextRetryAt = &value
+		}
+		results = append(results, result)
+	}
+	return results, rows.Err()
+}
+
 // GetPresentationIncident returns one incident only when it satisfies the same
 // provenance and public-readiness rules as the timeline.
 func (s *Store) GetPresentationIncident(ctx context.Context, id int64, scope PresentationScope) (IncidentRecord, error) {
@@ -530,7 +634,7 @@ func (s *Store) GetPresentationIncident(ctx context.Context, id int64, scope Pre
 
 func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 	var record IncidentRecord
-	var publishedAt, updatedAt, aiMetadataGeneratedAt, aiCategoryVerificationGeneratedAt, aiGeneratedAt, aiTranslationGeneratedAt, nextRetryAt, translationNextRetryAt string
+	var publishedAt, updatedAt, aiMetadataGeneratedAt, aiPublicAssistanceVerificationGeneratedAt, aiCategoryVerificationGeneratedAt, aiGeneratedAt, aiTranslationGeneratedAt, nextRetryAt, translationNextRetryAt string
 	if err := row.Scan(
 		&record.ID, &record.SourceDocumentID, &record.HasIncident, &record.Number, &record.Position,
 		&record.TitleDE, &record.BodyDE, &record.ContentHash, &record.SourceTitle, &record.SourceURL,
@@ -539,7 +643,9 @@ func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 		&record.AICategory, &record.AIOriginalCategory, &record.AIAreaName, &record.AIAreaType,
 		&record.AIEventStartDate, &record.AIEventStartTime, &record.AIEventDayPart,
 		&record.AIReportKind, &record.AIPublicAssistanceStatus, &record.AIPublicAssistanceTypes,
+		&record.AIOriginalPublicAssistanceStatus, &record.AIOriginalPublicAssistanceTypes,
 		&record.AIMetadataModel, &record.AIMetadataPromptVersion, &aiMetadataGeneratedAt,
+		&record.AIPublicAssistanceVerificationModel, &record.AIPublicAssistanceVerificationPromptVersion, &aiPublicAssistanceVerificationGeneratedAt,
 		&record.AICategoryVerificationModel, &record.AICategoryVerificationPromptVersion, &aiCategoryVerificationGeneratedAt,
 		&record.AIModel, &record.AIPromptVersion, &aiGeneratedAt,
 		&record.AITranslationModel, &record.AITranslationPromptVersion, &aiTranslationGeneratedAt,
@@ -564,6 +670,13 @@ func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 			return IncidentRecord{}, fmt.Errorf("parse AI metadata generation time: %w", err)
 		}
 		record.AIMetadataGeneratedAt = &generatedAt
+	}
+	if aiPublicAssistanceVerificationGeneratedAt != "" {
+		generatedAt, err := time.Parse(time.RFC3339Nano, aiPublicAssistanceVerificationGeneratedAt)
+		if err != nil {
+			return IncidentRecord{}, fmt.Errorf("parse AI public assistance verification generation time: %w", err)
+		}
+		record.AIPublicAssistanceVerificationGeneratedAt = &generatedAt
 	}
 	if aiCategoryVerificationGeneratedAt != "" {
 		generatedAt, err := time.Parse(time.RFC3339Nano, aiCategoryVerificationGeneratedAt)

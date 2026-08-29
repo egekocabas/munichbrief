@@ -10,8 +10,11 @@ import (
 func TestDefaultPostProcessorRegistryOrdersAndExpandsScopes(t *testing.T) {
 	registry := DefaultPostProcessorRegistry()
 	definitions := registry.Definitions()
-	if len(definitions) != 2 || definitions[0].Key != CategoryVerificationStep || definitions[1].Key != TranslationModelStep {
+	if len(definitions) != 3 || definitions[0].Key != PublicAssistanceVerificationStep || definitions[1].Key != CategoryVerificationStep || definitions[2].Key != TranslationModelStep {
 		t.Fatalf("post-processor priority order = %#v", definitions)
+	}
+	if definitions[0].Priority != 10 || definitions[0].ModelSettingKey != PublicAssistanceVerificationStep || !definitions[0].Automatic || !definitions[0].Manual || len(definitions[0].Counters) != 1 || definitions[0].Counters[0].Key != "corrected" {
+		t.Fatalf("public assistance processor registration = %#v", definitions[0])
 	}
 	plans, err := registry.Plans(TranslationModelStep, nil, "translate:4b")
 	if err != nil || len(plans) != len(RegisteredTranslations()) || plans[0].ScopeKey != EnglishLanguage || plans[0].Model != "translate:4b" {
@@ -24,7 +27,7 @@ func TestDefaultPostProcessorRegistryOrdersAndExpandsScopes(t *testing.T) {
 		t.Fatalf("unknown processor error = %v", err)
 	}
 
-	definitions[0].Scopes[0].Step.InputKinds[0] = "mutated"
+	definitions[1].Scopes[0].Step.InputKinds[0] = "mutated"
 	_, scope, found := registry.Scope(CategoryVerificationStep, DefaultPostProcessingScope)
 	if !found || scope.Step.InputKinds[0] == "mutated" {
 		t.Fatal("registry definitions are not immutable copies")

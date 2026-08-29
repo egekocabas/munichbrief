@@ -109,12 +109,17 @@ func DefaultPostProcessorRegistry() *PostProcessorRegistry {
 	}
 	registry, err := NewPostProcessorRegistry(
 		PostProcessorDefinition{
-			Key: CategoryVerificationStep, DisplayName: "Category verification", Description: "Recheck categories while keeping the last successful result effective until a replacement succeeds.", Priority: 10, ModelSettingKey: CategoryVerificationStep, Automatic: true, Manual: true,
+			Key: PublicAssistanceVerificationStep, DisplayName: "Public assistance verification", Description: "Recheck public-assistance status and types while keeping the last successful result effective until a replacement succeeds.", Priority: 10, ModelSettingKey: PublicAssistanceVerificationStep, Automatic: true, Manual: true,
+			Scopes:   []PostProcessorScope{{Key: DefaultPostProcessingScope, DisplayName: "Default", Step: PublicAssistanceVerificationDefinition()}},
+			Counters: []PostProcessorCounter{{Key: "corrected", OutputKind: "is_correct", EqualsValue: "false"}},
+		},
+		PostProcessorDefinition{
+			Key: CategoryVerificationStep, DisplayName: "Category verification", Description: "Recheck categories while keeping the last successful result effective until a replacement succeeds.", Priority: 20, ModelSettingKey: CategoryVerificationStep, Automatic: true, Manual: true,
 			Scopes:   []PostProcessorScope{{Key: DefaultPostProcessingScope, DisplayName: "Default", Step: CategoryVerificationDefinition()}},
 			Counters: []PostProcessorCounter{{Key: "corrected", OutputKind: "is_correct", EqualsValue: "false"}},
 		},
 		PostProcessorDefinition{
-			Key: TranslationModelStep, DisplayName: "Translations", Description: "Translate current presentations into one registered language or every registered language.", Priority: 20, ModelSettingKey: TranslationModelStep, Automatic: true, Manual: true,
+			Key: TranslationModelStep, DisplayName: "Translations", Description: "Translate current presentations into one registered language or every registered language.", Priority: 30, ModelSettingKey: TranslationModelStep, Automatic: true, Manual: true,
 			Scopes: translationScopes,
 		},
 	)

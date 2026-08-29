@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -87,6 +88,89 @@ func TestCategoryVerificationUsesOnlySummaryAndEnforcesVerdictInvariant(t *testi
 	corrected, err := step.OutputDecoder(`{"is_correct":false,"corrected_category":"Polizeieinsatz"}`)
 	if err != nil || corrected.Values["corrected_category"] != "police_operation" {
 		t.Fatalf("German category mapping = %#v/%v", corrected.Values, err)
+	}
+}
+
+func TestPublicAssistanceVerificationUsesRawGermanSourceAndEnforcesVerdictInvariant(t *testing.T) {
+	step := PublicAssistanceVerificationDefinition()
+	input := StepInput{Values: map[string]string{
+		"original_title":           "Zeugenaufruf nach Verkehrsunfall",
+		"incident_body":            "Die Polizei bittet Zeugen um Beobachtungen und Videos unter 089/123456.",
+		"public_assistance_status": "requested", "public_assistance_types": `["witness_observations"]`,
+		"title_de": "must never be sent", "summary_de": "must never be sent",
+	}}
+	generated, message, err := step.Generator(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{"Zeugenaufruf nach Verkehrsunfall", "089/123456", `"public_assistance_status":"requested"`, `"public_assistance_types":["witness_observations"]`} {
+		if !strings.Contains(message, expected) {
+			t.Errorf("public assistance verification input omitted %q: %s", expected, message)
+		}
+	}
+	if strings.Contains(message, "must never be sent") || generated.Value("title_de") != "" || generated.Value("summary_de") != "" {
+		t.Fatalf("public assistance verifier received undeclared presentation input: %s", message)
+	}
+	for _, expected := range []string{"deutscher Polizeipressebericht", "ausdrücklich", "öffentliche Bitte um Mithilfe"} {
+		if !strings.Contains(step.SystemPrompt, expected) {
+			t.Errorf("German public assistance prompt omitted %q", expected)
+		}
+	}
+	cases := []struct {
+		name    string
+		content string
+		valid   bool
+	}{
+		{"confirmed", `{"is_correct":true,"corrected_public_assistance_status":"requested","corrected_public_assistance_types":["witness_observations"]}`, true},
+		{"corrected status and types", `{"is_correct":false,"corrected_public_assistance_status":"requested","corrected_public_assistance_types":["photo_video_material","witness_observations"]}`, true},
+		{"corrected to not requested", `{"is_correct":false,"corrected_public_assistance_status":"not_requested","corrected_public_assistance_types":[]}`, true},
+		{"corrected to unclear", `{"is_correct":false,"corrected_public_assistance_status":"unclear","corrected_public_assistance_types":[]}`, true},
+		{"true but changed", `{"is_correct":true,"corrected_public_assistance_status":"not_requested","corrected_public_assistance_types":[]}`, false},
+		{"false but unchanged", `{"is_correct":false,"corrected_public_assistance_status":"requested","corrected_public_assistance_types":["witness_observations"]}`, false},
+		{"requested without types", `{"is_correct":false,"corrected_public_assistance_status":"requested","corrected_public_assistance_types":[]}`, false},
+		{"not requested with types", `{"is_correct":false,"corrected_public_assistance_status":"not_requested","corrected_public_assistance_types":["witness_observations"]}`, false},
+		{"unknown type", `{"is_correct":false,"corrected_public_assistance_status":"requested","corrected_public_assistance_types":["unknown"]}`, false},
+		{"missing field", `{"is_correct":false,"corrected_public_assistance_status":"not_requested"}`, false},
+		{"extra field", `{"is_correct":false,"corrected_public_assistance_status":"not_requested","corrected_public_assistance_types":[],"reason":"x"}`, false},
+		{"malformed", `{"is_correct":`, false},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			output, decodeErr := step.OutputDecoder(test.content)
+			if decodeErr == nil {
+				decodeErr = ValidateStepOutput(step, generated, &output)
+			}
+			if (decodeErr == nil) != test.valid {
+				t.Fatalf("validation error = %v, valid=%t", decodeErr, test.valid)
+			}
+		})
+	}
+	output, err := step.OutputDecoder(`{"is_correct":false,"corrected_public_assistance_status":"requested","corrected_public_assistance_types":["witness_observations","photo_video_material","witness_observations"]}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateStepOutput(step, generated, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Values["corrected_public_assistance_types"] != `["photo_video_material","witness_observations"]` {
+		t.Fatalf("normalized types = %s", output.Values["corrected_public_assistance_types"])
+	}
+	noRequest, _, err := step.Generator(StepInput{Values: map[string]string{
+		"original_title": "Mitteilung", "incident_body": "Text",
+		"public_assistance_status": "not_requested", "public_assistance_types": "[]",
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for assistanceType := range assistanceTypes {
+		content := fmt.Sprintf(`{"is_correct":false,"corrected_public_assistance_status":"requested","corrected_public_assistance_types":[%q]}`, assistanceType)
+		candidate, err := step.OutputDecoder(content)
+		if err != nil {
+			t.Fatalf("decode assistance type %s: %v", assistanceType, err)
+		}
+		if err := ValidateStepOutput(step, noRequest, &candidate); err != nil {
+			t.Errorf("allowed assistance type %s rejected: %v", assistanceType, err)
+		}
 	}
 }
 
