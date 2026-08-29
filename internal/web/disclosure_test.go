@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/egekocabas/munichbrief/internal/processing"
 	"github.com/egekocabas/munichbrief/internal/store"
 )
 
@@ -103,7 +102,7 @@ func TestAIDisclosureAcknowledgementCookieAndRedirect(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	server, err := NewWithOptions(database, logger, Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
-		PromptVersion: processing.PipelineVersion, SecureCookies: true,
+		SecureCookies: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -193,7 +192,7 @@ func TestAIGeneratedLabelsHTMLMarkdownAndSocialCard(t *testing.T) {
 
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	public, err := NewWithOptions(database, logger, Options{
-		PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PromptVersion: processing.PipelineVersion,
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "public",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -251,7 +250,7 @@ func TestPublicModeDoesNotForceDisclosurePreview(t *testing.T) {
 	database := fixtureStore(t)
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	server, err := NewWithOptions(database, logger, Options{
-		PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PromptVersion: processing.PipelineVersion,
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "public",
 	})
 	if err != nil {
 		t.Fatal(err)

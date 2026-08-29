@@ -27,7 +27,7 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 		http.Error(response, "invalid all_page", http.StatusBadRequest)
 		return
 	}
-	scope := store.PresentationScope{PromptVersion: s.options.PromptVersion, Language: canonicalReaderLanguage().Code}
+	scope := store.PresentationScope{Language: canonicalReaderLanguage().Code}
 	if translations := translatedReaderLanguages(); len(translations) > 0 {
 		scope.TranslationLanguage = translations[0].Code
 	}
@@ -207,7 +207,7 @@ func (s *Server) adminTranslations(request *http.Request, records []store.Incide
 		languages = append(languages, definition.Language)
 		displayNames[definition.Language] = definition.DisplayName
 	}
-	translations, err := s.store.ListAdminTranslations(request.Context(), incidentIDs, languages, s.options.PromptVersion)
+	translations, err := s.store.ListAdminTranslations(request.Context(), incidentIDs, languages)
 	if err != nil {
 		return nil, err
 	}
@@ -334,8 +334,16 @@ func (s *Server) processPostProcessing(response http.ResponseWriter, request *ht
 			break
 		}
 	}
-	if selected == nil {
+	if selected == nil || !selected.Manual {
 		http.Error(response, "unsupported post-processing processor", http.StatusBadRequest)
+		return
+	}
+	modelAvailable := false
+	for _, available := range models.Models {
+		modelAvailable = modelAvailable || available == model
+	}
+	if !models.CatalogAvailable || !modelAvailable {
+		http.Error(response, "selected Ollama model is unavailable", http.StatusServiceUnavailable)
 		return
 	}
 	var scopeKeys []string
@@ -395,6 +403,10 @@ func (s *Server) preparePostProcessingMutation(response http.ResponseWriter, req
 func postProcessingIncidentID(response http.ResponseWriter, form url.Values) (*int64, bool) {
 	switch form.Get("target") {
 	case "all":
+		if strings.TrimSpace(form.Get("incident_id")) != "" {
+			http.Error(response, "incident_id is only valid for an incident target", http.StatusBadRequest)
+			return nil, false
+		}
 		return nil, true
 	case "incident":
 		incidentID, err := strconv.ParseInt(form.Get("incident_id"), 10, 64)

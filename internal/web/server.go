@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"net/http"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/egekocabas/munichbrief/internal/processing"
@@ -63,7 +62,7 @@ type incidentStore interface {
 	ListPublicIncidentLinks(context.Context, string, store.PresentationScope) ([]store.PublicIncidentLink, error)
 	GetPresentationIncident(context.Context, int64, store.PresentationScope) (store.IncidentRecord, error)
 	ListAdminIncidents(context.Context, int, int, string, store.PresentationScope, store.AdminIncidentFilter) ([]store.IncidentRecord, int, error)
-	ListAdminTranslations(context.Context, []int64, []string, string) ([]store.AdminTranslation, error)
+	ListAdminTranslations(context.Context, []int64, []string) ([]store.AdminTranslation, error)
 	ListAdminCategoryVerifications(context.Context, []int64) ([]store.AdminCategoryVerification, error)
 	ListPipelineHistory(context.Context, string, int, *store.PipelineHistoryCursor, *store.PipelineHistoryCursor) (store.PipelineHistoryPage, error)
 	Ready(context.Context) error
@@ -86,7 +85,6 @@ type Options struct {
 	PageSize         int
 	SourceMode       string
 	PresentationMode string
-	PromptVersion    string
 	SecureCookies    bool
 	AdminEnabled     bool
 	PublicHosts      []string
@@ -136,9 +134,6 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 	}
 	if options.PresentationMode != "review" && options.PresentationMode != "public" {
 		return nil, errors.New("presentation mode must be review or public")
-	}
-	if strings.TrimSpace(options.PromptVersion) == "" {
-		return nil, errors.New("presentation prompt version is required")
 	}
 	if (options.Build.Commit == "") != options.Build.BuiltAt.IsZero() {
 		return nil, errors.New("build commit and build time must be provided together")

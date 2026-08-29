@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/egekocabas/munichbrief/internal/processing"
 	"github.com/egekocabas/munichbrief/internal/store"
 )
 
@@ -21,7 +20,7 @@ func publicDiscoveryServer(t *testing.T, database *store.Store, presentation tes
 	job := seedV2Presentation(t, database, presentation, time.Now())
 	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "public",
-		PromptVersion: processing.PipelineVersion, SecureCookies: true,
+		SecureCookies:   true,
 		PublicHosts:     []string{"munichbrief.egekocabas.com", "munichbrief.de"},
 		CanonicalOrigin: "https://munichbrief.de",
 	})
@@ -305,9 +304,9 @@ func TestPublicMarkdownNegotiationPreservesPrivacyBoundary(t *testing.T) {
 func TestCanonicalOriginMustMatchPublicHost(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	for _, options := range []Options{
-		{PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PromptVersion: processing.PipelineVersion, PublicHosts: []string{"munichbrief.de"}},
-		{PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PromptVersion: processing.PipelineVersion, PublicHosts: []string{"munichbrief.de"}, CanonicalOrigin: "http://munichbrief.de"},
-		{PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PromptVersion: processing.PipelineVersion, PublicHosts: []string{"munichbrief.de"}, CanonicalOrigin: "https://example.com"},
+		{PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PublicHosts: []string{"munichbrief.de"}},
+		{PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PublicHosts: []string{"munichbrief.de"}, CanonicalOrigin: "http://munichbrief.de"},
+		{PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PublicHosts: []string{"munichbrief.de"}, CanonicalOrigin: "https://example.com"},
 	} {
 		if _, err := NewWithOptions(fixtureStore(t), logger, options); err == nil {
 			t.Fatalf("NewWithOptions(%#v) error = nil", options)

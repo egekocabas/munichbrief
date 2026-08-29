@@ -48,7 +48,7 @@ func TestPostProcessingGenericLifecycleKeepsSuccessfulValueDuringForcedReplaceme
 	if queued, err := database.QueueIncidentPostProcessing(ctx, incidentID, []PostProcessingPlan{plan}, now.Add(6*time.Minute)); err != nil || queued != 1 {
 		t.Fatalf("forced incident queue = %d/%v", queued, err)
 	}
-	visible, err := database.GetPresentationIncident(ctx, incidentID, PresentationScope{PromptVersion: PipelineVersion, TranslationLanguage: "en"})
+	visible, err := database.GetPresentationIncident(ctx, incidentID, PresentationScope{TranslationLanguage: "en"})
 	if err != nil || visible.AITranslatedTitle != "First title" {
 		t.Fatalf("successful fallback during replacement = %#v/%v", visible, err)
 	}
@@ -59,7 +59,7 @@ func TestPostProcessingGenericLifecycleKeepsSuccessfulValueDuringForcedReplaceme
 	if err := database.CompletePostProcessingJob(ctx, replacement, []PipelineValue{{Kind: "title", Value: "Second title"}, {Kind: "summary", Value: "Second summary."}}, "translate:4b", replacement.InputHash, now.Add(8*time.Minute)); err != nil {
 		t.Fatal(err)
 	}
-	visible, err = database.GetPresentationIncident(ctx, incidentID, PresentationScope{PromptVersion: PipelineVersion, TranslationLanguage: "en"})
+	visible, err = database.GetPresentationIncident(ctx, incidentID, PresentationScope{TranslationLanguage: "en"})
 	if err != nil || visible.AITranslatedTitle != "Second title" {
 		t.Fatalf("replacement selection = %#v/%v", visible, err)
 	}

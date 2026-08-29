@@ -160,8 +160,8 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 
 	webServer, err := web.NewWithOptions(database, logger, web.Options{
 		PageSize: cfg.PageSize, SourceMode: cfg.SourceMode, PresentationMode: cfg.PresentationMode,
-		PromptVersion: processing.PipelineVersion, SecureCookies: cfg.SecureCookies,
-		AdminEnabled: cfg.AdminEnabled, PublicHosts: cfg.PublicHosts, CanonicalOrigin: cfg.CanonicalOrigin, Processor: processor,
+		SecureCookies: cfg.SecureCookies,
+		AdminEnabled:  cfg.AdminEnabled, PublicHosts: cfg.PublicHosts, CanonicalOrigin: cfg.CanonicalOrigin, Processor: processor,
 		Build: build,
 	})
 	if err != nil {

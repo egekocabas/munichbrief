@@ -438,10 +438,10 @@ func TestMissingTranslationModelDoesNotBlockCanonicalGerman(t *testing.T) {
 	if err != nil || len(records) != 1 {
 		t.Fatal(err)
 	}
-	if _, err := database.GetPresentationIncident(ctx, records[0].ID, store.PresentationScope{PromptVersion: PipelineVersion, Language: "de", PublicOnly: true}); err != nil {
+	if _, err := database.GetPresentationIncident(ctx, records[0].ID, store.PresentationScope{Language: "de", PublicOnly: true}); err != nil {
 		t.Fatalf("canonical German was not public: %v", err)
 	}
-	if _, err := database.GetPresentationIncident(ctx, records[0].ID, store.PresentationScope{PromptVersion: PipelineVersion, Language: "en", PublicOnly: true}); !errors.Is(err, store.ErrNotFound) {
+	if _, err := database.GetPresentationIncident(ctx, records[0].ID, store.PresentationScope{Language: "en", PublicOnly: true}); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("English was visible without a translation: %v", err)
 	}
 	status, err := worker.ModelStatus(ctx)
@@ -526,10 +526,10 @@ func TestTranslationFailureDoesNotChangeCanonicalCompletion(t *testing.T) {
 	if err != nil || len(records) != 1 {
 		t.Fatalf("incidents = %d, err=%v", len(records), err)
 	}
-	if _, err := database.GetPresentationIncident(ctx, records[0].ID, store.PresentationScope{PromptVersion: PipelineVersion, Language: "de", PublicOnly: true}); err != nil {
+	if _, err := database.GetPresentationIncident(ctx, records[0].ID, store.PresentationScope{Language: "de", PublicOnly: true}); err != nil {
 		t.Fatalf("canonical German was not public after translation failure: %v", err)
 	}
-	if _, err := database.GetPresentationIncident(ctx, records[0].ID, store.PresentationScope{PromptVersion: PipelineVersion, Language: "en", PublicOnly: true}); !errors.Is(err, store.ErrNotFound) {
+	if _, err := database.GetPresentationIncident(ctx, records[0].ID, store.PresentationScope{Language: "en", PublicOnly: true}); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("failed English translation became public: %v", err)
 	}
 	snapshot, err := database.PipelineSnapshot(ctx, "fixture", StepKeys(), nil, now)

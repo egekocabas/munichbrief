@@ -24,7 +24,7 @@ func (s *Server) scope(request *http.Request) store.PresentationScope {
 		language = preferredLanguage(request)
 	}
 	return store.PresentationScope{
-		PromptVersion: s.options.PromptVersion, Language: language, TranslationLanguage: language,
+		Language: language, TranslationLanguage: language,
 		PublicOnly: s.options.PresentationMode == "public" || s.isPublicRequest(request),
 	}
 }

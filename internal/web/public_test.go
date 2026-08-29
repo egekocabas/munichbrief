@@ -89,7 +89,6 @@ func TestReaderFooterShowsBuildProvenance(t *testing.T) {
 	commit := "28c9a1265115c07d46e61fa26bd489e07acf95c4"
 	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
-		PromptVersion: processing.PipelineVersion,
 		Build: BuildInfo{
 			Commit:  commit,
 			BuiltAt: time.Date(2026, time.August, 24, 19, 2, 0, 0, time.UTC),
@@ -118,7 +117,6 @@ func TestReaderFooterShowsDevelopmentBuildPlaceholder(t *testing.T) {
 	database := fixtureStore(t)
 	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
-		PromptVersion: processing.PipelineVersion,
 		Build: BuildInfo{
 			Commit:  "dev",
 			BuiltAt: time.Date(2026, time.August, 27, 8, 15, 0, 0, time.UTC),
@@ -291,14 +289,14 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	}, german.ModelIdentity, store.HashPipelineInput("de"), startedAt.Add(4*time.Minute)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := database.GetPresentationIncident(ctx, incidentID, store.PresentationScope{PromptVersion: processing.PipelineVersion, Language: "de", PublicOnly: true}); err != nil {
+	if _, err := database.GetPresentationIncident(ctx, incidentID, store.PresentationScope{Language: "de", PublicOnly: true}); err != nil {
 		t.Fatalf("German was not public immediately after canonical success: %v", err)
 	}
-	if _, err := database.GetPresentationIncident(ctx, incidentID, store.PresentationScope{PromptVersion: processing.PipelineVersion, Language: "en", PublicOnly: true}); !errors.Is(err, store.ErrNotFound) {
+	if _, err := database.GetPresentationIncident(ctx, incidentID, store.PresentationScope{Language: "en", PublicOnly: true}); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("English was public before translation completion: %v", err)
 	}
 	canonicalOnlyServer, err := NewWithOptions(database, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), Options{
-		PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PromptVersion: processing.PipelineVersion,
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "public",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -435,7 +433,7 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 
 	markdown := httptest.NewRecorder()
 	publicServer, err := NewWithOptions(database, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), Options{
-		PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PromptVersion: processing.PipelineVersion,
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "public",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -526,7 +524,6 @@ func TestLiveTimelineFallbackAndIncidentAttribution(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	server, err := NewWithOptions(database, logger, Options{
 		PageSize: 20, SourceMode: "live", PresentationMode: "review",
-		PromptVersion: processing.PipelineVersion,
 	})
 	if err != nil {
 		t.Fatalf("NewWithOptions() error = %v", err)
@@ -710,7 +707,7 @@ func TestLocalizedRoutesAndLanguagePreference(t *testing.T) {
 
 	secureServer, err := NewWithOptions(fixtureStore(t), slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
-		PromptVersion: processing.PipelineVersion, SecureCookies: true,
+		SecureCookies: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -797,7 +794,6 @@ func TestPublicModeHidesUnprocessedStaleAndOriginalContent(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	publicServer, err := NewWithOptions(database, logger, Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "public",
-		PromptVersion: processing.PipelineVersion,
 	})
 	if err != nil {
 		t.Fatal(err)

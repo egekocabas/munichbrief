@@ -44,8 +44,7 @@ CREATE INDEX post_processing_jobs_selection_idx
 ON post_processing_jobs(presentation_run_id, processor_key, scope_key, status, completed_at DESC, id DESC);
 
 CREATE INDEX post_processing_jobs_history_idx
-ON post_processing_jobs(julianday(updated_at) DESC, id DESC)
-WHERE request_kind <> 'imported';
+ON post_processing_jobs(julianday(updated_at) DESC, id DESC);
 
 CREATE TABLE post_processing_values (
     job_id INTEGER NOT NULL REFERENCES post_processing_jobs(id) ON DELETE CASCADE,

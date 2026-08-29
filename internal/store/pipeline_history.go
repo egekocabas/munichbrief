@@ -81,7 +81,7 @@ func (s *Store) listPipelineHistoryEntries(ctx context.Context, sourceMode strin
 			WHERE linked.presentation_run_id=r.id ORDER BY linked.id DESC LIMIT 1
 		)
 		LEFT JOIN processing_cycles c ON c.id=ci.cycle_id
-		WHERE ` + sourceCondition + ` AND post.request_kind<>'imported'
+		WHERE ` + sourceCondition + `
 	)
 	SELECT job_id, updated_at, kind, cycle_id, cycle_kind, cycle_status,
 		incident_id, step_key, processor_key, scope_key, execution_key, request_kind, status, attempt_count,

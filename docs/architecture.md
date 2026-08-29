@@ -112,7 +112,9 @@ The v2 migration records an automatic-scheduling cutover. Each registered
 processor scope also has a persisted enablement time. Existing translation and
 category-verification attempts are migrated into unified jobs and named values
 for audit, including imported and superseded records, but only complete current
-`incident-pipeline-v2` runs are eligible for new work or reader selection.
+`incident-pipeline-v2` runs are eligible for new work or reader selection. The
+paginated admin history retains those imported attempts while excluding model
+output and internal error text.
 
 ## Presentation boundary
 

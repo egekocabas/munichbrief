@@ -12,7 +12,6 @@ import (
 // PresentationScope pins queries to the expected prompt/model provenance and
 // determines whether only complete public output may be returned.
 type PresentationScope struct {
-	PromptVersion       string
 	Language            string
 	TranslationLanguage string
 	PublicOnly          bool
@@ -131,7 +130,6 @@ func presentationArgs(scope PresentationScope) []any {
 		translationLanguage = scope.TranslationLanguage
 	}
 	return []any{
-		sql.Named("prompt", scope.PromptVersion),
 		sql.Named("language", language),
 		sql.Named("translation_language", translationLanguage),
 	}
@@ -346,13 +344,13 @@ func (s *Store) ListAdminIncidents(ctx context.Context, limit, offset int, sourc
 
 // ListAdminTranslations loads every requested incident/language pair in one
 // query so adding a registered translation does not introduce per-card reads.
-func (s *Store) ListAdminTranslations(ctx context.Context, incidentIDs []int64, languages []string, promptVersion string) ([]AdminTranslation, error) {
+func (s *Store) ListAdminTranslations(ctx context.Context, incidentIDs []int64, languages []string) ([]AdminTranslation, error) {
 	if len(incidentIDs) == 0 || len(languages) == 0 {
 		return nil, nil
 	}
 	incidentValues := make([]string, 0, len(incidentIDs))
 	languageValues := make([]string, 0, len(languages))
-	args := []any{sql.Named("prompt", promptVersion)}
+	args := []any{}
 	for index, incidentID := range incidentIDs {
 		name := fmt.Sprintf("incident_%d", index)
 		incidentValues = append(incidentValues, "(@"+name+")")

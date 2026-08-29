@@ -37,7 +37,7 @@
 
     {{if .Notice}}<div class="mt-6 rounded-md border px-4 py-3 font-semibold {{if .NoticeIsWarning}}border-alert/30 bg-alert-soft text-alert{{else}}border-civic/25 bg-paper text-civic{{end}}" role="status">{{.Notice}}</div>{{end}}
 
-    {{/* Canonical stages are numbered; the shared translation model is intentionally unnumbered. */}}
+    {{/* Canonical stages are numbered; independent registered processors are unnumbered. */}}
     <section class="mt-8" aria-labelledby="model-heading">
       <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Ollama configuration</p>
       <h2 id="model-heading" class="mt-1 font-serif text-2xl font-bold">Registered pipeline steps</h2>

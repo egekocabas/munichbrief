@@ -32,7 +32,7 @@ type testPresentationJob struct {
 func seedV2Presentation(t *testing.T, database *store.Store, presentation testPresentation, now time.Time) testPresentationJob {
 	t.Helper()
 	ctx := context.Background()
-	records, _, err := database.ListAdminIncidents(ctx, 1, 0, "fixture", store.PresentationScope{PromptVersion: processing.PipelineVersion, Language: "de"}, store.AdminIncidentsUnprocessed)
+	records, _, err := database.ListAdminIncidents(ctx, 1, 0, "fixture", store.PresentationScope{Language: "de"}, store.AdminIncidentsUnprocessed)
 	if err != nil || len(records) != 1 {
 		t.Fatalf("find unprocessed presentation target = %d/%v", len(records), err)
 	}
@@ -189,7 +189,6 @@ func testServer(t *testing.T, database *store.Store) *Server {
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	server, err := NewWithOptions(database, logger, Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
-		PromptVersion: processing.PipelineVersion,
 	})
 	if err != nil {
 		t.Fatalf("NewWithOptions() error = %v", err)
@@ -202,7 +201,6 @@ func adminTestServer(t *testing.T, database *store.Store, publicHosts []string) 
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	server, err := NewWithOptions(database, logger, Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
-		PromptVersion: processing.PipelineVersion,
 		SecureCookies: true, AdminEnabled: true, PublicHosts: publicHosts,
 		CanonicalOrigin: canonicalOriginForHosts(publicHosts),
 		Processor:       fakeProcessingRequester{database: database},

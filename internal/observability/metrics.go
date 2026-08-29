@@ -54,6 +54,11 @@ type postCounterKey struct {
 	counter   string
 }
 
+type postCounterMetric struct {
+	key   postCounterKey
+	value int64
+}
+
 // NewMetrics creates an empty registry for one process instance.
 func NewMetrics(version string, startedAt time.Time) *Metrics {
 	if version == "" {
@@ -152,6 +157,25 @@ func (m *Metrics) pipelineSteps() []string {
 	m.pipelineMu.RUnlock()
 	sort.Strings(steps)
 	return steps
+}
+
+func (m *Metrics) postCounterSnapshot() []postCounterMetric {
+	m.pipelineMu.RLock()
+	counters := make([]postCounterMetric, 0, len(m.postCounters))
+	for key, value := range m.postCounters {
+		counters = append(counters, postCounterMetric{key: key, value: value})
+	}
+	m.pipelineMu.RUnlock()
+	sort.Slice(counters, func(i, j int) bool {
+		if counters[i].key.processor != counters[j].key.processor {
+			return counters[i].key.processor < counters[j].key.processor
+		}
+		if counters[i].key.scope != counters[j].key.scope {
+			return counters[i].key.scope < counters[j].key.scope
+		}
+		return counters[i].key.counter < counters[j].key.counter
+	})
+	return counters
 }
 
 func (m *Metrics) RecordPipelineAttempt(step string) {
@@ -309,24 +333,9 @@ func (m *Metrics) write(writer io.Writer) {
 	}
 	fmt.Fprintln(writer, "# HELP munichbrief_post_processing_results Successful post-processing results matching a registered aggregate counter.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_post_processing_results gauge")
-	m.pipelineMu.RLock()
-	counterKeys := make([]postCounterKey, 0, len(m.postCounters))
-	for key := range m.postCounters {
-		counterKeys = append(counterKeys, key)
+	for _, counter := range m.postCounterSnapshot() {
+		fmt.Fprintf(writer, "munichbrief_post_processing_results{processor=%q,scope=%q,counter=%q} %d\n", counter.key.processor, counter.key.scope, counter.key.counter, counter.value)
 	}
-	sort.Slice(counterKeys, func(i, j int) bool {
-		if counterKeys[i].processor != counterKeys[j].processor {
-			return counterKeys[i].processor < counterKeys[j].processor
-		}
-		if counterKeys[i].scope != counterKeys[j].scope {
-			return counterKeys[i].scope < counterKeys[j].scope
-		}
-		return counterKeys[i].counter < counterKeys[j].counter
-	})
-	for _, key := range counterKeys {
-		fmt.Fprintf(writer, "munichbrief_post_processing_results{processor=%q,scope=%q,counter=%q} %d\n", key.processor, key.scope, key.counter, m.postCounters[key])
-	}
-	m.pipelineMu.RUnlock()
 	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_active_cycle Whether a staged processing cycle is active.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_pipeline_active_cycle gauge")
 	for index, kind := range []string{"scheduled", "manual", "continuation"} {

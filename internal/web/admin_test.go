@@ -80,6 +80,16 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	if invalidScope.Code != http.StatusBadRequest {
 		t.Fatalf("unknown focused category scope = %d, want 400", invalidScope.Code)
 	}
+	invalidModel := httptest.NewRecorder()
+	handler.ServeHTTP(invalidModel, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=translation&scope=en&target=all&model=missing%3A4b"))
+	if invalidModel.Code != http.StatusServiceUnavailable {
+		t.Fatalf("unavailable focused model = %d, want 503", invalidModel.Code)
+	}
+	unexpectedIncident := httptest.NewRecorder()
+	handler.ServeHTTP(unexpectedIncident, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=translation&scope=en&target=all&incident_id=1&model=qwen3.5%3A4b"))
+	if unexpectedIncident.Code != http.StatusBadRequest {
+		t.Fatalf("incident ID on all target = %d, want 400", unexpectedIncident.Code)
+	}
 	unconfirmedFocused := httptest.NewRecorder()
 	handler.ServeHTTP(unconfirmedFocused, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "processor=translation&scope=all&target=all&model=qwen3.5%3A4b"))
 	if unconfirmedFocused.Code != http.StatusBadRequest {
@@ -171,7 +181,7 @@ func TestAdminProcessingReturnsUnavailableWhenAIIsDisabled(t *testing.T) {
 	database := fixtureStore(t)
 	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
-		PromptVersion: processing.PipelineVersion, AdminEnabled: true,
+		AdminEnabled: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -280,7 +290,7 @@ func TestAdminDistinguishesUnavailableAndMissingPreferredModels(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			database := fixtureStore(t)
 			server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
-				PageSize: 20, SourceMode: "fixture", PresentationMode: "review", PromptVersion: processing.PipelineVersion,
+				PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
 				AdminEnabled: true, Processor: fakeProcessingRequester{database: database, status: &test.status},
 			})
 			if err != nil {
@@ -306,7 +316,7 @@ func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	server, err := NewWithOptions(database, logger, Options{
 		PageSize: 2, SourceMode: "fixture", PresentationMode: "public",
-		PromptVersion: processing.PipelineVersion, AdminEnabled: true,
+		AdminEnabled: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -336,15 +346,11 @@ func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
 		}
 	}
 
-	expectedUnprocessed, _, err := database.ListAdminIncidents(ctx, 2, 2, "fixture", store.PresentationScope{
-		PromptVersion: processing.PipelineVersion,
-	}, store.AdminIncidentsUnprocessed)
+	expectedUnprocessed, _, err := database.ListAdminIncidents(ctx, 2, 2, "fixture", store.PresentationScope{}, store.AdminIncidentsUnprocessed)
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedAll, _, err := database.ListAdminIncidents(ctx, 2, 4, "fixture", store.PresentationScope{
-		PromptVersion: processing.PipelineVersion,
-	}, store.AdminIncidentsAll)
+	expectedAll, _, err := database.ListAdminIncidents(ctx, 2, 4, "fixture", store.PresentationScope{}, store.AdminIncidentsAll)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -449,8 +455,8 @@ func TestAdminPipelineHistoryCombinesCanonicalAndPostProcessingJobs(t *testing.T
 	}
 	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
 		PageSize: 2, SourceMode: "fixture", PresentationMode: "review",
-		PromptVersion: processing.PipelineVersion, AdminEnabled: true,
-		Processor: fakeProcessingRequester{database: database},
+		AdminEnabled: true,
+		Processor:    fakeProcessingRequester{database: database},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -515,7 +521,7 @@ func TestAdminReportsStoreErrors(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	retryServer, err := NewWithOptions(database, logger, Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
-		PromptVersion: processing.PipelineVersion, AdminEnabled: true, Processor: fakeProcessingRequester{err: errors.New("processing unavailable")},
+		AdminEnabled: true, Processor: fakeProcessingRequester{err: errors.New("processing unavailable")},
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -242,9 +242,8 @@ func (s *Server) sitemap(response http.ResponseWriter, request *http.Request) {
 	urls := make([]sitemapURL, 0)
 	for _, definition := range readerLanguages {
 		links, err := s.store.ListPublicIncidentLinks(request.Context(), s.options.SourceMode, store.PresentationScope{
-			PromptVersion: s.options.PromptVersion,
-			Language:      definition.Code,
-			PublicOnly:    true,
+			Language:   definition.Code,
+			PublicOnly: true,
 		})
 		if err != nil {
 			s.internalError(response, request, "list sitemap incidents", err)

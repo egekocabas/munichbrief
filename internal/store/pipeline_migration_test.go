@@ -137,14 +137,25 @@ func TestUnifiedPostProcessingMigrationPreservesAuditAndCutsReadersToV2(t *testi
 	if err := database.db.QueryRowContext(ctx, `SELECT status FROM post_processing_jobs WHERE id=2`).Scan(&recovered); err != nil || recovered != "pending" {
 		t.Fatalf("running migration recovery = %q/%v", recovered, err)
 	}
-	record, err := database.GetPresentationIncident(ctx, 1, PresentationScope{PromptVersion: PipelineVersion, Language: "en", TranslationLanguage: "en", PublicOnly: true})
+	record, err := database.GetPresentationIncident(ctx, 1, PresentationScope{Language: "en", TranslationLanguage: "en", PublicOnly: true})
 	if err != nil || record.AITranslatedTitle != "English 3" || record.AICategory != "other" {
 		t.Fatalf("v2 result after migration = %#v/%v", record, err)
 	}
-	if _, err := database.GetPresentationIncident(ctx, 2, PresentationScope{PromptVersion: PipelineVersion, Language: "de", PublicOnly: true}); !errors.Is(err, ErrNotFound) {
+	if _, err := database.GetPresentationIncident(ctx, 2, PresentationScope{Language: "de", PublicOnly: true}); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("legacy-only incident remained public: %v", err)
 	}
-	_, unprocessed, err := database.ListAdminIncidents(ctx, 20, 0, "fixture", PresentationScope{PromptVersion: PipelineVersion, Language: "de"}, AdminIncidentsUnprocessed)
+	history, err := database.ListPipelineHistory(ctx, "fixture", 50, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	importedFound := false
+	for _, entry := range history.Entries {
+		importedFound = importedFound || entry.Kind == pipelineHistoryKindPostProcessing && entry.RequestKind == "imported" && entry.ProcessorKey == "translation"
+	}
+	if !importedFound {
+		t.Fatal("migrated imported attempt is missing from audit history")
+	}
+	_, unprocessed, err := database.ListAdminIncidents(ctx, 20, 0, "fixture", PresentationScope{Language: "de"}, AdminIncidentsUnprocessed)
 	if err != nil || unprocessed != 1 {
 		t.Fatalf("legacy-only review state = %d/%v", unprocessed, err)
 	}

@@ -27,7 +27,7 @@ func TestPresentationSelectionRequiresCompleteCurrentV2(t *testing.T) {
 		"title_de": "V1 DE", "summary_de": "V1 summary.", "title_en": "V1 EN", "summary_en": "V1 English summary.",
 		"category": "other", "privacy_status": "safe", "privacy_flags": "[]",
 	})
-	record, err := database.GetPresentationIncident(ctx, incidentID, PresentationScope{PromptVersion: PipelineVersion, TranslationLanguage: "en"})
+	record, err := database.GetPresentationIncident(ctx, incidentID, PresentationScope{TranslationLanguage: "en"})
 	if err != nil || record.HasAI {
 		t.Fatalf("v1 audit run %d selected for readers: %#v, err=%v", v1, record, err)
 	}
@@ -37,7 +37,7 @@ func TestPresentationSelectionRequiresCompleteCurrentV2(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	record, err = database.GetPresentationIncident(ctx, incidentID, PresentationScope{PromptVersion: PipelineVersion, TranslationLanguage: "en"})
+	record, err = database.GetPresentationIncident(ctx, incidentID, PresentationScope{TranslationLanguage: "en"})
 	if err != nil || record.HasAI {
 		t.Fatalf("incomplete v2 became selectable: %#v, err=%v", record, err)
 	}
@@ -47,7 +47,7 @@ func TestPresentationSelectionRequiresCompleteCurrentV2(t *testing.T) {
 		"category": "traffic", "event_start_date": "2026-08-26",
 		"report_kind": "incident", "public_assistance_status": "not_requested", "public_assistance_types": "[]", "privacy_status": "safe", "privacy_flags": "[]",
 	})
-	record, err = database.GetPresentationIncident(ctx, incidentID, PresentationScope{PromptVersion: PipelineVersion, TranslationLanguage: "en"})
+	record, err = database.GetPresentationIncident(ctx, incidentID, PresentationScope{TranslationLanguage: "en"})
 	if err != nil || record.AIPipelineVersion != PipelineVersion || record.AITranslatedTitle != "V2 EN" || record.AIEventStartDate != "2026-08-26" {
 		t.Fatalf("completed v2 selection = %#v, err=%v", record, err)
 	}
@@ -56,10 +56,10 @@ func TestPresentationSelectionRequiresCompleteCurrentV2(t *testing.T) {
 		"title_de": "New V2 DE", "summary_de": "New V2 summary.", "category": "traffic",
 		"report_kind": "incident", "public_assistance_status": "not_requested", "public_assistance_types": "[]", "privacy_status": "safe", "privacy_flags": "[]",
 	})
-	if _, err := database.GetPresentationIncident(ctx, incidentID, PresentationScope{PromptVersion: PipelineVersion, Language: "en", TranslationLanguage: "en", PublicOnly: true}); !errors.Is(err, ErrNotFound) {
+	if _, err := database.GetPresentationIncident(ctx, incidentID, PresentationScope{Language: "en", TranslationLanguage: "en", PublicOnly: true}); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("older v2 translation remained a cross-run fallback: %v", err)
 	}
-	translations, err := database.ListAdminTranslations(ctx, []int64{incidentID}, []string{"en"}, PipelineVersion)
+	translations, err := database.ListAdminTranslations(ctx, []int64{incidentID}, []string{"en"})
 	if err != nil || len(translations) != 1 || translations[0].Title != "" {
 		t.Fatalf("admin selected an older v2 translation: %#v/%v", translations, err)
 	}
