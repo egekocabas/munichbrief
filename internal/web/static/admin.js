@@ -156,6 +156,14 @@
       } else {
         setText(card.querySelector("[data-post-processing-elapsed]"), "No running job");
       }
+      const queueStartedAt = processor.queue_started_at && new Date(processor.queue_started_at);
+      if (queueStartedAt && !Number.isNaN(queueStartedAt.getTime())) {
+        const seconds = Math.max(0, Math.floor((new Date(status.generated_at) - queueStartedAt) / 1000));
+        const minutes = Math.floor(seconds / 60);
+        setText(card.querySelector("[data-post-processing-total-elapsed]"), `Total elapsed ${minutes}m ${seconds % 60}s`);
+      } else {
+        setText(card.querySelector("[data-post-processing-total-elapsed]"), "No active queue");
+      }
     }
     if (events) {
       events.replaceChildren(...(queue.recent_events || []).map((event) => {

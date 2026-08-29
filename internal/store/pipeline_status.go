@@ -132,6 +132,7 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 		COALESCE(SUM(CASE WHEN jobs.status='failed' THEN 1 ELSE 0 END),0),
 		COALESCE(SUM(CASE WHEN jobs.status='skipped' THEN 1 ELSE 0 END),0),
 		COALESCE(SUM(CASE WHEN jobs.status='succeeded' THEN 1 ELSE 0 END),0),
+		COALESCE(MIN(CASE WHEN jobs.status IN ('pending','running') THEN jobs.created_at END),''),
 		COALESCE(MIN(CASE WHEN jobs.status='running' THEN jobs.started_at END),'')
 		FROM post_processing_scopes scopes LEFT JOIN post_processing_jobs jobs
 		ON jobs.processor_key=scopes.processor_key AND jobs.scope_key=scopes.scope_key
@@ -141,10 +142,19 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 	}
 	for postRows.Next() {
 		var stat PostProcessingQueueStats
+		var queueStartedAt string
 		var runningStartedAt string
-		if err := postRows.Scan(&stat.ProcessorKey, &stat.ScopeKey, &stat.Pending, &stat.Running, &stat.Retrying, &stat.NeedsReview, &stat.Failed, &stat.Skipped, &stat.Succeeded, &runningStartedAt); err != nil {
+		if err := postRows.Scan(&stat.ProcessorKey, &stat.ScopeKey, &stat.Pending, &stat.Running, &stat.Retrying, &stat.NeedsReview, &stat.Failed, &stat.Skipped, &stat.Succeeded, &queueStartedAt, &runningStartedAt); err != nil {
 			postRows.Close()
 			return snapshot, err
+		}
+		if queueStartedAt != "" {
+			value, err := time.Parse(time.RFC3339Nano, queueStartedAt)
+			if err != nil {
+				postRows.Close()
+				return snapshot, fmt.Errorf("parse %s/%s queue start: %w", stat.ProcessorKey, stat.ScopeKey, err)
+			}
+			stat.QueueStartedAt = &value
 		}
 		if runningStartedAt != "" {
 			value, err := time.Parse(time.RFC3339Nano, runningStartedAt)

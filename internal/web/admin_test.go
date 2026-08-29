@@ -543,7 +543,7 @@ func TestAdminPipelineHistoryCombinesCanonicalAndPostProcessingJobs(t *testing.T
 	}
 	dashboard := httptest.NewRecorder()
 	handler.ServeHTTP(dashboard, httptest.NewRequest(http.MethodGet, "/admin", nil))
-	if dashboard.Code != http.StatusOK || !strings.Contains(dashboard.Body.String(), "category_verification/default") || !strings.Contains(dashboard.Body.String(), "translation/en") || !strings.Contains(dashboard.Body.String(), "data-post-processing-elapsed") || !strings.Contains(dashboard.Body.String(), "Cycle #"+formatID(result.CycleID)) {
+	if dashboard.Code != http.StatusOK || !strings.Contains(dashboard.Body.String(), "category_verification/default") || !strings.Contains(dashboard.Body.String(), "translation/en") || !strings.Contains(dashboard.Body.String(), "data-post-processing-elapsed") || !strings.Contains(dashboard.Body.String(), "data-post-processing-total-elapsed") || !strings.Contains(dashboard.Body.String(), "Cycle #"+formatID(result.CycleID)) {
 		t.Fatalf("admin dashboard post-processing history = %d/%q", dashboard.Code, dashboard.Body.String())
 	}
 	status := httptest.NewRecorder()
@@ -712,7 +712,7 @@ func TestAdminShowsUnavailableSourceVerificationAsSkipped(t *testing.T) {
 
 	adminScript := httptest.NewRecorder()
 	server.Handler().ServeHTTP(adminScript, httptest.NewRequest(http.MethodGet, staticAssets["admin.js"].path, nil))
-	for _, expected := range []string{"event.status_reason", "event.status_detail", "Original incident text unavailable"} {
+	for _, expected := range []string{"event.status_reason", "event.status_detail", "Original incident text unavailable", "processor.queue_started_at", "Total elapsed"} {
 		if adminScript.Code != http.StatusOK || !strings.Contains(adminScript.Body.String(), expected) {
 			t.Errorf("live admin event renderer does not preserve %q", expected)
 		}

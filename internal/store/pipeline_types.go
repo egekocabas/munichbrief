@@ -118,6 +118,7 @@ type PostProcessingQueueStats struct {
 	Failed           int            `json:"failed"`
 	Skipped          int            `json:"skipped"`
 	Succeeded        int            `json:"succeeded"`
+	QueueStartedAt   *time.Time     `json:"queue_started_at,omitempty"`
 	RunningStartedAt *time.Time     `json:"running_started_at,omitempty"`
 	Counters         map[string]int `json:"counters,omitempty"`
 }
