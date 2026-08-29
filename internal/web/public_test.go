@@ -7,12 +7,10 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"strings"
+	"testing"
 	"testing/fstest"
 	"time"
-
-	"testing"
 
 	"github.com/egekocabas/munichbrief/internal/domain"
 	"github.com/egekocabas/munichbrief/internal/processing"
@@ -145,11 +143,7 @@ func TestReaderFooterShowsDevelopmentBuildPlaceholder(t *testing.T) {
 
 func TestTemplatesEscapeIncidentContent(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "munichbrief.db"))
-	if err != nil {
-		t.Fatalf("Open() error = %v", err)
-	}
-	t.Cleanup(func() { database.Close() })
+	database := openTestStore(t)
 
 	documents := []domain.SourceDocument{{
 		ExternalID:      "hostile-fixture",
@@ -501,11 +495,7 @@ func TestIncidentTimeFormattingSupportsClockDateAndDayPart(t *testing.T) {
 
 func TestLiveTimelineFallbackAndIncidentAttribution(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "munichbrief.db"))
-	if err != nil {
-		t.Fatalf("Open() error = %v", err)
-	}
-	t.Cleanup(func() { database.Close() })
+	database := openTestStore(t)
 	now := time.Date(2026, time.August, 22, 10, 0, 0, 0, time.UTC)
 	documents := []domain.SourceDocument{
 		{
