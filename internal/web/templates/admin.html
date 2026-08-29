@@ -85,10 +85,10 @@
     </section>
 
     {{/* Live operational state keeps canonical and post-processing queues distinct. */}}
-    <section class="mt-8 rounded-lg border border-rule bg-paper p-5" aria-labelledby="queue-heading" data-pipeline-status data-status-url="/api/admin/ai/status">
+    <section class="mt-8 rounded-lg border border-rule bg-paper p-5" aria-labelledby="queue-heading" {{if .ProcessingEnabled}}data-pipeline-status data-status-url="/api/admin/ai/status"{{end}}>
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div><p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Live operations</p><h2 id="queue-heading" class="mt-1 font-serif text-2xl font-bold">Current cycle</h2></div>
-        <p class="rounded-full border border-rule bg-white px-3 py-1 text-sm font-bold" data-live-connection>Connecting…</p>
+        <p class="rounded-full border border-rule bg-white px-3 py-1 text-sm font-bold" data-live-connection>{{if .ProcessingEnabled}}Connecting…{{else}}Disabled{{end}}</p>
       </div>
       {{if .ProcessingEnabled}}
       <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-rule bg-newsprint/60 p-4">
@@ -109,7 +109,7 @@
         </div>
       </div>
       {{end}}
-      <p class="mt-4 text-lg font-bold" data-worker-state>{{if .Runtime.Queue.ActiveCycle}}Cycle #{{.Runtime.Queue.ActiveCycle.ID}} · {{.Runtime.Queue.ActiveCycle.Kind}}{{else}}Idle{{end}}</p>
+      <p class="mt-4 text-lg font-bold" data-worker-state>{{if not .ProcessingEnabled}}AI processing unavailable{{else if .Runtime.Queue.ActiveCycle}}Cycle #{{.Runtime.Queue.ActiveCycle.ID}} · {{.Runtime.Queue.ActiveCycle.Kind}}{{else}}Idle{{end}}</p>
       <p class="mt-1 text-sm text-muted" data-active-step>{{if .Runtime.Queue.ActiveStepKey}}{{.Runtime.Queue.ActiveStepKey}} · {{.Runtime.Queue.ActiveModel}}{{else}}No active model{{end}}</p>
       <p class="mt-1 text-sm text-muted" data-cycle-elapsed>{{if .Runtime.Queue.ActiveCycle}}Elapsed time updates live{{else}}No active cycle{{end}}</p>
       {{if .Runtime.Queue.ScheduledAfter}}<p class="mt-2 rounded-md border border-rule bg-newsprint/60 px-3 py-2 text-sm text-muted"><strong class="text-ink">Automatic v2 cutover:</strong> <time datetime="{{.Runtime.Queue.ScheduledAfter.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime "en" .Runtime.Queue.ScheduledAfter}}</time>. Earlier incidents remain on their completed presentation unless manually reprocessed.</p>{{end}}
@@ -140,7 +140,7 @@
         <div class="flex flex-wrap items-center justify-between gap-3"><h3 class="text-xs font-extrabold uppercase tracking-wider text-muted">Recent safe events</h3><a class="text-sm font-bold text-civic no-underline hover:text-civic-dark" href="/admin/history">View full history →</a></div>
         <ol class="mt-2 grid gap-1 text-sm text-muted" data-recent-events>{{range .Runtime.Queue.RecentEvents}}<li>{{if .CycleID}}Cycle #{{.CycleID}}{{else}}Independent{{end}} · incident #{{.IncidentID}} · {{.ExecutionKey}} · {{pipelineStatusLabel .Status .FailureKind .StatusReason}}{{if .StatusReason}} ({{postProcessingStatusReason .StatusReason .StatusDetail}}){{else if .FailureKind}} ({{postProcessingStatusReason .FailureKind ""}}){{end}}</li>{{else}}<li>No pipeline events yet.</li>{{end}}</ol>
       </div>
-      <p class="mt-4 text-sm font-semibold {{if and .Runtime.WindowOpen .Runtime.AutomaticProcessingEnabled}}text-emerald-700{{else}}text-muted{{end}}" data-window-state>{{if not .Runtime.AutomaticProcessingEnabled}}{{if .Runtime.WindowOpen}}Processing window open{{else}}Processing window closed{{end}} · automatic processing disabled · manual requests remain available{{else if .Runtime.WindowOpen}}Processing window open{{else}}Processing window closed{{end}}</p>
+      <p class="mt-4 text-sm font-semibold {{if and .Runtime.WindowOpen .Runtime.AutomaticProcessingEnabled}}text-emerald-700{{else}}text-muted{{end}}" data-window-state>{{if not .ProcessingEnabled}}Application-level AI processing is disabled; automatic and manual requests are unavailable{{else if not .Runtime.AutomaticProcessingEnabled}}{{if .Runtime.WindowOpen}}Processing window open{{else}}Processing window closed{{end}} · automatic processing disabled · manual requests remain available{{else if .Runtime.WindowOpen}}Processing window open{{else}}Processing window closed{{end}}</p>
     </section>
 
     {{/* Manual controls freeze the selected models into each requested job. */}}

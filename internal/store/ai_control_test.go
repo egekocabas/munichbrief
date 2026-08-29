@@ -296,3 +296,61 @@ func TestCancelAllAIWorkIsAtomicAuditableAndIdempotent(t *testing.T) {
 		t.Fatalf("idempotent cancel = %#v/%v", again, err)
 	}
 }
+
+func TestCancelAllPreservesCanonicalAndPostProcessingCompletionsThatCommitFirst(t *testing.T) {
+	ctx := context.Background()
+	database, err := Open(ctx, filepath.Join(t.TempDir(), "cancel-all-completion-first.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 15, 15, 0, 0, time.UTC)
+	insertPipelineDocuments(t, ctx, database, now, "one")
+	cycle, found, err := database.ActivateNextPipelineCycle(ctx, "fixture", testPipelinePlans(), true, now)
+	if err != nil || !found {
+		t.Fatalf("activate cycle = %#v/%t/%v", cycle, found, err)
+	}
+	canonical, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 0, now)
+	if err != nil || !found {
+		t.Fatalf("claim canonical job = %#v/%t/%v", canonical, found, err)
+	}
+	if err := database.CompletePipelineJob(ctx, canonical, []PipelineValue{{Kind: "category", Value: "other"}}, canonical.ModelIdentity, HashPipelineInput("accepted"), now.Add(time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	completedRun := insertCompletedPresentationRun(t, ctx, database, canonical.IncidentID, canonical.SourceHash, PipelineVersion, now, map[string]string{"title_de": "Titel", "summary_de": "Zusammenfassung."})
+	postPlan := PostProcessingPlan{ProcessorKey: "translation", ScopeKey: "en", PromptVersion: "translation-v1", Model: "translate:4b", InputKinds: []string{"title_de", "summary_de"}}
+	if queued, err := database.QueuePostProcessingForRun(ctx, completedRun, []PostProcessingPlan{postPlan}, "manual", false, now); err != nil || queued != 1 {
+		t.Fatalf("queue post-processing = %d/%v", queued, err)
+	}
+	postJob, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", postPlan.PromptVersion, []string{"title", "summary"}, postPlan.InputKinds...), false, nil, now)
+	if err != nil || !found {
+		t.Fatalf("claim post-processing = %#v/%t/%v", postJob, found, err)
+	}
+	if err := database.CompletePostProcessingJob(ctx, postJob, []PipelineValue{{Kind: "title", Value: "Accepted"}, {Kind: "summary", Value: "Accepted summary."}}, postJob.ModelIdentity, postJob.InputHash, now.Add(time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	canceled, err := database.CancelAllAIWork(ctx, now.Add(2*time.Second))
+	if err != nil || canceled.Cycles != 1 || canceled.CanonicalJobs != 1 || canceled.PostProcessingJobs != 0 {
+		t.Fatalf("completion-first cancel all = %#v/%v", canceled, err)
+	}
+	var canonicalStatus, postStatus, completedRunStatus string
+	var canonicalValues, postValues int
+	if err := database.db.QueryRowContext(ctx, `SELECT status FROM processing_step_jobs WHERE id=?`, canonical.ID).Scan(&canonicalStatus); err != nil {
+		t.Fatal(err)
+	}
+	if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM presentation_values WHERE presentation_run_id=?`, canonical.PresentationRunID).Scan(&canonicalValues); err != nil {
+		t.Fatal(err)
+	}
+	if err := database.db.QueryRowContext(ctx, `SELECT status FROM post_processing_jobs WHERE id=?`, postJob.ID).Scan(&postStatus); err != nil {
+		t.Fatal(err)
+	}
+	if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM post_processing_values WHERE job_id=?`, postJob.ID).Scan(&postValues); err != nil {
+		t.Fatal(err)
+	}
+	if err := database.db.QueryRowContext(ctx, `SELECT status FROM presentation_runs WHERE id=?`, completedRun).Scan(&completedRunStatus); err != nil {
+		t.Fatal(err)
+	}
+	if canonicalStatus != "succeeded" || canonicalValues != 1 || postStatus != "succeeded" || postValues != 2 || completedRunStatus != "complete" {
+		t.Fatalf("completion-first preservation = canonical:%s/%d post:%s/%d run:%s", canonicalStatus, canonicalValues, postStatus, postValues, completedRunStatus)
+	}
+}

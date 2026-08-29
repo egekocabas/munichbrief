@@ -304,10 +304,30 @@ func TestAdminProcessingReturnsUnavailableWhenAIIsDisabled(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	response := httptest.NewRecorder()
-	server.Handler().ServeHTTP(response, formRequest(http.MethodPost, "/api/admin/ai/process-all-now", "confirmed=true"))
-	if response.Code != http.StatusServiceUnavailable {
-		t.Fatalf("AI-disabled processing status = %d, want 503", response.Code)
+	handler := server.Handler()
+	page := httptest.NewRecorder()
+	handler.ServeHTTP(page, httptest.NewRequest(http.MethodGet, "/admin", nil))
+	if page.Code != http.StatusOK || !strings.Contains(page.Body.String(), "Application-level AI processing is disabled; automatic and manual requests are unavailable") || !strings.Contains(page.Body.String(), "AI processing unavailable") || strings.Contains(page.Body.String(), "data-pipeline-status") {
+		t.Fatalf("AI-disabled admin page = %d/%q", page.Code, page.Body.String())
+	}
+	for _, test := range []struct {
+		method, path, body string
+	}{
+		{method: http.MethodPost, path: "/api/admin/ai/process-all-now", body: "confirmed=true"},
+		{method: http.MethodPost, path: "/api/admin/ai/automatic-processing", body: "enabled=false"},
+		{method: http.MethodPost, path: "/api/admin/ai/cancel-all", body: "confirmed=true"},
+		{method: http.MethodPost, path: "/api/admin/ai/post-processing/process", body: "confirmed=true&processor=translation&scope=en&target=all&model=qwen3.5%3A4b"},
+	} {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, formRequest(test.method, test.path, test.body))
+		if response.Code != http.StatusServiceUnavailable {
+			t.Errorf("AI-disabled %s status = %d, want 503", test.path, response.Code)
+		}
+	}
+	status := httptest.NewRecorder()
+	handler.ServeHTTP(status, httptest.NewRequest(http.MethodGet, "/api/admin/ai/status", nil))
+	if status.Code != http.StatusServiceUnavailable {
+		t.Fatalf("AI-disabled status endpoint = %d, want 503", status.Code)
 	}
 }
 

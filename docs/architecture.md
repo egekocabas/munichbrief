@@ -144,6 +144,9 @@ automatic processing is disabled, no new scheduled canonical or post-processing
 request starts even inside the window; explicit admin and CLI work remains
 eligible. An automatic request already in flight finishes, then its frozen cycle
 is suspended without losing accepted results or its window authorization.
+The same boundary suspension applies when that request ends in a retryable
+provider or configuration failure, so a disabled cycle never retains the
+running-cycle lease while it waits.
 Re-enabling wakes the worker and lets an authorized cycle resume even after the
 window closes.
 

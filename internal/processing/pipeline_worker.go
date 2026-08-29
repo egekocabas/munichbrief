@@ -441,8 +441,11 @@ func (w *PipelineWorker) processAvailable(ctx context.Context) {
 			w.logger.Error("activate staged AI cycle", "error", err)
 			return
 		}
-		if found && w.processCycle(ctx, cycle) {
-			continue
+		if found {
+			processed := w.processCycle(ctx, cycle)
+			if processed || w.suspendDisabledAutomaticCycle(ctx, cycle) {
+				continue
+			}
 		}
 
 		processedPostJob := false
@@ -526,23 +529,8 @@ func (w *PipelineWorker) processAvailable(ctx context.Context) {
 func (w *PipelineWorker) processCycle(ctx context.Context, cycle store.PipelineCycle) bool {
 	steps := RegisteredSteps()
 	for ctx.Err() == nil {
-		if cycle.Kind != "manual" {
-			control, err := w.repository.AIControl(ctx)
-			if err != nil {
-				w.logger.Error("read automatic AI processing state", "cycle_id", cycle.ID, "error", err)
-				return false
-			}
-			if !control.AutomaticProcessingEnabled {
-				suspended, err := w.repository.SuspendAutomaticCycle(ctx, cycle.ID, w.clock())
-				if err != nil {
-					w.logger.Error("suspend automatic AI cycle", "cycle_id", cycle.ID, "error", err)
-					return false
-				}
-				if suspended {
-					w.logger.Info("automatic AI cycle suspended", "cycle_id", cycle.ID, "kind", cycle.Kind)
-				}
-				return true
-			}
+		if w.suspendDisabledAutomaticCycle(ctx, cycle) {
+			return true
 		}
 		stepKey, model, err := w.repository.PipelineStepModel(ctx, cycle.ID, cycle.ActiveStep)
 		if err != nil {
@@ -591,23 +579,8 @@ func (w *PipelineWorker) processCycle(ctx context.Context, cycle store.PipelineC
 			continue
 		}
 		w.executionMu.Unlock()
-		if cycle.Kind != "manual" {
-			control, err := w.repository.AIControl(ctx)
-			if err != nil {
-				w.logger.Error("read automatic AI processing state", "cycle_id", cycle.ID, "error", err)
-				return false
-			}
-			if !control.AutomaticProcessingEnabled {
-				suspended, err := w.repository.SuspendAutomaticCycle(ctx, cycle.ID, w.clock())
-				if err != nil {
-					w.logger.Error("suspend automatic AI cycle", "cycle_id", cycle.ID, "error", err)
-					return false
-				}
-				if suspended {
-					w.logger.Info("automatic AI cycle suspended", "cycle_id", cycle.ID, "kind", cycle.Kind)
-				}
-				return true
-			}
+		if w.suspendDisabledAutomaticCycle(ctx, cycle) {
+			return true
 		}
 		advance, err := w.repository.AdvancePipelineCycle(ctx, cycle, len(steps), w.clock())
 		if err != nil {
@@ -629,6 +602,31 @@ func (w *PipelineWorker) processCycle(ctx context.Context, cycle store.PipelineC
 		return false
 	}
 	return false
+}
+
+// suspendDisabledAutomaticCycle enforces the durable switch after every way a
+// cycle can leave a job boundary, including provider failure and circuit paths.
+func (w *PipelineWorker) suspendDisabledAutomaticCycle(ctx context.Context, cycle store.PipelineCycle) bool {
+	if cycle.Kind == "manual" || ctx.Err() != nil {
+		return false
+	}
+	control, err := w.repository.AIControl(ctx)
+	if err != nil {
+		w.logger.Error("read automatic AI processing state", "cycle_id", cycle.ID, "error", err)
+		return false
+	}
+	if control.AutomaticProcessingEnabled {
+		return false
+	}
+	suspended, err := w.repository.SuspendAutomaticCycle(ctx, cycle.ID, w.clock())
+	if err != nil {
+		w.logger.Error("suspend automatic AI cycle", "cycle_id", cycle.ID, "error", err)
+		return false
+	}
+	if suspended {
+		w.logger.Info("automatic AI cycle suspended", "cycle_id", cycle.ID, "kind", cycle.Kind)
+	}
+	return true
 }
 
 func (w *PipelineWorker) yieldBlockedForManual(ctx context.Context, cycle store.PipelineCycle) bool {

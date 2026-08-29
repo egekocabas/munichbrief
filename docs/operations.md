@@ -57,8 +57,10 @@ switch. Disabling it overrides an open window for scheduled canonical work and
 all registered post-processors, but does not block explicit admin or
 `ai-process` requests. A running automatic Ollama request is allowed to finish;
 the cycle then waits with its frozen models, prompts, progress, and original
-window authorization. Re-enabling wakes the worker, and an already-authorized
-cycle may resume outside the window under the same finish-after-close rule.
+window authorization, including when the request ends in a retryable provider
+or model-configuration failure. Re-enabling wakes the worker, and an
+already-authorized cycle may resume outside the window under the same
+finish-after-close rule.
 If a scheduled or continuation cycle is waiting on a retry or circuit breaker,
 a queued explicit canonical request takes its running lease and the automatic
 cycle resumes afterward with its accepted results intact.
