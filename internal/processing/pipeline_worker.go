@@ -301,6 +301,7 @@ func (w *PipelineWorker) Status(ctx context.Context) (PipelineRuntimeStatus, err
 	if err != nil {
 		return PipelineRuntimeStatus{}, err
 	}
+	queue.PostProcessing = w.postProcessors.OrderedQueueStats(queue.PostProcessing)
 	w.mu.RLock()
 	available := w.available
 	w.mu.RUnlock()
@@ -780,6 +781,7 @@ func (w *PipelineWorker) publishSnapshot(ctx context.Context) {
 		w.logger.Error("read staged pipeline snapshot", "error", err)
 		return
 	}
+	snapshot.PostProcessing = w.postProcessors.OrderedQueueStats(snapshot.PostProcessing)
 	w.observer.SetPipelineSnapshot(snapshot)
 }
 

@@ -177,6 +177,7 @@ func (p fakeProcessingRequester) Status(ctx context.Context) (processing.Pipelin
 		return processing.PipelineRuntimeStatus{}, err
 	}
 	queue, err := p.database.PipelineSnapshot(ctx, "fixture", processing.StepKeys(), nil, time.Now())
+	queue.PostProcessing = processing.DefaultPostProcessorRegistry().OrderedQueueStats(queue.PostProcessing)
 	return processing.PipelineRuntimeStatus{GeneratedAt: time.Now(), WindowOpen: true, ScheduledReady: models.Ready, ProcessorAvailable: true, Models: models, Queue: queue}, err
 }
 

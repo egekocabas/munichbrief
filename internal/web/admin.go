@@ -8,7 +8,6 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -45,7 +44,6 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 			s.internalError(response, request, "read staged AI runtime status", err)
 			return
 		}
-		orderPostProcessingQueue(&runtime)
 	}
 	unprocessed, unprocessedTotal, err := s.store.ListAdminIncidents(
 		request.Context(), s.options.PageSize, (unprocessedPage-1)*s.options.PageSize,
@@ -525,43 +523,12 @@ func (s *Server) pipelineStatus(response http.ResponseWriter, request *http.Requ
 		s.internalError(response, request, "read staged AI status", err)
 		return
 	}
-	orderPostProcessingQueue(&status)
 	response.Header().Set("Content-Type", "application/json; charset=utf-8")
 	response.Header().Set("Cache-Control", "private, no-store")
 	response.Header().Set("X-Content-Type-Options", "nosniff")
 	if err := json.NewEncoder(response).Encode(status); err != nil {
 		s.logger.ErrorContext(request.Context(), "encode staged AI status", "error", err)
 	}
-}
-
-// orderPostProcessingQueue keeps operational queue cards aligned with the
-// registry order exposed by the processor instead of the store's neutral key
-// order. Unknown persisted scopes remain visible after registered scopes.
-func orderPostProcessingQueue(status *processing.PipelineRuntimeStatus) {
-	ranks := make(map[string]int)
-	rank := 0
-	for _, processor := range status.Models.PostProcessors {
-		for _, scope := range processor.Scopes {
-			ranks[processor.Key+"\x00"+scope.Key] = rank
-			rank++
-		}
-	}
-	sort.SliceStable(status.Queue.PostProcessing, func(i, j int) bool {
-		left := status.Queue.PostProcessing[i]
-		right := status.Queue.PostProcessing[j]
-		leftRank, leftRegistered := ranks[left.ProcessorKey+"\x00"+left.ScopeKey]
-		rightRank, rightRegistered := ranks[right.ProcessorKey+"\x00"+right.ScopeKey]
-		if leftRegistered != rightRegistered {
-			return leftRegistered
-		}
-		if leftRegistered {
-			return leftRank < rightRank
-		}
-		if left.ProcessorKey == right.ProcessorKey {
-			return left.ScopeKey < right.ScopeKey
-		}
-		return left.ProcessorKey < right.ProcessorKey
-	})
 }
 
 type adminPage struct {
