@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"errors"
 	"path/filepath"
 	"testing"
 	"time"
@@ -49,6 +50,18 @@ func TestPresentationSelectionRequiresCompleteCurrentV2(t *testing.T) {
 	record, err = database.GetPresentationIncident(ctx, incidentID, PresentationScope{PromptVersion: PipelineVersion, TranslationLanguage: "en"})
 	if err != nil || record.AIPipelineVersion != PipelineVersion || record.AITranslatedTitle != "V2 EN" || record.AIEventStartDate != "2026-08-26" {
 		t.Fatalf("completed v2 selection = %#v, err=%v", record, err)
+	}
+
+	insertCompletedPresentationRun(t, ctx, database, incidentID, sourceHash, PipelineVersion, now.Add(4*time.Minute), map[string]string{
+		"title_de": "New V2 DE", "summary_de": "New V2 summary.", "category": "traffic",
+		"report_kind": "incident", "public_assistance_status": "not_requested", "public_assistance_types": "[]", "privacy_status": "safe", "privacy_flags": "[]",
+	})
+	if _, err := database.GetPresentationIncident(ctx, incidentID, PresentationScope{PromptVersion: PipelineVersion, Language: "en", TranslationLanguage: "en", PublicOnly: true}); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("older v2 translation remained a cross-run fallback: %v", err)
+	}
+	translations, err := database.ListAdminTranslations(ctx, []int64{incidentID}, []string{"en"}, PipelineVersion)
+	if err != nil || len(translations) != 1 || translations[0].Title != "" {
+		t.Fatalf("admin selected an older v2 translation: %#v/%v", translations, err)
 	}
 }
 

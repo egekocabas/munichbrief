@@ -106,6 +106,12 @@ func TestUnifiedPostProcessingMigrationPreservesAuditAndCutsReadersToV2(t *testi
 	if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM cycle_post_processing_plans WHERE cycle_id=50`).Scan(&plans); err != nil || plans != 2 {
 		t.Fatalf("migrated cycle plans = %d, err=%v", plans, err)
 	}
+	for processor, want := range map[string]string{"translation": "2026-08-29T07:00:00Z", "category_verification": "2026-08-29T07:30:00Z"} {
+		var automaticAfter string
+		if err := database.db.QueryRowContext(ctx, `SELECT automatic_after FROM post_processing_scopes WHERE processor_key=?`, processor).Scan(&automaticAfter); err != nil || automaticAfter != want {
+			t.Fatalf("migrated %s cutover = %q/%v, want %q", processor, automaticAfter, err, want)
+		}
+	}
 	for _, table := range []string{"presentation_translations", "presentation_category_verifications", "translation_language_cutovers", "category_verification_cutover"} {
 		var count int
 		if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?`, table).Scan(&count); err != nil || count != 0 {
@@ -116,6 +122,12 @@ func TestUnifiedPostProcessingMigrationPreservesAuditAndCutsReadersToV2(t *testi
 		var count int
 		if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name=?`, index).Scan(&count); err != nil || count != 1 {
 			t.Fatalf("index %s = %d/%v", index, count, err)
+		}
+	}
+	for _, column := range []string{"translation_model_identity", "category_verification_model_identity"} {
+		var count int
+		if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM pragma_table_info('processing_cycles') WHERE name=?`, column).Scan(&count); err != nil || count != 0 {
+			t.Fatalf("old cycle column %s remains: %d/%v", column, count, err)
 		}
 	}
 	if err := database.RecoverPostProcessing(ctx, time.Date(2026, 8, 29, 9, 0, 0, 0, time.UTC)); err != nil {

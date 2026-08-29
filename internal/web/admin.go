@@ -221,7 +221,7 @@ func (s *Server) adminTranslations(request *http.Request, records []store.Incide
 			Title: translation.Title, Summary: translation.Summary,
 			Model: translation.Model, PromptVersion: translation.PromptVersion,
 			StatusLabel: adminTranslationLabel(translation), FailureKind: translation.FailureKind,
-			CanRetry: canonicalReady[translation.IncidentID] && (translation.Model == "" || translation.Fallback) && translation.Status != "pending" && translation.Status != "running",
+			CanRetry: canonicalReady[translation.IncidentID] && translation.Status != "pending" && translation.Status != "running",
 		})
 	}
 	return views, nil
@@ -577,29 +577,29 @@ func adminProcessingLabel(state string) string {
 }
 
 func adminTranslationLabel(translation store.AdminTranslation) string {
-	label := ""
-	if translation.Model != "" && !translation.Fallback {
+	label := "Missing"
+	switch translation.Status {
+	case "succeeded":
 		label = "Completed"
-	} else {
-		switch translation.Status {
-		case "pending":
-			if translation.Attempts > 0 {
-				label = "Retrying"
-			} else {
-				label = "Pending"
-			}
-		case "running":
-			label = "Running"
-		case "needs_review":
-			label = "Needs review"
-		case "failed":
-			label = "Failed"
-		default:
-			label = "Missing"
+	case "pending":
+		if translation.Attempts > 0 {
+			label = "Retrying"
+		} else {
+			label = "Pending"
+		}
+	case "running":
+		label = "Running"
+	case "needs_review":
+		label = "Needs review"
+	case "failed":
+		label = "Failed"
+	default:
+		if translation.Model != "" {
+			label = "Completed"
 		}
 	}
-	if translation.Fallback {
-		label += " · older translated fallback"
+	if translation.Model != "" && translation.Status != "" && translation.Status != "succeeded" {
+		label += " · previous success retained"
 	}
 	return label
 }

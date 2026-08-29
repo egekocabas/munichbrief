@@ -41,7 +41,6 @@ type AdminTranslation struct {
 	Attempts      int
 	NextRetryAt   *time.Time
 	FailureKind   string
-	Fallback      bool
 }
 
 // AdminCategoryVerification combines the latest durable attempt with the latest
@@ -66,24 +65,14 @@ const (
 	AdminIncidentsUnprocessed AdminIncidentFilter = "unprocessed"
 )
 
-const latestPresentationRun = `(SELECT r.id
-	FROM presentation_runs r
-	WHERE r.incident_id = i.id AND r.source_hash = i.content_hash AND r.status = 'complete'
-		AND r.pipeline_version = '` + PipelineVersion + `' AND r.legacy = 0
-		AND (@language = 'de' OR EXISTS (
-			SELECT 1 FROM post_processing_jobs translated
-			WHERE translated.presentation_run_id = r.id AND translated.processor_key='translation'
-			AND translated.scope_key = @language AND translated.status = 'succeeded'
-		))
-	ORDER BY r.completed_at DESC, r.id DESC
-	LIMIT 1)`
-
 const latestCanonicalPresentationRun = `(SELECT r.id
 	FROM presentation_runs r
 	WHERE r.incident_id = i.id AND r.source_hash = i.content_hash AND r.status = 'complete'
 		AND r.pipeline_version = '` + PipelineVersion + `' AND r.legacy = 0
 	ORDER BY r.completed_at DESC, r.id DESC
 	LIMIT 1)`
+
+const latestPresentationRun = latestCanonicalPresentationRun
 
 const scopedAIColumns = `
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'title_de' LIMIT 1), ''),
@@ -121,23 +110,11 @@ const scopedAIColumns = `
 				COALESCE((SELECT status FROM post_processing_jobs WHERE presentation_run_id = ` + latestCanonicalPresentationRun + ` AND processor_key='translation' AND scope_key=@translation_language ORDER BY created_at DESC,id DESC LIMIT 1), ''),
 				COALESCE((SELECT attempt_count FROM post_processing_jobs WHERE presentation_run_id = ` + latestCanonicalPresentationRun + ` AND processor_key='translation' AND scope_key=@translation_language ORDER BY created_at DESC,id DESC LIMIT 1), 0),
 				COALESCE((SELECT next_retry_at FROM post_processing_jobs WHERE presentation_run_id = ` + latestCanonicalPresentationRun + ` AND processor_key='translation' AND scope_key=@translation_language ORDER BY created_at DESC,id DESC LIMIT 1), ''),
-				COALESCE((SELECT failure_kind FROM post_processing_jobs WHERE presentation_run_id = ` + latestCanonicalPresentationRun + ` AND processor_key='translation' AND scope_key=@translation_language ORDER BY created_at DESC,id DESC LIMIT 1), ''),
-				CASE WHEN NOT EXISTS (
-					SELECT 1 FROM post_processing_jobs current_translation
-					WHERE current_translation.presentation_run_id = ` + latestCanonicalPresentationRun + `
-						AND current_translation.processor_key='translation' AND current_translation.scope_key=@translation_language AND current_translation.status='succeeded'
-				) AND EXISTS (
-					SELECT 1 FROM presentation_runs fallback_run
-					JOIN post_processing_jobs fallback_translation ON fallback_translation.presentation_run_id=fallback_run.id
-					WHERE fallback_run.incident_id=i.id AND fallback_run.source_hash=i.content_hash AND fallback_run.status='complete'
-						AND fallback_run.pipeline_version='` + PipelineVersion + `' AND fallback_run.legacy=0
-						AND fallback_translation.processor_key='translation' AND fallback_translation.scope_key=@translation_language AND fallback_translation.status='succeeded'
-				) THEN 1 ELSE 0 END`
+				COALESCE((SELECT failure_kind FROM post_processing_jobs WHERE presentation_run_id = ` + latestCanonicalPresentationRun + ` AND processor_key='translation' AND scope_key=@translation_language ORDER BY created_at DESC,id DESC LIMIT 1), '')`
 
 const publicReadyCondition = `EXISTS (
 		SELECT 1 FROM presentation_runs r
-		WHERE r.incident_id = i.id AND r.source_hash = i.content_hash AND r.status = 'complete'
-			AND r.pipeline_version='` + PipelineVersion + `' AND r.legacy=0
+		WHERE r.id = ` + latestCanonicalPresentationRun + `
 			AND (@language = 'de' OR EXISTS (
 				SELECT 1 FROM post_processing_jobs translated
 				WHERE translated.presentation_run_id = r.id AND translated.processor_key='translation' AND translated.scope_key = @language AND translated.status = 'succeeded'
@@ -227,7 +204,7 @@ func (s *Store) ListPresentationEntries(ctx context.Context, limit, offset int, 
 				'', '', '',
 				'', '', '',
 				'', '', 0, '', '',
-				'', 0, '', '', 0
+				'', 0, '', ''
 			FROM source_documents d
 			WHERE ` + statusCondition + ` AND NOT EXISTS (
 				SELECT 1 FROM incidents i WHERE i.source_document_id = d.id
@@ -398,10 +375,10 @@ func (s *Store) ListAdminTranslations(ctx context.Context, incidentIDs []int64, 
 		),
 		canonical_runs AS (SELECT * FROM eligible_runs WHERE canonical_rank = 1),
 		ranked_translations AS (
-			SELECT eligible.incident_id,translation.*,
-				ROW_NUMBER() OVER (PARTITION BY eligible.incident_id,translation.scope_key ORDER BY eligible.completed_at DESC,eligible.id DESC,translation.completed_at DESC,translation.id DESC) AS translation_rank
-			FROM eligible_runs eligible
-			JOIN post_processing_jobs translation ON translation.presentation_run_id=eligible.id AND translation.processor_key='translation' AND translation.status='succeeded'
+			SELECT canonical.incident_id,translation.*,
+				ROW_NUMBER() OVER (PARTITION BY canonical.incident_id,translation.scope_key ORDER BY translation.completed_at DESC,translation.id DESC) AS translation_rank
+			FROM canonical_runs canonical
+			JOIN post_processing_jobs translation ON translation.presentation_run_id=canonical.id AND translation.processor_key='translation' AND translation.status='succeeded'
 			JOIN requested_languages language ON language.language_code=translation.scope_key
 		),
 		selected_translations AS (SELECT * FROM ranked_translations WHERE translation_rank = 1),
@@ -417,8 +394,7 @@ func (s *Store) ListAdminTranslations(ctx context.Context, incidentIDs []int64, 
 			COALESCE((SELECT value FROM post_processing_values WHERE job_id=selected.id AND kind='title'),''),
 			COALESCE((SELECT value FROM post_processing_values WHERE job_id=selected.id AND kind='summary'),''),
 			COALESCE(selected.model_identity, ''), COALESCE(selected.prompt_version, ''), COALESCE(selected.completed_at, ''),
-			COALESCE(attempt.status, ''), COALESCE(attempt.attempt_count, 0), COALESCE(attempt.next_retry_at, ''), COALESCE(attempt.failure_kind, ''),
-			CASE WHEN selected.presentation_run_id IS NOT NULL AND selected.presentation_run_id != canonical.id THEN 1 ELSE 0 END
+			COALESCE(attempt.status, ''), COALESCE(attempt.attempt_count, 0), COALESCE(attempt.next_retry_at, ''), COALESCE(attempt.failure_kind, '')
 		FROM requested_incidents requested
 		CROSS JOIN requested_languages language
 		LEFT JOIN canonical_runs canonical ON canonical.incident_id = requested.incident_id
@@ -434,15 +410,13 @@ func (s *Store) ListAdminTranslations(ctx context.Context, incidentIDs []int64, 
 	for rows.Next() {
 		var translation AdminTranslation
 		var generatedAt, nextRetryAt string
-		var fallback int
 		if err := rows.Scan(
 			&translation.IncidentID, &translation.Language, &translation.Title, &translation.Summary,
 			&translation.Model, &translation.PromptVersion, &generatedAt,
-			&translation.Status, &translation.Attempts, &nextRetryAt, &translation.FailureKind, &fallback,
+			&translation.Status, &translation.Attempts, &nextRetryAt, &translation.FailureKind,
 		); err != nil {
 			return nil, fmt.Errorf("scan admin translation: %w", err)
 		}
-		translation.Fallback = fallback == 1
 		if generatedAt != "" {
 			parsed, err := time.Parse(time.RFC3339Nano, generatedAt)
 			if err != nil {
@@ -559,7 +533,6 @@ func (s *Store) GetPresentationIncident(ctx context.Context, id int64, scope Pre
 func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 	var record IncidentRecord
 	var publishedAt, updatedAt, aiMetadataGeneratedAt, aiCategoryVerificationGeneratedAt, aiGeneratedAt, aiTranslationGeneratedAt, nextRetryAt, translationNextRetryAt string
-	var translationFallback int
 	if err := row.Scan(
 		&record.ID, &record.SourceDocumentID, &record.HasIncident, &record.Number, &record.Position,
 		&record.TitleDE, &record.BodyDE, &record.ContentHash, &record.SourceTitle, &record.SourceURL,
@@ -574,7 +547,7 @@ func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 		&record.AITranslationModel, &record.AITranslationPromptVersion, &aiTranslationGeneratedAt,
 		&record.AIPipelineVersion,
 		&record.ProcessingStatus, &record.ProcessingAttempts, &nextRetryAt, &record.ProcessingFailureKind,
-		&record.AITranslationStatus, &record.AITranslationAttempts, &translationNextRetryAt, &record.AITranslationFailureKind, &translationFallback,
+		&record.AITranslationStatus, &record.AITranslationAttempts, &translationNextRetryAt, &record.AITranslationFailureKind,
 	); err != nil {
 		return IncidentRecord{}, err
 	}
@@ -615,7 +588,6 @@ func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 		}
 		record.AITranslationGeneratedAt = &generatedAt
 	}
-	record.AITranslationFallback = translationFallback == 1
 	if nextRetryAt != "" {
 		next, err := time.Parse(time.RFC3339Nano, nextRetryAt)
 		if err != nil {

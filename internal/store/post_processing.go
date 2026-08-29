@@ -12,6 +12,11 @@ import (
 // EnsurePostProcessingScopes records the first automatic-enablement time for
 // every registered processor scope without moving an existing cutover.
 func (s *Store) EnsurePostProcessingScopes(ctx context.Context, scopes []PostProcessingScope, now time.Time) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin post-processing scope initialization: %w", err)
+	}
+	defer tx.Rollback()
 	formatted := formatTime(now.UTC())
 	seen := make(map[string]struct{}, len(scopes))
 	for _, scope := range scopes {
@@ -25,9 +30,12 @@ func (s *Store) EnsurePostProcessingScopes(ctx context.Context, scopes []PostPro
 			continue
 		}
 		seen[identity] = struct{}{}
-		if _, err := s.db.ExecContext(ctx, `INSERT INTO post_processing_scopes(processor_key,scope_key,automatic_after) VALUES(?,?,?) ON CONFLICT(processor_key,scope_key) DO NOTHING`, scope.ProcessorKey, scope.ScopeKey, formatted); err != nil {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO post_processing_scopes(processor_key,scope_key,automatic_after) VALUES(?,?,?) ON CONFLICT(processor_key,scope_key) DO NOTHING`, scope.ProcessorKey, scope.ScopeKey, formatted); err != nil {
 			return fmt.Errorf("ensure post-processing scope %s/%s: %w", scope.ProcessorKey, scope.ScopeKey, err)
 		}
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit post-processing scope initialization: %w", err)
 	}
 	return nil
 }

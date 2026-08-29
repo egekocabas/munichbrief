@@ -60,7 +60,7 @@ func TestPostProcessingGenericLifecycleKeepsSuccessfulValueDuringForcedReplaceme
 		t.Fatal(err)
 	}
 	visible, err = database.GetPresentationIncident(ctx, incidentID, PresentationScope{PromptVersion: PipelineVersion, TranslationLanguage: "en"})
-	if err != nil || visible.AITranslatedTitle != "Second title" || visible.AITranslationFallback {
+	if err != nil || visible.AITranslatedTitle != "Second title" {
 		t.Fatalf("replacement selection = %#v/%v", visible, err)
 	}
 }
@@ -121,5 +121,29 @@ func TestPostProcessingRetryRecoveryAndTransactionalCompletion(t *testing.T) {
 	}
 	if status != "running" || valueCount != 0 {
 		t.Fatalf("failed completion was not transactional: status=%s values=%d", status, valueCount)
+	}
+}
+
+func TestEnsurePostProcessingScopesIsAtomic(t *testing.T) {
+	ctx := context.Background()
+	database, err := Open(ctx, filepath.Join(t.TempDir(), "post-processing-scopes.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	processor := "atomic_test_processor"
+	err = database.EnsurePostProcessingScopes(ctx, []PostProcessingScope{
+		{ProcessorKey: processor, ScopeKey: "valid"},
+		{ProcessorKey: processor, ScopeKey: ""},
+	}, time.Now())
+	if err == nil {
+		t.Fatal("invalid scope initialization unexpectedly succeeded")
+	}
+	var count int
+	if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM post_processing_scopes WHERE processor_key=?`, processor).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Fatalf("partial scope initialization committed %d rows", count)
 	}
 }

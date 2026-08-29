@@ -503,10 +503,10 @@ func TestAdminPipelineHistoryCombinesCanonicalAndPostProcessingJobs(t *testing.T
 	}
 }
 
-func TestAdminTranslationLabelKeepsCurrentFailureVisibleWithFallback(t *testing.T) {
-	translation := store.AdminTranslation{Model: "translate:4b", Status: "failed", FailureKind: "output", Fallback: true}
-	if label := adminTranslationLabel(translation); label != "Failed · older translated fallback" {
-		t.Fatalf("fallback translation label = %q", label)
+func TestAdminTranslationLabelKeepsCurrentFailureVisibleWithPreviousSuccess(t *testing.T) {
+	translation := store.AdminTranslation{Model: "translate:4b", Status: "failed", FailureKind: "output"}
+	if label := adminTranslationLabel(translation); label != "Failed · previous success retained" {
+		t.Fatalf("retained translation label = %q", label)
 	}
 }
 
