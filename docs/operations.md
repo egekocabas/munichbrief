@@ -97,11 +97,14 @@ generated languages. It also shows raw and formatted metadata, separate
 canonical, category-verification, and translation provenance and queue states, the v1/v2/legacy
 presentation source, and the scheduling cutover. Its confirmed actions can
 create a canonical cycle for one incident, every canonically unprocessed
-incident, or every current incident, recheck one category immediately, backfill
-reader-selectable historical categories, retry one missing/failed translation
-immediately, or backfill one language's historical presentations. Category
-backfills respect the processing window; individual rechecks are manual-priority
-jobs. The
+incident, or every current incident. Focused post-processing controls can
+retranslate one incident or every eligible current incident with a selected
+installed model and either one registered language or all languages. They can
+also recheck one incident's category or all reader-selectable presentations.
+These explicit focused actions are manual-priority jobs, rerun successful work,
+and leave the previous successful translation or effective category available
+until the replacement succeeds. The narrower retry and historical-backfill
+actions remain available; backfills respect the processing window. The
 application does not authenticate users itself: enable the dashboard only when
 the ingress protects `/admin*` and `/api/admin*`, and keep both prefixes absent
 from public ingress.

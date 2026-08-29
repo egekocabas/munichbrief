@@ -186,6 +186,51 @@ func TestPipelineWorkerPrioritizesCategoryVerificationBeforeTranslation(t *testi
 	}
 }
 
+func TestPipelineWorkerRequestsFocusedPostProcessing(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-focused-post-processing.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 11, 0, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "one")
+	if err := database.EnsurePipelineSteps(ctx, ModelSettingKeys(), now); err != nil {
+		t.Fatal(err)
+	}
+	for step, model := range pipelineTestModels() {
+		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := database.SetPipelineStepModel(ctx, CategoryVerificationStep, "verify:4b", now); err != nil {
+		t.Fatal(err)
+	}
+	provider := &pipelineTestProvider{}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b", "verify:4b"}, CheckedAt: now}}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker.processAvailable(ctx)
+	records, _, err := database.ListIncidents(ctx, 1, 0)
+	if err != nil || len(records) != 1 {
+		t.Fatalf("list focused incident = %d/%v", len(records), err)
+	}
+	if queued, err := worker.RequestTranslations(ctx, &records[0].ID, []string{"en", "en"}, "translate:4b"); err != nil || queued != 1 {
+		t.Fatalf("focused translation request = %d/%v", queued, err)
+	}
+	if queued, err := worker.RequestCategoryVerifications(ctx, nil, "verify:4b"); err != nil || queued != 1 {
+		t.Fatalf("focused category request = %d/%v", queued, err)
+	}
+	if _, err := worker.RequestTranslations(ctx, nil, []string{"en"}, "missing:4b"); !errors.Is(err, ErrModelUnavailable) {
+		t.Fatalf("unavailable focused model error = %v", err)
+	}
+	worker.processAvailable(ctx)
+	if provider.callCount(EnglishTranslationStep) != 2 || provider.callCount(CategoryVerificationStep) != 2 {
+		t.Fatalf("focused post-processing calls = translation:%d category:%d", provider.callCount(EnglishTranslationStep), provider.callCount(CategoryVerificationStep))
+	}
+}
+
 func TestPipelineWorkerFinishesAuthorizedCycleAfterWindowButDoesNotStartAnother(t *testing.T) {
 	ctx := context.Background()
 	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "window.db"))
