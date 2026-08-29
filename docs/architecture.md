@@ -137,7 +137,9 @@ cycle may finish after the window closes. Explicit admin or CLI requests persist
 manual priority but retain validation, circuit breaking, and retry delays.
 If a scheduled cycle publishes its final German result after the window closes,
 automatic post-processing discovery waits for the next open window; the German
-publication itself remains complete and available.
+publication itself remains complete and available. A continuation retains its
+automatic provenance at this handoff and never gains a manual window or switch
+bypass merely because the original scheduled cycle yielded its lease.
 When an automatic scheduled or continuation cycle is waiting on a retry or open
 circuit, it releases the running-cycle lease to a queued manual cycle and later
 resumes with the same frozen progress.
@@ -148,7 +150,8 @@ request starts even inside the window; explicit admin and CLI work remains
 eligible. The deployment-level `MUNICHBRIEF_AI_ENABLED` setting remains the
 absolute gate for both interfaces; the CLI bypasses only the durable runtime
 switch and schedule. An automatic request already in flight finishes, then its
-frozen cycle is suspended without losing accepted results or its window authorization.
+frozen cycle is suspended without losing accepted results or its window
+authorization.
 The same boundary suspension applies when that request ends in a retryable
 provider or configuration failure, so a disabled cycle never retains the
 running-cycle lease while it waits.

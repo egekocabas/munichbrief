@@ -687,12 +687,16 @@ func (w *PipelineWorker) processJob(ctx, requestCtx context.Context, job store.P
 		// German publication is already committed. Independent enqueueing is
 		// best-effort so post-processing cannot roll it back.
 		requestKind := "manual"
-		postPlans, postErr := w.repository.CyclePostProcessingPlans(ctx, job.CycleID)
+		var postPlans []store.PostProcessingPlan
+		var postErr error
+		if job.CycleKind != "scheduled" {
+			postPlans, postErr = w.repository.CyclePostProcessingPlans(ctx, job.CycleID)
+		}
+		automaticCycle := job.CycleKind == "scheduled" || job.CycleKind == "continuation"
+		windowOpen := w.schedule.Allows(completed)
 		if job.CycleKind == "scheduled" {
 			requestKind = "scheduled"
-			postPlans = nil
-			postErr = nil
-			if w.schedule.Allows(completed) {
+			if windowOpen {
 				for _, definition := range w.postProcessors.Definitions() {
 					if !definition.Automatic {
 						continue
@@ -708,11 +712,20 @@ func (w *PipelineWorker) processJob(ctx, requestCtx context.Context, job store.P
 					}
 					postPlans = append(postPlans, plans...)
 				}
-			} else {
-				w.logger.Info("scheduled AI post-processing discovery deferred outside window", "cycle_id", job.CycleID, "presentation_run_id", job.PresentationRunID)
+			}
+		} else if job.CycleKind == "continuation" {
+			requestKind = "scheduled"
+			if !windowOpen {
+				postPlans = nil
+				postErr = nil
+			} else if postErr == nil {
+				postPlans, postErr = w.hydratePostProcessingPlans(postPlans)
 			}
 		} else if postErr == nil {
 			postPlans, postErr = w.hydratePostProcessingPlans(postPlans)
+		}
+		if automaticCycle && !windowOpen {
+			w.logger.Info("scheduled AI post-processing discovery deferred outside window", "cycle_id", job.CycleID, "cycle_kind", job.CycleKind, "presentation_run_id", job.PresentationRunID)
 		}
 		if postErr != nil {
 			w.logger.Error("resolve AI post-processing plans", "cycle_id", job.CycleID, "error", postErr)

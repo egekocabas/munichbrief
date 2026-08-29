@@ -51,7 +51,8 @@ Ollama requests start only during the configured Europe/Berlin processing
 window; a frozen canonical cycle is allowed to finish after the window closes.
 When its final German result completes outside the window, scheduled
 post-processing discovery waits for the next open window rather than creating
-new automatic jobs immediately.
+new automatic jobs immediately. Continuation cycles retain scheduled
+post-processing provenance and do not gain the manual bypass.
 An explicit admin or `ai-process` request persists manual intent and bypasses
 only this window. The CLI still requires the deployment-level
 `MUNICHBRIEF_AI_ENABLED=true` gate. Processing remains sequential and retains

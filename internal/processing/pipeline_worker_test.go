@@ -37,6 +37,19 @@ type blockingManualRepository struct {
 	manualRelease chan struct{}
 }
 
+// continuationJobRepository exercises the provenance boundary for a
+// continuation carrying frozen post-processing plans, even though fresh
+// scheduled cycles do not currently populate those plans.
+type continuationJobRepository struct{ *store.Store }
+
+func (r continuationJobRepository) ClaimPipelineJob(ctx context.Context, cycleID int64, stepOrder int, now time.Time) (store.PipelineJob, bool, error) {
+	job, found, err := r.Store.ClaimPipelineJob(ctx, cycleID, stepOrder, now)
+	if found {
+		job.CycleKind = "continuation"
+	}
+	return job, found, err
+}
+
 func (r *blockingManualRepository) CreateManualPipelineCycle(ctx context.Context, sourceMode string, plans []store.PipelineStepPlan, postPlans []store.PostProcessingPlan, incidentID *int64, reprocessAll bool, now time.Time) (store.PipelineRequestResult, error) {
 	close(r.manualEntered)
 	<-r.manualRelease
@@ -991,6 +1004,73 @@ func TestPipelineWorkerFinishesAuthorizedCycleAfterWindowButDoesNotStartAnother(
 	worker.processAvailable(ctx)
 	if len(provider.events) != 5 {
 		t.Fatalf("outside-window manual cycle did not run: %v", provider.events)
+	}
+}
+
+func TestContinuationPostProcessingRetainsAutomaticWindowAndRequestKind(t *testing.T) {
+	for _, test := range []struct {
+		name        string
+		scopeTime   time.Time
+		executeTime time.Time
+	}{
+		{name: "inside window", scopeTime: time.Date(2030, 8, 29, 10, 59, 0, 0, time.UTC), executeTime: time.Date(2030, 8, 29, 11, 0, 0, 0, time.UTC)},
+		{name: "outside window", scopeTime: time.Date(2030, 8, 29, 12, 59, 0, 0, time.UTC), executeTime: time.Date(2030, 8, 29, 13, 0, 0, 0, time.UTC)},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			database, err := store.Open(ctx, filepath.Join(t.TempDir(), "continuation-post-window.db"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer database.Close()
+			current := test.scopeTime
+			insertWorkerDocument(t, ctx, database, current, strings.ReplaceAll(test.name, " ", "-"))
+			if err := database.EnsurePipelineSteps(ctx, ModelSettingKeys(), current); err != nil {
+				t.Fatal(err)
+			}
+			for step, model := range pipelineTestModels() {
+				if err := database.SetPipelineStepModel(ctx, step, model, current); err != nil {
+					t.Fatal(err)
+				}
+			}
+			provider := &pipelineTestProvider{}
+			worker, err := NewPipelineWorker(continuationJobRepository{Store: database}, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: current}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return current }, Schedule{Location: time.UTC, Start: 10 * time.Hour, End: 12 * time.Hour}, "fixture")
+			if err != nil {
+				t.Fatal(err)
+			}
+			current = test.executeTime
+			if result, err := worker.RequestNow(ctx, "fixture", pipelineTestModels(), nil, false); err != nil || result.Requested != 1 {
+				t.Fatalf("continuation fixture request = %#v/%v", result, err)
+			}
+			worker.processAvailable(ctx)
+			if test.name == "outside window" {
+				if provider.callCount(EnglishTranslationStep) != 0 {
+					t.Fatal("continuation post-processing bypassed the closed window")
+				}
+				current = time.Date(2030, 8, 30, 11, 0, 0, 0, time.UTC)
+				worker.processAvailable(ctx)
+			}
+			if provider.callCount(EnglishTranslationStep) != 1 {
+				status, _ := worker.Status(ctx)
+				t.Fatalf("continuation translation calls = %d, want 1; status=%#v", provider.callCount(EnglishTranslationStep), status)
+			}
+			history, err := database.ListPipelineHistory(ctx, "fixture", 20, nil, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			postFound := false
+			for _, entry := range history.Entries {
+				if entry.ProcessorKey == TranslationModelStep && entry.ScopeKey == EnglishLanguage {
+					postFound = true
+					if entry.RequestKind != "scheduled" {
+						t.Fatalf("continuation post-processing request kind = %q, want scheduled", entry.RequestKind)
+					}
+				}
+			}
+			if !postFound {
+				t.Fatal("continuation post-processing history is missing")
+			}
+		})
 	}
 }
 
