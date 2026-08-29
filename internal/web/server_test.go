@@ -28,6 +28,10 @@ type testPresentationJob struct {
 	BodyDE            string
 }
 
+func testPostProcessingInputs(scope, promptVersion string, kinds ...string) store.PostProcessingInputContract {
+	return store.PostProcessingInputContract{scope: {PromptVersion: promptVersion, InputKinds: kinds}}
+}
+
 func seedV2Presentation(t *testing.T, database *store.Store, presentation testPresentation, now time.Time) testPresentationJob {
 	t.Helper()
 	ctx := context.Background()
@@ -75,7 +79,7 @@ func seedV2Presentation(t *testing.T, database *store.Store, presentation testPr
 	if queued, err := database.QueuePostProcessingForRun(ctx, german.PresentationRunID, []store.PostProcessingPlan{translationPlan}, "manual", false, now); err != nil || queued != 1 {
 		t.Fatalf("queue test translation = %d/%v", queued, err)
 	}
-	translation, found, err := database.ClaimPostProcessingJob(ctx, "translation", false, nil, now)
+	translation, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingInputs("en", translationPlan.PromptVersion, "title_de", "summary_de"), false, nil, now)
 	if err != nil || !found {
 		t.Fatalf("claim test translation = %#v/%t/%v", translation, found, err)
 	}

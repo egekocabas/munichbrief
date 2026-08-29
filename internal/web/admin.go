@@ -150,41 +150,15 @@ func (s *Server) adminList(records []store.IncidentRecord, total, page, totalPag
 
 func (s *Server) adminCategoryVerifications(request *http.Request, records []store.IncidentRecord) (map[int64]adminCategoryVerificationView, error) {
 	views := make(map[int64]adminCategoryVerificationView)
-	seen := make(map[int64]struct{}, len(records))
-	incidentIDs := make([]int64, 0, len(records))
-	for _, record := range records {
-		if record.ID < 1 {
-			continue
-		}
-		if _, exists := seen[record.ID]; exists {
-			continue
-		}
-		seen[record.ID] = struct{}{}
-		incidentIDs = append(incidentIDs, record.ID)
-	}
-	results, err := s.store.ListAdminCategoryVerifications(request.Context(), incidentIDs)
+	results, err := s.store.ListAdminCategoryVerifications(request.Context(), adminIncidentIDs(records))
 	if err != nil {
 		return nil, err
 	}
 	for _, result := range results {
-		verdict := "Not checked"
-		if result.IsCorrect != nil {
-			if *result.IsCorrect {
-				verdict = "Confirmed"
-			} else {
-				verdict = "Corrected"
-			}
-		}
-		status := result.Status
-		if status == "" {
-			status = "missing"
-		} else if status == "pending" && result.Attempts > 0 {
-			status = "retrying"
-		}
 		views[result.IncidentID] = adminCategoryVerificationView{
 			OriginalCategory: result.OriginalCategory, EffectiveCategory: result.EffectiveCategory,
 			OriginalLabel: processing.CategoryLabel(result.OriginalCategory, "en"), EffectiveLabel: processing.CategoryLabel(result.EffectiveCategory, "en"),
-			Verdict: verdict, Status: status, Attempts: result.Attempts, FailureKind: result.FailureKind,
+			Verdict: adminVerificationVerdict(result.IsCorrect), Status: adminPostProcessingStatus(result.Status, result.Attempts), Attempts: result.Attempts, FailureKind: result.FailureKind,
 			Model: result.Model, PromptVersion: result.PromptVersion, GeneratedAt: result.GeneratedAt,
 			CanRetry: result.PresentationRunID > 0 && result.OriginalCategory != "" && result.Status != "pending" && result.Status != "running",
 		}
@@ -194,6 +168,24 @@ func (s *Server) adminCategoryVerifications(request *http.Request, records []sto
 
 func (s *Server) adminPublicAssistanceVerifications(request *http.Request, records []store.IncidentRecord) (map[int64]adminPublicAssistanceVerificationView, error) {
 	views := make(map[int64]adminPublicAssistanceVerificationView)
+	results, err := s.store.ListAdminPublicAssistanceVerifications(request.Context(), adminIncidentIDs(records))
+	if err != nil {
+		return nil, err
+	}
+	for _, result := range results {
+		views[result.IncidentID] = adminPublicAssistanceVerificationView{
+			OriginalStatus: result.OriginalStatus, OriginalTypes: result.OriginalTypes,
+			EffectiveStatus: result.EffectiveStatus, EffectiveTypes: result.EffectiveTypes,
+			OriginalTypeLabels: s.adminAssistanceTypeLabels(result.OriginalTypes), EffectiveTypeLabels: s.adminAssistanceTypeLabels(result.EffectiveTypes),
+			Verdict: adminVerificationVerdict(result.IsCorrect), Status: adminPostProcessingStatus(result.Status, result.Attempts), Attempts: result.Attempts, FailureKind: result.FailureKind,
+			Model: result.Model, PromptVersion: result.PromptVersion, GeneratedAt: result.GeneratedAt, NextRetryAt: result.NextRetryAt,
+			CanRetry: result.PresentationRunID > 0 && result.OriginalStatus != "" && result.Status != "pending" && result.Status != "running",
+		}
+	}
+	return views, nil
+}
+
+func adminIncidentIDs(records []store.IncidentRecord) []int64 {
 	seen := make(map[int64]struct{}, len(records))
 	incidentIDs := make([]int64, 0, len(records))
 	for _, record := range records {
@@ -206,35 +198,27 @@ func (s *Server) adminPublicAssistanceVerifications(request *http.Request, recor
 		seen[record.ID] = struct{}{}
 		incidentIDs = append(incidentIDs, record.ID)
 	}
-	results, err := s.store.ListAdminPublicAssistanceVerifications(request.Context(), incidentIDs)
-	if err != nil {
-		return nil, err
+	return incidentIDs
+}
+
+func adminVerificationVerdict(isCorrect *bool) string {
+	if isCorrect == nil {
+		return "Not checked"
 	}
-	for _, result := range results {
-		verdict := "Not checked"
-		if result.IsCorrect != nil {
-			if *result.IsCorrect {
-				verdict = "Confirmed"
-			} else {
-				verdict = "Corrected"
-			}
-		}
-		status := result.Status
-		if status == "" {
-			status = "missing"
-		} else if status == "pending" && result.Attempts > 0 {
-			status = "retrying"
-		}
-		views[result.IncidentID] = adminPublicAssistanceVerificationView{
-			OriginalStatus: result.OriginalStatus, OriginalTypes: result.OriginalTypes,
-			EffectiveStatus: result.EffectiveStatus, EffectiveTypes: result.EffectiveTypes,
-			OriginalTypeLabels: s.adminAssistanceTypeLabels(result.OriginalTypes), EffectiveTypeLabels: s.adminAssistanceTypeLabels(result.EffectiveTypes),
-			Verdict: verdict, Status: status, Attempts: result.Attempts, FailureKind: result.FailureKind,
-			Model: result.Model, PromptVersion: result.PromptVersion, GeneratedAt: result.GeneratedAt, NextRetryAt: result.NextRetryAt,
-			CanRetry: result.PresentationRunID > 0 && result.OriginalStatus != "" && result.Status != "pending" && result.Status != "running",
-		}
+	if *isCorrect {
+		return "Confirmed"
 	}
-	return views, nil
+	return "Corrected"
+}
+
+func adminPostProcessingStatus(status string, attempts int) string {
+	if status == "" {
+		return "missing"
+	}
+	if status == "pending" && attempts > 0 {
+		return "retrying"
+	}
+	return status
 }
 
 func (s *Server) adminAssistanceTypeLabels(encoded string) []string {
@@ -253,18 +237,6 @@ func (s *Server) adminAssistanceTypeLabels(encoded string) []string {
 
 func (s *Server) adminTranslations(request *http.Request, records []store.IncidentRecord) (map[int64][]adminTranslationView, error) {
 	views := make(map[int64][]adminTranslationView)
-	seen := make(map[int64]struct{}, len(records))
-	incidentIDs := make([]int64, 0, len(records))
-	for _, record := range records {
-		if record.ID < 1 {
-			continue
-		}
-		if _, exists := seen[record.ID]; exists {
-			continue
-		}
-		seen[record.ID] = struct{}{}
-		incidentIDs = append(incidentIDs, record.ID)
-	}
 	definitions := processing.RegisteredTranslations()
 	languages := make([]string, 0, len(definitions))
 	displayNames := make(map[string]string, len(definitions))
@@ -272,7 +244,7 @@ func (s *Server) adminTranslations(request *http.Request, records []store.Incide
 		languages = append(languages, definition.Language)
 		displayNames[definition.Language] = definition.DisplayName
 	}
-	translations, err := s.store.ListAdminTranslations(request.Context(), incidentIDs, languages)
+	translations, err := s.store.ListAdminTranslations(request.Context(), adminIncidentIDs(records), languages)
 	if err != nil {
 		return nil, err
 	}

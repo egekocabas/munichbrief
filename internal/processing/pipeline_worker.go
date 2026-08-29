@@ -35,7 +35,7 @@ type PipelineRepository interface {
 	QueuePostProcessingForRun(context.Context, int64, []store.PostProcessingPlan, string, bool, time.Time) (int, error)
 	QueueIncidentPostProcessing(context.Context, int64, []store.PostProcessingPlan, time.Time) (int, error)
 	QueuePostProcessingForAll(context.Context, string, []store.PostProcessingPlan, bool, time.Time) (int, error)
-	ClaimPostProcessingJob(context.Context, string, bool, []string, time.Time) (store.PostProcessingJob, bool, error)
+	ClaimPostProcessingJob(context.Context, string, store.PostProcessingInputContract, bool, []string, time.Time) (store.PostProcessingJob, bool, error)
 	CompletePostProcessingJob(context.Context, store.PostProcessingJob, []store.PipelineValue, string, string, time.Time) error
 	FailPostProcessingJob(context.Context, store.PostProcessingJob, string, string, *time.Time, time.Time, error) error
 	RecoverPostProcessing(context.Context, time.Time) error
@@ -366,6 +366,13 @@ func (w *PipelineWorker) processAvailable(ctx context.Context) {
 
 		processedPostJob := false
 		for _, definition := range w.postProcessors.Definitions() {
+			inputContracts := make(store.PostProcessingInputContract, len(definition.Scopes))
+			for _, scope := range definition.Scopes {
+				inputContracts[scope.Key] = store.PostProcessingScopeInputContract{
+					PromptVersion: scope.Step.PromptVersion,
+					InputKinds:    append([]string(nil), scope.Step.InputKinds...),
+				}
+			}
 			preferred, preferredErr := w.repository.PreferredPipelineModels(ctx, []string{definition.ModelSettingKey})
 			model := preferred[definition.ModelSettingKey]
 			if definition.Automatic && preferredErr == nil && catalog.Available() && catalog.Has(model) && windowOpen {
@@ -383,7 +390,7 @@ func (w *PipelineWorker) processAvailable(ctx context.Context) {
 					w.logger.Info("AI post-processing jobs discovered", "processor", definition.Key, "jobs", queued, "request_kind", "scheduled")
 				}
 			}
-			job, found, err := w.repository.ClaimPostProcessingJob(ctx, definition.Key, windowOpen, w.blockedModels(definition.Key, now), now)
+			job, found, err := w.repository.ClaimPostProcessingJob(ctx, definition.Key, inputContracts, windowOpen, w.blockedModels(definition.Key, now), now)
 			if err != nil {
 				w.logger.Error("claim AI post-processing job", "processor", definition.Key, "error", err)
 				return

@@ -232,31 +232,61 @@ func validatePostProcessingPlan(plan PostProcessingPlan) error {
 func postProcessingInputValuesTx(ctx context.Context, tx *sql.Tx, runID int64, kinds []string) (map[string]string, error) {
 	values := make(map[string]string, len(kinds))
 	present := make(map[string]bool, len(kinds))
-	var originalTitle, incidentBody string
-	if err := tx.QueryRowContext(ctx, `SELECT i.title_de,COALESCE(i.body_de,'') FROM presentation_runs r
-		JOIN incidents i ON i.id=r.incident_id AND i.content_hash=r.source_hash WHERE r.id=?`, runID).Scan(&originalTitle, &incidentBody); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
+	needOriginalTitle, needIncidentBody := false, false
+	presentationKinds := make([]string, 0, len(kinds))
+	for _, kind := range kinds {
+		switch kind {
+		case "original_title":
+			needOriginalTitle = true
+		case "incident_body":
+			needIncidentBody = true
+		default:
+			presentationKinds = append(presentationKinds, kind)
 		}
-		return nil, err
 	}
-	values["original_title"], values["incident_body"] = originalTitle, incidentBody
-	present["original_title"], present["incident_body"] = true, true
-	rows, err := tx.QueryContext(ctx, `SELECT kind,value FROM presentation_values WHERE presentation_run_id=?`, runID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var kind, value string
-		if err := rows.Scan(&kind, &value); err != nil {
+	if needOriginalTitle || needIncidentBody {
+		var originalTitle, incidentBody string
+		if err := tx.QueryRowContext(ctx, `SELECT i.title_de,COALESCE(i.body_de,'') FROM presentation_runs r
+			JOIN incidents i ON i.id=r.incident_id AND i.content_hash=r.source_hash WHERE r.id=?`, runID).Scan(&originalTitle, &incidentBody); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, ErrNotFound
+			}
 			return nil, err
 		}
-		values[kind] = value
-		present[kind] = true
+		if needOriginalTitle {
+			values["original_title"], present["original_title"] = originalTitle, true
+		}
+		if needIncidentBody {
+			values["incident_body"], present["incident_body"] = incidentBody, true
+		}
 	}
-	if err := rows.Err(); err != nil {
-		return nil, err
+	if len(presentationKinds) > 0 {
+		placeholders := strings.TrimSuffix(strings.Repeat("?,", len(presentationKinds)), ",")
+		args := make([]any, 0, len(presentationKinds)+1)
+		args = append(args, runID)
+		for _, kind := range presentationKinds {
+			args = append(args, kind)
+		}
+		rows, err := tx.QueryContext(ctx, `SELECT kind,value FROM presentation_values WHERE presentation_run_id=? AND kind IN (`+placeholders+`)`, args...)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			var kind, value string
+			if err := rows.Scan(&kind, &value); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			values[kind] = value
+			present[kind] = true
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		if err := rows.Close(); err != nil {
+			return nil, err
+		}
 	}
 	for _, kind := range kinds {
 		if !present[kind] || kind != "incident_body" && strings.TrimSpace(values[kind]) == "" {
@@ -267,8 +297,10 @@ func postProcessingInputValuesTx(ctx context.Context, tx *sql.Tx, runID int64, k
 }
 
 // ClaimPostProcessingJob atomically claims the next eligible job for a
-// registered processor and loads its immutable canonical inputs.
-func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string, allowScheduled bool, blockedModels []string, now time.Time) (PostProcessingJob, bool, error) {
+// registered processor. Inputs are materialized only when the queued prompt
+// still matches the registered contract, allowing stale jobs to be claimed and
+// failed by the worker's prompt-version guard after a deployment.
+func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string, inputContracts PostProcessingInputContract, allowScheduled bool, blockedModels []string, now time.Time) (PostProcessingJob, bool, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return PostProcessingJob{}, false, err
@@ -291,16 +323,15 @@ func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string,
 		}
 	}
 	var job PostProcessingJob
-	var originalTitle, incidentBody string
 	err = tx.QueryRowContext(ctx, `SELECT job.id,job.presentation_run_id,r.incident_id,job.processor_key,job.scope_key,job.request_kind,
-		job.model_identity,job.prompt_version,job.input_hash,job.attempt_count,i.title_de,COALESCE(i.body_de,'')
+		job.model_identity,job.prompt_version,job.input_hash,job.attempt_count
 		FROM post_processing_jobs job JOIN presentation_runs r ON r.id=job.presentation_run_id
 		JOIN incidents i ON i.id=r.incident_id AND i.content_hash=r.source_hash
 		WHERE job.processor_key=? AND job.status='pending' AND (job.next_retry_at IS NULL OR job.next_retry_at<=?)
 		AND (job.request_kind='manual' OR ?)`+blockedCondition+`
 		ORDER BY CASE job.request_kind WHEN 'manual' THEN 0 WHEN 'scheduled' THEN 1 ELSE 2 END,job.created_at,job.id LIMIT 1`, args...).Scan(
 		&job.ID, &job.PresentationRunID, &job.IncidentID, &job.ProcessorKey, &job.ScopeKey, &job.RequestKind,
-		&job.ModelIdentity, &job.PromptVersion, &job.InputHash, &job.AttemptCount, &originalTitle, &incidentBody,
+		&job.ModelIdentity, &job.PromptVersion, &job.InputHash, &job.AttemptCount,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		if err := tx.Commit(); err != nil {
@@ -311,25 +342,16 @@ func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string,
 	if err != nil {
 		return PostProcessingJob{}, false, err
 	}
-	job.InputValues = map[string]string{"original_title": originalTitle, "incident_body": incidentBody}
-	rows, err := tx.QueryContext(ctx, `SELECT kind,value FROM presentation_values WHERE presentation_run_id=?`, job.PresentationRunID)
-	if err != nil {
-		return PostProcessingJob{}, false, err
+	inputContract, registered := inputContracts[job.ScopeKey]
+	if !registered || inputContract.PromptVersion == "" || len(inputContract.InputKinds) == 0 {
+		return PostProcessingJob{}, false, fmt.Errorf("post-processing scope %s/%s has no valid registered input contract", job.ProcessorKey, job.ScopeKey)
 	}
-	for rows.Next() {
-		var kind, value string
-		if err := rows.Scan(&kind, &value); err != nil {
-			rows.Close()
-			return PostProcessingJob{}, false, err
+	job.InputValues = make(map[string]string)
+	if inputContract.PromptVersion == job.PromptVersion {
+		job.InputValues, err = postProcessingInputValuesTx(ctx, tx, job.PresentationRunID, inputContract.InputKinds)
+		if err != nil {
+			return PostProcessingJob{}, false, fmt.Errorf("load claimed post-processing inputs: %w", err)
 		}
-		job.InputValues[kind] = value
-	}
-	if err := rows.Err(); err != nil {
-		rows.Close()
-		return PostProcessingJob{}, false, err
-	}
-	if err := rows.Close(); err != nil {
-		return PostProcessingJob{}, false, err
 	}
 	job.AttemptCount++
 	result, err := tx.ExecContext(ctx, `UPDATE post_processing_jobs SET status='running',attempt_count=?,next_retry_at=NULL,

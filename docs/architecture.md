@@ -59,8 +59,17 @@ Independent LLM work uses one registry-driven post-processing subsystem. Each
 processor registration declares metadata, ordering, model setting, scopes,
 inputs, named outputs, validation, automatic/manual capabilities, and bounded
 aggregate counters. The generic worker and store provide queueing, claims,
-retries, recovery, history, status, and metrics without processor branches. The
-public-assistance verifier receives the immutable, parser-extracted German
+retries, recovery, history, status, and metrics without processor branches.
+Claims materialize only the input kinds declared for the selected processor
+scope; source-backed inputs are never added to another processor's claimed job.
+The claim contract includes the prompt version, so jobs left behind by a prompt
+upgrade are claimed without newly declared inputs and handled by the worker's
+configuration-failure path instead of blocking the queue.
+Correction-style admin readers share one value-pair selection path for latest
+complete success, original-value fallback, and latest-attempt state, so another
+verifier does not require a new persistence algorithm.
+
+The public-assistance verifier receives the immutable, parser-extracted German
 police title and body plus the original metadata status and types. This is an
 intentional exception to the minimized post-processing boundary: the configured
 Ollama endpoint sees the unredacted German source so the verifier can check the

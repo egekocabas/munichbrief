@@ -73,6 +73,17 @@ type PostProcessingScope struct {
 	ScopeKey     string
 }
 
+// PostProcessingScopeInputContract identifies the current prompt and exact
+// immutable inputs for one registered processor scope.
+type PostProcessingScopeInputContract struct {
+	PromptVersion string
+	InputKinds    []string
+}
+
+// PostProcessingInputContract maps each scope of one processor to its current
+// prompt and immutable input contract.
+type PostProcessingInputContract map[string]PostProcessingScopeInputContract
+
 // PostProcessingJob is one independently claimed job for an immutable current
 // canonical presentation.
 type PostProcessingJob struct {

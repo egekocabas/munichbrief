@@ -475,7 +475,7 @@ func TestAdminPipelineHistoryCombinesCanonicalAndPostProcessingJobs(t *testing.T
 	if queued, err := database.QueuePostProcessingForRun(ctx, german.PresentationRunID, []store.PostProcessingPlan{translationPlan}, "manual", false, requestedAt); err != nil || queued != 1 {
 		t.Fatalf("queue history translation = %d/%v", queued, err)
 	}
-	translation, found, err := database.ClaimPostProcessingJob(ctx, "translation", false, nil, requestedAt)
+	translation, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingInputs("en", translationPlan.PromptVersion, "title_de", "summary_de"), false, nil, requestedAt)
 	if err != nil || !found {
 		t.Fatalf("claim history translation = %#v/%t/%v", translation, found, err)
 	}
@@ -486,7 +486,7 @@ func TestAdminPipelineHistoryCombinesCanonicalAndPostProcessingJobs(t *testing.T
 	if queued, err := database.QueuePostProcessingForRun(ctx, german.PresentationRunID, []store.PostProcessingPlan{verificationPlan}, "manual", false, requestedAt); err != nil || queued != 1 {
 		t.Fatalf("queue history category verification = %d/%v", queued, err)
 	}
-	verification, found, err := database.ClaimPostProcessingJob(ctx, "category_verification", false, nil, requestedAt)
+	verification, found, err := database.ClaimPostProcessingJob(ctx, "category_verification", testPostProcessingInputs("default", verificationPlan.PromptVersion, "title_de", "summary_de", "category"), false, nil, requestedAt)
 	if err != nil || !found {
 		t.Fatalf("claim history category verification = %#v/%t/%v", verification, found, err)
 	}
@@ -567,7 +567,7 @@ func TestAdminShowsPublicAssistanceVerificationControlsAndSafeHistory(t *testing
 	if queued, err := database.QueuePostProcessingForRun(ctx, job.PresentationRunID, []store.PostProcessingPlan{plan}, "manual", false, now.Add(time.Minute)); err != nil || queued != 1 {
 		t.Fatalf("queue assistance verification = %d/%v", queued, err)
 	}
-	verification, found, err := database.ClaimPostProcessingJob(ctx, processing.PublicAssistanceVerificationStep, false, nil, now.Add(2*time.Minute))
+	verification, found, err := database.ClaimPostProcessingJob(ctx, processing.PublicAssistanceVerificationStep, testPostProcessingInputs("default", plan.PromptVersion, plan.InputKinds...), false, nil, now.Add(2*time.Minute))
 	if err != nil || !found {
 		t.Fatalf("claim assistance verification = %#v/%t/%v", verification, found, err)
 	}
