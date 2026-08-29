@@ -30,6 +30,39 @@ type testModelCatalog struct{ snapshot ModelCatalogSnapshot }
 
 func (c testModelCatalog) Snapshot() ModelCatalogSnapshot { return c.snapshot }
 
+type pipelineTestObserver struct {
+	attempts  map[string]int
+	failures  map[string]int
+	durations map[string]int
+}
+
+func (o *pipelineTestObserver) RecordPipelineAttempt(step string) {
+	if o.attempts == nil {
+		o.attempts = make(map[string]int)
+	}
+	o.attempts[step]++
+}
+
+func (o *pipelineTestObserver) RecordPipelineSuccess(string, time.Time) {}
+
+func (o *pipelineTestObserver) RecordPipelineFailure(step, _ string) {
+	if o.failures == nil {
+		o.failures = make(map[string]int)
+	}
+	o.failures[step]++
+}
+
+func (o *pipelineTestObserver) RecordPipelineDuration(step string, _ time.Duration) {
+	if o.durations == nil {
+		o.durations = make(map[string]int)
+	}
+	o.durations[step]++
+}
+
+func (*pipelineTestObserver) SetPipelineSnapshot(store.PipelineSnapshot) {}
+func (*pipelineTestObserver) SetProcessorAvailable(bool)                 {}
+func (*pipelineTestObserver) SetProcessingWindowOpen(bool)               {}
+
 func (p *pipelineTestProvider) StepGenerator(model string) (StepGenerator, error) {
 	return pipelineTestGenerator{model: model, provider: p}, nil
 }
@@ -651,13 +684,17 @@ func TestPipelineWorkerTransientFailureOpensPerStepModelCircuit(t *testing.T) {
 		}
 		return nil
 	}}
-	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	observer := &pipelineTestObserver{}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), observer, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
 	if err != nil {
 		t.Fatal(err)
 	}
 	worker.processAvailable(ctx)
 	if provider.callCount(IncidentMetadataStep) != 1 || provider.callCount(GermanPresentationStep) != 1 || !worker.circuitOpen(GermanPresentationStep, "qwen:4b", now) {
 		t.Fatalf("first transient failure calls/circuit = metadata:%d german:%d/%t", provider.callCount(IncidentMetadataStep), provider.callCount(GermanPresentationStep), worker.circuitOpen(GermanPresentationStep, "qwen:4b", now))
+	}
+	if observer.attempts[GermanPresentationStep] != 1 || observer.failures[GermanPresentationStep] != 1 || observer.durations[GermanPresentationStep] != 1 {
+		t.Fatalf("failed canonical observability = attempts:%d failures:%d durations:%d", observer.attempts[GermanPresentationStep], observer.failures[GermanPresentationStep], observer.durations[GermanPresentationStep])
 	}
 	worker.processAvailable(ctx)
 	if provider.callCount(GermanPresentationStep) != 1 {
@@ -693,13 +730,17 @@ func TestTranslationTransientFailureBacksOffFailedModel(t *testing.T) {
 		}
 		return nil
 	}}
-	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	observer := &pipelineTestObserver{}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), observer, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
 	if err != nil {
 		t.Fatal(err)
 	}
 	worker.processAvailable(ctx)
 	if provider.callCount(EnglishTranslationStep) != 1 || len(worker.blockedModels(TranslationModelStep, now)) != 1 {
 		t.Fatalf("translation circuit = calls:%d blocked:%v", provider.callCount(EnglishTranslationStep), worker.blockedModels(TranslationModelStep, now))
+	}
+	if observer.attempts[TranslationModelStep+"/en"] != 1 || observer.failures[TranslationModelStep+"/en"] != 1 || observer.durations[TranslationModelStep+"/en"] != 1 {
+		t.Fatalf("failed post-processing observability = attempts:%d failures:%d durations:%d", observer.attempts[TranslationModelStep+"/en"], observer.failures[TranslationModelStep+"/en"], observer.durations[TranslationModelStep+"/en"])
 	}
 	worker.processAvailable(ctx)
 	if provider.callCount(EnglishTranslationStep) != 1 {

@@ -72,6 +72,15 @@ func (w *PipelineWorker) RequestPostProcessing(ctx context.Context, request Post
 		queued, err = w.repository.QueueIncidentPostProcessing(ctx, *request.IncidentID, plans, w.clock())
 	}
 	if err == nil && queued > 0 {
+		target := "all"
+		if request.IncidentID != nil {
+			target = "incident"
+		}
+		scopes := make([]string, 0, len(plans))
+		for _, plan := range plans {
+			scopes = append(scopes, plan.ScopeKey)
+		}
+		w.logger.Info("AI post-processing jobs queued", "processor", request.ProcessorKey, "scopes", scopes, "target", target, "incident_id", request.IncidentID, "model", model, "jobs", queued, "request_kind", "manual")
 		w.signal()
 	}
 	return queued, err
@@ -306,7 +315,7 @@ func (w *PipelineWorker) Run(ctx context.Context) {
 		w.logger.Error("recover staged AI processing", "error", err)
 	}
 	if err := w.repository.RecoverPostProcessing(ctx, w.clock()); err != nil {
-		w.logger.Error("recover post-processing", "error", err)
+		w.logger.Error("recover AI post-processing", "error", err)
 	}
 	w.processAvailable(ctx)
 	ticker := time.NewTicker(w.interval)
@@ -362,17 +371,21 @@ func (w *PipelineWorker) processAvailable(ctx context.Context) {
 			if definition.Automatic && preferredErr == nil && catalog.Available() && catalog.Has(model) && windowOpen {
 				plans, err := w.postProcessors.Plans(definition.Key, nil, model)
 				if err != nil {
-					w.logger.Error("build scheduled post-processing plans", "processor", definition.Key, "error", err)
+					w.logger.Error("build scheduled AI post-processing plans", "processor", definition.Key, "error", err)
 					return
 				}
-				if _, err := w.repository.QueuePostProcessingForAll(ctx, w.sourceMode, plans, false, now); err != nil {
-					w.logger.Error("queue missing post-processing", "processor", definition.Key, "error", err)
+				queued, err := w.repository.QueuePostProcessingForAll(ctx, w.sourceMode, plans, false, now)
+				if err != nil {
+					w.logger.Error("queue missing AI post-processing", "processor", definition.Key, "error", err)
 					return
+				}
+				if queued > 0 {
+					w.logger.Info("AI post-processing jobs discovered", "processor", definition.Key, "jobs", queued, "request_kind", "scheduled")
 				}
 			}
 			job, found, err := w.repository.ClaimPostProcessingJob(ctx, definition.Key, windowOpen, w.blockedModels(definition.Key, now), now)
 			if err != nil {
-				w.logger.Error("claim post-processing job", "processor", definition.Key, "error", err)
+				w.logger.Error("claim AI post-processing job", "processor", definition.Key, "error", err)
 				return
 			}
 			if !found {
@@ -382,7 +395,13 @@ func (w *PipelineWorker) processAvailable(ctx context.Context) {
 			if !catalog.Has(job.ModelIdentity) {
 				retry := now.Add(30 * time.Second)
 				if err := w.repository.FailPostProcessingJob(ctx, job, "pending", string(ErrorConfiguration), &retry, now, fmt.Errorf("selected post-processing model is unavailable")); err != nil {
-					w.logger.Error("defer unavailable post-processing model", "job_id", job.ID, "processor", job.ProcessorKey, "error", err)
+					w.logger.Error("defer unavailable AI post-processing model", "job_id", job.ID, "processor", job.ProcessorKey, "error", err)
+				} else {
+					if w.observer != nil {
+						w.observer.RecordPipelineAttempt(job.ProcessorKey + "/" + job.ScopeKey)
+						w.observer.RecordPipelineFailure(job.ProcessorKey+"/"+job.ScopeKey, string(ErrorConfiguration))
+					}
+					w.logger.Warn("AI post-processing job deferred", "job_id", job.ID, "incident_id", job.IncidentID, "processor", job.ProcessorKey, "scope", job.ScopeKey, "model", job.ModelIdentity, "failure_kind", ErrorConfiguration, "retry_at", retry)
 				}
 				w.openCircuit(job.ProcessorKey, job.ModelIdentity, retry)
 				w.publishSnapshot(ctx)
@@ -426,6 +445,11 @@ func (w *PipelineWorker) processCycle(ctx context.Context, cycle store.PipelineC
 					w.logger.Error("defer unavailable staged AI model", "cycle_id", cycle.ID, "job_id", job.ID, "error", err)
 					return false
 				}
+				if w.observer != nil {
+					w.observer.RecordPipelineAttempt(job.StepKey)
+					w.observer.RecordPipelineFailure(job.StepKey, string(ErrorConfiguration))
+				}
+				w.logger.Warn("staged AI job deferred", "cycle_id", cycle.ID, "job_id", job.ID, "incident_id", job.IncidentID, "step", job.StepKey, "model", job.ModelIdentity, "failure_kind", ErrorConfiguration, "retry_at", retry)
 				w.openCircuit(job.StepKey, job.ModelIdentity, retry)
 				return w.yieldBlockedForManual(ctx, cycle)
 			}
@@ -481,6 +505,7 @@ func (w *PipelineWorker) processJob(ctx context.Context, job store.PipelineJob) 
 	started := w.clock()
 	if w.observer != nil {
 		w.observer.RecordPipelineAttempt(step.Key)
+		defer func() { w.observer.RecordPipelineDuration(step.Key, w.clock().Sub(started)) }()
 	}
 	w.logger.Info("staged AI request started", "cycle_id", job.CycleID, "job_id", job.ID, "incident_id", job.IncidentID, "step", step.Key, "model", job.ModelIdentity, "attempt", job.AttemptCount)
 	generator, err := w.providers.StepGenerator(job.ModelIdentity)
@@ -529,10 +554,13 @@ func (w *PipelineWorker) processJob(ctx context.Context, job store.PipelineJob) 
 			postPlans, postErr = w.hydratePostProcessingPlans(postPlans)
 		}
 		if postErr != nil {
-			w.logger.Error("resolve post-processing plans", "cycle_id", job.CycleID, "error", postErr)
+			w.logger.Error("resolve AI post-processing plans", "cycle_id", job.CycleID, "error", postErr)
 		} else if len(postPlans) > 0 {
-			if _, err := w.repository.QueuePostProcessingForRun(ctx, job.PresentationRunID, postPlans, requestKind, false, completed); err != nil {
-				w.logger.Error("queue presentation post-processing", "presentation_run_id", job.PresentationRunID, "error", err)
+			queued, err := w.repository.QueuePostProcessingForRun(ctx, job.PresentationRunID, postPlans, requestKind, false, completed)
+			if err != nil {
+				w.logger.Error("queue presentation AI post-processing", "presentation_run_id", job.PresentationRunID, "error", err)
+			} else if queued > 0 {
+				w.logger.Info("AI post-processing jobs queued", "cycle_id", job.CycleID, "presentation_run_id", job.PresentationRunID, "jobs", queued, "request_kind", requestKind)
 			}
 		}
 	}
@@ -540,9 +568,9 @@ func (w *PipelineWorker) processJob(ctx context.Context, job store.PipelineJob) 
 	w.closeCircuit(step.Key, job.ModelIdentity)
 	if w.observer != nil {
 		w.observer.RecordPipelineSuccess(step.Key, completed)
-		w.observer.RecordPipelineDuration(step.Key, completed.Sub(started))
 	}
-	w.logger.Info("staged AI request completed", "cycle_id", job.CycleID, "job_id", job.ID, "incident_id", job.IncidentID, "step", step.Key, "model", modelIdentity, "duration", completed.Sub(started).Round(time.Millisecond))
+	duration := completed.Sub(started)
+	w.logger.Info("staged AI request completed", "cycle_id", job.CycleID, "job_id", job.ID, "incident_id", job.IncidentID, "step", step.Key, "model", modelIdentity, "duration", duration.Round(time.Millisecond), "duration_seconds", duration.Seconds())
 	w.publishSnapshot(ctx)
 	return true
 }
@@ -567,8 +595,9 @@ func (w *PipelineWorker) processPostProcessingJob(ctx context.Context, job store
 	started := w.clock()
 	if w.observer != nil {
 		w.observer.RecordPipelineAttempt(executionKey)
+		defer func() { w.observer.RecordPipelineDuration(executionKey, w.clock().Sub(started)) }()
 	}
-	w.logger.Info("post-processing request started", "job_id", job.ID, "incident_id", job.IncidentID, "processor", job.ProcessorKey, "scope", job.ScopeKey, "model", job.ModelIdentity, "attempt", job.AttemptCount)
+	w.logger.Info("AI post-processing request started", "job_id", job.ID, "incident_id", job.IncidentID, "processor", job.ProcessorKey, "scope", job.ScopeKey, "model", job.ModelIdentity, "attempt", job.AttemptCount)
 	generator, err := w.providers.StepGenerator(job.ModelIdentity)
 	if err != nil {
 		return w.handlePostProcessingFailure(ctx, job, errorOf(ErrorConfiguration, "create post-processing generator: %v", err))
@@ -600,9 +629,9 @@ func (w *PipelineWorker) processPostProcessingJob(ctx context.Context, job store
 	w.closeCircuit(job.ProcessorKey, job.ModelIdentity)
 	if w.observer != nil {
 		w.observer.RecordPipelineSuccess(executionKey, completed)
-		w.observer.RecordPipelineDuration(executionKey, completed.Sub(started))
 	}
-	w.logger.Info("post-processing request completed", "job_id", job.ID, "incident_id", job.IncidentID, "processor", job.ProcessorKey, "scope", job.ScopeKey, "model", modelIdentity, "duration", completed.Sub(started).Round(time.Millisecond))
+	duration := completed.Sub(started)
+	w.logger.Info("AI post-processing request completed", "job_id", job.ID, "incident_id", job.IncidentID, "processor", job.ProcessorKey, "scope", job.ScopeKey, "model", modelIdentity, "duration", duration.Round(time.Millisecond), "duration_seconds", duration.Seconds())
 	w.publishSnapshot(ctx)
 	return true
 }
@@ -625,7 +654,7 @@ func (w *PipelineWorker) handlePostProcessingFailure(ctx context.Context, job st
 		retryAt = &next
 	}
 	if err := w.repository.FailPostProcessingJob(ctx, job, status, string(kind), retryAt, now, processingError); err != nil {
-		w.logger.Error("record post-processing failure", "job_id", job.ID, "error", err)
+		w.logger.Error("record AI post-processing failure", "job_id", job.ID, "error", err)
 		return false
 	}
 	if kind == ErrorTransient || kind == ErrorConfiguration {
@@ -637,7 +666,7 @@ func (w *PipelineWorker) handlePostProcessingFailure(ctx context.Context, job st
 		executionKey := job.ProcessorKey + "/" + job.ScopeKey
 		w.observer.RecordPipelineFailure(executionKey, string(kind))
 	}
-	w.logger.Warn("post-processing request failed", "job_id", job.ID, "incident_id", job.IncidentID, "processor", job.ProcessorKey, "scope", job.ScopeKey, "failure_kind", kind, "status", status, "retry_at", retryAt)
+	w.logger.Warn("AI post-processing request failed", "job_id", job.ID, "incident_id", job.IncidentID, "processor", job.ProcessorKey, "scope", job.ScopeKey, "failure_kind", kind, "status", status, "retry_at", retryAt)
 	return kind == ErrorOutput || kind == ErrorPrivacy
 }
 

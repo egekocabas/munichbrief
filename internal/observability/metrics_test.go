@@ -121,6 +121,7 @@ func TestMetricsExposeStagedPipelineState(t *testing.T) {
 		`munichbrief_pipeline_successes_total{step="incident_metadata"} 1`,
 		`munichbrief_pipeline_successes_total{step="category_verification/default"} 1`,
 		`munichbrief_pipeline_failures_total{step="translation/en"} 1`,
+		`munichbrief_pipeline_failures_by_kind_total{step="translation/en",kind="output"} 1`,
 		`munichbrief_pipeline_duration_seconds_sum{step="category_verification/default"} 1.250000`,
 		`munichbrief_pipeline_duration_seconds_sum{step="translation/en"} 1.750000`,
 		`munichbrief_pipeline_jobs{step="incident_metadata",state="queued"} 2`,

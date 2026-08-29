@@ -106,9 +106,10 @@ func fixtureStore(t *testing.T) *store.Store {
 }
 
 type fakeProcessingRequester struct {
-	database *store.Store
-	err      error
-	status   *processing.PipelineModelStatus
+	database    *store.Store
+	err         error
+	status      *processing.PipelineModelStatus
+	postRequest func(context.Context, processing.PostProcessingRequest) (int, error)
 }
 
 func (p fakeProcessingRequester) RequestNow(ctx context.Context, sourceMode string, models map[string]string, incidentID *int64, reprocessAll bool) (store.PipelineRequestResult, error) {
@@ -157,6 +158,9 @@ func (p fakeProcessingRequester) SetPreferredStepModel(ctx context.Context, step
 }
 
 func (p fakeProcessingRequester) RequestPostProcessing(ctx context.Context, request processing.PostProcessingRequest) (int, error) {
+	if p.postRequest != nil {
+		return p.postRequest(ctx, request)
+	}
 	plans, err := processing.DefaultPostProcessorRegistry().Plans(request.ProcessorKey, request.ScopeKeys, request.Model)
 	if err != nil {
 		return 0, err

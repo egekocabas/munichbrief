@@ -101,8 +101,9 @@ one missing model does not pause the others.
 
 When a newer canonical run queues a language, pending translations for older
 runs of the same incident and source revision are superseded. Running attempts
-finish safely, while completed translations remain available for audit and
-reader fallback.
+finish safely, while completed translations remain available for audit. A
+replacement attempt for the current run leaves that run's prior success visible
+until the replacement succeeds.
 
 Scheduled work starts inside the configured Europe/Berlin window. A frozen
 cycle may finish after the window closes. Explicit admin or CLI requests persist

@@ -67,7 +67,8 @@ readiness. The ten-minute generation timeout already accommodates model loading
 delays of roughly 30 seconds.
 
 Structured logs identify AI job and incident IDs, attempts, safe failure
-categories, RSS synchronization stages, and press-release document stages.
+categories, queue discovery and manual queueing, RSS synchronization stages,
+and press-release document stages.
 Completed stages include both a human-readable `duration` and numeric
 `duration_seconds`. Source bodies, prompts, generated text, and model responses
 are deliberately excluded.

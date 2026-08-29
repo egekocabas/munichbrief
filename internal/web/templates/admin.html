@@ -153,7 +153,7 @@
       </div>
       <div class="rounded-lg border border-alert bg-alert-soft/30 p-5">
         <h2 class="font-serif text-xl font-bold">Reprocess everything</h2>
-        <p class="mt-2 text-sm text-muted">Freeze every current incident and upgrade it through the canonical v2 pipeline from metadata extraction. Translations follow asynchronously; older queued automatic work for these revisions is superseded.</p>
+        <p class="mt-2 text-sm text-muted">Freeze every current incident and upgrade it through the canonical v2 pipeline from metadata extraction. Registered post-processing follows asynchronously; older queued automatic work for these revisions is superseded.</p>
         <form class="mt-4 flex flex-col gap-3" method="post" action="/api/admin/ai/reprocess-all" data-confirm-processing data-confirm-description="Reprocess every current incident from the first pipeline step. Older queued scheduled and continuation work for these source revisions will be superseded.">
           <input name="confirmed" type="hidden" value="false">
           <input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}">
@@ -200,7 +200,7 @@
         <div>
           <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-alert">Review queue</p>
           <h2 id="unprocessed-heading" class="mt-1 font-serif text-2xl font-bold">Unprocessed incidents</h2>
-          <p class="mt-2 max-w-3xl text-sm text-muted">Incidents without a current, complete presentation for the active source content and prompt from any model.</p>
+          <p class="mt-2 max-w-3xl text-sm text-muted">Incidents without a current, complete v2 presentation for the active source content.</p>
         </div>
         <p class="font-mono text-sm font-semibold tabular-nums text-muted">{{.Unprocessed.Shown}} shown / {{.Unprocessed.Total}} total</p>
       </div>

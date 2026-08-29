@@ -177,6 +177,46 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	}
 }
 
+func TestAdminUsesInjectedPostProcessorMetadataWithoutHandlerBranches(t *testing.T) {
+	database := fixtureStore(t)
+	status := processing.PipelineModelStatus{
+		Steps:            defaultTestStepStatus("qwen3.5:4b"),
+		Models:           []string{"qwen3.5:4b"},
+		CatalogAvailable: true,
+		Ready:            true,
+		PostProcessors: []processing.PostProcessorModelStatus{{
+			Key: "quality_note", DisplayName: "Quality note", Description: "Run an independent quality note.",
+			ModelSettingKey: "quality_note", Manual: true, Preferred: "qwen3.5:4b", PreferredAvailable: true,
+			Scopes: []processing.PostProcessorScopeStatus{{Key: "brief", DisplayName: "Brief"}, {Key: "detailed", DisplayName: "Detailed"}},
+		}},
+	}
+	var received processing.PostProcessingRequest
+	requester := fakeProcessingRequester{database: database, status: &status, postRequest: func(_ context.Context, request processing.PostProcessingRequest) (int, error) {
+		received = request
+		return 2, nil
+	}}
+	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "review", AdminEnabled: true, Processor: requester,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	page := httptest.NewRecorder()
+	server.Handler().ServeHTTP(page, httptest.NewRequest(http.MethodGet, "/admin", nil))
+	for _, expected := range []string{"Quality note only", "Run an independent quality note.", `name="processor" type="hidden" value="quality_note"`, `value="brief"`, `value="detailed"`} {
+		if page.Code != http.StatusOK || !strings.Contains(page.Body.String(), expected) {
+			t.Fatalf("injected post-processor card = %d, missing %q", page.Code, expected)
+		}
+	}
+
+	response := httptest.NewRecorder()
+	server.Handler().ServeHTTP(response, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=quality_note&scope=all&target=all&model=qwen3.5%3A4b"))
+	if response.Code != http.StatusSeeOther || received.ProcessorKey != "quality_note" || received.Model != "qwen3.5:4b" || received.IncidentID != nil || len(received.ScopeKeys) != 0 {
+		t.Fatalf("injected post-processor request = %d/%#v", response.Code, received)
+	}
+}
+
 func TestAdminProcessingReturnsUnavailableWhenAIIsDisabled(t *testing.T) {
 	database := fixtureStore(t)
 	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{

@@ -45,6 +45,7 @@ type Metrics struct {
 
 type pipelineStepMetrics struct {
 	attempts, successes, failures, durationNanos, durationCount atomic.Uint64
+	failureKinds                                                [4]atomic.Uint64
 	queued, running, retrying, review, failed, succeeded        atomic.Int64
 }
 
@@ -187,8 +188,15 @@ func (m *Metrics) RecordPipelineSuccess(step string, at time.Time) {
 	m.lastProcessingSuccess.Store(at.Unix())
 }
 
-func (m *Metrics) RecordPipelineFailure(step, _ string) {
-	m.pipelineStep(step).failures.Add(1)
+func (m *Metrics) RecordPipelineFailure(step, kind string) {
+	metrics := m.pipelineStep(step)
+	metrics.failures.Add(1)
+	for index, candidate := range pipelineFailureKinds {
+		if kind == candidate {
+			metrics.failureKinds[index].Add(1)
+			return
+		}
+	}
 }
 
 func (m *Metrics) RecordPipelineDuration(step string, duration time.Duration) {
@@ -301,7 +309,7 @@ func (m *Metrics) write(writer io.Writer) {
 	writeResponseClasses(writer, "munichbrief_http_responses_total", "Reader HTTP responses by status class.", "", &m.httpResponses)
 	writeResponseClasses(writer, "munichbrief_source_http_responses_total", "Source HTTP responses by resource and status class.", "feed", &m.sourceFeedResponses)
 	writeResponseClasses(writer, "munichbrief_source_http_responses_total", "", "article", &m.sourcePageResponses)
-	fmt.Fprintln(writer, "# HELP munichbrief_last_processing_success_timestamp_seconds Unix timestamp of the last successful AI presentation.")
+	fmt.Fprintln(writer, "# HELP munichbrief_last_processing_success_timestamp_seconds Unix timestamp of the last successful canonical or post-processing AI job.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_last_processing_success_timestamp_seconds gauge")
 	fmt.Fprintf(writer, "munichbrief_last_processing_success_timestamp_seconds %d\n", m.lastProcessingSuccess.Load())
 	fmt.Fprintln(writer, "# HELP munichbrief_ai_processor_available Whether the AI processor circuit is closed and available.")
@@ -316,6 +324,8 @@ func (m *Metrics) write(writer io.Writer) {
 	fmt.Fprintln(writer, "# TYPE munichbrief_pipeline_successes_total counter")
 	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_failures_total Failed AI attempts by canonical or independent processing step.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_pipeline_failures_total counter")
+	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_failures_by_kind_total Failed AI attempts by processing step and bounded safe category.")
+	fmt.Fprintln(writer, "# TYPE munichbrief_pipeline_failures_by_kind_total counter")
 	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_duration_seconds AI attempt duration by canonical or independent processing step.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_pipeline_duration_seconds summary")
 	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_jobs AI jobs by canonical or independent processing step and bounded state.")
@@ -325,6 +335,9 @@ func (m *Metrics) write(writer io.Writer) {
 		fmt.Fprintf(writer, "munichbrief_pipeline_attempts_total{step=%q} %d\n", step, metrics.attempts.Load())
 		fmt.Fprintf(writer, "munichbrief_pipeline_successes_total{step=%q} %d\n", step, metrics.successes.Load())
 		fmt.Fprintf(writer, "munichbrief_pipeline_failures_total{step=%q} %d\n", step, metrics.failures.Load())
+		for index, kind := range pipelineFailureKinds {
+			fmt.Fprintf(writer, "munichbrief_pipeline_failures_by_kind_total{step=%q,kind=%q} %d\n", step, kind, metrics.failureKinds[index].Load())
+		}
 		fmt.Fprintf(writer, "munichbrief_pipeline_duration_seconds_sum{step=%q} %.6f\n", step, float64(metrics.durationNanos.Load())/float64(time.Second))
 		fmt.Fprintf(writer, "munichbrief_pipeline_duration_seconds_count{step=%q} %d\n", step, metrics.durationCount.Load())
 		for state, value := range map[string]int64{"queued": metrics.queued.Load(), "running": metrics.running.Load(), "retrying": metrics.retrying.Load(), "needs_review": metrics.review.Load(), "failed": metrics.failed.Load(), "succeeded": metrics.succeeded.Load()} {
@@ -353,6 +366,8 @@ func (m *Metrics) write(writer io.Writer) {
 	}
 	writeCounter(writer, "munichbrief_retention_deletions_total", "Records removed by retention processing.", 0)
 }
+
+var pipelineFailureKinds = [...]string{"transient", "configuration", "output", "privacy"}
 
 func writeDurationSummary(writer io.Writer, name, help string, nanoseconds, count uint64) {
 	fmt.Fprintf(writer, "# HELP %s %s\n", name, help)
