@@ -141,6 +141,14 @@
       if (!card) continue;
       const counters = Object.entries(processor.counters || {}).map(([name, value]) => ` · ${name} ${value}`).join("");
       setText(card.querySelector("[data-post-processing-details]"), `Pending ${processor.pending || 0} · Running ${processor.running || 0} · Retrying ${processor.retrying || 0} · Review ${processor.needs_review || 0} · Failed ${processor.failed || 0} · Completed ${processor.succeeded || 0}${counters}`);
+      const runningStartedAt = processor.running_started_at && new Date(processor.running_started_at);
+      if (runningStartedAt && !Number.isNaN(runningStartedAt.getTime())) {
+        const seconds = Math.max(0, Math.floor((new Date(status.generated_at) - runningStartedAt) / 1000));
+        const minutes = Math.floor(seconds / 60);
+        setText(card.querySelector("[data-post-processing-elapsed]"), `Current job elapsed ${minutes}m ${seconds % 60}s`);
+      } else {
+        setText(card.querySelector("[data-post-processing-elapsed]"), "No running job");
+      }
     }
     if (events) {
       events.replaceChildren(...(queue.recent_events || []).map((event) => {
@@ -180,4 +188,45 @@
     if (!document.hidden) refresh();
   });
   refresh();
+})();
+
+(() => {
+  const history = document.querySelector("[data-pipeline-history]");
+  if (!(history instanceof HTMLElement)) return;
+
+  const interval = Number(history.dataset.historyPollInterval) || 2000;
+  let timer = 0;
+  let requestInFlight = false;
+  let failures = 0;
+
+  const schedule = (delay) => {
+    window.clearTimeout(timer);
+    if (!document.hidden) timer = window.setTimeout(refresh, delay);
+  };
+
+  async function refresh() {
+    if (document.hidden || requestInFlight) return;
+    requestInFlight = true;
+    try {
+      const response = await fetch(window.location.href, {headers: {Accept: "text/html"}, cache: "no-store"});
+      if (!response.ok) throw new Error(`status ${response.status}`);
+      const parsedDocument = new DOMParser().parseFromString(await response.text(), "text/html");
+      const nextHistory = parsedDocument.querySelector("[data-pipeline-history]");
+      if (!(nextHistory instanceof HTMLElement)) throw new Error("history content missing");
+      if (history.innerHTML !== nextHistory.innerHTML) history.replaceChildren(...nextHistory.childNodes);
+      failures = 0;
+      schedule(interval);
+    } catch (_error) {
+      failures += 1;
+      schedule(Math.min(30000, interval * (2 ** Math.min(failures, 4))));
+    } finally {
+      requestInFlight = false;
+    }
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    window.clearTimeout(timer);
+    if (!document.hidden) refresh();
+  });
+  schedule(interval);
 })();

@@ -508,7 +508,7 @@ func TestAdminPipelineHistoryCombinesCanonicalAndPostProcessingJobs(t *testing.T
 	if first.Code != http.StatusOK || first.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("pipeline history = %d/%q", first.Code, first.Header().Get("Cache-Control"))
 	}
-	for _, expected := range []string{"Pipeline history", "Open reader", `aria-current="page"`, "2 job states shown", "category_verification/default", "post-processing · manual", "qwen3.5:4b", "translation/en", "translategemma:4b", "Older →"} {
+	for _, expected := range []string{"Pipeline history", "Open reader", `aria-current="page"`, "2 job states shown", "category_verification/default", "post-processing · manual", "qwen3.5:4b", "translation/en", "translategemma:4b", "Older →", `data-pipeline-history`, `data-history-poll-interval="2000"`, staticAssets["admin.js"].path} {
 		if !strings.Contains(first.Body.String(), expected) {
 			t.Errorf("pipeline history does not contain %q", expected)
 		}
@@ -518,7 +518,7 @@ func TestAdminPipelineHistoryCombinesCanonicalAndPostProcessingJobs(t *testing.T
 	}
 	dashboard := httptest.NewRecorder()
 	handler.ServeHTTP(dashboard, httptest.NewRequest(http.MethodGet, "/admin", nil))
-	if dashboard.Code != http.StatusOK || !strings.Contains(dashboard.Body.String(), "category_verification/default") || !strings.Contains(dashboard.Body.String(), "translation/en") || !strings.Contains(dashboard.Body.String(), "Cycle #"+formatID(result.CycleID)) {
+	if dashboard.Code != http.StatusOK || !strings.Contains(dashboard.Body.String(), "category_verification/default") || !strings.Contains(dashboard.Body.String(), "translation/en") || !strings.Contains(dashboard.Body.String(), "data-post-processing-elapsed") || !strings.Contains(dashboard.Body.String(), "Cycle #"+formatID(result.CycleID)) {
 		t.Fatalf("admin dashboard post-processing history = %d/%q", dashboard.Code, dashboard.Body.String())
 	}
 	status := httptest.NewRecorder()

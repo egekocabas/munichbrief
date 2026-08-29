@@ -9,6 +9,7 @@
   <script src="{{assetURL "theme.js"}}"></script>
   <link rel="icon" href="{{assetURL "favicon.svg"}}" type="image/svg+xml">
   <link rel="stylesheet" href="{{assetURL "app.css"}}">
+  <script defer src="{{assetURL "admin.js"}}"></script>
 </head>
 <body class="min-h-screen text-ink antialiased">
   <header class="border-b border-rule/90 bg-paper/95">
@@ -27,7 +28,7 @@
       </nav>
     </div>
   </header>
-  <main class="page-shell py-8">
+  <main class="page-shell py-8" data-pipeline-history data-history-poll-interval="2000">
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div class="max-w-3xl">
         <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Operations</p>
