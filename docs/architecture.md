@@ -55,7 +55,11 @@ operations:
    metadata. It creates the canonical privacy-safe German title and summary.
 
 When stage 2 succeeds, that presentation run becomes complete immediately.
-Category verification and translations are separate durable subsystems. The
+Independent LLM work uses one registry-driven post-processing subsystem. Each
+processor registration declares metadata, ordering, model setting, scopes,
+inputs, named outputs, validation, automatic/manual capabilities, and bounded
+aggregate counters. The generic worker and store provide queueing, claims,
+retries, recovery, history, status, and metrics without processor branches. The
 category verifier receives only the accepted German title, summary, and the
 immutable metadata category represented by its German display name. The model
 sees and returns only German category names; application-owned mappings convert
@@ -67,7 +71,7 @@ publication and is not interpreted as a verdict. A pending, exhausted, or
 failed recheck leaves the previous successful result effective, or falls back
 to the immutable original metadata category when no verification has succeeded.
 
-Each registered translation language owns
+Translation scopes are generated from registered languages. Each language owns
 an immutable prompt, schema, validator, generator, and enablement cutover, while
 all languages share one preferred translation model. English is currently the
 only target and receives only the accepted German title and summary.
@@ -90,9 +94,10 @@ The worker:
 5. Publishes each German presentation as soon as its stage-2 job succeeds and
    enqueues category verification and translations for that exact run.
 
-At every job boundary the worker prioritizes canonical work, then category
-verification, then translation. The independent processors have separate model
-settings and circuit breakers, so one missing model does not pause the others.
+At every job boundary the worker prioritizes canonical work, then registered
+post-processors by priority. Category verification precedes translation. The
+independent processors have separate model settings and circuit breakers, so
+one missing model does not pause the others.
 
 When a newer canonical run queues a language, pending translations for older
 runs of the same incident and source revision are superseded. Running attempts
@@ -103,16 +108,11 @@ Scheduled work starts inside the configured Europe/Berlin window. A frozen
 cycle may finish after the window closes. Explicit admin or CLI requests persist
 manual priority but retain validation, circuit breaking, and retry delays.
 
-The v2 migration records an automatic-scheduling cutover. Incidents existing at
-that boundary are not automatically upgraded, and unfinished v1 work is marked
-superseded so the canonical worker cannot resume an incompatible snapshot.
-Language enablement has its own cutover: new canonical runs translate
-automatically, while historical translation requires an explicit admin
-backfill. Completed v1 and legacy English values are imported into generic
-translation records without rewriting their original audit values.
-Category verification has an equivalent deployment cutover. Explicit backfill
-covers current canonical runs and older same-source runs that can still be
-selected as translated fallbacks; obsolete source revisions are excluded.
+The v2 migration records an automatic-scheduling cutover. Each registered
+processor scope also has a persisted enablement time. Existing translation and
+category-verification attempts are migrated into unified jobs and named values
+for audit, including imported and superseded records, but only complete current
+`incident-pipeline-v2` runs are eligible for new work or reader selection.
 
 ## Presentation boundary
 
@@ -137,14 +137,14 @@ effective category is the newest successful verification for that run, or its
 immutable original category when no verification succeeded. A category result
 from another run is never mixed into German or translated fallback content.
 
-German selection prefers the newest completed v2 run, then a completed v1 run,
-then an imported legacy bilingual run. A target-language page selects the
-newest canonical run with a completed translation for that language; a pending
-or failed newer translation leaves an older translated run visible, and an
-incident with no translated fallback is omitted. Metadata always comes from
-the same canonical run as the selected translation. Timeline grouping and
-pagination remain based on publication time; incident timing is display
-metadata.
+German selection uses the newest complete current v2 run. A target-language
+page uses the newest successful translation for that same v2 run; a pending or
+failed replacement leaves the previous successful value for that run visible.
+V1, imported, and legacy presentations remain auditable but are never reader or
+admin-selection fallbacks. An incident without a complete current v2
+presentation is unprocessed and omitted publicly. Metadata always comes from
+the selected canonical run. Timeline grouping and pagination remain based on
+publication time; incident timing is display metadata.
 
 The optional admin routes contain retained originals and processing controls.
 The application does not authenticate them; the ingress must protect both

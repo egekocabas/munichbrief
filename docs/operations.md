@@ -39,10 +39,10 @@ metrics listener provides `/metrics`.
 The AI worker automatically considers incidents created after the persisted v2
 cutover. It freezes a canonical cycle, processes all metadata-extraction jobs,
 and switches to German-presentation jobs. Each German result becomes available
-immediately; its English job enters a separate durable queue. Older
-incidents retain completed v1 or legacy presentations unless an operator
-explicitly selects one or uses “Reprocess everything.” “Process all
-unprocessed” does not upgrade an incident with a valid completed presentation.
+immediately; registered post-processing jobs enter a unified durable queue.
+Only complete current `incident-pipeline-v2` presentations are selectable.
+Incidents with only v1, imported, or legacy output are unprocessed and remain
+hidden publicly until v2 completes.
 The five-second AI interval is an idle queue check, while the ten-minute AI
 timeout bounds a single Ollama request. Unless immediate mode is enabled, new
 Ollama requests start only during the configured Europe/Berlin processing
@@ -53,13 +53,13 @@ the circuit breaker, and normal retry delays. A command-line request is picked
 up by the running server on its next idle worker check.
 
 The protected admin dashboard stores one preferred model for each canonical
-step, one category-verification model, and one shared preferred model for all
-registered translations. Fresh
+step and each registered post-processor. Translation scopes share their
+processor model setting. Fresh
 databases start unconfigured; upgraded databases migrate the former German
 preference to both canonical steps and rename the former English preference to
 the shared translation setting. A missing category or translation model pauses
 only that independent processor without pausing German processing. The dashboard
-displays the automatic v2 and category-verification cutovers. The server refreshes Ollama's
+displays the automatic v2 and registered processor-scope cutovers. The server refreshes Ollama's
 `/api/tags` every 30 seconds; scheduled processing pauses until all required
 models are installed, while priority manual cycles retain their per-step model
 choices. Catalog failure pauses all AI calls but does not affect reader
@@ -75,9 +75,9 @@ are deliberately excluded.
 `review` presentation mode displays stored German source text and processing
 states and is intended for local fixture development. `public` mode fails closed: it
 lists only incidents with a privacy-safe presentation from the active source
-hash and supported pipeline lifecycle, and never renders stored originals. A
-completed v2 run is preferred, with v1 and imported legacy output as fallbacks;
-incomplete v2 attempts do not replace either fallback. Back up SQLite
+hash and supported pipeline lifecycle, and never renders stored originals. Only
+a complete current v2 run is eligible; v1 and imported legacy output are
+retained for audit but never selected. Back up SQLite
 before deploying a migration. German and English pages use explicit `/de` and
 `/en` paths; visiting either path refreshes one one-year, HTTP-only preference
 cookie used by the root and legacy-route redirects. Enable secure cookies
@@ -93,18 +93,17 @@ negotiate a privacy-safe Markdown representation through
 
 The optional `/admin` dashboard shows live cycle and per-step queue state,
 independently paginated incident lists, retained German originals, and both
-generated languages. It also shows raw and formatted metadata, separate
-canonical, category-verification, and translation provenance and queue states, the v1/v2/legacy
-presentation source, and the scheduling cutover. Its confirmed actions can
+generated languages. It also shows raw and formatted metadata, canonical and
+registry-driven post-processing provenance and queue states, and scheduling
+cutovers. Its confirmed actions can
 create a canonical cycle for one incident, every canonically unprocessed
-incident, or every current incident. Focused post-processing controls can
-retranslate one incident or every eligible current incident with a selected
-installed model and either one registered language or all languages. They can
-also recheck one incident's category or all reader-selectable presentations.
-These explicit focused actions are manual-priority jobs, rerun successful work,
-and leave the previous successful translation or effective category available
-until the replacement succeeds. They replace the former model-card history
-backfill controls; narrower per-incident retry actions remain available. The
+incident, or every current incident. Registry-generated post-processing cards
+can process one incident or every eligible current v2 presentation with a
+selected installed model. Multi-scope processors such as translation can select
+one scope or all registered scopes; a single default scope stays hidden. These
+manual-priority actions rerun successful work and leave the prior successful
+value effective until replacement succeeds. Per-incident retry forms use the
+same generic endpoint. There are no model-card history backfill controls. The
 application does not authenticate users itself: enable the dashboard only when
 the ingress protects `/admin*` and `/api/admin*`, and keep both prefixes absent
 from public ingress.
