@@ -3,16 +3,14 @@ package web
 import (
 	"bytes"
 	"context"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
-
-	"io"
 	"testing"
+	"time"
 
 	"github.com/egekocabas/munichbrief/internal/processing"
 	"github.com/egekocabas/munichbrief/internal/source"
@@ -90,11 +88,7 @@ func seedV2Presentation(t *testing.T, database *store.Store, presentation testPr
 func fixtureStore(t *testing.T) *store.Store {
 	t.Helper()
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "munichbrief.db"))
-	if err != nil {
-		t.Fatalf("Open() error = %v", err)
-	}
-	t.Cleanup(func() { database.Close() })
+	database := openTestStore(t)
 	documents, err := source.NewFixtureProvider().Load(ctx)
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)

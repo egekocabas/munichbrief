@@ -148,6 +148,11 @@ func (r *socialCardRenderer) render(spec socialCardSpec) ([]byte, error) {
 	return embedPNGXMP(output.Bytes(), []byte(socialCardXMP))
 }
 
+func (r *socialCardRenderer) etag(spec socialCardSpec) string {
+	digest := sha256.Sum256([]byte(r.version + "\x00" + spec.Eyebrow + "\x00" + spec.Title + "\x00" + strconv.FormatBool(spec.AIGenerated) + "\x00" + spec.AIModel + "\x00" + spec.CacheIdentity))
+	return fmt.Sprintf(`"%x"`, digest[:12])
+}
+
 func embedPNGXMP(contents, packet []byte) ([]byte, error) {
 	if len(contents) < 8 || !bytes.Equal(contents[:8], []byte("\x89PNG\r\n\x1a\n")) {
 		return nil, errors.New("embed XMP: invalid PNG signature")
@@ -323,8 +328,7 @@ func socialCardLanguage(request *http.Request) (string, bool) {
 }
 
 func (s *Server) writeSocialCard(response http.ResponseWriter, request *http.Request, spec socialCardSpec) {
-	digest := sha256.Sum256([]byte(s.socialCards.version + "\x00" + spec.Eyebrow + "\x00" + spec.Title + "\x00" + strconv.FormatBool(spec.AIGenerated) + "\x00" + spec.AIModel + "\x00" + spec.CacheIdentity))
-	etag := fmt.Sprintf(`"%x"`, digest[:12])
+	etag := s.socialCards.etag(spec)
 	response.Header().Set("Content-Type", "image/png")
 	response.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400")
 	response.Header().Set("ETag", etag)

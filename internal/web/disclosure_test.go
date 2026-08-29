@@ -229,19 +229,18 @@ func TestAIGeneratedLabelsHTMLMarkdownAndSocialCard(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	plain, err := renderer.render(socialCardSpec{Title: "Synthetic report"})
+	plain, err := renderer.render(socialCardSpec{
+		Eyebrow: public.localization.Text("en", "SocialIncidentLabel"),
+		Title:   "Synthetic AI title",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	labelled, err := renderer.render(socialCardSpec{Title: "Synthetic report", AIGenerated: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if bytes.Equal(plain, labelled) {
+	if bytes.Equal(plain, socialResponse.Body.Bytes()) {
 		t.Fatal("AI-labelled social card is identical to unlabelled card")
 	}
-	assertSocialCardDimensions(t, labelled)
-	if !bytes.Contains(labelled, []byte(iptcCompositeWithTrainedAlgorithmicMedia)) || !bytes.Contains(plain, []byte(iptcCompositeWithTrainedAlgorithmicMedia)) {
+	assertSocialCardDimensions(t, socialResponse.Body.Bytes())
+	if !bytes.Contains(socialResponse.Body.Bytes(), []byte(iptcCompositeWithTrainedAlgorithmicMedia)) || !bytes.Contains(plain, []byte(iptcCompositeWithTrainedAlgorithmicMedia)) {
 		t.Fatal("social card IPTC/XMP background provenance is missing")
 	}
 }
