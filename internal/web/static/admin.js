@@ -22,7 +22,7 @@
       const incidentInput = document.getElementById(incidentInputID);
       if (incidentInput instanceof HTMLInputElement) message += ` Incident ID: ${incidentInput.value}.`;
     }
-    const selections = [...form.querySelectorAll('select[name="language"], select[name="model"], select[name^="model_"]')]
+    const selections = [...form.querySelectorAll('select[name="scope"], select[name="model"], select[name^="model_"]')]
       .filter((field) => field instanceof HTMLSelectElement && field.value)
       .map((field) => {
         const label = field.labels?.[0]?.textContent?.trim() || field.name.replace("model_", "").replaceAll("_", " ");
@@ -116,20 +116,11 @@
       setText(card.querySelector("[data-step-model]"), step.preferred || "Not configured");
       setText(card.querySelector("[data-step-availability]"), step.preferred_available ? "✓ Installed and ready" : "✕ Select an installed model before scheduled processing can start");
     }
-    const translationModel = status.models?.translation;
-    if (translationModel) {
-      const card = document.querySelector(`[data-step-card="${CSS.escape(translationModel.key)}"]`);
+    for (const processor of status.models?.post_processors || []) {
+      const card = document.querySelector(`[data-step-card="${CSS.escape(processor.key)}"]`);
       if (card) {
-        setText(card.querySelector("[data-step-model]"), translationModel.preferred || "Not configured");
-        setText(card.querySelector("[data-step-availability]"), translationModel.preferred_available ? "✓ Installed and ready" : "✕ Translations are paused; German processing can continue");
-      }
-    }
-    const categoryModel = status.models?.category_verification;
-    if (categoryModel) {
-      const card = document.querySelector(`[data-step-card="${CSS.escape(categoryModel.key)}"]`);
-      if (card) {
-        setText(card.querySelector("[data-step-model]"), categoryModel.preferred || "Not configured");
-        setText(card.querySelector("[data-step-availability]"), categoryModel.preferred_available ? "✓ Installed and ready" : "✕ Verification is paused; publication and translations can continue");
+        setText(card.querySelector("[data-step-model]"), processor.preferred || "Not configured");
+        setText(card.querySelector("[data-step-availability]"), processor.preferred_available ? "✓ Installed and ready" : "✕ Automatic processing is paused for this processor");
       }
     }
     const activeSteps = new Map((queue.active_steps || []).map((step) => [step.step_key, step]));
@@ -144,14 +135,13 @@
         : "No active cycle");
       setText(card.querySelector("[data-all-step-stats]"), `Succeeded ${step.succeeded || 0} · Review ${step.needs_review || 0} · Failed ${step.failed || 0} · Avg ${average}s · Last success ${last}`);
     }
-    for (const translation of queue.translations || []) {
-      const card = panel.querySelector(`[data-translation-language="${CSS.escape(translation.language)}"]`);
+    for (const processor of queue.post_processing || []) {
+      const key = `${processor.processor_key}/${processor.scope_key}`;
+      const card = panel.querySelector(`[data-post-processing-stat="${CSS.escape(key)}"]`);
       if (!card) continue;
-      const details = card.querySelector("p + p");
-      setText(details, `Pending ${translation.pending || 0} · Running ${translation.running || 0} · Retrying ${translation.retrying || 0} · Review ${translation.needs_review || 0} · Failed ${translation.failed || 0} · Completed ${translation.succeeded || 0}`);
+      const counters = Object.entries(processor.counters || {}).map(([name, value]) => ` · ${name} ${value}`).join("");
+      setText(card.querySelector("[data-post-processing-details]"), `Pending ${processor.pending || 0} · Running ${processor.running || 0} · Retrying ${processor.retrying || 0} · Review ${processor.needs_review || 0} · Failed ${processor.failed || 0} · Completed ${processor.succeeded || 0}${counters}`);
     }
-    const category = queue.category_verification || {};
-    setText(panel.querySelector("[data-category-verification-details]"), `Pending ${category.pending || 0} · Running ${category.running || 0} · Retrying ${category.retrying || 0} · Review ${category.needs_review || 0} · Failed ${category.failed || 0} · Completed ${category.succeeded || 0} · Corrected ${category.corrected || 0}`);
     if (events) {
       events.replaceChildren(...(queue.recent_events || []).map((event) => {
         const item = document.createElement("li");

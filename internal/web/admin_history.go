@@ -85,7 +85,7 @@ func requestedPipelineHistoryCursor(request *http.Request, name string) (*store.
 		kind = parts[1]
 		jobIDPart = parts[2]
 	}
-	if kind != "cycle" && kind != "translation" && kind != "category_verification" {
+	if kind != "cycle" && kind != "post_processing" {
 		return nil, errors.New("invalid cursor kind")
 	}
 	jobID, err := strconv.ParseInt(jobIDPart, 10, 64)
