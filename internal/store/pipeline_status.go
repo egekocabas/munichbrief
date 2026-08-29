@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKeys []string, now time.Time) (PipelineSnapshot, error) {
+func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKeys []string, counterSpecs []PostProcessingCounterSpec, now time.Time) (PipelineSnapshot, error) {
 	var snapshot PipelineSnapshot
 	var scheduledAfter string
 	if err := s.db.QueryRowContext(ctx, `SELECT scheduled_after FROM pipeline_cutovers WHERE pipeline_version = ?`, PipelineVersion).Scan(&scheduledAfter); err != nil {
@@ -19,15 +19,6 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 		return snapshot, fmt.Errorf("parse pipeline cutover: %w", err)
 	}
 	snapshot.ScheduledAfter = &cutover
-	var categoryVerificationAfter string
-	if err := s.db.QueryRowContext(ctx, `SELECT automatic_after FROM category_verification_cutover WHERE id=1`).Scan(&categoryVerificationAfter); err != nil {
-		return snapshot, fmt.Errorf("read category verification cutover: %w", err)
-	}
-	categoryCutover, err := time.Parse(time.RFC3339Nano, categoryVerificationAfter)
-	if err != nil {
-		return snapshot, fmt.Errorf("parse category verification cutover: %w", err)
-	}
-	snapshot.CategoryVerificationAfter = &categoryCutover
 	var cycle PipelineCycle
 	var authorized int
 	var started, completed string
@@ -133,49 +124,47 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 		}
 		snapshot.Steps = append(snapshot.Steps, stat)
 	}
-	translationRows, err := s.db.QueryContext(ctx, `SELECT languages.language_code,
-		COALESCE(SUM(CASE WHEN translations.status='pending' AND translations.attempt_count=0 THEN 1 ELSE 0 END),0),
-		COALESCE(SUM(CASE WHEN translations.status='running' THEN 1 ELSE 0 END),0),
-		COALESCE(SUM(CASE WHEN translations.status='pending' AND translations.attempt_count>0 THEN 1 ELSE 0 END),0),
-		COALESCE(SUM(CASE WHEN translations.status='needs_review' THEN 1 ELSE 0 END),0),
-		COALESCE(SUM(CASE WHEN translations.status='failed' THEN 1 ELSE 0 END),0),
-		COALESCE(SUM(CASE WHEN translations.status='succeeded' THEN 1 ELSE 0 END),0)
-		FROM translation_language_cutovers languages
-		LEFT JOIN presentation_translations translations ON translations.language_code=languages.language_code
-		GROUP BY languages.language_code ORDER BY languages.language_code`)
+	postRows, err := s.db.QueryContext(ctx, `SELECT scopes.processor_key,scopes.scope_key,
+		COALESCE(SUM(CASE WHEN jobs.status='pending' AND jobs.attempt_count=0 THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN jobs.status='running' THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN jobs.status='pending' AND jobs.attempt_count>0 THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN jobs.status='needs_review' THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN jobs.status='failed' THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN jobs.status='succeeded' THEN 1 ELSE 0 END),0)
+		FROM post_processing_scopes scopes LEFT JOIN post_processing_jobs jobs
+		ON jobs.processor_key=scopes.processor_key AND jobs.scope_key=scopes.scope_key
+		GROUP BY scopes.processor_key,scopes.scope_key ORDER BY scopes.processor_key,scopes.scope_key`)
 	if err != nil {
-		return snapshot, fmt.Errorf("read translation queue stats: %w", err)
+		return snapshot, fmt.Errorf("read post-processing queue stats: %w", err)
 	}
-	for translationRows.Next() {
-		var stat TranslationQueueStats
-		if err := translationRows.Scan(&stat.Language, &stat.Pending, &stat.Running, &stat.Retrying, &stat.NeedsReview, &stat.Failed, &stat.Succeeded); err != nil {
-			translationRows.Close()
+	for postRows.Next() {
+		var stat PostProcessingQueueStats
+		if err := postRows.Scan(&stat.ProcessorKey, &stat.ScopeKey, &stat.Pending, &stat.Running, &stat.Retrying, &stat.NeedsReview, &stat.Failed, &stat.Succeeded); err != nil {
+			postRows.Close()
 			return snapshot, err
 		}
-		snapshot.Translations = append(snapshot.Translations, stat)
+		stat.Counters = make(map[string]int)
+		snapshot.PostProcessing = append(snapshot.PostProcessing, stat)
 	}
-	if err := translationRows.Err(); err != nil {
-		translationRows.Close()
-		return snapshot, fmt.Errorf("iterate translation queue stats: %w", err)
+	if err := postRows.Err(); err != nil {
+		postRows.Close()
+		return snapshot, fmt.Errorf("iterate post-processing queue stats: %w", err)
 	}
-	if err := translationRows.Close(); err != nil {
+	if err := postRows.Close(); err != nil {
 		return snapshot, err
 	}
-	if err := s.db.QueryRowContext(ctx, `SELECT
-		COALESCE(SUM(CASE WHEN status='pending' AND attempt_count=0 THEN 1 ELSE 0 END),0),
-		COALESCE(SUM(CASE WHEN status='running' THEN 1 ELSE 0 END),0),
-		COALESCE(SUM(CASE WHEN status='pending' AND attempt_count>0 THEN 1 ELSE 0 END),0),
-		COALESCE(SUM(CASE WHEN status='needs_review' THEN 1 ELSE 0 END),0),
-		COALESCE(SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END),0),
-		COALESCE(SUM(CASE WHEN status='succeeded' THEN 1 ELSE 0 END),0),
-		COALESCE(SUM(CASE WHEN status='succeeded' AND is_correct=0 THEN 1 ELSE 0 END),0)
-		FROM presentation_category_verifications`).Scan(
-		&snapshot.CategoryVerification.Pending, &snapshot.CategoryVerification.Running,
-		&snapshot.CategoryVerification.Retrying, &snapshot.CategoryVerification.NeedsReview,
-		&snapshot.CategoryVerification.Failed, &snapshot.CategoryVerification.Succeeded,
-		&snapshot.CategoryVerification.Corrected,
-	); err != nil {
-		return snapshot, fmt.Errorf("read category verification queue stats: %w", err)
+	for _, spec := range counterSpecs {
+		var count int
+		if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM post_processing_jobs job JOIN post_processing_values value ON value.job_id=job.id
+			WHERE job.processor_key=? AND job.scope_key=? AND job.status='succeeded' AND value.kind=? AND value.value=?`, spec.ProcessorKey, spec.ScopeKey, spec.OutputKind, spec.EqualsValue).Scan(&count); err != nil {
+			return snapshot, fmt.Errorf("read post-processing counter %s: %w", spec.CounterKey, err)
+		}
+		for index := range snapshot.PostProcessing {
+			stat := &snapshot.PostProcessing[index]
+			if stat.ProcessorKey == spec.ProcessorKey && stat.ScopeKey == spec.ScopeKey {
+				stat.Counters[spec.CounterKey] = count
+			}
+		}
 	}
 	history, err := s.listPipelineHistoryEntries(ctx, sourceMode, 12, nil, nil)
 	if err != nil {
@@ -184,7 +173,7 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 	for _, entry := range history {
 		snapshot.RecentEvents = append(snapshot.RecentEvents, PipelineEvent{
 			At: entry.UpdatedAt, Kind: entry.Kind, CycleID: entry.CycleID,
-			IncidentID: entry.IncidentID, StepKey: entry.StepKey, Language: entry.Language,
+			IncidentID: entry.IncidentID, StepKey: entry.StepKey, ProcessorKey: entry.ProcessorKey, ScopeKey: entry.ScopeKey, ExecutionKey: entry.ExecutionKey,
 			Status: entry.Status, FailureKind: entry.FailureKind,
 		})
 	}

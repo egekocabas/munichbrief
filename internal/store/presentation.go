@@ -12,8 +12,6 @@ import (
 // PresentationScope pins queries to the expected prompt/model provenance and
 // determines whether only complete public output may be returned.
 type PresentationScope struct {
-	Operation           string
-	ModelIdentity       string
 	PromptVersion       string
 	Language            string
 	TranslationLanguage string
@@ -71,31 +69,28 @@ const (
 const latestPresentationRun = `(SELECT r.id
 	FROM presentation_runs r
 	WHERE r.incident_id = i.id AND r.source_hash = i.content_hash AND r.status = 'complete'
-		AND ((@prompt = '` + PipelineVersion + `' AND (r.pipeline_version IN ('` + PipelineVersion + `', '` + PreviousPipelineVersion + `') OR r.legacy = 1))
-			OR r.pipeline_version LIKE 'legacy/' || @prompt || '/%')
+		AND r.pipeline_version = '` + PipelineVersion + `' AND r.legacy = 0
 		AND (@language = 'de' OR EXISTS (
-			SELECT 1 FROM presentation_translations translated
-			WHERE translated.presentation_run_id = r.id AND translated.language_code = @language AND translated.status = 'succeeded'
+			SELECT 1 FROM post_processing_jobs translated
+			WHERE translated.presentation_run_id = r.id AND translated.processor_key='translation'
+			AND translated.scope_key = @language AND translated.status = 'succeeded'
 		))
-	ORDER BY CASE r.pipeline_version WHEN '` + PipelineVersion + `' THEN 0 WHEN '` + PreviousPipelineVersion + `' THEN 1 ELSE 2 END,
-		r.completed_at DESC, r.id DESC
+	ORDER BY r.completed_at DESC, r.id DESC
 	LIMIT 1)`
 
 const latestCanonicalPresentationRun = `(SELECT r.id
 	FROM presentation_runs r
 	WHERE r.incident_id = i.id AND r.source_hash = i.content_hash AND r.status = 'complete'
-		AND ((@prompt = '` + PipelineVersion + `' AND (r.pipeline_version IN ('` + PipelineVersion + `', '` + PreviousPipelineVersion + `') OR r.legacy = 1))
-			OR r.pipeline_version LIKE 'legacy/' || @prompt || '/%')
-	ORDER BY CASE r.pipeline_version WHEN '` + PipelineVersion + `' THEN 0 WHEN '` + PreviousPipelineVersion + `' THEN 1 ELSE 2 END,
-		r.completed_at DESC, r.id DESC
+		AND r.pipeline_version = '` + PipelineVersion + `' AND r.legacy = 0
+	ORDER BY r.completed_at DESC, r.id DESC
 	LIMIT 1)`
 
 const scopedAIColumns = `
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'title_de' LIMIT 1), ''),
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
-				COALESCE((SELECT title FROM presentation_translations WHERE presentation_run_id = ` + latestPresentationRun + ` AND language_code = @translation_language AND status = 'succeeded' ORDER BY completed_at DESC, id DESC LIMIT 1), ''),
-				COALESCE((SELECT summary FROM presentation_translations WHERE presentation_run_id = ` + latestPresentationRun + ` AND language_code = @translation_language AND status = 'succeeded' ORDER BY completed_at DESC, id DESC LIMIT 1), ''),
-				COALESCE((SELECT corrected_category FROM presentation_category_verifications WHERE presentation_run_id = ` + latestPresentationRun + ` AND status = 'succeeded' ORDER BY completed_at DESC, id DESC LIMIT 1),
+				COALESCE((SELECT value.value FROM post_processing_jobs job JOIN post_processing_values value ON value.job_id=job.id WHERE job.presentation_run_id = ` + latestPresentationRun + ` AND job.processor_key='translation' AND job.scope_key=@translation_language AND job.status='succeeded' AND value.kind='title' ORDER BY job.completed_at DESC,job.id DESC LIMIT 1), ''),
+				COALESCE((SELECT value.value FROM post_processing_jobs job JOIN post_processing_values value ON value.job_id=job.id WHERE job.presentation_run_id = ` + latestPresentationRun + ` AND job.processor_key='translation' AND job.scope_key=@translation_language AND job.status='succeeded' AND value.kind='summary' ORDER BY job.completed_at DESC,job.id DESC LIMIT 1), ''),
+				COALESCE((SELECT value.value FROM post_processing_jobs job JOIN post_processing_values value ON value.job_id=job.id WHERE job.presentation_run_id = ` + latestPresentationRun + ` AND job.processor_key='category_verification' AND job.scope_key='default' AND job.status='succeeded' AND value.kind='corrected_category' ORDER BY job.completed_at DESC,job.id DESC LIMIT 1),
 					(SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'category' LIMIT 1), ''),
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'category' LIMIT 1), ''),
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'area_name' LIMIT 1), ''),
@@ -109,46 +104,43 @@ const scopedAIColumns = `
 				COALESCE((SELECT model_identity FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'category' LIMIT 1), ''),
 				COALESCE((SELECT prompt_version FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'category' LIMIT 1), ''),
 				COALESCE((SELECT generated_at FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'category' LIMIT 1), ''),
-				COALESCE((SELECT model_identity FROM presentation_category_verifications WHERE presentation_run_id = ` + latestPresentationRun + ` AND status = 'succeeded' ORDER BY completed_at DESC, id DESC LIMIT 1), ''),
-				COALESCE((SELECT prompt_version FROM presentation_category_verifications WHERE presentation_run_id = ` + latestPresentationRun + ` AND status = 'succeeded' ORDER BY completed_at DESC, id DESC LIMIT 1), ''),
-				COALESCE((SELECT completed_at FROM presentation_category_verifications WHERE presentation_run_id = ` + latestPresentationRun + ` AND status = 'succeeded' ORDER BY completed_at DESC, id DESC LIMIT 1), ''),
+				COALESCE((SELECT model_identity FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='category_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1), ''),
+				COALESCE((SELECT prompt_version FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='category_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1), ''),
+				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='category_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1), ''),
 				COALESCE((SELECT model_identity FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
 				COALESCE((SELECT prompt_version FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
 				COALESCE((SELECT generated_at FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
-				COALESCE((SELECT model_identity FROM presentation_translations WHERE presentation_run_id = ` + latestPresentationRun + ` AND language_code = @translation_language AND status = 'succeeded' ORDER BY completed_at DESC, id DESC LIMIT 1), ''),
-				COALESCE((SELECT prompt_version FROM presentation_translations WHERE presentation_run_id = ` + latestPresentationRun + ` AND language_code = @translation_language AND status = 'succeeded' ORDER BY completed_at DESC, id DESC LIMIT 1), ''),
-				COALESCE((SELECT completed_at FROM presentation_translations WHERE presentation_run_id = ` + latestPresentationRun + ` AND language_code = @translation_language AND status = 'succeeded' ORDER BY completed_at DESC, id DESC LIMIT 1), ''),
+				COALESCE((SELECT model_identity FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='translation' AND scope_key=@translation_language AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1), ''),
+				COALESCE((SELECT prompt_version FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='translation' AND scope_key=@translation_language AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1), ''),
+				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='translation' AND scope_key=@translation_language AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1), ''),
 				COALESCE((SELECT pipeline_version FROM presentation_runs WHERE id = ` + latestPresentationRun + `), ''),
-				COALESCE((SELECT legacy FROM presentation_runs WHERE id = ` + latestPresentationRun + `), 0),
 				COALESCE((SELECT j.status FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id = j.cycle_item_id WHERE ci.incident_id = i.id AND ci.source_hash = i.content_hash ORDER BY j.updated_at DESC, j.id DESC LIMIT 1), ''),
 				COALESCE((SELECT j.attempt_count FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id = j.cycle_item_id WHERE ci.incident_id = i.id AND ci.source_hash = i.content_hash ORDER BY j.updated_at DESC, j.id DESC LIMIT 1), 0),
 				COALESCE((SELECT j.next_retry_at FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id = j.cycle_item_id WHERE ci.incident_id = i.id AND ci.source_hash = i.content_hash ORDER BY j.updated_at DESC, j.id DESC LIMIT 1), ''),
 				COALESCE((SELECT j.failure_kind FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id = j.cycle_item_id WHERE ci.incident_id = i.id AND ci.source_hash = i.content_hash ORDER BY j.updated_at DESC, j.id DESC LIMIT 1), ''),
-				COALESCE((SELECT status FROM presentation_translations WHERE presentation_run_id = ` + latestCanonicalPresentationRun + ` AND language_code = @translation_language ORDER BY created_at DESC, id DESC LIMIT 1), ''),
-				COALESCE((SELECT attempt_count FROM presentation_translations WHERE presentation_run_id = ` + latestCanonicalPresentationRun + ` AND language_code = @translation_language ORDER BY created_at DESC, id DESC LIMIT 1), 0),
-				COALESCE((SELECT next_retry_at FROM presentation_translations WHERE presentation_run_id = ` + latestCanonicalPresentationRun + ` AND language_code = @translation_language ORDER BY created_at DESC, id DESC LIMIT 1), ''),
-				COALESCE((SELECT failure_kind FROM presentation_translations WHERE presentation_run_id = ` + latestCanonicalPresentationRun + ` AND language_code = @translation_language ORDER BY created_at DESC, id DESC LIMIT 1), ''),
+				COALESCE((SELECT status FROM post_processing_jobs WHERE presentation_run_id = ` + latestCanonicalPresentationRun + ` AND processor_key='translation' AND scope_key=@translation_language ORDER BY created_at DESC,id DESC LIMIT 1), ''),
+				COALESCE((SELECT attempt_count FROM post_processing_jobs WHERE presentation_run_id = ` + latestCanonicalPresentationRun + ` AND processor_key='translation' AND scope_key=@translation_language ORDER BY created_at DESC,id DESC LIMIT 1), 0),
+				COALESCE((SELECT next_retry_at FROM post_processing_jobs WHERE presentation_run_id = ` + latestCanonicalPresentationRun + ` AND processor_key='translation' AND scope_key=@translation_language ORDER BY created_at DESC,id DESC LIMIT 1), ''),
+				COALESCE((SELECT failure_kind FROM post_processing_jobs WHERE presentation_run_id = ` + latestCanonicalPresentationRun + ` AND processor_key='translation' AND scope_key=@translation_language ORDER BY created_at DESC,id DESC LIMIT 1), ''),
 				CASE WHEN NOT EXISTS (
-					SELECT 1 FROM presentation_translations current_translation
+					SELECT 1 FROM post_processing_jobs current_translation
 					WHERE current_translation.presentation_run_id = ` + latestCanonicalPresentationRun + `
-						AND current_translation.language_code=@translation_language AND current_translation.status='succeeded'
+						AND current_translation.processor_key='translation' AND current_translation.scope_key=@translation_language AND current_translation.status='succeeded'
 				) AND EXISTS (
 					SELECT 1 FROM presentation_runs fallback_run
-					JOIN presentation_translations fallback_translation ON fallback_translation.presentation_run_id=fallback_run.id
+					JOIN post_processing_jobs fallback_translation ON fallback_translation.presentation_run_id=fallback_run.id
 					WHERE fallback_run.incident_id=i.id AND fallback_run.source_hash=i.content_hash AND fallback_run.status='complete'
-						AND fallback_translation.language_code=@translation_language AND fallback_translation.status='succeeded'
-						AND ((@prompt = '` + PipelineVersion + `' AND (fallback_run.pipeline_version IN ('` + PipelineVersion + `', '` + PreviousPipelineVersion + `') OR fallback_run.legacy = 1))
-							OR fallback_run.pipeline_version LIKE 'legacy/' || @prompt || '/%')
+						AND fallback_run.pipeline_version='` + PipelineVersion + `' AND fallback_run.legacy=0
+						AND fallback_translation.processor_key='translation' AND fallback_translation.scope_key=@translation_language AND fallback_translation.status='succeeded'
 				) THEN 1 ELSE 0 END`
 
 const publicReadyCondition = `EXISTS (
 		SELECT 1 FROM presentation_runs r
 		WHERE r.incident_id = i.id AND r.source_hash = i.content_hash AND r.status = 'complete'
-			AND ((@prompt = '` + PipelineVersion + `' AND (r.pipeline_version IN ('` + PipelineVersion + `', '` + PreviousPipelineVersion + `') OR r.legacy = 1))
-				OR r.pipeline_version LIKE 'legacy/' || @prompt || '/%')
+			AND r.pipeline_version='` + PipelineVersion + `' AND r.legacy=0
 			AND (@language = 'de' OR EXISTS (
-				SELECT 1 FROM presentation_translations translated
-				WHERE translated.presentation_run_id = r.id AND translated.language_code = @language AND translated.status = 'succeeded'
+				SELECT 1 FROM post_processing_jobs translated
+				WHERE translated.presentation_run_id = r.id AND translated.processor_key='translation' AND translated.scope_key = @language AND translated.status = 'succeeded'
 			))
 )`
 
@@ -165,7 +157,6 @@ func presentationArgs(scope PresentationScope) []any {
 		sql.Named("prompt", scope.PromptVersion),
 		sql.Named("language", language),
 		sql.Named("translation_language", translationLanguage),
-		sql.Named("operation_prefix", "incident-presentation/"+scope.PromptVersion+"/"),
 	}
 }
 
@@ -235,7 +226,7 @@ func (s *Store) ListPresentationEntries(ctx context.Context, limit, offset int, 
 				'', '', '',
 				'', '', '',
 				'', '', '',
-				'', 0, '', 0, '', '',
+				'', '', 0, '', '',
 				'', 0, '', '', 0
 			FROM source_documents d
 			WHERE ` + statusCondition + ` AND NOT EXISTS (
@@ -277,11 +268,11 @@ func (s *Store) ListPublicIncidentLinks(ctx context.Context, sourceMode string, 
 			CASE WHEN @language = 'de' THEN
 				COALESCE(NULLIF(MAX(
 					COALESCE((SELECT r.completed_at FROM presentation_runs r WHERE r.id = ` + latestPresentationRun + `),''),
-					COALESCE((SELECT completed_at FROM presentation_category_verifications WHERE presentation_run_id = ` + latestPresentationRun + ` AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),'')
+					COALESCE((SELECT completed_at FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='category_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),'')
 				),''), i.updated_at)
 			ELSE COALESCE(NULLIF(MAX(
-				COALESCE((SELECT completed_at FROM presentation_translations WHERE presentation_run_id = ` + latestPresentationRun + ` AND language_code=@language AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),''),
-				COALESCE((SELECT completed_at FROM presentation_category_verifications WHERE presentation_run_id = ` + latestPresentationRun + ` AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),'')
+				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='translation' AND scope_key=@language AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),''),
+				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='category_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),'')
 			),''), i.updated_at) END
 		FROM incidents i
 		JOIN source_documents d ON d.id = i.source_document_id
@@ -399,47 +390,40 @@ func (s *Store) ListAdminTranslations(ctx context.Context, incidentIDs []int64, 
 		WITH requested_incidents(incident_id) AS (VALUES ` + strings.Join(incidentValues, ",") + `),
 		requested_languages(language_code) AS (VALUES ` + strings.Join(languageValues, ",") + `),
 		eligible_runs AS (
-			SELECT r.*,
-				CASE r.pipeline_version WHEN '` + PipelineVersion + `' THEN 0 WHEN '` + PreviousPipelineVersion + `' THEN 1 ELSE 2 END AS pipeline_priority,
-				ROW_NUMBER() OVER (PARTITION BY r.incident_id ORDER BY
-					CASE r.pipeline_version WHEN '` + PipelineVersion + `' THEN 0 WHEN '` + PreviousPipelineVersion + `' THEN 1 ELSE 2 END,
-					r.completed_at DESC, r.id DESC) AS canonical_rank
+			SELECT r.*,ROW_NUMBER() OVER (PARTITION BY r.incident_id ORDER BY r.completed_at DESC,r.id DESC) AS canonical_rank
 			FROM presentation_runs r
 			JOIN requested_incidents requested ON requested.incident_id = r.incident_id
 			JOIN incidents current_incident ON current_incident.id = r.incident_id AND current_incident.content_hash = r.source_hash
-			WHERE r.status = 'complete' AND ((@prompt = '` + PipelineVersion + `' AND
-				(r.pipeline_version IN ('` + PipelineVersion + `', '` + PreviousPipelineVersion + `') OR r.legacy = 1))
-				OR r.pipeline_version LIKE 'legacy/' || @prompt || '/%')
+			WHERE r.status='complete' AND r.pipeline_version='` + PipelineVersion + `' AND r.legacy=0
 		),
 		canonical_runs AS (SELECT * FROM eligible_runs WHERE canonical_rank = 1),
 		ranked_translations AS (
-			SELECT eligible.incident_id, translation.*,
-				ROW_NUMBER() OVER (PARTITION BY eligible.incident_id, translation.language_code ORDER BY
-					eligible.pipeline_priority, eligible.completed_at DESC, eligible.id DESC,
-					translation.completed_at DESC, translation.id DESC) AS translation_rank
+			SELECT eligible.incident_id,translation.*,
+				ROW_NUMBER() OVER (PARTITION BY eligible.incident_id,translation.scope_key ORDER BY eligible.completed_at DESC,eligible.id DESC,translation.completed_at DESC,translation.id DESC) AS translation_rank
 			FROM eligible_runs eligible
-			JOIN presentation_translations translation ON translation.presentation_run_id = eligible.id AND translation.status = 'succeeded'
-			JOIN requested_languages language ON language.language_code = translation.language_code
+			JOIN post_processing_jobs translation ON translation.presentation_run_id=eligible.id AND translation.processor_key='translation' AND translation.status='succeeded'
+			JOIN requested_languages language ON language.language_code=translation.scope_key
 		),
 		selected_translations AS (SELECT * FROM ranked_translations WHERE translation_rank = 1),
 		ranked_attempts AS (
-			SELECT canonical.incident_id, attempt.*,
-				ROW_NUMBER() OVER (PARTITION BY canonical.incident_id, attempt.language_code ORDER BY attempt.created_at DESC, attempt.id DESC) AS attempt_rank
+			SELECT canonical.incident_id,attempt.*,
+				ROW_NUMBER() OVER (PARTITION BY canonical.incident_id,attempt.scope_key ORDER BY attempt.created_at DESC,attempt.id DESC) AS attempt_rank
 			FROM canonical_runs canonical
-			JOIN presentation_translations attempt ON attempt.presentation_run_id = canonical.id
-			JOIN requested_languages language ON language.language_code = attempt.language_code
+			JOIN post_processing_jobs attempt ON attempt.presentation_run_id=canonical.id AND attempt.processor_key='translation'
+			JOIN requested_languages language ON language.language_code=attempt.scope_key
 		),
 		latest_attempts AS (SELECT * FROM ranked_attempts WHERE attempt_rank = 1)
 		SELECT requested.incident_id, language.language_code,
-			COALESCE(selected.title, ''), COALESCE(selected.summary, ''),
+			COALESCE((SELECT value FROM post_processing_values WHERE job_id=selected.id AND kind='title'),''),
+			COALESCE((SELECT value FROM post_processing_values WHERE job_id=selected.id AND kind='summary'),''),
 			COALESCE(selected.model_identity, ''), COALESCE(selected.prompt_version, ''), COALESCE(selected.completed_at, ''),
 			COALESCE(attempt.status, ''), COALESCE(attempt.attempt_count, 0), COALESCE(attempt.next_retry_at, ''), COALESCE(attempt.failure_kind, ''),
 			CASE WHEN selected.presentation_run_id IS NOT NULL AND selected.presentation_run_id != canonical.id THEN 1 ELSE 0 END
 		FROM requested_incidents requested
 		CROSS JOIN requested_languages language
 		LEFT JOIN canonical_runs canonical ON canonical.incident_id = requested.incident_id
-		LEFT JOIN selected_translations selected ON selected.incident_id = requested.incident_id AND selected.language_code = language.language_code
-		LEFT JOIN latest_attempts attempt ON attempt.incident_id = requested.incident_id AND attempt.language_code = language.language_code
+		LEFT JOIN selected_translations selected ON selected.incident_id=requested.incident_id AND selected.scope_key=language.language_code
+		LEFT JOIN latest_attempts attempt ON attempt.incident_id=requested.incident_id AND attempt.scope_key=language.language_code
 		ORDER BY requested.incident_id, language.language_code`
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -496,25 +480,24 @@ func (s *Store) ListAdminCategoryVerifications(ctx context.Context, incidentIDs 
 		selected_runs AS (
 			SELECT requested.incident_id, (SELECT r.id FROM presentation_runs r JOIN incidents i ON i.id=r.incident_id
 				WHERE r.incident_id=requested.incident_id AND r.source_hash=i.content_hash AND r.status='complete'
-				AND (r.pipeline_version IN ('` + PipelineVersion + `','` + PreviousPipelineVersion + `') OR r.legacy=1)
-				ORDER BY CASE r.pipeline_version WHEN '` + PipelineVersion + `' THEN 0 WHEN '` + PreviousPipelineVersion + `' THEN 1 ELSE 2 END,
-				r.completed_at DESC,r.id DESC LIMIT 1) AS run_id
+				AND r.pipeline_version='` + PipelineVersion + `' AND r.legacy=0
+				ORDER BY r.completed_at DESC,r.id DESC LIMIT 1) AS run_id
 			FROM requested
 		)
 	SELECT selected.incident_id,COALESCE(selected.run_id,0),
 		COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id=selected.run_id AND kind='category' LIMIT 1),''),
-		COALESCE((SELECT corrected_category FROM presentation_category_verifications WHERE presentation_run_id=selected.run_id AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),
+		COALESCE((SELECT value.value FROM post_processing_jobs job JOIN post_processing_values value ON value.job_id=job.id WHERE job.presentation_run_id=selected.run_id AND job.processor_key='category_verification' AND job.scope_key='default' AND job.status='succeeded' AND value.kind='corrected_category' ORDER BY job.completed_at DESC,job.id DESC LIMIT 1),
 			(SELECT value FROM presentation_values WHERE presentation_run_id=selected.run_id AND kind='category' LIMIT 1),''),
-		COALESCE((SELECT CAST(is_correct AS TEXT) FROM presentation_category_verifications WHERE presentation_run_id=selected.run_id AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),''),
-		COALESCE((SELECT model_identity FROM presentation_category_verifications WHERE presentation_run_id=selected.run_id AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),
-			(SELECT model_identity FROM presentation_category_verifications WHERE presentation_run_id=selected.run_id ORDER BY created_at DESC,id DESC LIMIT 1),''),
-		COALESCE((SELECT prompt_version FROM presentation_category_verifications WHERE presentation_run_id=selected.run_id AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),
-			(SELECT prompt_version FROM presentation_category_verifications WHERE presentation_run_id=selected.run_id ORDER BY created_at DESC,id DESC LIMIT 1),''),
-		COALESCE((SELECT completed_at FROM presentation_category_verifications WHERE presentation_run_id=selected.run_id AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),''),
-		COALESCE((SELECT status FROM presentation_category_verifications WHERE presentation_run_id=selected.run_id ORDER BY created_at DESC,id DESC LIMIT 1),''),
-		COALESCE((SELECT attempt_count FROM presentation_category_verifications WHERE presentation_run_id=selected.run_id ORDER BY created_at DESC,id DESC LIMIT 1),0),
-		COALESCE((SELECT next_retry_at FROM presentation_category_verifications WHERE presentation_run_id=selected.run_id ORDER BY created_at DESC,id DESC LIMIT 1),''),
-		COALESCE((SELECT failure_kind FROM presentation_category_verifications WHERE presentation_run_id=selected.run_id ORDER BY created_at DESC,id DESC LIMIT 1),'')
+		COALESCE((SELECT value.value FROM post_processing_jobs job JOIN post_processing_values value ON value.job_id=job.id WHERE job.presentation_run_id=selected.run_id AND job.processor_key='category_verification' AND job.scope_key='default' AND job.status='succeeded' AND value.kind='is_correct' ORDER BY job.completed_at DESC,job.id DESC LIMIT 1),''),
+		COALESCE((SELECT model_identity FROM post_processing_jobs WHERE presentation_run_id=selected.run_id AND processor_key='category_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),
+			(SELECT model_identity FROM post_processing_jobs WHERE presentation_run_id=selected.run_id AND processor_key='category_verification' AND scope_key='default' ORDER BY created_at DESC,id DESC LIMIT 1),''),
+		COALESCE((SELECT prompt_version FROM post_processing_jobs WHERE presentation_run_id=selected.run_id AND processor_key='category_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),
+			(SELECT prompt_version FROM post_processing_jobs WHERE presentation_run_id=selected.run_id AND processor_key='category_verification' AND scope_key='default' ORDER BY created_at DESC,id DESC LIMIT 1),''),
+		COALESCE((SELECT completed_at FROM post_processing_jobs WHERE presentation_run_id=selected.run_id AND processor_key='category_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),''),
+		COALESCE((SELECT status FROM post_processing_jobs WHERE presentation_run_id=selected.run_id AND processor_key='category_verification' AND scope_key='default' ORDER BY created_at DESC,id DESC LIMIT 1),''),
+		COALESCE((SELECT attempt_count FROM post_processing_jobs WHERE presentation_run_id=selected.run_id AND processor_key='category_verification' AND scope_key='default' ORDER BY created_at DESC,id DESC LIMIT 1),0),
+		COALESCE((SELECT next_retry_at FROM post_processing_jobs WHERE presentation_run_id=selected.run_id AND processor_key='category_verification' AND scope_key='default' ORDER BY created_at DESC,id DESC LIMIT 1),''),
+		COALESCE((SELECT failure_kind FROM post_processing_jobs WHERE presentation_run_id=selected.run_id AND processor_key='category_verification' AND scope_key='default' ORDER BY created_at DESC,id DESC LIMIT 1),'')
 	FROM selected_runs selected ORDER BY selected.incident_id`
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -530,7 +513,7 @@ func (s *Store) ListAdminCategoryVerifications(ctx context.Context, incidentIDs 
 			return nil, fmt.Errorf("scan admin category verification: %w", err)
 		}
 		if correct != "" {
-			value := correct == "1"
+			value := correct == "true"
 			result.IsCorrect = &value
 		}
 		if generatedAt != "" {
@@ -576,7 +559,7 @@ func (s *Store) GetPresentationIncident(ctx context.Context, id int64, scope Pre
 func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 	var record IncidentRecord
 	var publishedAt, updatedAt, aiMetadataGeneratedAt, aiCategoryVerificationGeneratedAt, aiGeneratedAt, aiTranslationGeneratedAt, nextRetryAt, translationNextRetryAt string
-	var aiLegacy, translationFallback int
+	var translationFallback int
 	if err := row.Scan(
 		&record.ID, &record.SourceDocumentID, &record.HasIncident, &record.Number, &record.Position,
 		&record.TitleDE, &record.BodyDE, &record.ContentHash, &record.SourceTitle, &record.SourceURL,
@@ -589,7 +572,7 @@ func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 		&record.AICategoryVerificationModel, &record.AICategoryVerificationPromptVersion, &aiCategoryVerificationGeneratedAt,
 		&record.AIModel, &record.AIPromptVersion, &aiGeneratedAt,
 		&record.AITranslationModel, &record.AITranslationPromptVersion, &aiTranslationGeneratedAt,
-		&record.AIPipelineVersion, &aiLegacy,
+		&record.AIPipelineVersion,
 		&record.ProcessingStatus, &record.ProcessingAttempts, &nextRetryAt, &record.ProcessingFailureKind,
 		&record.AITranslationStatus, &record.AITranslationAttempts, &translationNextRetryAt, &record.AITranslationFailureKind, &translationFallback,
 	); err != nil {
@@ -632,7 +615,6 @@ func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 		}
 		record.AITranslationGeneratedAt = &generatedAt
 	}
-	record.AILegacy = aiLegacy == 1
 	record.AITranslationFallback = translationFallback == 1
 	if nextRetryAt != "" {
 		next, err := time.Parse(time.RFC3339Nano, nextRetryAt)

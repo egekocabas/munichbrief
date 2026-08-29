@@ -9,17 +9,17 @@ import (
 	"time"
 )
 
-// CreateManualPipelineCycle atomically freezes targets and step configuration.
-// An identical queued request coalesces into the existing cycle.
-func (s *Store) CreateManualPipelineCycle(ctx context.Context, sourceMode string, steps []PipelineStepPlan, translationModel string, incidentID *int64, reprocessAll bool, now time.Time) (PipelineRequestResult, error) {
-	return s.CreateManualPipelineCycleWithPostProcessing(ctx, sourceMode, steps, translationModel, "", incidentID, reprocessAll, now)
-}
-
-// CreateManualPipelineCycleWithPostProcessing also freezes the optional
-// independent category-verification model selected for completed runs.
-func (s *Store) CreateManualPipelineCycleWithPostProcessing(ctx context.Context, sourceMode string, steps []PipelineStepPlan, translationModel, categoryVerificationModel string, incidentID *int64, reprocessAll bool, now time.Time) (PipelineRequestResult, error) {
+// CreateManualPipelineCycle atomically freezes targets, canonical step models,
+// and optional independent post-processing plans. An identical queued request
+// coalesces into the existing cycle.
+func (s *Store) CreateManualPipelineCycle(ctx context.Context, sourceMode string, steps []PipelineStepPlan, postPlans []PostProcessingPlan, incidentID *int64, reprocessAll bool, now time.Time) (PipelineRequestResult, error) {
 	if err := validateStepPlans(steps); err != nil {
 		return PipelineRequestResult{}, err
+	}
+	for _, plan := range postPlans {
+		if err := validatePostProcessingPlan(plan); err != nil {
+			return PipelineRequestResult{}, err
+		}
 	}
 	condition, err := sourceStatusCondition(sourceMode)
 	if err != nil {
@@ -44,7 +44,7 @@ func (s *Store) CreateManualPipelineCycleWithPostProcessing(ctx context.Context,
 		return PipelineRequestResult{}, fmt.Errorf("begin manual pipeline cycle: %w", err)
 	}
 	defer tx.Rollback()
-	requestKey, targetCount, err := manualRequestKeyTx(ctx, tx, sourceMode, condition, args, steps, translationModel, categoryVerificationModel)
+	requestKey, targetCount, err := manualRequestKeyTx(ctx, tx, sourceMode, condition, args, steps, postPlans)
 	if err != nil {
 		return PipelineRequestResult{}, err
 	}
@@ -57,7 +57,7 @@ func (s *Store) CreateManualPipelineCycleWithPostProcessing(ctx context.Context,
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		return PipelineRequestResult{}, err
 	}
-	cycleID, count, err := createPipelineCycleTxWithPostProcessing(ctx, tx, "manual", sourceMode, true, requestKey, condition, args, steps, translationModel, categoryVerificationModel, now)
+	cycleID, count, err := createPipelineCycleTx(ctx, tx, "manual", sourceMode, true, requestKey, condition, args, steps, postPlans, now)
 	if err != nil {
 		return PipelineRequestResult{}, err
 	}
@@ -113,7 +113,7 @@ func (s *Store) ActivateNextPipelineCycle(ctx context.Context, sourceMode string
 			SELECT 1 FROM presentation_runs r WHERE r.incident_id = i.id AND r.source_hash = i.content_hash
 			AND r.pipeline_version = '` + PipelineVersion + `' AND r.status IN ('complete','failed')
 		)`
-		cycleID, count, err := createPipelineCycleTx(ctx, tx, "scheduled", sourceMode, true, "", condition, nil, steps, "", now)
+		cycleID, count, err := createPipelineCycleTx(ctx, tx, "scheduled", sourceMode, true, "", condition, nil, steps, nil, now)
 		if err != nil {
 			return PipelineCycle{}, false, err
 		}
@@ -183,7 +183,7 @@ func (s *Store) InterruptBlockedScheduledCycle(ctx context.Context, cycleID int6
 	if kind != "scheduled" || status != "running" {
 		return 0, errors.New("only a running scheduled cycle may be interrupted")
 	}
-	result, err := tx.ExecContext(ctx, `INSERT INTO processing_cycles(kind, source_mode, status, active_step, window_authorized, translation_model_identity, category_verification_model_identity, created_at, updated_at) SELECT 'continuation', source_mode, 'queued', ?, 1, translation_model_identity, category_verification_model_identity, ?, ? FROM processing_cycles WHERE id = ?`, activeStep, formatted, formatted, cycleID)
+	result, err := tx.ExecContext(ctx, `INSERT INTO processing_cycles(kind, source_mode, status, active_step, window_authorized, created_at, updated_at) SELECT 'continuation', source_mode, 'queued', ?, 1, ?, ? FROM processing_cycles WHERE id = ?`, activeStep, formatted, formatted, cycleID)
 	if err != nil {
 		return 0, err
 	}
@@ -192,6 +192,9 @@ func (s *Store) InterruptBlockedScheduledCycle(ctx context.Context, cycleID int6
 		return 0, fmt.Errorf("read continuation cycle ID: %w", err)
 	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO cycle_step_models(cycle_id, step_key, step_order, model_identity, prompt_version) SELECT ?, step_key, step_order, model_identity, prompt_version FROM cycle_step_models WHERE cycle_id = ?`, continuationID, cycleID); err != nil {
+		return 0, err
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO cycle_post_processing_plans(cycle_id,processor_key,scope_key,model_identity,prompt_version) SELECT ?,processor_key,scope_key,model_identity,prompt_version FROM cycle_post_processing_plans WHERE cycle_id=?`, continuationID, cycleID); err != nil {
 		return 0, err
 	}
 	if _, err := tx.ExecContext(ctx, `UPDATE processing_cycle_items SET cycle_id = ?, updated_at = ? WHERE cycle_id = ? AND status = 'pending'`, continuationID, formatted, cycleID); err != nil {
@@ -289,14 +292,15 @@ func (s *Store) AdvancePipelineCycle(ctx context.Context, cycle PipelineCycle, s
 	return AdvanceResult{Completed: true}, nil
 }
 
-func manualRequestKeyTx(ctx context.Context, tx *sql.Tx, sourceMode, condition string, args []any, steps []PipelineStepPlan, translationModel, categoryVerificationModel string) (string, int, error) {
+func manualRequestKeyTx(ctx context.Context, tx *sql.Tx, sourceMode, condition string, args []any, steps []PipelineStepPlan, postPlans []PostProcessingPlan) (string, int, error) {
 	hash := sha256.New()
 	fmt.Fprintf(hash, "manual\x00%s", sourceMode)
 	for _, step := range steps {
 		fmt.Fprintf(hash, "\x00%s\x00%d\x00%s\x00%s", step.Key, step.Order, step.PromptVersion, step.Model)
 	}
-	fmt.Fprintf(hash, "\x00translation\x00%s", translationModel)
-	fmt.Fprintf(hash, "\x00category_verification\x00%s", categoryVerificationModel)
+	for _, plan := range postPlans {
+		fmt.Fprintf(hash, "\x00post\x00%s\x00%s\x00%s\x00%s", plan.ProcessorKey, plan.ScopeKey, plan.PromptVersion, plan.Model)
+	}
 	rows, err := tx.QueryContext(ctx, `SELECT i.id, i.content_hash FROM incidents i JOIN source_documents d ON d.id=i.source_document_id WHERE `+condition+` ORDER BY i.id`, args...)
 	if err != nil {
 		return "", 0, fmt.Errorf("select manual request signature targets: %w", err)
@@ -356,19 +360,15 @@ func supersedeQueuedAutomaticTargetsTx(ctx context.Context, tx *sql.Tx, manualCy
 	return nil
 }
 
-func createPipelineCycleTx(ctx context.Context, tx *sql.Tx, kind, sourceMode string, windowAuthorized bool, requestKey, targetCondition string, targetArgs []any, steps []PipelineStepPlan, translationModel string, now time.Time) (int64, int, error) {
-	return createPipelineCycleTxWithPostProcessing(ctx, tx, kind, sourceMode, windowAuthorized, requestKey, targetCondition, targetArgs, steps, translationModel, "", now)
-}
-
-func createPipelineCycleTxWithPostProcessing(ctx context.Context, tx *sql.Tx, kind, sourceMode string, windowAuthorized bool, requestKey, targetCondition string, targetArgs []any, steps []PipelineStepPlan, translationModel, categoryVerificationModel string, now time.Time) (int64, int, error) {
+func createPipelineCycleTx(ctx context.Context, tx *sql.Tx, kind, sourceMode string, windowAuthorized bool, requestKey, targetCondition string, targetArgs []any, steps []PipelineStepPlan, postPlans []PostProcessingPlan, now time.Time) (int64, int, error) {
 	formatted := formatTime(now.UTC())
 	requested := any(nil)
 	if kind == "manual" {
 		requested = formatted
 	}
 	result, err := tx.ExecContext(ctx, `
-		INSERT INTO processing_cycles(kind, source_mode, status, active_step, window_authorized, translation_model_identity, category_verification_model_identity, requested_at, request_key, created_at, updated_at)
-		VALUES (?, ?, 'queued', 0, ?, ?, ?, ?, ?, ?, ?)`, kind, sourceMode, boolInt(windowAuthorized), nullableString(translationModel), nullableString(categoryVerificationModel), requested, nullableString(requestKey), formatted, formatted)
+		INSERT INTO processing_cycles(kind, source_mode, status, active_step, window_authorized, requested_at, request_key, created_at, updated_at)
+		VALUES (?, ?, 'queued', 0, ?, ?, ?, ?, ?)`, kind, sourceMode, boolInt(windowAuthorized), requested, nullableString(requestKey), formatted, formatted)
 	if err != nil {
 		return 0, 0, fmt.Errorf("create pipeline cycle: %w", err)
 	}
@@ -381,6 +381,11 @@ func createPipelineCycleTxWithPostProcessing(ctx context.Context, tx *sql.Tx, ki
 			INSERT INTO cycle_step_models(cycle_id, step_key, step_order, model_identity, prompt_version)
 			VALUES (?, ?, ?, ?, ?)`, cycleID, step.Key, step.Order, step.Model, step.PromptVersion); err != nil {
 			return 0, 0, fmt.Errorf("store cycle step %s: %w", step.Key, err)
+		}
+	}
+	for _, plan := range postPlans {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO cycle_post_processing_plans(cycle_id,processor_key,scope_key,model_identity,prompt_version) VALUES(?,?,?,?,?)`, cycleID, plan.ProcessorKey, plan.ScopeKey, plan.Model, plan.PromptVersion); err != nil {
+			return 0, 0, fmt.Errorf("store cycle post-processing plan %s/%s: %w", plan.ProcessorKey, plan.ScopeKey, err)
 		}
 	}
 	query := `SELECT i.id, i.content_hash FROM incidents i JOIN source_documents d ON d.id = i.source_document_id WHERE ` + targetCondition + ` ORDER BY d.published_at DESC, i.position ASC`
@@ -451,14 +456,14 @@ func createPipelineCycleTxWithPostProcessing(ctx context.Context, tx *sql.Tx, ki
 }
 
 func selectCycleTx(ctx context.Context, tx *sql.Tx, condition string, args []any) (PipelineCycle, bool, error) {
-	query := `SELECT id, kind, status, active_step, window_authorized, COALESCE(started_at, ''), COALESCE(completed_at, ''), COALESCE(translation_model_identity, ''), COALESCE(category_verification_model_identity, '')
+	query := `SELECT id, kind, status, active_step, window_authorized, COALESCE(started_at, ''), COALESCE(completed_at, '')
 		FROM processing_cycles WHERE ` + condition + `
 		ORDER BY CASE kind WHEN 'manual' THEN 0 WHEN 'continuation' THEN 1 ELSE 2 END,
 			COALESCE(requested_at, created_at), id LIMIT 1`
 	var cycle PipelineCycle
 	var authorized int
 	var started, completed string
-	err := tx.QueryRowContext(ctx, query, args...).Scan(&cycle.ID, &cycle.Kind, &cycle.Status, &cycle.ActiveStep, &authorized, &started, &completed, &cycle.TranslationModel, &cycle.CategoryVerificationModel)
+	err := tx.QueryRowContext(ctx, query, args...).Scan(&cycle.ID, &cycle.Kind, &cycle.Status, &cycle.ActiveStep, &authorized, &started, &completed)
 	if errors.Is(err, sql.ErrNoRows) {
 		return PipelineCycle{}, false, nil
 	}

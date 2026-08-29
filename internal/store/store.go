@@ -79,7 +79,6 @@ type IncidentRecord struct {
 	AITranslationFailureKind            string
 	AITranslationFallback               bool
 	AIPipelineVersion                   string
-	AILegacy                            bool
 	HasAI                               bool
 	ProcessingStatus                    string
 	ProcessingAttempts                  int
