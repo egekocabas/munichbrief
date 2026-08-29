@@ -77,6 +77,11 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 		s.internalError(response, request, "load admin category verifications", err)
 		return
 	}
+	assistanceViews, err := s.adminPublicAssistanceVerifications(request, append(append([]store.IncidentRecord{}, unprocessed...), allIncidents...))
+	if err != nil {
+		s.internalError(response, request, "load admin public assistance verifications", err)
+		return
+	}
 	data := adminPage{
 		ProcessingEnabled: s.options.Processor != nil,
 		UnprocessedPage:   unprocessedPage,
@@ -84,9 +89,9 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 		Models:            models,
 		Runtime:           runtime,
 		Unprocessed: s.adminList(unprocessed, unprocessedTotal, unprocessedPage, unprocessedPages,
-			adminPaginationURL(unprocessedPage-1, allPage), adminPaginationURL(unprocessedPage+1, allPage), true, allPage, "unprocessed", translationViews, categoryViews),
+			adminPaginationURL(unprocessedPage-1, allPage), adminPaginationURL(unprocessedPage+1, allPage), true, allPage, "unprocessed", translationViews, categoryViews, assistanceViews),
 		AllIncidents: s.adminList(allIncidents, allTotal, allPage, allPages,
-			adminPaginationURL(unprocessedPage, allPage-1), adminPaginationURL(unprocessedPage, allPage+1), false, unprocessedPage, "all", translationViews, categoryViews),
+			adminPaginationURL(unprocessedPage, allPage-1), adminPaginationURL(unprocessedPage, allPage+1), false, unprocessedPage, "all", translationViews, categoryViews, assistanceViews),
 	}
 	data.Unprocessed.Models = models
 	data.AllIncidents.Models = models
@@ -113,7 +118,7 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 	}
 }
 
-func (s *Server) adminList(records []store.IncidentRecord, total, page, totalPages int, previousURL, nextURL string, allowProcessing bool, otherPage int, idPrefix string, translations map[int64][]adminTranslationView, categories map[int64]adminCategoryVerificationView) adminIncidentList {
+func (s *Server) adminList(records []store.IncidentRecord, total, page, totalPages int, previousURL, nextURL string, allowProcessing bool, otherPage int, idPrefix string, translations map[int64][]adminTranslationView, categories map[int64]adminCategoryVerificationView, assistance map[int64]adminPublicAssistanceVerificationView) adminIncidentList {
 	incidents := make([]adminIncidentView, 0, len(records))
 	for _, record := range records {
 		state := record.ProcessingState()
@@ -129,8 +134,9 @@ func (s *Server) adminList(records []store.IncidentRecord, total, page, totalPag
 			CategoryLabel: processing.CategoryLabel(record.AICategory, "en"), CanProcess: state != "running",
 			EventText: publicView.EventText, EventLabel: publicView.EventLabel, ReportKindLabel: publicView.ReportKindLabel,
 			PublicAssistanceTypes: publicView.PublicAssistanceTypes, PrimaryProvenanceLabel: primaryProvenanceLabel,
-			Translations:         translations[record.ID],
-			CategoryVerification: categories[record.ID],
+			Translations:                 translations[record.ID],
+			CategoryVerification:         categories[record.ID],
+			PublicAssistanceVerification: assistance[record.ID],
 		})
 	}
 	return adminIncidentList{
@@ -184,6 +190,65 @@ func (s *Server) adminCategoryVerifications(request *http.Request, records []sto
 		}
 	}
 	return views, nil
+}
+
+func (s *Server) adminPublicAssistanceVerifications(request *http.Request, records []store.IncidentRecord) (map[int64]adminPublicAssistanceVerificationView, error) {
+	views := make(map[int64]adminPublicAssistanceVerificationView)
+	seen := make(map[int64]struct{}, len(records))
+	incidentIDs := make([]int64, 0, len(records))
+	for _, record := range records {
+		if record.ID < 1 {
+			continue
+		}
+		if _, exists := seen[record.ID]; exists {
+			continue
+		}
+		seen[record.ID] = struct{}{}
+		incidentIDs = append(incidentIDs, record.ID)
+	}
+	results, err := s.store.ListAdminPublicAssistanceVerifications(request.Context(), incidentIDs)
+	if err != nil {
+		return nil, err
+	}
+	for _, result := range results {
+		verdict := "Not checked"
+		if result.IsCorrect != nil {
+			if *result.IsCorrect {
+				verdict = "Confirmed"
+			} else {
+				verdict = "Corrected"
+			}
+		}
+		status := result.Status
+		if status == "" {
+			status = "missing"
+		} else if status == "pending" && result.Attempts > 0 {
+			status = "retrying"
+		}
+		views[result.IncidentID] = adminPublicAssistanceVerificationView{
+			OriginalStatus: result.OriginalStatus, OriginalTypes: result.OriginalTypes,
+			EffectiveStatus: result.EffectiveStatus, EffectiveTypes: result.EffectiveTypes,
+			OriginalTypeLabels: s.adminAssistanceTypeLabels(result.OriginalTypes), EffectiveTypeLabels: s.adminAssistanceTypeLabels(result.EffectiveTypes),
+			Verdict: verdict, Status: status, Attempts: result.Attempts, FailureKind: result.FailureKind,
+			Model: result.Model, PromptVersion: result.PromptVersion, GeneratedAt: result.GeneratedAt, NextRetryAt: result.NextRetryAt,
+			CanRetry: result.PresentationRunID > 0 && result.OriginalStatus != "" && result.Status != "pending" && result.Status != "running",
+		}
+	}
+	return views, nil
+}
+
+func (s *Server) adminAssistanceTypeLabels(encoded string) []string {
+	var types []string
+	if json.Unmarshal([]byte(encoded), &types) != nil {
+		return nil
+	}
+	labels := make([]string, 0, len(types))
+	for _, assistanceType := range types {
+		if label := s.metadataCodeLabel("en", "AssistanceType", assistanceType); label != "" {
+			labels = append(labels, label)
+		}
+	}
+	return labels
 }
 
 func (s *Server) adminTranslations(request *http.Request, records []store.IncidentRecord) (map[int64][]adminTranslationView, error) {
@@ -523,19 +588,20 @@ type adminIncidentList struct {
 }
 
 type adminIncidentView struct {
-	Record                 store.IncidentRecord
-	ProcessingState        string
-	ProcessingLabel        string
-	PresentationLabel      string
-	CategoryLabel          string
-	EventText              string
-	EventLabel             string
-	ReportKindLabel        string
-	PublicAssistanceTypes  []string
-	PrimaryProvenanceLabel string
-	CanProcess             bool
-	Translations           []adminTranslationView
-	CategoryVerification   adminCategoryVerificationView
+	Record                       store.IncidentRecord
+	ProcessingState              string
+	ProcessingLabel              string
+	PresentationLabel            string
+	CategoryLabel                string
+	EventText                    string
+	EventLabel                   string
+	ReportKindLabel              string
+	PublicAssistanceTypes        []string
+	PrimaryProvenanceLabel       string
+	CanProcess                   bool
+	Translations                 []adminTranslationView
+	CategoryVerification         adminCategoryVerificationView
+	PublicAssistanceVerification adminPublicAssistanceVerificationView
 }
 
 type adminCategoryVerificationView struct {
@@ -551,6 +617,24 @@ type adminCategoryVerificationView struct {
 	PromptVersion     string
 	GeneratedAt       *time.Time
 	CanRetry          bool
+}
+
+type adminPublicAssistanceVerificationView struct {
+	OriginalStatus      string
+	OriginalTypes       string
+	EffectiveStatus     string
+	EffectiveTypes      string
+	OriginalTypeLabels  []string
+	EffectiveTypeLabels []string
+	Verdict             string
+	Status              string
+	Attempts            int
+	FailureKind         string
+	Model               string
+	PromptVersion       string
+	GeneratedAt         *time.Time
+	NextRetryAt         *time.Time
+	CanRetry            bool
 }
 
 type adminTranslationView struct {

@@ -315,8 +315,14 @@ func (s *Server) socialIncident(response http.ResponseWriter, request *http.Requ
 	}
 	view := s.incidentForLanguage(incident, language)
 	cacheIdentity := ""
-	if view.Record.AICategoryVerificationGeneratedAt != nil {
-		cacheIdentity = view.Record.AICategoryVerificationGeneratedAt.UTC().Format(time.RFC3339Nano)
+	var latestVerification *time.Time
+	for _, generatedAt := range []*time.Time{view.Record.AIPublicAssistanceVerificationGeneratedAt, view.Record.AICategoryVerificationGeneratedAt} {
+		if generatedAt != nil && (latestVerification == nil || generatedAt.After(*latestVerification)) {
+			latestVerification = generatedAt
+		}
+	}
+	if latestVerification != nil {
+		cacheIdentity = latestVerification.UTC().Format(time.RFC3339Nano)
 	}
 	s.writeSocialCard(response, request, socialCardSpec{Eyebrow: s.localization.Text(language, "SocialIncidentLabel"), Title: view.Title, AIGenerated: view.Record.HasAI, AIModel: view.Record.AIModel, CacheIdentity: cacheIdentity})
 }

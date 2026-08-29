@@ -22,9 +22,10 @@ type testPresentation struct {
 }
 
 type testPresentationJob struct {
-	IncidentID int64
-	TitleDE    string
-	BodyDE     string
+	IncidentID        int64
+	PresentationRunID int64
+	TitleDE           string
+	BodyDE            string
 }
 
 func seedV2Presentation(t *testing.T, database *store.Store, presentation testPresentation, now time.Time) testPresentationJob {
@@ -82,7 +83,7 @@ func seedV2Presentation(t *testing.T, database *store.Store, presentation testPr
 	if err := database.CompletePostProcessingJob(ctx, translation, translated, translation.ModelIdentity, translation.InputHash, now); err != nil {
 		t.Fatal(err)
 	}
-	return testPresentationJob{IncidentID: incidentID, TitleDE: records[0].TitleDE, BodyDE: records[0].BodyDE}
+	return testPresentationJob{IncidentID: incidentID, PresentationRunID: german.PresentationRunID, TitleDE: records[0].TitleDE, BodyDE: records[0].BodyDE}
 }
 
 func fixtureStore(t *testing.T) *store.Store {
@@ -135,6 +136,7 @@ func (p fakeProcessingRequester) ModelStatus(ctx context.Context) (processing.Pi
 		return *p.status, nil
 	}
 	postProcessors := []processing.PostProcessorModelStatus{
+		{Key: processing.PublicAssistanceVerificationStep, DisplayName: "Public assistance verification", Description: "Verify public assistance metadata.", ModelSettingKey: processing.PublicAssistanceVerificationStep, Manual: true, Preferred: "qwen3.5:4b", PreferredAvailable: true, Scopes: []processing.PostProcessorScopeStatus{{Key: "default", DisplayName: "Default"}}},
 		{Key: processing.CategoryVerificationStep, DisplayName: "Category verification", Description: "Verify categories.", ModelSettingKey: processing.CategoryVerificationStep, Manual: true, Preferred: "qwen3.5:4b", PreferredAvailable: true, Scopes: []processing.PostProcessorScopeStatus{{Key: "default", DisplayName: "Default"}}},
 		{Key: processing.TranslationModelStep, DisplayName: "Translations", Description: "Translate presentations.", ModelSettingKey: processing.TranslationModelStep, Manual: true, Preferred: "qwen3.5:4b", PreferredAvailable: true, Scopes: []processing.PostProcessorScopeStatus{{Key: "en", DisplayName: "English"}}},
 	}

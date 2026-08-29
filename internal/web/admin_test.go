@@ -549,6 +549,67 @@ func TestAdminPipelineHistoryCombinesCanonicalAndPostProcessingJobs(t *testing.T
 	}
 }
 
+func TestAdminShowsPublicAssistanceVerificationControlsAndSafeHistory(t *testing.T) {
+	ctx := context.Background()
+	database := fixtureStore(t)
+	now := time.Date(2026, time.August, 29, 16, 0, 0, 0, time.UTC)
+	job := seedV2Presentation(t, database, testPresentation{
+		TitleDE: "Deutscher Titel", SummaryDE: "Deutsche Zusammenfassung.",
+		TitleEN: "English title", SummaryEN: "English summary.",
+	}, now)
+	if err := database.EnsurePostProcessingScopes(ctx, []store.PostProcessingScope{{ProcessorKey: processing.PublicAssistanceVerificationStep, ScopeKey: "default"}}, now); err != nil {
+		t.Fatal(err)
+	}
+	plan := store.PostProcessingPlan{
+		ProcessorKey: processing.PublicAssistanceVerificationStep, ScopeKey: "default", PromptVersion: processing.PublicAssistanceVerificationPromptVersion,
+		Model: "qwen3.5:4b", InputKinds: []string{"original_title", "incident_body", "public_assistance_status", "public_assistance_types"},
+	}
+	if queued, err := database.QueuePostProcessingForRun(ctx, job.PresentationRunID, []store.PostProcessingPlan{plan}, "manual", false, now.Add(time.Minute)); err != nil || queued != 1 {
+		t.Fatalf("queue assistance verification = %d/%v", queued, err)
+	}
+	verification, found, err := database.ClaimPostProcessingJob(ctx, processing.PublicAssistanceVerificationStep, false, nil, now.Add(2*time.Minute))
+	if err != nil || !found {
+		t.Fatalf("claim assistance verification = %#v/%t/%v", verification, found, err)
+	}
+	if err := database.CompletePostProcessingJob(ctx, verification, []store.PipelineValue{
+		{Kind: "is_correct", Value: "false"},
+		{Kind: "corrected_public_assistance_status", Value: "requested"},
+		{Kind: "corrected_public_assistance_types", Value: `["identify_person"]`},
+	}, verification.ModelIdentity, verification.InputHash, now.Add(3*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+
+	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "review", AdminEnabled: true,
+		Processor: fakeProcessingRequester{database: database},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	dashboard := httptest.NewRecorder()
+	server.Handler().ServeHTTP(dashboard, httptest.NewRequest(http.MethodGet, "/admin", nil))
+	body := dashboard.Body.String()
+	for _, expected := range []string{
+		"Independent public-assistance verification runs next", "Public assistance verification", processing.PublicAssistanceVerificationPromptVersion,
+		"public_assistance_verification/default", "Corrected · succeeded", "not_requested / []", `requested / [&#34;identify_person&#34;]`,
+		"Identify a person", "Public assistance verifier provenance", "Recheck public assistance now",
+		`name="processor" type="hidden" value="public_assistance_verification"`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Errorf("admin dashboard does not contain %q", expected)
+		}
+	}
+
+	history := httptest.NewRecorder()
+	server.Handler().ServeHTTP(history, httptest.NewRequest(http.MethodGet, "/admin/history", nil))
+	if history.Code != http.StatusOK || !strings.Contains(history.Body.String(), "public_assistance_verification/default") {
+		t.Fatalf("assistance history = %d/%q", history.Code, history.Body.String())
+	}
+	if strings.Contains(history.Body.String(), job.TitleDE) || strings.Contains(history.Body.String(), job.BodyDE) || strings.Contains(history.Body.String(), `identify_person`) {
+		t.Error("pipeline history exposed incident source or verifier output")
+	}
+}
+
 func TestAdminTranslationLabelKeepsCurrentFailureVisibleWithPreviousSuccess(t *testing.T) {
 	translation := store.AdminTranslation{Model: "translate:4b", Status: "failed", FailureKind: "output"}
 	if label := adminTranslationLabel(translation); label != "Failed · previous success retained" {

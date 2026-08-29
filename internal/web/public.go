@@ -252,6 +252,9 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 	}
 	base.PublishedTime = view.Record.PublishedAt.Format(time.RFC3339)
 	modifiedAt := view.Record.UpdatedAt
+	if view.Record.AIPublicAssistanceVerificationGeneratedAt != nil && view.Record.AIPublicAssistanceVerificationGeneratedAt.After(modifiedAt) {
+		modifiedAt = *view.Record.AIPublicAssistanceVerificationGeneratedAt
+	}
 	if view.Record.AICategoryVerificationGeneratedAt != nil && view.Record.AICategoryVerificationGeneratedAt.After(modifiedAt) {
 		modifiedAt = *view.Record.AICategoryVerificationGeneratedAt
 	}
@@ -351,6 +354,12 @@ func (s *Server) incidentForLanguage(record store.IncidentRecord, language strin
 			{Number: 1, Name: s.localization.Text(language, "IncidentMetadataStep"), Model: record.AIMetadataModel, PromptVersion: record.AIMetadataPromptVersion, GeneratedAt: record.AIMetadataGeneratedAt},
 			{Number: 2, Name: s.localization.Text(language, "GermanPresentationStep"), Model: record.AIModel, PromptVersion: record.AIPromptVersion, GeneratedAt: record.AIGeneratedAt},
 		}
+		if record.AIPublicAssistanceVerificationModel != "" {
+			view.ProcessingSteps = append(view.ProcessingSteps, processingStepView{
+				Label: s.localization.Text(language, "PublicAssistanceVerificationStep"), Name: s.localization.Text(language, "PublicAssistanceVerificationStep"), Model: record.AIPublicAssistanceVerificationModel,
+				PromptVersion: record.AIPublicAssistanceVerificationPromptVersion, GeneratedAt: record.AIPublicAssistanceVerificationGeneratedAt,
+			})
+		}
 		if record.AICategoryVerificationModel != "" {
 			view.ProcessingSteps = append(view.ProcessingSteps, processingStepView{
 				Label: s.localization.Text(language, "CategoryVerificationStep"), Name: s.localization.Text(language, "CategoryVerificationStep"), Model: record.AICategoryVerificationModel,
@@ -446,42 +455,43 @@ func (s *Server) groupByDay(incidents []store.IncidentRecord, language string) [
 }
 
 type basePage struct {
-	Lang                        string
-	HomeURL                     string
-	AboutURL                    string
-	CurrentURL                  string
-	Description                 string
-	OpenGraphLocale             string
-	OpenGraphLocaleAlternates   []string
-	SocialTitle                 string
-	SocialType                  string
-	SocialImageURL              string
-	SocialImageSecureURL        string
-	SocialImageAlt              string
-	Robots                      string
-	PublishedTime               string
-	ModifiedTime                string
-	StructuredData              template.JS
-	AIContentMetadata           template.JS
-	AIGeneratedState            string
-	AIModel                     string
-	AIMetadataModel             string
-	AICategoryVerificationModel string
-	AITranslationModel          string
-	LanguageAlternates          []languageLink
-	LanguageSwitches            []languageLink
-	CanonicalOrigin             string
-	CanonicalURL                string
-	PreviousCanonicalURL        string
-	NextCanonicalURL            string
-	Fixture                     bool
-	Review                      bool
-	ShowAIDisclosure            bool
-	ShowReviewNotice            bool
-	BuildCommit                 string
-	BuildCommitURL              string
-	BuildTime                   string
-	BuildTimeLabel              string
+	Lang                                string
+	HomeURL                             string
+	AboutURL                            string
+	CurrentURL                          string
+	Description                         string
+	OpenGraphLocale                     string
+	OpenGraphLocaleAlternates           []string
+	SocialTitle                         string
+	SocialType                          string
+	SocialImageURL                      string
+	SocialImageSecureURL                string
+	SocialImageAlt                      string
+	Robots                              string
+	PublishedTime                       string
+	ModifiedTime                        string
+	StructuredData                      template.JS
+	AIContentMetadata                   template.JS
+	AIGeneratedState                    string
+	AIModel                             string
+	AIMetadataModel                     string
+	AIPublicAssistanceVerificationModel string
+	AICategoryVerificationModel         string
+	AITranslationModel                  string
+	LanguageAlternates                  []languageLink
+	LanguageSwitches                    []languageLink
+	CanonicalOrigin                     string
+	CanonicalURL                        string
+	PreviousCanonicalURL                string
+	NextCanonicalURL                    string
+	Fixture                             bool
+	Review                              bool
+	ShowAIDisclosure                    bool
+	ShowReviewNotice                    bool
+	BuildCommit                         string
+	BuildCommitURL                      string
+	BuildTime                           string
+	BuildTimeLabel                      string
 }
 
 func structuredPageData(page basePage, pageType string) template.JS {
