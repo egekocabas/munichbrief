@@ -83,14 +83,6 @@ func (p fakeProcessingRequester) RetryTranslation(ctx context.Context, incidentI
 	return p.database.QueueIncidentTranslation(ctx, incidentID, store.TranslationPlan{Language: language, PromptVersion: definition.PromptVersion, Model: model}, time.Now())
 }
 
-func (p fakeProcessingRequester) BackfillTranslations(ctx context.Context, language, model string) (int, error) {
-	definition, found := processing.TranslationByLanguage(language)
-	if !found {
-		return 0, store.ErrNotFound
-	}
-	return p.database.QueueMissingTranslations(ctx, "fixture", []store.TranslationPlan{{Language: language, PromptVersion: definition.PromptVersion, Model: model}}, true, time.Now())
-}
-
 func (p fakeProcessingRequester) RequestTranslations(ctx context.Context, incidentID *int64, languages []string, model string) (int, error) {
 	plans := make([]store.TranslationPlan, 0, len(languages))
 	for _, language := range languages {
@@ -101,17 +93,13 @@ func (p fakeProcessingRequester) RequestTranslations(ctx context.Context, incide
 		plans = append(plans, store.TranslationPlan{Language: language, PromptVersion: definition.PromptVersion, Model: model})
 	}
 	if incidentID != nil {
-		return p.database.QueueIncidentTranslations(ctx, *incidentID, plans, true, time.Now())
+		return p.database.RequeueIncidentTranslations(ctx, *incidentID, plans, time.Now())
 	}
-	return p.database.QueueAllTranslations(ctx, "fixture", plans, true, true, time.Now())
+	return p.database.RequeueAllTranslations(ctx, "fixture", plans, time.Now())
 }
 
 func (p fakeProcessingRequester) RetryCategoryVerification(ctx context.Context, incidentID int64, model string) (int, error) {
 	return p.database.QueueIncidentCategoryVerification(ctx, incidentID, store.CategoryVerificationPlan{PromptVersion: processing.CategoryVerificationPromptVersion, Model: model}, time.Now())
-}
-
-func (p fakeProcessingRequester) BackfillCategoryVerifications(ctx context.Context, model string) (int, error) {
-	return p.database.QueueMissingCategoryVerifications(ctx, "fixture", store.CategoryVerificationPlan{PromptVersion: processing.CategoryVerificationPromptVersion, Model: model}, true, time.Now())
 }
 
 func (p fakeProcessingRequester) RequestCategoryVerifications(ctx context.Context, incidentID *int64, model string) (int, error) {
@@ -119,7 +107,7 @@ func (p fakeProcessingRequester) RequestCategoryVerifications(ctx context.Contex
 	if incidentID != nil {
 		return p.database.QueueIncidentCategoryVerification(ctx, *incidentID, plan, time.Now())
 	}
-	return p.database.QueueAllCategoryVerifications(ctx, "fixture", plan, true, true, time.Now())
+	return p.database.RequeueAllCategoryVerifications(ctx, "fixture", plan, time.Now())
 }
 
 func (p fakeProcessingRequester) Status(ctx context.Context) (processing.PipelineRuntimeStatus, error) {

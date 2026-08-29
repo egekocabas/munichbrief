@@ -67,7 +67,7 @@ func TestTranslationJobsAreIndependentAuditableAndManualRetriesBypassWindow(t *t
 	if queued, err := database.QueueIncidentTranslation(ctx, incidentID, TranslationPlan{Language: "en", PromptVersion: plan.PromptVersion, Model: "translate:c"}, now.Add(4*time.Minute)); err != nil || queued != 0 {
 		t.Fatalf("model change rewrote completed translation = %d/%v", queued, err)
 	}
-	if queued, err := database.QueueIncidentTranslations(ctx, incidentID, []TranslationPlan{{Language: "en", PromptVersion: plan.PromptVersion, Model: "translate:c"}}, true, now.Add(4*time.Minute)); err != nil || queued != 1 {
+	if queued, err := database.RequeueIncidentTranslations(ctx, incidentID, []TranslationPlan{{Language: "en", PromptVersion: plan.PromptVersion, Model: "translate:c"}}, now.Add(4*time.Minute)); err != nil || queued != 1 {
 		t.Fatalf("explicit focused retranslation = %d/%v", queued, err)
 	}
 	forced, found, err := database.ClaimTranslationJob(ctx, false, nil, now.Add(4*time.Minute))

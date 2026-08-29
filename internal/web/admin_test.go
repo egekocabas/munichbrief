@@ -183,7 +183,7 @@ func TestAdminProcessingReturnsUnavailableWhenAIIsDisabled(t *testing.T) {
 	}
 }
 
-func TestAdminRetriesMissingTranslationAndConfirmsHistoricalBackfill(t *testing.T) {
+func TestAdminRetriesPostProcessingAndRejectsRemovedBackfillRoutes(t *testing.T) {
 	ctx := context.Background()
 	database := fixtureStore(t)
 	records, _, err := database.ListIncidents(ctx, 1, 0)
@@ -249,8 +249,8 @@ func TestAdminRetriesMissingTranslationAndConfirmsHistoricalBackfill(t *testing.
 	}
 	backfill := httptest.NewRecorder()
 	handler.ServeHTTP(backfill, formRequest(http.MethodPost, "/api/admin/ai/translation-backfill", "confirmed=true&language=en&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
-	if backfill.Code != http.StatusSeeOther || !strings.Contains(backfill.Header().Get("Location"), "translations_queued=0") {
-		t.Fatalf("translation backfill = %d/%q", backfill.Code, backfill.Header().Get("Location"))
+	if backfill.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("removed translation backfill route = %d, want 405", backfill.Code)
 	}
 	categoryUnconfirmed := httptest.NewRecorder()
 	handler.ServeHTTP(categoryUnconfirmed, formRequest(http.MethodPost, "/api/admin/ai/category-verification-retry", "incident_id="+formatID(records[0].ID)+"&model=qwen3.5%3A4b"))
@@ -264,8 +264,8 @@ func TestAdminRetriesMissingTranslationAndConfirmsHistoricalBackfill(t *testing.
 	}
 	categoryBackfill := httptest.NewRecorder()
 	handler.ServeHTTP(categoryBackfill, formRequest(http.MethodPost, "/api/admin/ai/category-verification-backfill", "confirmed=true&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
-	if categoryBackfill.Code != http.StatusSeeOther || !strings.Contains(categoryBackfill.Header().Get("Location"), "category_verifications_queued=0") {
-		t.Fatalf("category backfill = %d/%q", categoryBackfill.Code, categoryBackfill.Header().Get("Location"))
+	if categoryBackfill.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("removed category backfill route = %d, want 405", categoryBackfill.Code)
 	}
 }
 

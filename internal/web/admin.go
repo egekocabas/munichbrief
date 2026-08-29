@@ -334,19 +334,11 @@ func (s *Server) processNow(response http.ResponseWriter, request *http.Request,
 }
 
 func (s *Server) retryTranslation(response http.ResponseWriter, request *http.Request) {
-	s.translationMutation(response, request, false)
-}
-
-func (s *Server) backfillTranslations(response http.ResponseWriter, request *http.Request) {
-	s.translationMutation(response, request, true)
+	s.translationMutation(response, request)
 }
 
 func (s *Server) retryCategoryVerification(response http.ResponseWriter, request *http.Request) {
-	s.categoryVerificationMutation(response, request, false)
-}
-
-func (s *Server) backfillCategoryVerifications(response http.ResponseWriter, request *http.Request) {
-	s.categoryVerificationMutation(response, request, true)
+	s.categoryVerificationMutation(response, request)
 }
 
 func (s *Server) processTranslationsOnly(response http.ResponseWriter, request *http.Request) {
@@ -400,7 +392,7 @@ func (s *Server) processCategoryVerificationsOnly(response http.ResponseWriter, 
 	s.redirectPostProcessing(response, request, "category_verifications_queued", queued, "", "")
 }
 
-func (s *Server) categoryVerificationMutation(response http.ResponseWriter, request *http.Request, backfill bool) {
+func (s *Server) categoryVerificationMutation(response http.ResponseWriter, request *http.Request) {
 	if !validAdminMutation(request) {
 		http.Error(response, "cross-site request blocked", http.StatusForbidden)
 		return
@@ -427,18 +419,12 @@ func (s *Server) categoryVerificationMutation(response http.ResponseWriter, requ
 		http.Error(response, "model is required", http.StatusBadRequest)
 		return
 	}
-	var queued int
-	var err error
-	if backfill {
-		queued, err = s.options.Processor.BackfillCategoryVerifications(request.Context(), model)
-	} else {
-		incidentID, parseErr := strconv.ParseInt(request.PostForm.Get("incident_id"), 10, 64)
-		if parseErr != nil || incidentID < 1 {
-			http.Error(response, "incident_id must be a positive integer", http.StatusBadRequest)
-			return
-		}
-		queued, err = s.options.Processor.RetryCategoryVerification(request.Context(), incidentID, model)
+	incidentID, parseErr := strconv.ParseInt(request.PostForm.Get("incident_id"), 10, 64)
+	if parseErr != nil || incidentID < 1 {
+		http.Error(response, "incident_id must be a positive integer", http.StatusBadRequest)
+		return
 	}
+	queued, err := s.options.Processor.RetryCategoryVerification(request.Context(), incidentID, model)
 	if errors.Is(err, store.ErrNotFound) {
 		http.NotFound(response, request)
 		return
@@ -458,7 +444,7 @@ func (s *Server) categoryVerificationMutation(response http.ResponseWriter, requ
 	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
 }
 
-func (s *Server) translationMutation(response http.ResponseWriter, request *http.Request, backfill bool) {
+func (s *Server) translationMutation(response http.ResponseWriter, request *http.Request) {
 	if !validAdminMutation(request) {
 		http.Error(response, "cross-site request blocked", http.StatusForbidden)
 		return
@@ -486,18 +472,12 @@ func (s *Server) translationMutation(response http.ResponseWriter, request *http
 		http.Error(response, "language and model are required", http.StatusBadRequest)
 		return
 	}
-	var queued int
-	var err error
-	if backfill {
-		queued, err = s.options.Processor.BackfillTranslations(request.Context(), language, model)
-	} else {
-		incidentID, parseErr := strconv.ParseInt(request.PostForm.Get("incident_id"), 10, 64)
-		if parseErr != nil || incidentID < 1 {
-			http.Error(response, "incident_id must be a positive integer", http.StatusBadRequest)
-			return
-		}
-		queued, err = s.options.Processor.RetryTranslation(request.Context(), incidentID, language, model)
+	incidentID, parseErr := strconv.ParseInt(request.PostForm.Get("incident_id"), 10, 64)
+	if parseErr != nil || incidentID < 1 {
+		http.Error(response, "incident_id must be a positive integer", http.StatusBadRequest)
+		return
 	}
+	queued, err := s.options.Processor.RetryTranslation(request.Context(), incidentID, language, model)
 	if errors.Is(err, store.ErrNotFound) {
 		http.NotFound(response, request)
 		return

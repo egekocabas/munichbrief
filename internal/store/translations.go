@@ -70,13 +70,16 @@ func (s *Store) queueTranslationsForRun(ctx context.Context, runID int64, plans 
 // QueueIncidentTranslation requests one immediate target-language translation
 // for the newest completed canonical presentation of the current incident.
 func (s *Store) QueueIncidentTranslation(ctx context.Context, incidentID int64, plan TranslationPlan, now time.Time) (int, error) {
-	return s.QueueIncidentTranslations(ctx, incidentID, []TranslationPlan{plan}, false, now)
+	return s.queueIncidentTranslations(ctx, incidentID, []TranslationPlan{plan}, false, now)
 }
 
-// QueueIncidentTranslations queues one or more translation languages for the
-// newest completed presentation. Force permits a new manual attempt after a
-// successful translation while still deduplicating active work.
-func (s *Store) QueueIncidentTranslations(ctx context.Context, incidentID int64, plans []TranslationPlan, force bool, now time.Time) (int, error) {
+// RequeueIncidentTranslations queues one or more translation languages for the
+// newest completed presentation, including replacements for successful work.
+func (s *Store) RequeueIncidentTranslations(ctx context.Context, incidentID int64, plans []TranslationPlan, now time.Time) (int, error) {
+	return s.queueIncidentTranslations(ctx, incidentID, plans, true, now)
+}
+
+func (s *Store) queueIncidentTranslations(ctx context.Context, incidentID int64, plans []TranslationPlan, force bool, now time.Time) (int, error) {
 	if incidentID < 1 {
 		return 0, errors.New("incident ID must be positive")
 	}
@@ -100,13 +103,16 @@ func (s *Store) QueueIncidentTranslations(ctx context.Context, incidentID int64,
 // each current incident. Automatic work respects each language's enablement
 // cutover; explicit backfills intentionally ignore it.
 func (s *Store) QueueMissingTranslations(ctx context.Context, sourceMode string, plans []TranslationPlan, backfill bool, now time.Time) (int, error) {
-	return s.QueueAllTranslations(ctx, sourceMode, plans, backfill, false, now)
+	return s.queueTranslations(ctx, sourceMode, plans, backfill, false, now)
 }
 
-// QueueAllTranslations scans the newest completed presentation for every
-// current incident. Force permits explicit operator requests to retranslate
-// completed languages; active jobs remain deduplicated.
-func (s *Store) QueueAllTranslations(ctx context.Context, sourceMode string, plans []TranslationPlan, backfill, force bool, now time.Time) (int, error) {
+// RequeueAllTranslations queues replacements for the newest completed
+// presentation of every current incident. Active jobs remain deduplicated.
+func (s *Store) RequeueAllTranslations(ctx context.Context, sourceMode string, plans []TranslationPlan, now time.Time) (int, error) {
+	return s.queueTranslations(ctx, sourceMode, plans, true, true, now)
+}
+
+func (s *Store) queueTranslations(ctx context.Context, sourceMode string, plans []TranslationPlan, backfill, force bool, now time.Time) (int, error) {
 	condition, err := sourceStatusCondition(sourceMode)
 	if err != nil {
 		return 0, err

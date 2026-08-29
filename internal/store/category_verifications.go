@@ -74,13 +74,16 @@ func (s *Store) QueueIncidentCategoryVerification(ctx context.Context, incidentI
 // source revision. Automatic work respects the deployment cutover; an explicit
 // backfill covers older current runs, including translated fallbacks.
 func (s *Store) QueueMissingCategoryVerifications(ctx context.Context, sourceMode string, plan CategoryVerificationPlan, backfill bool, now time.Time) (int, error) {
-	return s.QueueAllCategoryVerifications(ctx, sourceMode, plan, backfill, false, now)
+	return s.queueCategoryVerifications(ctx, sourceMode, plan, backfill, false, now)
 }
 
-// QueueAllCategoryVerifications scans reader-selectable presentations for the
-// active source revision. Force permits an explicit operator request to rerun
-// successful checks while still deduplicating active work.
-func (s *Store) QueueAllCategoryVerifications(ctx context.Context, sourceMode string, plan CategoryVerificationPlan, backfill, force bool, now time.Time) (int, error) {
+// RequeueAllCategoryVerifications queues replacements for reader-selectable
+// presentations in the active source revision. Active jobs remain deduplicated.
+func (s *Store) RequeueAllCategoryVerifications(ctx context.Context, sourceMode string, plan CategoryVerificationPlan, now time.Time) (int, error) {
+	return s.queueCategoryVerifications(ctx, sourceMode, plan, true, true, now)
+}
+
+func (s *Store) queueCategoryVerifications(ctx context.Context, sourceMode string, plan CategoryVerificationPlan, backfill, force bool, now time.Time) (int, error) {
 	condition, err := sourceStatusCondition(sourceMode)
 	if err != nil {
 		return 0, err

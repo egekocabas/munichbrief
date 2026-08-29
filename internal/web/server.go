@@ -77,10 +77,8 @@ type ProcessingRequester interface {
 	ModelStatus(context.Context) (processing.PipelineModelStatus, error)
 	SetPreferredStepModel(context.Context, string, string) error
 	RetryTranslation(context.Context, int64, string, string) (int, error)
-	BackfillTranslations(context.Context, string, string) (int, error)
 	RequestTranslations(context.Context, *int64, []string, string) (int, error)
 	RetryCategoryVerification(context.Context, int64, string) (int, error)
-	BackfillCategoryVerifications(context.Context, string) (int, error)
 	RequestCategoryVerifications(context.Context, *int64, string) (int, error)
 	Status(context.Context) (processing.PipelineRuntimeStatus, error)
 }
@@ -239,10 +237,8 @@ func (s *Server) Handler() http.Handler {
 		mux.HandleFunc("POST /api/admin/ai/reprocess-all", s.reprocessAll)
 		mux.HandleFunc("POST /api/admin/ai/step-model", s.updatePreferredStepModel)
 		mux.HandleFunc("POST /api/admin/ai/translation-retry", s.retryTranslation)
-		mux.HandleFunc("POST /api/admin/ai/translation-backfill", s.backfillTranslations)
 		mux.HandleFunc("POST /api/admin/ai/translations/process", s.processTranslationsOnly)
 		mux.HandleFunc("POST /api/admin/ai/category-verification-retry", s.retryCategoryVerification)
-		mux.HandleFunc("POST /api/admin/ai/category-verification-backfill", s.backfillCategoryVerifications)
 		mux.HandleFunc("POST /api/admin/ai/category-verifications/process", s.processCategoryVerificationsOnly)
 	}
 	return s.requestLogger(s.accessBoundary(mux))

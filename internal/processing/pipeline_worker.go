@@ -34,9 +34,9 @@ type PipelineRepository interface {
 	EnsureTranslationLanguages(context.Context, []string, time.Time) error
 	QueueTranslationsForRun(context.Context, int64, []store.TranslationPlan, string, time.Time) (int, error)
 	QueueIncidentTranslation(context.Context, int64, store.TranslationPlan, time.Time) (int, error)
-	QueueIncidentTranslations(context.Context, int64, []store.TranslationPlan, bool, time.Time) (int, error)
+	RequeueIncidentTranslations(context.Context, int64, []store.TranslationPlan, time.Time) (int, error)
 	QueueMissingTranslations(context.Context, string, []store.TranslationPlan, bool, time.Time) (int, error)
-	QueueAllTranslations(context.Context, string, []store.TranslationPlan, bool, bool, time.Time) (int, error)
+	RequeueAllTranslations(context.Context, string, []store.TranslationPlan, time.Time) (int, error)
 	ClaimTranslationJob(context.Context, bool, []string, time.Time) (store.TranslationJob, bool, error)
 	CompleteTranslationJob(context.Context, store.TranslationJob, string, string, string, string, time.Time) error
 	FailTranslationJob(context.Context, store.TranslationJob, string, string, *time.Time, time.Time, error) error
@@ -44,7 +44,7 @@ type PipelineRepository interface {
 	QueueCategoryVerificationForRun(context.Context, int64, store.CategoryVerificationPlan, string, bool, time.Time) (int, error)
 	QueueIncidentCategoryVerification(context.Context, int64, store.CategoryVerificationPlan, time.Time) (int, error)
 	QueueMissingCategoryVerifications(context.Context, string, store.CategoryVerificationPlan, bool, time.Time) (int, error)
-	QueueAllCategoryVerifications(context.Context, string, store.CategoryVerificationPlan, bool, bool, time.Time) (int, error)
+	RequeueAllCategoryVerifications(context.Context, string, store.CategoryVerificationPlan, time.Time) (int, error)
 	ClaimCategoryVerificationJob(context.Context, bool, []string, time.Time) (store.CategoryVerificationJob, bool, error)
 	CompleteCategoryVerificationJob(context.Context, store.CategoryVerificationJob, bool, string, string, string, time.Time) error
 	FailCategoryVerificationJob(context.Context, store.CategoryVerificationJob, string, string, *time.Time, time.Time, error) error
@@ -61,7 +61,7 @@ func (w *PipelineWorker) RequestCategoryVerifications(ctx context.Context, incid
 	var queued int
 	var err error
 	if incidentID == nil {
-		queued, err = w.repository.QueueAllCategoryVerifications(ctx, w.sourceMode, plan, true, true, w.clock())
+		queued, err = w.repository.RequeueAllCategoryVerifications(ctx, w.sourceMode, plan, w.clock())
 	} else {
 		queued, err = w.repository.QueueIncidentCategoryVerification(ctx, *incidentID, plan, w.clock())
 	}
@@ -97,9 +97,9 @@ func (w *PipelineWorker) RequestTranslations(ctx context.Context, incidentID *in
 	var queued int
 	var err error
 	if incidentID == nil {
-		queued, err = w.repository.QueueAllTranslations(ctx, w.sourceMode, plans, true, true, w.clock())
+		queued, err = w.repository.RequeueAllTranslations(ctx, w.sourceMode, plans, w.clock())
 	} else {
-		queued, err = w.repository.QueueIncidentTranslations(ctx, *incidentID, plans, true, w.clock())
+		queued, err = w.repository.RequeueIncidentTranslations(ctx, *incidentID, plans, w.clock())
 	}
 	if err == nil && queued > 0 {
 		w.signal()
@@ -120,19 +120,6 @@ func (w *PipelineWorker) RetryCategoryVerification(ctx context.Context, incident
 	return queued, err
 }
 
-func (w *PipelineWorker) BackfillCategoryVerifications(ctx context.Context, model string) (int, error) {
-	if !w.catalog.Snapshot().Has(model) {
-		return 0, fmt.Errorf("%w: %s", ErrModelUnavailable, model)
-	}
-	queued, err := w.repository.QueueMissingCategoryVerifications(ctx, w.sourceMode, store.CategoryVerificationPlan{
-		PromptVersion: CategoryVerificationPromptVersion, Model: model,
-	}, true, w.clock())
-	if err == nil && queued > 0 {
-		w.signal()
-	}
-	return queued, err
-}
-
 // RetryTranslation queues one immediate translation attempt for the incident's
 // newest supported canonical presentation.
 func (w *PipelineWorker) RetryTranslation(ctx context.Context, incidentID int64, language, model string) (int, error) {
@@ -144,23 +131,6 @@ func (w *PipelineWorker) RetryTranslation(ctx context.Context, incidentID int64,
 		return 0, fmt.Errorf("%w: %s", ErrModelUnavailable, model)
 	}
 	queued, err := w.repository.QueueIncidentTranslation(ctx, incidentID, store.TranslationPlan{Language: language, PromptVersion: translation.PromptVersion, Model: model}, w.clock())
-	if err == nil && queued > 0 {
-		w.signal()
-	}
-	return queued, err
-}
-
-// BackfillTranslations explicitly queues historical canonical presentations,
-// bypassing the language's automatic-enablement cutover.
-func (w *PipelineWorker) BackfillTranslations(ctx context.Context, language, model string) (int, error) {
-	translation, found := TranslationByLanguage(language)
-	if !found {
-		return 0, store.ErrNotFound
-	}
-	if !w.catalog.Snapshot().Has(model) {
-		return 0, fmt.Errorf("%w: %s", ErrModelUnavailable, model)
-	}
-	queued, err := w.repository.QueueMissingTranslations(ctx, w.sourceMode, []store.TranslationPlan{{Language: language, PromptVersion: translation.PromptVersion, Model: model}}, true, w.clock())
 	if err == nil && queued > 0 {
 		w.signal()
 	}

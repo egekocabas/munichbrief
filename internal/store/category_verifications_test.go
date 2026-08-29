@@ -95,7 +95,7 @@ func TestCategoryVerificationIsIndependentAuditableAndRunScoped(t *testing.T) {
 	if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM presentation_category_verifications WHERE presentation_run_id=? AND status='succeeded'`, runID).Scan(&successful); err != nil || successful != 2 {
 		t.Fatalf("successful verification history = %d/%v", successful, err)
 	}
-	if queued, err := database.QueueAllCategoryVerifications(ctx, "fixture", CategoryVerificationPlan{PromptVersion: plan.PromptVersion, Model: "verify:all"}, true, true, now.Add(6*time.Minute)); err != nil || queued != 1 {
+	if queued, err := database.RequeueAllCategoryVerifications(ctx, "fixture", CategoryVerificationPlan{PromptVersion: plan.PromptVersion, Model: "verify:all"}, now.Add(6*time.Minute)); err != nil || queued != 1 {
 		t.Fatalf("explicit all-category recheck = %d/%v", queued, err)
 	}
 	allJob, found, err := database.ClaimCategoryVerificationJob(ctx, false, nil, now.Add(6*time.Minute))

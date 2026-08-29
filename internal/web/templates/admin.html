@@ -207,7 +207,7 @@
           </form>
           <form class="mt-6 grid gap-3 border-t border-rule pt-5" method="post" action="/api/admin/ai/translations/process" data-confirm-processing data-confirm-description="Retranslate every eligible current incident. Existing translations stay published until replacements succeed.">
             <input name="confirmed" type="hidden" value="false"><input name="scope" type="hidden" value="all"><input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}"><input name="all_page" type="hidden" value="{{.AllPage}}">
-            <h4 class="font-bold">Process all eligible presentations</h4>
+            <h4 class="font-bold">Process all incidents</h4>
             <label class="text-sm font-bold" for="translation-all-language">Language</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="translation-all-language" name="language" required><option value="all">All registered languages</option>{{range .TranslationLanguages}}<option value="{{.Code}}">{{.DisplayName}}</option>{{end}}</select>
             <label class="text-sm font-bold" for="translation-all-model">Model</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="translation-all-model" name="model" required {{if or (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>{{range .Models.Models}}<option value="{{.}}" {{if eq . $translation.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>
             <button class="rounded-md border border-civic bg-white px-4 py-2 font-bold text-civic hover:bg-newsprint" type="submit" {{if or (not .ProcessingEnabled) (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>Process all translations</button>
@@ -227,7 +227,7 @@
           </form>
           <form class="mt-6 grid gap-3 border-t border-rule pt-5" method="post" action="/api/admin/ai/category-verifications/process" data-confirm-processing data-confirm-description="Recheck categories for every eligible current presentation. Existing verified categories remain effective until replacements succeed.">
             <input name="confirmed" type="hidden" value="false"><input name="scope" type="hidden" value="all"><input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}"><input name="all_page" type="hidden" value="{{.AllPage}}">
-            <h4 class="font-bold">Process all incidents</h4>
+            <h4 class="font-bold">Process all eligible presentations</h4>
             <label class="text-sm font-bold" for="category-all-model">Model</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="category-all-model" name="model" required {{if or (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>{{range .Models.Models}}<option value="{{.}}" {{if eq . $category.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>
             <button class="rounded-md border border-civic bg-white px-4 py-2 font-bold text-civic hover:bg-newsprint" type="submit" {{if or (not .ProcessingEnabled) (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>Verify all eligible categories</button>
           </form>
