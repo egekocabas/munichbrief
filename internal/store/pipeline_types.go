@@ -32,33 +32,35 @@ type StepSetting struct {
 
 // PipelineCycle is the persisted coordinator for an ordered set of step jobs.
 type PipelineCycle struct {
-	ID               int64      `json:"id"`
-	Kind             string     `json:"kind"`
-	Status           string     `json:"status"`
-	ActiveStep       int        `json:"active_step"`
-	WindowAuthorized bool       `json:"window_authorized"`
-	StartedAt        *time.Time `json:"started_at,omitempty"`
-	CompletedAt      *time.Time `json:"completed_at,omitempty"`
-	TranslationModel string     `json:"translation_model,omitempty"`
+	ID                        int64      `json:"id"`
+	Kind                      string     `json:"kind"`
+	Status                    string     `json:"status"`
+	ActiveStep                int        `json:"active_step"`
+	WindowAuthorized          bool       `json:"window_authorized"`
+	StartedAt                 *time.Time `json:"started_at,omitempty"`
+	CompletedAt               *time.Time `json:"completed_at,omitempty"`
+	TranslationModel          string     `json:"translation_model,omitempty"`
+	CategoryVerificationModel string     `json:"category_verification_model,omitempty"`
 }
 
 // PipelineJob is a claimed unit of work with its frozen input provenance.
 type PipelineJob struct {
-	ID                int64
-	CycleID           int64
-	CycleKind         string
-	CycleItemID       int64
-	PresentationRunID int64
-	IncidentID        int64
-	SourceHash        string
-	StepKey           string
-	StepOrder         int
-	ModelIdentity     string
-	PromptVersion     string
-	InputHash         string
-	AttemptCount      int
-	TranslationModel  string
-	InputValues       map[string]string
+	ID                        int64
+	CycleID                   int64
+	CycleKind                 string
+	CycleItemID               int64
+	PresentationRunID         int64
+	IncidentID                int64
+	SourceHash                string
+	StepKey                   string
+	StepOrder                 int
+	ModelIdentity             string
+	PromptVersion             string
+	InputHash                 string
+	AttemptCount              int
+	TranslationModel          string
+	CategoryVerificationModel string
+	InputValues               map[string]string
 	// TitleDE and SummaryDE remain populated for compatibility with operational
 	// callers while step execution consumes InputValues exclusively.
 	TitleDE   string
@@ -86,6 +88,38 @@ type TranslationJob struct {
 	AttemptCount      int
 	TitleDE           string
 	SummaryDE         string
+}
+
+// CategoryVerificationPlan freezes the focused verifier prompt and model.
+type CategoryVerificationPlan struct {
+	PromptVersion string
+	Model         string
+}
+
+// CategoryVerificationJob checks one immutable canonical presentation category.
+type CategoryVerificationJob struct {
+	ID                int64
+	PresentationRunID int64
+	IncidentID        int64
+	RequestKind       string
+	InputCategory     string
+	ModelIdentity     string
+	PromptVersion     string
+	InputHash         string
+	AttemptCount      int
+	TitleDE           string
+	SummaryDE         string
+}
+
+// CategoryVerificationQueueStats summarizes the independent verifier queue.
+type CategoryVerificationQueueStats struct {
+	Pending     int `json:"pending"`
+	Running     int `json:"running"`
+	Retrying    int `json:"retrying"`
+	NeedsReview int `json:"needs_review"`
+	Failed      int `json:"failed"`
+	Succeeded   int `json:"succeeded"`
+	Corrected   int `json:"corrected"`
 }
 
 // TranslationQueueStats summarizes one target language independently from the
@@ -224,20 +258,22 @@ func nullableString(value string) any {
 
 // PipelineSnapshot is an operational view of active, queued, and candidate work.
 type PipelineSnapshot struct {
-	ScheduledAfter      *time.Time              `json:"scheduled_after,omitempty"`
-	ActiveCycle         *PipelineCycle          `json:"active_cycle,omitempty"`
-	ActiveStepKey       string                  `json:"active_step_key"`
-	ActiveModel         string                  `json:"active_model"`
-	CurrentIncidentID   int64                   `json:"current_incident_id,omitempty"`
-	ActiveStepCompleted int                     `json:"active_step_completed"`
-	ActiveStepTotal     int                     `json:"active_step_total"`
-	CycleCompleted      int                     `json:"cycle_completed"`
-	CycleTotal          int                     `json:"cycle_total"`
-	ManualCycles        int                     `json:"manual_cycles"`
-	ContinuationCycles  int                     `json:"continuation_cycles"`
-	ScheduledCandidates int                     `json:"scheduled_candidates"`
-	ActiveSteps         []StepQueueStats        `json:"active_steps"`
-	Steps               []StepQueueStats        `json:"steps"`
-	RecentEvents        []PipelineEvent         `json:"recent_events"`
-	Translations        []TranslationQueueStats `json:"translations"`
+	ScheduledAfter            *time.Time                     `json:"scheduled_after,omitempty"`
+	CategoryVerificationAfter *time.Time                     `json:"category_verification_after,omitempty"`
+	ActiveCycle               *PipelineCycle                 `json:"active_cycle,omitempty"`
+	ActiveStepKey             string                         `json:"active_step_key"`
+	ActiveModel               string                         `json:"active_model"`
+	CurrentIncidentID         int64                          `json:"current_incident_id,omitempty"`
+	ActiveStepCompleted       int                            `json:"active_step_completed"`
+	ActiveStepTotal           int                            `json:"active_step_total"`
+	CycleCompleted            int                            `json:"cycle_completed"`
+	CycleTotal                int                            `json:"cycle_total"`
+	ManualCycles              int                            `json:"manual_cycles"`
+	ContinuationCycles        int                            `json:"continuation_cycles"`
+	ScheduledCandidates       int                            `json:"scheduled_candidates"`
+	ActiveSteps               []StepQueueStats               `json:"active_steps"`
+	Steps                     []StepQueueStats               `json:"steps"`
+	RecentEvents              []PipelineEvent                `json:"recent_events"`
+	Translations              []TranslationQueueStats        `json:"translations"`
+	CategoryVerification      CategoryVerificationQueueStats `json:"category_verification"`
 }

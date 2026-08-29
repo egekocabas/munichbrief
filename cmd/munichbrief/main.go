@@ -266,7 +266,11 @@ func runAIProcess(ctx context.Context, logger *slog.Logger, cfg config.Config, a
 	if translationModels, translationErr := database.PreferredPipelineModels(ctx, []string{processing.TranslationModelStep}); translationErr == nil {
 		translationModel = translationModels[processing.TranslationModelStep]
 	}
-	result, err := database.CreateManualPipelineCycle(ctx, cfg.SourceMode, plans, translationModel, selectedID, false, time.Now())
+	categoryVerificationModel := ""
+	if verificationModels, verificationErr := database.PreferredPipelineModels(ctx, []string{processing.CategoryVerificationStep}); verificationErr == nil {
+		categoryVerificationModel = verificationModels[processing.CategoryVerificationStep]
+	}
+	result, err := database.CreateManualPipelineCycleWithPostProcessing(ctx, cfg.SourceMode, plans, translationModel, categoryVerificationModel, selectedID, false, time.Now())
 	if err != nil {
 		return err
 	}

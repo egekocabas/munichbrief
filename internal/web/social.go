@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	xdraw "golang.org/x/image/draw"
 	xfont "golang.org/x/image/font"
@@ -51,10 +52,11 @@ type socialCardRenderer struct {
 }
 
 type socialCardSpec struct {
-	Eyebrow     string
-	Title       string
-	AIGenerated bool
-	AIModel     string
+	Eyebrow       string
+	Title         string
+	AIGenerated   bool
+	AIModel       string
+	CacheIdentity string
 }
 
 func newSocialCardRenderer() (*socialCardRenderer, error) {
@@ -298,7 +300,11 @@ func (s *Server) socialIncident(response http.ResponseWriter, request *http.Requ
 		return
 	}
 	view := s.incidentForLanguage(incident, language)
-	s.writeSocialCard(response, request, socialCardSpec{Eyebrow: s.localization.Text(language, "SocialIncidentLabel"), Title: view.Title, AIGenerated: view.Record.HasAI, AIModel: view.Record.AIModel})
+	cacheIdentity := ""
+	if view.Record.AICategoryVerificationGeneratedAt != nil {
+		cacheIdentity = view.Record.AICategoryVerificationGeneratedAt.UTC().Format(time.RFC3339Nano)
+	}
+	s.writeSocialCard(response, request, socialCardSpec{Eyebrow: s.localization.Text(language, "SocialIncidentLabel"), Title: view.Title, AIGenerated: view.Record.HasAI, AIModel: view.Record.AIModel, CacheIdentity: cacheIdentity})
 }
 
 func socialCardLanguage(request *http.Request) (string, bool) {
@@ -308,7 +314,7 @@ func socialCardLanguage(request *http.Request) (string, bool) {
 }
 
 func (s *Server) writeSocialCard(response http.ResponseWriter, request *http.Request, spec socialCardSpec) {
-	digest := sha256.Sum256([]byte(s.socialCards.version + "\x00" + spec.Eyebrow + "\x00" + spec.Title + "\x00" + strconv.FormatBool(spec.AIGenerated) + "\x00" + spec.AIModel))
+	digest := sha256.Sum256([]byte(s.socialCards.version + "\x00" + spec.Eyebrow + "\x00" + spec.Title + "\x00" + strconv.FormatBool(spec.AIGenerated) + "\x00" + spec.AIModel + "\x00" + spec.CacheIdentity))
 	etag := fmt.Sprintf(`"%x"`, digest[:12])
 	response.Header().Set("Content-Type", "image/png")
 	response.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400")

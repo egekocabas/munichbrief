@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/egekocabas/munichbrief/internal/processing"
 	"github.com/egekocabas/munichbrief/internal/store"
@@ -71,6 +72,11 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 		s.internalError(response, request, "load admin translations", err)
 		return
 	}
+	categoryViews, err := s.adminCategoryVerifications(request, append(append([]store.IncidentRecord{}, unprocessed...), allIncidents...))
+	if err != nil {
+		s.internalError(response, request, "load admin category verifications", err)
+		return
+	}
 	data := adminPage{
 		ProcessingEnabled:    s.options.Processor != nil,
 		UnprocessedPage:      unprocessedPage,
@@ -79,9 +85,9 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 		Runtime:              runtime,
 		TranslationLanguages: adminTranslationLanguages(),
 		Unprocessed: s.adminList(unprocessed, unprocessedTotal, unprocessedPage, unprocessedPages,
-			adminPaginationURL(unprocessedPage-1, allPage), adminPaginationURL(unprocessedPage+1, allPage), true, allPage, "unprocessed", translationViews),
+			adminPaginationURL(unprocessedPage-1, allPage), adminPaginationURL(unprocessedPage+1, allPage), true, allPage, "unprocessed", translationViews, categoryViews),
 		AllIncidents: s.adminList(allIncidents, allTotal, allPage, allPages,
-			adminPaginationURL(unprocessedPage, allPage-1), adminPaginationURL(unprocessedPage, allPage+1), false, unprocessedPage, "all", translationViews),
+			adminPaginationURL(unprocessedPage, allPage-1), adminPaginationURL(unprocessedPage, allPage+1), false, unprocessedPage, "all", translationViews, categoryViews),
 	}
 	data.Unprocessed.Models = models
 	data.AllIncidents.Models = models
@@ -103,6 +109,10 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 		data.Notice = fmt.Sprintf("Queued %d %s translation job(s). Canonical German presentations remain available independently.", queued, displayName)
 		data.NoticeIsWarning = queued == 0
 	}
+	if queued, ok := nonNegativeQueryInt(request, "category_verifications_queued"); ok {
+		data.Notice = fmt.Sprintf("Queued %d category verification job(s). Existing German presentations remain available while checks run.", queued)
+		data.NoticeIsWarning = queued == 0
+	}
 	response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	response.Header().Set("Cache-Control", "private, no-store")
 	response.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive")
@@ -111,7 +121,7 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 	}
 }
 
-func (s *Server) adminList(records []store.IncidentRecord, total, page, totalPages int, previousURL, nextURL string, allowProcessing bool, otherPage int, idPrefix string, translations map[int64][]adminTranslationView) adminIncidentList {
+func (s *Server) adminList(records []store.IncidentRecord, total, page, totalPages int, previousURL, nextURL string, allowProcessing bool, otherPage int, idPrefix string, translations map[int64][]adminTranslationView, categories map[int64]adminCategoryVerificationView) adminIncidentList {
 	incidents := make([]adminIncidentView, 0, len(records))
 	for _, record := range records {
 		state := record.ProcessingState()
@@ -135,7 +145,8 @@ func (s *Server) adminList(records []store.IncidentRecord, total, page, totalPag
 			CategoryLabel: processing.CategoryLabel(record.AICategory, "en"), CanProcess: state != "running",
 			EventText: publicView.EventText, EventLabel: publicView.EventLabel, ReportKindLabel: publicView.ReportKindLabel,
 			PublicAssistanceTypes: publicView.PublicAssistanceTypes, PrimaryProvenanceLabel: primaryProvenanceLabel,
-			Translations: translations[record.ID],
+			Translations:         translations[record.ID],
+			CategoryVerification: categories[record.ID],
 		})
 	}
 	return adminIncidentList{
@@ -145,6 +156,50 @@ func (s *Server) adminList(records []store.IncidentRecord, total, page, totalPag
 		OtherPage:       otherPage,
 		IDPrefix:        idPrefix,
 	}
+}
+
+func (s *Server) adminCategoryVerifications(request *http.Request, records []store.IncidentRecord) (map[int64]adminCategoryVerificationView, error) {
+	views := make(map[int64]adminCategoryVerificationView)
+	seen := make(map[int64]struct{}, len(records))
+	incidentIDs := make([]int64, 0, len(records))
+	for _, record := range records {
+		if record.ID < 1 {
+			continue
+		}
+		if _, exists := seen[record.ID]; exists {
+			continue
+		}
+		seen[record.ID] = struct{}{}
+		incidentIDs = append(incidentIDs, record.ID)
+	}
+	results, err := s.store.ListAdminCategoryVerifications(request.Context(), incidentIDs)
+	if err != nil {
+		return nil, err
+	}
+	for _, result := range results {
+		verdict := "Not checked"
+		if result.IsCorrect != nil {
+			if *result.IsCorrect {
+				verdict = "Confirmed"
+			} else {
+				verdict = "Corrected"
+			}
+		}
+		status := result.Status
+		if status == "" {
+			status = "missing"
+		} else if status == "pending" && result.Attempts > 0 {
+			status = "retrying"
+		}
+		views[result.IncidentID] = adminCategoryVerificationView{
+			OriginalCategory: result.OriginalCategory, EffectiveCategory: result.EffectiveCategory,
+			OriginalLabel: processing.CategoryLabel(result.OriginalCategory, "en"), EffectiveLabel: processing.CategoryLabel(result.EffectiveCategory, "en"),
+			Verdict: verdict, Status: status, Attempts: result.Attempts, FailureKind: result.FailureKind,
+			Model: result.Model, PromptVersion: result.PromptVersion, GeneratedAt: result.GeneratedAt,
+			CanRetry: result.PresentationRunID > 0 && result.OriginalCategory != "" && result.Status != "pending" && result.Status != "running",
+		}
+	}
+	return views, nil
 }
 
 func (s *Server) adminTranslations(request *http.Request, records []store.IncidentRecord) (map[int64][]adminTranslationView, error) {
@@ -251,6 +306,7 @@ func (s *Server) processNow(response http.ResponseWriter, request *http.Request,
 	}
 	translationModel := strings.TrimSpace(request.PostForm.Get("model_" + processing.TranslationModelStep))
 	models[processing.TranslationModelStep] = translationModel
+	models[processing.CategoryVerificationStep] = strings.TrimSpace(request.PostForm.Get("model_" + processing.CategoryVerificationStep))
 	result, err := s.options.Processor.RequestNow(request.Context(), s.options.SourceMode, models, incidentID, reprocessAll)
 	if errors.Is(err, store.ErrNotFound) {
 		http.NotFound(response, request)
@@ -281,6 +337,72 @@ func (s *Server) retryTranslation(response http.ResponseWriter, request *http.Re
 
 func (s *Server) backfillTranslations(response http.ResponseWriter, request *http.Request) {
 	s.translationMutation(response, request, true)
+}
+
+func (s *Server) retryCategoryVerification(response http.ResponseWriter, request *http.Request) {
+	s.categoryVerificationMutation(response, request, false)
+}
+
+func (s *Server) backfillCategoryVerifications(response http.ResponseWriter, request *http.Request) {
+	s.categoryVerificationMutation(response, request, true)
+}
+
+func (s *Server) categoryVerificationMutation(response http.ResponseWriter, request *http.Request, backfill bool) {
+	if !validAdminMutation(request) {
+		http.Error(response, "cross-site request blocked", http.StatusForbidden)
+		return
+	}
+	if !isFormPost(request) {
+		http.Error(response, "form content type required", http.StatusUnsupportedMediaType)
+		return
+	}
+	request.Body = http.MaxBytesReader(response, request.Body, 4096)
+	if err := request.ParseForm(); err != nil {
+		http.Error(response, "invalid form", http.StatusBadRequest)
+		return
+	}
+	if request.PostForm.Get("confirmed") != "true" {
+		http.Error(response, "category verification confirmation is required", http.StatusBadRequest)
+		return
+	}
+	if s.options.Processor == nil {
+		http.Error(response, "AI processing is disabled", http.StatusServiceUnavailable)
+		return
+	}
+	model := strings.TrimSpace(request.PostForm.Get("model"))
+	if model == "" {
+		http.Error(response, "model is required", http.StatusBadRequest)
+		return
+	}
+	var queued int
+	var err error
+	if backfill {
+		queued, err = s.options.Processor.BackfillCategoryVerifications(request.Context(), model)
+	} else {
+		incidentID, parseErr := strconv.ParseInt(request.PostForm.Get("incident_id"), 10, 64)
+		if parseErr != nil || incidentID < 1 {
+			http.Error(response, "incident_id must be a positive integer", http.StatusBadRequest)
+			return
+		}
+		queued, err = s.options.Processor.RetryCategoryVerification(request.Context(), incidentID, model)
+	}
+	if errors.Is(err, store.ErrNotFound) {
+		http.NotFound(response, request)
+		return
+	}
+	if errors.Is(err, processing.ErrModelUnavailable) {
+		http.Error(response, "selected Ollama model is unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	if err != nil {
+		s.internalError(response, request, "queue category verification work", err)
+		return
+	}
+	target, _ := url.Parse(adminPaginationURL(positiveFormInt(request.PostForm.Get("unprocessed_page")), positiveFormInt(request.PostForm.Get("all_page"))))
+	query := target.Query()
+	query.Set("category_verifications_queued", strconv.Itoa(queued))
+	target.RawQuery = query.Encode()
+	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
 }
 
 func (s *Server) translationMutation(response http.ResponseWriter, request *http.Request, backfill bool) {
@@ -442,6 +564,22 @@ type adminIncidentView struct {
 	PrimaryProvenanceLabel string
 	CanProcess             bool
 	Translations           []adminTranslationView
+	CategoryVerification   adminCategoryVerificationView
+}
+
+type adminCategoryVerificationView struct {
+	OriginalCategory  string
+	EffectiveCategory string
+	OriginalLabel     string
+	EffectiveLabel    string
+	Verdict           string
+	Status            string
+	Attempts          int
+	FailureKind       string
+	Model             string
+	PromptVersion     string
+	GeneratedAt       *time.Time
+	CanRetry          bool
 }
 
 type adminTranslationLanguage struct {

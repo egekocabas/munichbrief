@@ -46,6 +46,23 @@ type AdminTranslation struct {
 	Fallback      bool
 }
 
+// AdminCategoryVerification combines the latest durable attempt with the latest
+// successful effective result for one current canonical presentation.
+type AdminCategoryVerification struct {
+	IncidentID        int64
+	PresentationRunID int64
+	OriginalCategory  string
+	EffectiveCategory string
+	IsCorrect         *bool
+	Model             string
+	PromptVersion     string
+	GeneratedAt       *time.Time
+	Status            string
+	Attempts          int
+	NextRetryAt       *time.Time
+	FailureKind       string
+}
+
 const (
 	AdminIncidentsAll         AdminIncidentFilter = "all"
 	AdminIncidentsUnprocessed AdminIncidentFilter = "unprocessed"
@@ -78,6 +95,8 @@ const scopedAIColumns = `
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
 				COALESCE((SELECT title FROM presentation_translations WHERE presentation_run_id = ` + latestPresentationRun + ` AND language_code = @translation_language AND status = 'succeeded' ORDER BY completed_at DESC, id DESC LIMIT 1), ''),
 				COALESCE((SELECT summary FROM presentation_translations WHERE presentation_run_id = ` + latestPresentationRun + ` AND language_code = @translation_language AND status = 'succeeded' ORDER BY completed_at DESC, id DESC LIMIT 1), ''),
+				COALESCE((SELECT corrected_category FROM presentation_category_verifications WHERE presentation_run_id = ` + latestPresentationRun + ` AND status = 'succeeded' ORDER BY completed_at DESC, id DESC LIMIT 1),
+					(SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'category' LIMIT 1), ''),
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'category' LIMIT 1), ''),
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'area_name' LIMIT 1), ''),
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'area_type' LIMIT 1), ''),
@@ -90,6 +109,9 @@ const scopedAIColumns = `
 				COALESCE((SELECT model_identity FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'category' LIMIT 1), ''),
 				COALESCE((SELECT prompt_version FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'category' LIMIT 1), ''),
 				COALESCE((SELECT generated_at FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'category' LIMIT 1), ''),
+				COALESCE((SELECT model_identity FROM presentation_category_verifications WHERE presentation_run_id = ` + latestPresentationRun + ` AND status = 'succeeded' ORDER BY completed_at DESC, id DESC LIMIT 1), ''),
+				COALESCE((SELECT prompt_version FROM presentation_category_verifications WHERE presentation_run_id = ` + latestPresentationRun + ` AND status = 'succeeded' ORDER BY completed_at DESC, id DESC LIMIT 1), ''),
+				COALESCE((SELECT completed_at FROM presentation_category_verifications WHERE presentation_run_id = ` + latestPresentationRun + ` AND status = 'succeeded' ORDER BY completed_at DESC, id DESC LIMIT 1), ''),
 				COALESCE((SELECT model_identity FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
 				COALESCE((SELECT prompt_version FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
 				COALESCE((SELECT generated_at FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
@@ -207,8 +229,9 @@ func (s *Store) ListPresentationEntries(ctx context.Context, limit, offset int, 
 			SELECT
 				0, d.id, 0, '', 0, d.title, '', '', d.title, d.source_url, d.external_id,
 				d.published_at, d.last_seen_at, d.fetch_status, COALESCE(d.error_message, ''),
-				'', '', '', '', '', '', '',
+				'', '', '', '', '', '', '', '',
 				'', '', '', '', '', '',
+				'', '', '',
 				'', '', '',
 				'', '', '',
 				'', '', '',
@@ -252,8 +275,14 @@ func (s *Store) ListPublicIncidentLinks(ctx context.Context, sourceMode string, 
 	query := `
 		SELECT i.id,
 			CASE WHEN @language = 'de' THEN
-				COALESCE((SELECT r.completed_at FROM presentation_runs r WHERE r.id = ` + latestPresentationRun + `), i.updated_at)
-			ELSE COALESCE((SELECT completed_at FROM presentation_translations WHERE presentation_run_id = ` + latestPresentationRun + ` AND language_code=@language AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1), i.updated_at) END
+				COALESCE(NULLIF(MAX(
+					COALESCE((SELECT r.completed_at FROM presentation_runs r WHERE r.id = ` + latestPresentationRun + `),''),
+					COALESCE((SELECT completed_at FROM presentation_category_verifications WHERE presentation_run_id = ` + latestPresentationRun + ` AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),'')
+				),''), i.updated_at)
+			ELSE COALESCE(NULLIF(MAX(
+				COALESCE((SELECT completed_at FROM presentation_translations WHERE presentation_run_id = ` + latestPresentationRun + ` AND language_code=@language AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),''),
+				COALESCE((SELECT completed_at FROM presentation_category_verifications WHERE presentation_run_id = ` + latestPresentationRun + ` AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),'')
+			),''), i.updated_at) END
 		FROM incidents i
 		JOIN source_documents d ON d.id = i.source_document_id
 		WHERE ` + statusCondition + ` AND ` + publicReadyCondition + `
@@ -452,6 +481,77 @@ func (s *Store) ListAdminTranslations(ctx context.Context, incidentIDs []int64, 
 	return translations, nil
 }
 
+// ListAdminCategoryVerifications loads verifier state for the newest current
+// canonical presentation of each requested incident in one bounded query.
+func (s *Store) ListAdminCategoryVerifications(ctx context.Context, incidentIDs []int64) ([]AdminCategoryVerification, error) {
+	if len(incidentIDs) == 0 {
+		return nil, nil
+	}
+	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(incidentIDs)), ",")
+	args := make([]any, 0, len(incidentIDs))
+	for _, id := range incidentIDs {
+		args = append(args, id)
+	}
+	query := `WITH requested(incident_id) AS (SELECT id FROM incidents WHERE id IN (` + placeholders + `)),
+		selected_runs AS (
+			SELECT requested.incident_id, (SELECT r.id FROM presentation_runs r JOIN incidents i ON i.id=r.incident_id
+				WHERE r.incident_id=requested.incident_id AND r.source_hash=i.content_hash AND r.status='complete'
+				AND (r.pipeline_version IN ('` + PipelineVersion + `','` + PreviousPipelineVersion + `') OR r.legacy=1)
+				ORDER BY CASE r.pipeline_version WHEN '` + PipelineVersion + `' THEN 0 WHEN '` + PreviousPipelineVersion + `' THEN 1 ELSE 2 END,
+				r.completed_at DESC,r.id DESC LIMIT 1) AS run_id
+			FROM requested
+		)
+	SELECT selected.incident_id,COALESCE(selected.run_id,0),
+		COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id=selected.run_id AND kind='category' LIMIT 1),''),
+		COALESCE((SELECT corrected_category FROM presentation_category_verifications WHERE presentation_run_id=selected.run_id AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),
+			(SELECT value FROM presentation_values WHERE presentation_run_id=selected.run_id AND kind='category' LIMIT 1),''),
+		COALESCE((SELECT CAST(is_correct AS TEXT) FROM presentation_category_verifications WHERE presentation_run_id=selected.run_id AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),''),
+		COALESCE((SELECT model_identity FROM presentation_category_verifications WHERE presentation_run_id=selected.run_id AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),
+			(SELECT model_identity FROM presentation_category_verifications WHERE presentation_run_id=selected.run_id ORDER BY created_at DESC,id DESC LIMIT 1),''),
+		COALESCE((SELECT prompt_version FROM presentation_category_verifications WHERE presentation_run_id=selected.run_id AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),
+			(SELECT prompt_version FROM presentation_category_verifications WHERE presentation_run_id=selected.run_id ORDER BY created_at DESC,id DESC LIMIT 1),''),
+		COALESCE((SELECT completed_at FROM presentation_category_verifications WHERE presentation_run_id=selected.run_id AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),''),
+		COALESCE((SELECT status FROM presentation_category_verifications WHERE presentation_run_id=selected.run_id ORDER BY created_at DESC,id DESC LIMIT 1),''),
+		COALESCE((SELECT attempt_count FROM presentation_category_verifications WHERE presentation_run_id=selected.run_id ORDER BY created_at DESC,id DESC LIMIT 1),0),
+		COALESCE((SELECT next_retry_at FROM presentation_category_verifications WHERE presentation_run_id=selected.run_id ORDER BY created_at DESC,id DESC LIMIT 1),''),
+		COALESCE((SELECT failure_kind FROM presentation_category_verifications WHERE presentation_run_id=selected.run_id ORDER BY created_at DESC,id DESC LIMIT 1),'')
+	FROM selected_runs selected ORDER BY selected.incident_id`
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list admin category verifications: %w", err)
+	}
+	defer rows.Close()
+	results := make([]AdminCategoryVerification, 0, len(incidentIDs))
+	for rows.Next() {
+		var result AdminCategoryVerification
+		var correct, generatedAt, nextRetryAt string
+		if err := rows.Scan(&result.IncidentID, &result.PresentationRunID, &result.OriginalCategory, &result.EffectiveCategory,
+			&correct, &result.Model, &result.PromptVersion, &generatedAt, &result.Status, &result.Attempts, &nextRetryAt, &result.FailureKind); err != nil {
+			return nil, fmt.Errorf("scan admin category verification: %w", err)
+		}
+		if correct != "" {
+			value := correct == "1"
+			result.IsCorrect = &value
+		}
+		if generatedAt != "" {
+			value, err := time.Parse(time.RFC3339Nano, generatedAt)
+			if err != nil {
+				return nil, fmt.Errorf("parse category verification generation time: %w", err)
+			}
+			result.GeneratedAt = &value
+		}
+		if nextRetryAt != "" {
+			value, err := time.Parse(time.RFC3339Nano, nextRetryAt)
+			if err != nil {
+				return nil, fmt.Errorf("parse category verification retry time: %w", err)
+			}
+			result.NextRetryAt = &value
+		}
+		results = append(results, result)
+	}
+	return results, rows.Err()
+}
+
 // GetPresentationIncident returns one incident only when it satisfies the same
 // provenance and public-readiness rules as the timeline.
 func (s *Store) GetPresentationIncident(ctx context.Context, id int64, scope PresentationScope) (IncidentRecord, error) {
@@ -475,17 +575,18 @@ func (s *Store) GetPresentationIncident(ctx context.Context, id int64, scope Pre
 
 func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 	var record IncidentRecord
-	var publishedAt, updatedAt, aiMetadataGeneratedAt, aiGeneratedAt, aiTranslationGeneratedAt, nextRetryAt, translationNextRetryAt string
+	var publishedAt, updatedAt, aiMetadataGeneratedAt, aiCategoryVerificationGeneratedAt, aiGeneratedAt, aiTranslationGeneratedAt, nextRetryAt, translationNextRetryAt string
 	var aiLegacy, translationFallback int
 	if err := row.Scan(
 		&record.ID, &record.SourceDocumentID, &record.HasIncident, &record.Number, &record.Position,
 		&record.TitleDE, &record.BodyDE, &record.ContentHash, &record.SourceTitle, &record.SourceURL,
 		&record.SourceExternalID, &publishedAt, &updatedAt, &record.FetchStatus, &record.ErrorMessage,
 		&record.AITitleDE, &record.AISummaryDE, &record.AITranslatedTitle, &record.AITranslatedSummary,
-		&record.AICategory, &record.AIAreaName, &record.AIAreaType,
+		&record.AICategory, &record.AIOriginalCategory, &record.AIAreaName, &record.AIAreaType,
 		&record.AIEventStartDate, &record.AIEventStartTime, &record.AIEventDayPart,
 		&record.AIReportKind, &record.AIPublicAssistanceStatus, &record.AIPublicAssistanceTypes,
 		&record.AIMetadataModel, &record.AIMetadataPromptVersion, &aiMetadataGeneratedAt,
+		&record.AICategoryVerificationModel, &record.AICategoryVerificationPromptVersion, &aiCategoryVerificationGeneratedAt,
 		&record.AIModel, &record.AIPromptVersion, &aiGeneratedAt,
 		&record.AITranslationModel, &record.AITranslationPromptVersion, &aiTranslationGeneratedAt,
 		&record.AIPipelineVersion, &aiLegacy,
@@ -509,6 +610,13 @@ func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 			return IncidentRecord{}, fmt.Errorf("parse AI metadata generation time: %w", err)
 		}
 		record.AIMetadataGeneratedAt = &generatedAt
+	}
+	if aiCategoryVerificationGeneratedAt != "" {
+		generatedAt, err := time.Parse(time.RFC3339Nano, aiCategoryVerificationGeneratedAt)
+		if err != nil {
+			return IncidentRecord{}, fmt.Errorf("parse AI category verification generation time: %w", err)
+		}
+		record.AICategoryVerificationGeneratedAt = &generatedAt
 	}
 	if aiGeneratedAt != "" {
 		generatedAt, err := time.Parse(time.RFC3339Nano, aiGeneratedAt)

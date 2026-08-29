@@ -43,6 +43,7 @@ and use of an EU icon must not be interpreted as adherence to the Code.
 | Control | Implementation |
 | --- | --- |
 | First-exposure explanation | A non-modal bottom disclosure explains local AI summarisation, categorisation, translation, possible errors, source authority, independence, and the presumption of innocence. |
+| Category correction | A separate local-AI verifier checks only the privacy-safe German title, summary, and German label of the original broad category. Application-owned mappings keep internal codes outside the prompt. Corrections are asynchronous, run-scoped, provenance-labelled, and never overwrite the original extraction; a failed check is not treated as a verdict. |
 | Acknowledgement | “Got it” stores an HTTP-only, SameSite=Lax acknowledgement cookie for 30 days. Dismissing the explanation never removes per-content labels. |
 | Permanent content label | The selected **AI GENERATED** icon appears immediately before every AI-generated homepage and incident headline. Unprocessed source text is not labelled as generated. |
 | Accessibility | The icon has an equivalent localized ARIA label and screen-reader text. Disclosure controls remain keyboard accessible and the dock avoids a backdrop or focus trap. |

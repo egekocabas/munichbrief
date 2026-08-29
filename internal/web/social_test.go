@@ -62,6 +62,21 @@ func TestSocialCardsRenderURLSpecificPNGResponses(t *testing.T) {
 	}
 }
 
+func TestSocialCardCacheIdentityChangesAfterCategoryCorrection(t *testing.T) {
+	server, _ := publicDiscoveryServer(t, fixtureStore(t), store.AIPresentation{
+		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
+		TitleEN: "Safe title", SummaryEN: "Safe summary.", PrivacyStatus: "safe",
+	})
+	request := publicDiscoveryRequest(http.MethodGet, "/social/en/incidents/1")
+	before := httptest.NewRecorder()
+	server.writeSocialCard(before, request, socialCardSpec{Title: "Safe title", AIGenerated: true, AIModel: "presenter:4b"})
+	after := httptest.NewRecorder()
+	server.writeSocialCard(after, request, socialCardSpec{Title: "Safe title", AIGenerated: true, AIModel: "presenter:4b", CacheIdentity: "2026-08-29T10:15:00Z"})
+	if before.Header().Get("ETag") == after.Header().Get("ETag") {
+		t.Fatal("category-verification completion did not invalidate the social-card cache identity")
+	}
+}
+
 func TestSocialCardTextStaysInsideSkySafeArea(t *testing.T) {
 	const longestPublishedTitle = "Verkehrsunfall am Mittleren Ring verursacht längere Sperrungen während des Berufsverkehrs."
 	if length := utf8.RuneCountInString(longestPublishedTitle); length != 90 {

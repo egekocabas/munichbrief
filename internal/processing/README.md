@@ -9,6 +9,16 @@ stages:
    then creates the canonical privacy-safe German presentation.
 
 After stage 2 succeeds, the German presentation is complete and publishable.
+The independent category verifier receives only `title_de`, `summary_de`, and
+the immutable `category` mapped to its German display name. Its German prompt
+and schema accept only German category names; application-owned mappings convert
+the validated result back to a stable internal code. The strict result contains
+only `is_correct` and an allowed `corrected_category`; application validation
+requires true/unchanged or false/changed. Successful results overlay category
+selection for their exact presentation run without mutating canonical values.
+Failures are not verdicts and leave the previous successful correction, or the
+original category when no correction succeeded, effective.
+
 The translation registry then creates one durable job per enabled target
 language. English uses `incident-translation-en-v1`; every translation receives
 only the accepted German presentation and never blocks canonical completion.
@@ -41,3 +51,8 @@ When adding a language, register its code, display name, immutable prompt,
 schema, generator, validator, and automatic-enablement timestamp. Use the shared
 translation model setting, and require an explicit admin backfill for older
 canonical presentations.
+
+Category verification has its own preferred model and cutover. Automatic jobs
+run only for new presentations; use the protected admin backfill for older
+reader-selectable runs. Do not add source text, explanations, confidence values,
+or unbounded model output to this processor.

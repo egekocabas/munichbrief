@@ -55,7 +55,19 @@ operations:
    metadata. It creates the canonical privacy-safe German title and summary.
 
 When stage 2 succeeds, that presentation run becomes complete immediately.
-Translations are a separate durable subsystem. Each registered language owns
+Category verification and translations are separate durable subsystems. The
+category verifier receives only the accepted German title, summary, and the
+immutable metadata category represented by its German display name. The model
+sees and returns only German category names; application-owned mappings convert
+those names to stable internal codes before validation and persistence. It
+returns a constrained verdict and category;
+the newest successful result for that exact presentation run becomes effective
+without rewriting the original value. Verification failure never blocks German
+publication and is not interpreted as a verdict. A pending, exhausted, or
+failed recheck leaves the previous successful result effective, or falls back
+to the immutable original metadata category when no verification has succeeded.
+
+Each registered translation language owns
 an immutable prompt, schema, validator, generator, and enablement cutover, while
 all languages share one preferred translation model. English is currently the
 only target and receives only the accepted German title and summary.
@@ -76,7 +88,11 @@ The worker:
    source-grounded areas and assistance requests, and privacy before storage.
 4. Advances only when the step has no unfinished jobs.
 5. Publishes each German presentation as soon as its stage-2 job succeeds and
-   enqueues independent translations for that exact run.
+   enqueues category verification and translations for that exact run.
+
+At every job boundary the worker prioritizes canonical work, then category
+verification, then translation. The independent processors have separate model
+settings and circuit breakers, so one missing model does not pause the others.
 
 When a newer canonical run queues a language, pending translations for older
 runs of the same incident and source revision are superseded. Running attempts
@@ -94,6 +110,9 @@ Language enablement has its own cutover: new canonical runs translate
 automatically, while historical translation requires an explicit admin
 backfill. Completed v1 and legacy English values are imported into generic
 translation records without rewriting their original audit values.
+Category verification has an equivalent deployment cutover. Explicit backfill
+covers current canonical runs and older same-source runs that can still be
+selected as translated fallbacks; obsolete source revisions are excluded.
 
 ## Presentation boundary
 
@@ -112,6 +131,11 @@ Reader-facing language behavior is declared in one compile-time registry. The
 server derives routes, locale catalogs, date formatting, navigation, alternate
 links, and sitemap entries from it, and startup verifies that every translated
 reader registration matches a processing translation definition.
+
+Reader queries choose content and metadata from one presentation run. The
+effective category is the newest successful verification for that run, or its
+immutable original category when no verification succeeded. A category result
+from another run is never mixed into German or translated fallback content.
 
 German selection prefers the newest completed v2 run, then a completed v1 run,
 then an imported legacy bilingual run. A target-language page selects the

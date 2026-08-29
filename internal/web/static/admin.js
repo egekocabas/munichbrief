@@ -121,6 +121,14 @@
         setText(card.querySelector("[data-step-availability]"), translationModel.preferred_available ? "✓ Installed and ready" : "✕ Translations are paused; German processing can continue");
       }
     }
+    const categoryModel = status.models?.category_verification;
+    if (categoryModel) {
+      const card = document.querySelector(`[data-step-card="${CSS.escape(categoryModel.key)}"]`);
+      if (card) {
+        setText(card.querySelector("[data-step-model]"), categoryModel.preferred || "Not configured");
+        setText(card.querySelector("[data-step-availability]"), categoryModel.preferred_available ? "✓ Installed and ready" : "✕ Verification is paused; publication and translations can continue");
+      }
+    }
     const activeSteps = new Map((queue.active_steps || []).map((step) => [step.step_key, step]));
     for (const step of queue.steps || []) {
       const card = panel.querySelector(`[data-step-stat="${CSS.escape(step.step_key)}"]`);
@@ -139,6 +147,8 @@
       const details = card.querySelector("p + p");
       setText(details, `Pending ${translation.pending || 0} · Running ${translation.running || 0} · Retrying ${translation.retrying || 0} · Review ${translation.needs_review || 0} · Failed ${translation.failed || 0} · Completed ${translation.succeeded || 0}`);
     }
+    const category = queue.category_verification || {};
+    setText(panel.querySelector("[data-category-verification-details]"), `Pending ${category.pending || 0} · Running ${category.running || 0} · Retrying ${category.retrying || 0} · Review ${category.needs_review || 0} · Failed ${category.failed || 0} · Completed ${category.succeeded || 0} · Corrected ${category.corrected || 0}`);
     if (events) {
       events.replaceChildren(...(queue.recent_events || []).map((event) => {
         const item = document.createElement("li");

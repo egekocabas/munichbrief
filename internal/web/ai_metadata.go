@@ -14,18 +14,20 @@ const (
 )
 
 type machineReadableAIMetadata struct {
-	AIGenerated        bool   `json:"ai_generated"`
-	AIGeneratedState   string `json:"ai_generated_state"`
-	AIModel            string `json:"ai_model,omitempty"`
-	AIMetadataModel    string `json:"ai_metadata_model,omitempty"`
-	AITranslationModel string `json:"ai_translation_model,omitempty"`
-	DigitalSourceType  string `json:"digital_source_type,omitempty"`
+	AIGenerated                 bool   `json:"ai_generated"`
+	AIGeneratedState            string `json:"ai_generated_state"`
+	AIModel                     string `json:"ai_model,omitempty"`
+	AIMetadataModel             string `json:"ai_metadata_model,omitempty"`
+	AICategoryVerificationModel string `json:"ai_category_verification_model,omitempty"`
+	AITranslationModel          string `json:"ai_translation_model,omitempty"`
+	DigitalSourceType           string `json:"digital_source_type,omitempty"`
 }
 
 func (page *basePage) setAIMetadata(state string, record *store.IncidentRecord) {
 	page.AIGeneratedState = state
 	page.AIModel = ""
 	page.AIMetadataModel = ""
+	page.AICategoryVerificationModel = ""
 	page.AITranslationModel = ""
 	metadata := machineReadableAIMetadata{AIGenerated: state != "false", AIGeneratedState: state}
 	if state != "false" {
@@ -34,11 +36,13 @@ func (page *basePage) setAIMetadata(state string, record *store.IncidentRecord) 
 	if record != nil && record.HasAI {
 		page.AIModel = record.AIModel
 		page.AIMetadataModel = record.AIMetadataModel
+		page.AICategoryVerificationModel = record.AICategoryVerificationModel
 		if page.Lang != canonicalReaderLanguage().Code {
 			page.AITranslationModel = record.AITranslationModel
 		}
 		metadata.AIModel = page.AIModel
 		metadata.AIMetadataModel = page.AIMetadataModel
+		metadata.AICategoryVerificationModel = page.AICategoryVerificationModel
 		metadata.AITranslationModel = page.AITranslationModel
 	}
 	page.AIContentMetadata = structuredJSON(metadata)
@@ -68,6 +72,9 @@ func setAIResponseHeaders(header http.Header, page basePage) {
 	}
 	if page.AITranslationModel != "" {
 		header.Set("X-AI-Translation-Model", safeMetadataHeader(page.AITranslationModel))
+	}
+	if page.AICategoryVerificationModel != "" {
+		header.Set("X-AI-Category-Verification-Model", safeMetadataHeader(page.AICategoryVerificationModel))
 	}
 	if page.AIGeneratedState != "false" {
 		header.Set("X-IPTC-Digital-Source-Type", iptcTrainedAlgorithmicMedia)

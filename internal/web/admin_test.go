@@ -195,7 +195,7 @@ func TestAdminRetriesMissingTranslationAndConfirmsHistoricalBackfill(t *testing.
 	handler := adminTestServer(t, database, nil).Handler()
 	page := httptest.NewRecorder()
 	handler.ServeHTTP(page, httptest.NewRequest(http.MethodGet, "/admin", nil))
-	for _, expected := range []string{"Kanonischer Titel", "English state", "Missing", "/api/admin/ai/translation-retry"} {
+	for _, expected := range []string{"Kanonischer Titel", "English state", "Missing", "/api/admin/ai/translation-retry", "Category verification", "Not checked", "/api/admin/ai/category-verification-retry"} {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("admin missing-translation page does not contain %q", expected)
 		}
@@ -214,6 +214,21 @@ func TestAdminRetriesMissingTranslationAndConfirmsHistoricalBackfill(t *testing.
 	handler.ServeHTTP(backfill, formRequest(http.MethodPost, "/api/admin/ai/translation-backfill", "confirmed=true&language=en&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
 	if backfill.Code != http.StatusSeeOther || !strings.Contains(backfill.Header().Get("Location"), "translations_queued=0") {
 		t.Fatalf("translation backfill = %d/%q", backfill.Code, backfill.Header().Get("Location"))
+	}
+	categoryUnconfirmed := httptest.NewRecorder()
+	handler.ServeHTTP(categoryUnconfirmed, formRequest(http.MethodPost, "/api/admin/ai/category-verification-retry", "incident_id="+formatID(records[0].ID)+"&model=qwen3.5%3A4b"))
+	if categoryUnconfirmed.Code != http.StatusBadRequest {
+		t.Fatalf("unconfirmed category retry = %d", categoryUnconfirmed.Code)
+	}
+	categoryRetry := httptest.NewRecorder()
+	handler.ServeHTTP(categoryRetry, formRequest(http.MethodPost, "/api/admin/ai/category-verification-retry", "confirmed=true&incident_id="+formatID(records[0].ID)+"&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
+	if categoryRetry.Code != http.StatusSeeOther || !strings.Contains(categoryRetry.Header().Get("Location"), "category_verifications_queued=1") {
+		t.Fatalf("category retry = %d/%q", categoryRetry.Code, categoryRetry.Header().Get("Location"))
+	}
+	categoryBackfill := httptest.NewRecorder()
+	handler.ServeHTTP(categoryBackfill, formRequest(http.MethodPost, "/api/admin/ai/category-verification-backfill", "confirmed=true&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
+	if categoryBackfill.Code != http.StatusSeeOther || !strings.Contains(categoryBackfill.Header().Get("Location"), "category_verifications_queued=0") {
+		t.Fatalf("category backfill = %d/%q", categoryBackfill.Code, categoryBackfill.Header().Get("Location"))
 	}
 }
 

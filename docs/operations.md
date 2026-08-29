@@ -53,12 +53,13 @@ the circuit breaker, and normal retry delays. A command-line request is picked
 up by the running server on its next idle worker check.
 
 The protected admin dashboard stores one preferred model for each canonical
-step and one shared preferred model for all registered translations. Fresh
+step, one category-verification model, and one shared preferred model for all
+registered translations. Fresh
 databases start unconfigured; upgraded databases migrate the former German
 preference to both canonical steps and rename the former English preference to
-the shared translation setting. A missing translation model pauses translations
-without pausing German processing. The dashboard displays the automatic v2
-cutover. The server refreshes Ollama's
+the shared translation setting. A missing category or translation model pauses
+only that independent processor without pausing German processing. The dashboard
+displays the automatic v2 and category-verification cutovers. The server refreshes Ollama's
 `/api/tags` every 30 seconds; scheduled processing pauses until all required
 models are installed, while priority manual cycles retain their per-step model
 choices. Catalog failure pauses all AI calls but does not affect reader
@@ -93,14 +94,23 @@ negotiate a privacy-safe Markdown representation through
 The optional `/admin` dashboard shows live cycle and per-step queue state,
 independently paginated incident lists, retained German originals, and both
 generated languages. It also shows raw and formatted metadata, separate
-canonical and translation provenance and queue states, the v1/v2/legacy
+canonical, category-verification, and translation provenance and queue states, the v1/v2/legacy
 presentation source, and the scheduling cutover. Its confirmed actions can
 create a canonical cycle for one incident, every canonically unprocessed
-incident, or every current incident, retry one missing/failed translation
-immediately, or backfill one language's historical presentations. The
+incident, or every current incident, recheck one category immediately, backfill
+reader-selectable historical categories, retry one missing/failed translation
+immediately, or backfill one language's historical presentations. Category
+backfills respect the processing window; individual rechecks are manual-priority
+jobs. The
 application does not authenticate users itself: enable the dashboard only when
 the ingress protects `/admin*` and `/api/admin*`, and keep both prefixes absent
 from public ingress.
+
+Category verification is correction-only. Its model receives the privacy-safe
+German title and summary plus a German category label. German labels are mapped
+to stable internal category codes by the application. A retry exhaustion,
+unavailable model, malformed response, or terminal failure does not change the
+reader category and does not require publication to stop.
 
 An Ollama endpoint using unencrypted HTTP must remain on a restricted network
 with narrowly scoped egress. Public presentation mode does not reduce the need

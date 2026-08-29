@@ -45,17 +45,17 @@ type Metrics struct {
 	lastProcessingSuccess   atomic.Int64
 	processingDurationNanos atomic.Uint64
 	processingDurationCount atomic.Uint64
-	pipelineAttempts        [3]atomic.Uint64
-	pipelineSuccesses       [3]atomic.Uint64
-	pipelineFailures        [3]atomic.Uint64
-	pipelineDurationNanos   [3]atomic.Uint64
-	pipelineDurationCount   [3]atomic.Uint64
-	pipelineQueued          [3]atomic.Int64
-	pipelineRunning         [3]atomic.Int64
-	pipelineRetrying        [3]atomic.Int64
-	pipelineReview          [3]atomic.Int64
-	pipelineFailed          [3]atomic.Int64
-	pipelineSucceeded       [3]atomic.Int64
+	pipelineAttempts        [4]atomic.Uint64
+	pipelineSuccesses       [4]atomic.Uint64
+	pipelineFailures        [4]atomic.Uint64
+	pipelineDurationNanos   [4]atomic.Uint64
+	pipelineDurationCount   [4]atomic.Uint64
+	pipelineQueued          [4]atomic.Int64
+	pipelineRunning         [4]atomic.Int64
+	pipelineRetrying        [4]atomic.Int64
+	pipelineReview          [4]atomic.Int64
+	pipelineFailed          [4]atomic.Int64
+	pipelineSucceeded       [4]atomic.Int64
 	pipelineActiveCycle     atomic.Int64
 	pipelineActiveStep      atomic.Int64
 	pipelineActiveKind      [3]atomic.Int64
@@ -160,7 +160,7 @@ func (m *Metrics) RecordProcessingDuration(duration time.Duration) {
 	m.processingDurationCount.Add(1)
 }
 
-var pipelineStepKeys = [...]string{"incident_metadata", "german_presentation", "translation/en"}
+var pipelineStepKeys = [...]string{"incident_metadata", "german_presentation", "category_verification", "translation/en"}
 
 func pipelineStepIndex(step string) (int, bool) {
 	for index, key := range pipelineStepKeys {
@@ -227,6 +227,15 @@ func (m *Metrics) SetPipelineSnapshot(snapshot store.PipelineSnapshot) {
 		if !ok {
 			continue
 		}
+		m.pipelineQueued[index].Store(int64(max(stats.Pending, 0)))
+		m.pipelineRunning[index].Store(int64(max(stats.Running, 0)))
+		m.pipelineRetrying[index].Store(int64(max(stats.Retrying, 0)))
+		m.pipelineReview[index].Store(int64(max(stats.NeedsReview, 0)))
+		m.pipelineFailed[index].Store(int64(max(stats.Failed, 0)))
+		m.pipelineSucceeded[index].Store(int64(max(stats.Succeeded, 0)))
+	}
+	if index, ok := pipelineStepIndex("category_verification"); ok {
+		stats := snapshot.CategoryVerification
 		m.pipelineQueued[index].Store(int64(max(stats.Pending, 0)))
 		m.pipelineRunning[index].Store(int64(max(stats.Running, 0)))
 		m.pipelineRetrying[index].Store(int64(max(stats.Retrying, 0)))
@@ -332,15 +341,15 @@ func (m *Metrics) write(writer io.Writer) {
 	fmt.Fprintln(writer, "# HELP munichbrief_ai_processing_window_open Whether new AI requests may start under the configured schedule.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_ai_processing_window_open gauge")
 	fmt.Fprintf(writer, "munichbrief_ai_processing_window_open %d\n", m.processingWindowOpen.Load())
-	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_attempts_total Staged AI attempts by registered step.")
+	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_attempts_total AI attempts by canonical or independent processing step.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_pipeline_attempts_total counter")
-	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_successes_total Successful staged AI jobs by registered step.")
+	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_successes_total Successful AI jobs by canonical or independent processing step.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_pipeline_successes_total counter")
-	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_failures_total Failed staged AI attempts by registered step.")
+	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_failures_total Failed AI attempts by canonical or independent processing step.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_pipeline_failures_total counter")
-	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_duration_seconds Staged AI attempt duration by registered step.")
+	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_duration_seconds AI attempt duration by canonical or independent processing step.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_pipeline_duration_seconds summary")
-	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_jobs Staged AI jobs by registered step and bounded state.")
+	fmt.Fprintln(writer, "# HELP munichbrief_pipeline_jobs AI jobs by canonical or independent processing step and bounded state.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_pipeline_jobs gauge")
 	for index, step := range pipelineStepKeys {
 		fmt.Fprintf(writer, "munichbrief_pipeline_attempts_total{step=%q} %d\n", step, m.pipelineAttempts[index].Load())

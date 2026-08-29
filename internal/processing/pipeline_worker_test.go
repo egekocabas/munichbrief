@@ -75,6 +75,12 @@ func (g pipelineTestGenerator) GenerateStep(_ context.Context, step StepDefiniti
 		}
 		return StepOutput{TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.", PrivacyStatus: "safe", PrivacyFlags: []string{}}, g.model, nil
 	}
+	if step.Key == CategoryVerificationStep {
+		if input.Value("title_de") != "Sicherer Titel" || input.Value("summary_de") != "Sichere Zusammenfassung." || input.Value("category") != "other" || input.Value("incident_body") != "" {
+			return StepOutput{}, "", fmt.Errorf("category verifier received invalid inputs")
+		}
+		return StepOutput{CategoryVerification: &CategoryVerificationResult{IsCorrect: true, CorrectedCategory: "other"}}, g.model, nil
+	}
 	if input.Value("title_de") != "Sicherer Titel" || input.Value("summary_de") != "Sichere Zusammenfassung." {
 		return StepOutput{}, "", fmt.Errorf("translation received incomplete German presentation")
 	}
@@ -137,6 +143,46 @@ func TestPipelineWorkerGroupsModelsFreezesTargetsAndStartsNextCycle(t *testing.T
 	snapshot, err := database.PipelineSnapshot(ctx, "fixture", StepKeys(), now)
 	if err != nil || snapshot.ActiveCycle != nil || snapshot.ScheduledCandidates != 0 {
 		t.Fatalf("completed pipeline snapshot = %#v, err=%v", snapshot, err)
+	}
+}
+
+func TestPipelineWorkerPrioritizesCategoryVerificationBeforeTranslation(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-category-priority.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 10, 0, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "one")
+	if err := database.EnsurePipelineSteps(ctx, ModelSettingKeys(), now); err != nil {
+		t.Fatal(err)
+	}
+	for step, model := range pipelineTestModels() {
+		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := database.SetPipelineStepModel(ctx, CategoryVerificationStep, "verify:4b", now); err != nil {
+		t.Fatal(err)
+	}
+	provider := &pipelineTestProvider{}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b", "verify:4b"}, CheckedAt: now}}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker.processAvailable(ctx)
+	provider.mu.Lock()
+	events := append([]string(nil), provider.events...)
+	provider.mu.Unlock()
+	want := []string{IncidentMetadataStep, GermanPresentationStep, CategoryVerificationStep, EnglishTranslationStep}
+	if len(events) != len(want) {
+		t.Fatalf("events = %v", events)
+	}
+	for index, step := range want {
+		if !strings.HasPrefix(events[index], step+":") {
+			t.Fatalf("event %d = %q, want %s", index, events[index], step)
+		}
 	}
 }
 

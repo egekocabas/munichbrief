@@ -59,6 +59,15 @@ job. Translation records never contain retained source text, contact details,
 or identity data. A translation failure cannot expose the original or delay the
 canonical German presentation.
 
+The independent category verifier receives the same accepted German title and
+summary plus the German display name mapped from the immutable broad category
+code. It never receives internal category codes, retained source text,
+identifiers, rejected output, or translation text. Its constrained German
+result is mapped back to an application-owned code and may change only the
+effective broad editorial category for that exact presentation run; the
+original extracted value remains auditable. A failed or exhausted verification
+does not express a verdict and leaves the prior effective category unchanged.
+
 The presumption of innocence applies. A generated summary never replaces the
 official source.
 

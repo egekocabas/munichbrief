@@ -284,6 +284,9 @@ other = "Vorfallsmetadaten"
 [GermanPresentationStep]
 other = "Deutsche Darstellung"
 
+[CategoryVerificationStep]
+other = "Kategorieprüfung"
+
 [EnglishTranslationStep]
 other = "Englische Übersetzung"
 
