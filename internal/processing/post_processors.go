@@ -45,10 +45,12 @@ func NewPostProcessorRegistry(definitions ...PostProcessorDefinition) (*PostProc
 	registry := &PostProcessorRegistry{definitions: make([]PostProcessorDefinition, len(definitions))}
 	seenProcessors := make(map[string]struct{}, len(definitions))
 	for index, definition := range definitions {
+		definition = clonePostProcessorDefinition(definition)
 		definition.Key = strings.TrimSpace(definition.Key)
+		definition.DisplayName = strings.TrimSpace(definition.DisplayName)
 		definition.ModelSettingKey = strings.TrimSpace(definition.ModelSettingKey)
 		definition.Description = strings.TrimSpace(definition.Description)
-		if definition.Key == "" || strings.TrimSpace(definition.DisplayName) == "" || definition.Description == "" || definition.ModelSettingKey == "" || len(definition.Scopes) == 0 || !definition.Automatic && !definition.Manual {
+		if definition.Key == "" || definition.DisplayName == "" || definition.Description == "" || definition.ModelSettingKey == "" || len(definition.Scopes) == 0 || !definition.Automatic && !definition.Manual {
 			return nil, errors.New("post-processor key, display name, model setting, and scopes are required")
 		}
 		if _, duplicate := seenProcessors[definition.Key]; duplicate {
@@ -56,10 +58,13 @@ func NewPostProcessorRegistry(definitions ...PostProcessorDefinition) (*PostProc
 		}
 		seenProcessors[definition.Key] = struct{}{}
 		seenScopes := make(map[string]struct{}, len(definition.Scopes))
-		outputKinds := make(map[string]struct{})
+		outputKindScopes := make(map[string]int)
 		for scopeIndex, scope := range definition.Scopes {
 			scope.Key = strings.TrimSpace(scope.Key)
-			if scope.Key == "" || strings.TrimSpace(scope.DisplayName) == "" || scope.Step.Key == "" || scope.Step.PromptVersion == "" || len(scope.Step.InputKinds) == 0 || len(scope.Step.OutputKinds) == 0 || scope.Step.OutputValues == nil {
+			scope.DisplayName = strings.TrimSpace(scope.DisplayName)
+			scope.Step.Key = strings.TrimSpace(scope.Step.Key)
+			scope.Step.PromptVersion = strings.TrimSpace(scope.Step.PromptVersion)
+			if scope.Key == "" || scope.DisplayName == "" || scope.Step.Key == "" || scope.Step.PromptVersion == "" || len(scope.Step.InputKinds) == 0 || len(scope.Step.OutputKinds) == 0 || scope.Step.OutputValues == nil {
 				return nil, errors.New("post-processor scope metadata and executable step are required")
 			}
 			if _, duplicate := seenScopes[scope.Key]; duplicate {
@@ -73,23 +78,26 @@ func NewPostProcessorRegistry(definitions ...PostProcessorDefinition) (*PostProc
 				return nil, err
 			}
 			for _, kind := range scope.Step.OutputKinds {
-				outputKinds[kind] = struct{}{}
+				outputKindScopes[kind]++
 			}
 			scope.Step = cloneStepDefinition(scope.Step)
 			definition.Scopes[scopeIndex] = scope
 		}
 		seenCounters := make(map[string]struct{}, len(definition.Counters))
-		for _, counter := range definition.Counters {
-			if strings.TrimSpace(counter.Key) == "" || strings.TrimSpace(counter.OutputKind) == "" {
-				return nil, errors.New("post-processor counter key and output kind are required")
+		for counterIndex, counter := range definition.Counters {
+			counter.Key = strings.TrimSpace(counter.Key)
+			counter.OutputKind = strings.TrimSpace(counter.OutputKind)
+			if counter.Key == "" || counter.OutputKind == "" || strings.TrimSpace(counter.EqualsValue) == "" {
+				return nil, errors.New("post-processor counter key, output kind, and comparison value are required")
 			}
 			if _, duplicate := seenCounters[counter.Key]; duplicate {
 				return nil, errors.New("post-processor counter keys must be unique")
 			}
-			if _, found := outputKinds[counter.OutputKind]; !found {
-				return nil, errors.New("post-processor counter must reference a declared output kind")
+			if outputKindScopes[counter.OutputKind] != len(definition.Scopes) {
+				return nil, errors.New("post-processor counter must reference an output kind declared by every scope")
 			}
 			seenCounters[counter.Key] = struct{}{}
+			definition.Counters[counterIndex] = counter
 		}
 		registry.definitions[index] = clonePostProcessorDefinition(definition)
 	}
@@ -109,12 +117,17 @@ func DefaultPostProcessorRegistry() *PostProcessorRegistry {
 	}
 	registry, err := NewPostProcessorRegistry(
 		PostProcessorDefinition{
-			Key: CategoryVerificationStep, DisplayName: "Category verification", Description: "Recheck categories while keeping the last successful result effective until a replacement succeeds.", Priority: 10, ModelSettingKey: CategoryVerificationStep, Automatic: true, Manual: true,
+			Key: PublicAssistanceVerificationStep, DisplayName: "Public assistance verification", Description: "Recheck public-assistance status and types while keeping the last successful result effective until a replacement succeeds.", Priority: 10, ModelSettingKey: PublicAssistanceVerificationStep, Automatic: true, Manual: true,
+			Scopes:   []PostProcessorScope{{Key: DefaultPostProcessingScope, DisplayName: "Default", Step: PublicAssistanceVerificationDefinition()}},
+			Counters: []PostProcessorCounter{{Key: "corrected", OutputKind: "is_correct", EqualsValue: "false"}},
+		},
+		PostProcessorDefinition{
+			Key: CategoryVerificationStep, DisplayName: "Category verification", Description: "Recheck categories while keeping the last successful result effective until a replacement succeeds.", Priority: 20, ModelSettingKey: CategoryVerificationStep, Automatic: true, Manual: true,
 			Scopes:   []PostProcessorScope{{Key: DefaultPostProcessingScope, DisplayName: "Default", Step: CategoryVerificationDefinition()}},
 			Counters: []PostProcessorCounter{{Key: "corrected", OutputKind: "is_correct", EqualsValue: "false"}},
 		},
 		PostProcessorDefinition{
-			Key: TranslationModelStep, DisplayName: "Translations", Description: "Translate current presentations into one registered language or every registered language.", Priority: 20, ModelSettingKey: TranslationModelStep, Automatic: true, Manual: true,
+			Key: TranslationModelStep, DisplayName: "Translations", Description: "Translate current presentations into one registered language or every registered language.", Priority: 30, ModelSettingKey: TranslationModelStep, Automatic: true, Manual: true,
 			Scopes: translationScopes,
 		},
 	)

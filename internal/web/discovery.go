@@ -303,6 +303,9 @@ func writeMarkdownFrontMatter(builder *strings.Builder, title string, page baseP
 	if page.AIMetadataModel != "" {
 		fmt.Fprintf(builder, "ai_metadata_model: %s\n", yamlQuoted(page.AIMetadataModel))
 	}
+	if page.AIPublicAssistanceVerificationModel != "" {
+		fmt.Fprintf(builder, "ai_public_assistance_verification_model: %s\n", yamlQuoted(page.AIPublicAssistanceVerificationModel))
+	}
 	if page.AICategoryVerificationModel != "" {
 		fmt.Fprintf(builder, "ai_category_verification_model: %s\n", yamlQuoted(page.AICategoryVerificationModel))
 	}

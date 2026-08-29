@@ -22,9 +22,14 @@ type testPresentation struct {
 }
 
 type testPresentationJob struct {
-	IncidentID int64
-	TitleDE    string
-	BodyDE     string
+	IncidentID        int64
+	PresentationRunID int64
+	TitleDE           string
+	BodyDE            string
+}
+
+func testPostProcessingContract(scope, promptVersion string, outputKinds []string, inputKinds ...string) store.PostProcessingContract {
+	return store.PostProcessingContract{scope: {PromptVersion: promptVersion, InputKinds: inputKinds, OutputKinds: outputKinds}}
 }
 
 func seedV2Presentation(t *testing.T, database *store.Store, presentation testPresentation, now time.Time) testPresentationJob {
@@ -74,7 +79,7 @@ func seedV2Presentation(t *testing.T, database *store.Store, presentation testPr
 	if queued, err := database.QueuePostProcessingForRun(ctx, german.PresentationRunID, []store.PostProcessingPlan{translationPlan}, "manual", false, now); err != nil || queued != 1 {
 		t.Fatalf("queue test translation = %d/%v", queued, err)
 	}
-	translation, found, err := database.ClaimPostProcessingJob(ctx, "translation", false, nil, now)
+	translation, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", translationPlan.PromptVersion, []string{"title", "summary"}, "title_de", "summary_de"), false, nil, now)
 	if err != nil || !found {
 		t.Fatalf("claim test translation = %#v/%t/%v", translation, found, err)
 	}
@@ -82,7 +87,7 @@ func seedV2Presentation(t *testing.T, database *store.Store, presentation testPr
 	if err := database.CompletePostProcessingJob(ctx, translation, translated, translation.ModelIdentity, translation.InputHash, now); err != nil {
 		t.Fatal(err)
 	}
-	return testPresentationJob{IncidentID: incidentID, TitleDE: records[0].TitleDE, BodyDE: records[0].BodyDE}
+	return testPresentationJob{IncidentID: incidentID, PresentationRunID: german.PresentationRunID, TitleDE: records[0].TitleDE, BodyDE: records[0].BodyDE}
 }
 
 func fixtureStore(t *testing.T) *store.Store {
@@ -135,6 +140,7 @@ func (p fakeProcessingRequester) ModelStatus(ctx context.Context) (processing.Pi
 		return *p.status, nil
 	}
 	postProcessors := []processing.PostProcessorModelStatus{
+		{Key: processing.PublicAssistanceVerificationStep, DisplayName: "Public assistance verification", Description: "Verify public assistance metadata.", ModelSettingKey: processing.PublicAssistanceVerificationStep, Manual: true, Preferred: "qwen3.5:4b", PreferredAvailable: true, Scopes: []processing.PostProcessorScopeStatus{{Key: "default", DisplayName: "Default"}}},
 		{Key: processing.CategoryVerificationStep, DisplayName: "Category verification", Description: "Verify categories.", ModelSettingKey: processing.CategoryVerificationStep, Manual: true, Preferred: "qwen3.5:4b", PreferredAvailable: true, Scopes: []processing.PostProcessorScopeStatus{{Key: "default", DisplayName: "Default"}}},
 		{Key: processing.TranslationModelStep, DisplayName: "Translations", Description: "Translate presentations.", ModelSettingKey: processing.TranslationModelStep, Manual: true, Preferred: "qwen3.5:4b", PreferredAvailable: true, Scopes: []processing.PostProcessorScopeStatus{{Key: "en", DisplayName: "English"}}},
 	}

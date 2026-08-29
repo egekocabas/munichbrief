@@ -59,8 +59,33 @@ Independent LLM work uses one registry-driven post-processing subsystem. Each
 processor registration declares metadata, ordering, model setting, scopes,
 inputs, named outputs, validation, automatic/manual capabilities, and bounded
 aggregate counters. The generic worker and store provide queueing, claims,
-retries, recovery, history, status, and metrics without processor branches. The
-category verifier receives only the accepted German title, summary, and the
+retries, recovery, history, status, and metrics without processor branches.
+Claims materialize only the input kinds declared for the selected processor
+scope; source-backed inputs are never added to another processor's claimed job.
+The claim contract includes the prompt version, so jobs left behind by a prompt
+upgrade are claimed without newly declared inputs and handled by the worker's
+configuration-failure path instead of blocking the queue.
+The same contract carries the complete output-kind set. Persistence rejects
+missing, duplicate, or undeclared outputs and a changed input hash before any
+value is committed. Reader, admin, readiness, and modification-time queries
+also select only complete successes for every verifier and translation scope,
+which preserves atomic fallback even for legacy or manually corrupted rows.
+Correction-style admin readers share one value-pair selection path for latest
+complete success, original-value fallback, and latest-attempt state, so another
+verifier does not require a new persistence algorithm.
+
+The public-assistance verifier receives the immutable, parser-extracted German
+police title and body plus the original metadata status and types. This is an
+intentional exception to the minimized post-processing boundary: the configured
+Ollama endpoint sees the unredacted German source so the verifier can check the
+actual request for public help. Its German prompt returns only a strict verdict,
+corrected status, and corrected type codes. The newest successful status/types
+pair becomes effective atomically without rewriting the original metadata. A
+pending, exhausted, unavailable, malformed, or failed replacement leaves the
+previous successful pair effective, or falls back to the original pair when
+none has succeeded.
+
+The category verifier receives only the accepted German title, summary, and the
 immutable metadata category represented by its German display name. The model
 sees and returns only German category names; application-owned mappings convert
 those names to stable internal codes before validation and persistence. It
@@ -92,12 +117,14 @@ The worker:
    source-grounded areas and assistance requests, and privacy before storage.
 4. Advances only when the step has no unfinished jobs.
 5. Publishes each German presentation as soon as its stage-2 job succeeds and
-   enqueues category verification and translations for that exact run.
+   enqueues public-assistance verification, category verification, and
+   translations for that exact run.
 
 At every job boundary the worker prioritizes canonical work, then registered
-post-processors by priority. Category verification precedes translation. The
-independent processors have separate model settings and circuit breakers, so
-one missing model does not pause the others.
+post-processors by priority: public-assistance verification, category
+verification, then translation. The independent processors have separate model
+settings and circuit breakers, so a missing model or failed response does not
+pause another processor.
 
 When a newer canonical run queues a language, pending translations for older
 runs of the same incident and source revision are superseded. Running attempts
@@ -110,12 +137,16 @@ cycle may finish after the window closes. Explicit admin or CLI requests persist
 manual priority but retain validation, circuit breaking, and retry delays.
 
 The v2 migration records an automatic-scheduling cutover. Each registered
-processor scope also has a persisted enablement time. Existing translation and
-category-verification attempts are migrated into unified jobs and named values
-for audit, including imported and superseded records, but only complete current
+processor scope also has a persisted enablement time. The public-assistance
+scope begins automatic work only for presentations completed after its first
+deployment-time registration; operators use the admin “process all” action for
+older presentations, with no automatic historical backfill or schema migration.
+Existing translation and category-verification attempts are migrated into
+unified jobs and named values for audit, including imported and superseded
+records, but only complete current
 `incident-pipeline-v2` runs are eligible for new work or reader selection. The
-paginated admin history retains those imported attempts while excluding model
-output and internal error text.
+paginated admin history retains those imported attempts while excluding source
+text, model output, and internal error text.
 
 ## Presentation boundary
 

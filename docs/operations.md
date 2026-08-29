@@ -57,8 +57,9 @@ step and each registered post-processor. Translation scopes share their
 processor model setting. Fresh
 databases start unconfigured; upgraded databases migrate the former German
 preference to both canonical steps and rename the former English preference to
-the shared translation setting. A missing category or translation model pauses
-only that independent processor without pausing German processing. The dashboard
+the shared translation setting. A missing public-assistance, category, or
+translation model pauses only that independent processor without pausing German
+processing or another processor. The dashboard
 displays the automatic v2 and registered processor-scope cutovers. The server refreshes Ollama's
 `/api/tags` every 30 seconds; scheduled processing pauses until all required
 models are installed, while priority manual cycles retain their per-step model
@@ -108,6 +109,25 @@ same generic endpoint. There are no model-card history backfill controls. The
 application does not authenticate users itself: enable the dashboard only when
 the ingress protects `/admin*` and `/api/admin*`, and keep both prefixes absent
 from public ingress.
+
+Public-assistance verification is correction-only and has the highest
+post-processing priority after the canonical metadata and German-presentation
+stages. Its German prompt receives the unredacted, parser-extracted German title
+and body plus the original assistance status/types through the configured
+Ollama endpoint. It never receives a generated or translated presentation and
+returns only the constrained verdict/status/types JSON. This raw-source decision
+means the Ollama network hop must be treated as sensitive. Logs and paginated
+history continue to exclude incident text, prompts, model output, and internal
+error text. A retry exhaustion, unavailable model, malformed response, or
+terminal failure leaves the prior successful assistance result effective, or
+the original metadata when there has been no success, and does not block
+category verification, translation, or German publication.
+
+The verifier scope uses the registry's persisted enablement cutover. New
+presentations are queued automatically once its preferred model is configured.
+Existing presentations are not backfilled automatically; use the protected
+post-processing “process all” control in the admin dashboard. No SQL migration
+is required for this rollout.
 
 Category verification is correction-only. Its model receives the privacy-safe
 German title and summary plus a German category label. German labels are mapped

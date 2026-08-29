@@ -200,6 +200,24 @@ func TestTimelineAndDetailRenderAIContentWithProvenance(t *testing.T) {
 		TitleEN: "Short English title", SummaryEN: "A factual English summary.",
 	}
 	job := seedV2Presentation(t, database, presentation, generatedAt)
+	assistancePlan := store.PostProcessingPlan{
+		ProcessorKey: processing.PublicAssistanceVerificationStep, ScopeKey: "default", PromptVersion: processing.PublicAssistanceVerificationPromptVersion,
+		Model: "assist:4b", InputKinds: []string{"original_title", "incident_body", "public_assistance_status", "public_assistance_types"},
+	}
+	if queued, err := database.QueuePostProcessingForRun(context.Background(), job.PresentationRunID, []store.PostProcessingPlan{assistancePlan}, "manual", false, generatedAt.Add(time.Minute)); err != nil || queued != 1 {
+		t.Fatalf("queue public assistance verification = %d/%v", queued, err)
+	}
+	assistance, found, err := database.ClaimPostProcessingJob(context.Background(), processing.PublicAssistanceVerificationStep, testPostProcessingContract("default", assistancePlan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, assistancePlan.InputKinds...), false, nil, generatedAt.Add(time.Minute))
+	if err != nil || !found {
+		t.Fatalf("claim public assistance verification = %#v/%t/%v", assistance, found, err)
+	}
+	if err := database.CompletePostProcessingJob(context.Background(), assistance, []store.PipelineValue{
+		{Kind: "is_correct", Value: "false"},
+		{Kind: "corrected_public_assistance_status", Value: "requested"},
+		{Kind: "corrected_public_assistance_types", Value: `["identify_person"]`},
+	}, assistance.ModelIdentity, assistance.InputHash, generatedAt.Add(2*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
 	verifications, err := database.ListAdminCategoryVerifications(context.Background(), []int64{job.IncidentID})
 	if err != nil || len(verifications) != 1 {
 		t.Fatalf("ListAdminCategoryVerifications() = %#v, err=%v", verifications, err)
@@ -211,7 +229,7 @@ func TestTimelineAndDetailRenderAIContentWithProvenance(t *testing.T) {
 	if queued, err := database.QueuePostProcessingForRun(context.Background(), verifications[0].PresentationRunID, []store.PostProcessingPlan{verificationPlan}, "manual", false, generatedAt); err != nil || queued != 1 {
 		t.Fatalf("queue category verification = %d/%v", queued, err)
 	}
-	verification, found, err := database.ClaimPostProcessingJob(context.Background(), "category_verification", false, nil, generatedAt)
+	verification, found, err := database.ClaimPostProcessingJob(context.Background(), "category_verification", testPostProcessingContract("default", verificationPlan.PromptVersion, []string{"is_correct", "corrected_category"}, verificationPlan.InputKinds...), false, nil, generatedAt)
 	if err != nil || !found {
 		t.Fatalf("claim category verification = %#v/%t/%v", verification, found, err)
 	}
@@ -222,7 +240,7 @@ func TestTimelineAndDetailRenderAIContentWithProvenance(t *testing.T) {
 	handler := testServer(t, database).Handler()
 	timeline := httptest.NewRecorder()
 	handler.ServeHTTP(timeline, englishRequest(http.MethodGet, "/en", nil))
-	for _, expected := range []string{"AI-generated summary", presentation.TitleEN, presentation.SummaryEN} {
+	for _, expected := range []string{"AI-generated summary", presentation.TitleEN, presentation.SummaryEN, "Public assistance needed"} {
 		if !strings.Contains(timeline.Body.String(), expected) {
 			t.Errorf("timeline body does not contain %q", expected)
 		}
@@ -233,8 +251,9 @@ func TestTimelineAndDetailRenderAIContentWithProvenance(t *testing.T) {
 	for _, expected := range []string{
 		"AI-generated summary", presentation.TitleEN, presentation.SummaryEN,
 		"Original German text", "Visible only for quality review",
-		"AI processing", "German presentation", "English translation",
+		"AI processing", "German presentation", "Public assistance verification", "English translation",
 		"Model", "qwen3.5:4b", "Prompt version", processing.GermanPresentationPromptVersion,
+		"assist:4b", processing.PublicAssistanceVerificationPromptVersion, "Police request public assistance", "Identify a person",
 	} {
 		if !strings.Contains(detail.Body.String(), expected) {
 			t.Errorf("detail body does not contain %q", expected)
@@ -242,6 +261,23 @@ func TestTimelineAndDetailRenderAIContentWithProvenance(t *testing.T) {
 	}
 	if !strings.Contains(detail.Body.String(), `text-alert">Category verification</p>`) {
 		t.Error("category verification provenance card does not use its own label")
+	}
+	if !strings.Contains(detail.Body.String(), `data-ai-public-assistance-verification-model="assist:4b"`) || detail.Header().Get("X-AI-Public-Assistance-Verification-Model") != "assist:4b" {
+		t.Error("public assistance verification provenance is missing from reader metadata")
+	}
+	if !strings.Contains(detail.Body.String(), `"ai_public_assistance_verification_model":"assist:4b"`) {
+		t.Error("public assistance verification provenance is missing from machine-readable JSON")
+	}
+	publicServer, err := NewWithOptions(database, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), Options{PageSize: 20, SourceMode: "fixture", PresentationMode: "public"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	markdownRequest := englishRequest(http.MethodGet, "/en/incidents/"+formatID(job.IncidentID), nil)
+	markdownRequest.Header.Set("Accept", "text/markdown")
+	markdown := httptest.NewRecorder()
+	publicServer.Handler().ServeHTTP(markdown, markdownRequest)
+	if markdown.Code != http.StatusOK || !strings.Contains(markdown.Body.String(), `ai_public_assistance_verification_model: "assist:4b"`) {
+		t.Errorf("public assistance verifier Markdown provenance = %d/%q", markdown.Code, markdown.Body.String())
 	}
 	if !strings.Contains(detail.Body.String(), `text-alert">Translation</p>`) {
 		t.Error("translation provenance card does not retain its translation label")
@@ -337,7 +373,7 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	if queued, err := database.QueuePostProcessingForRun(ctx, german.PresentationRunID, []store.PostProcessingPlan{translationPlan}, "manual", false, startedAt.Add(6*time.Minute)); err != nil || queued != 1 {
 		t.Fatalf("QueueTranslationsForRun() = %d, err=%v", queued, err)
 	}
-	translation, found, err := database.ClaimPostProcessingJob(ctx, "translation", false, nil, startedAt.Add(6*time.Minute))
+	translation, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", translationPlan.PromptVersion, []string{"title", "summary"}, translationPlan.InputKinds...), false, nil, startedAt.Add(6*time.Minute))
 	if err != nil || !found {
 		t.Fatalf("ClaimTranslationJob() = %#v, found=%t, err=%v", translation, found, err)
 	}

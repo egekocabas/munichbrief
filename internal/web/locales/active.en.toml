@@ -281,6 +281,9 @@ other = "Incident metadata"
 [GermanPresentationStep]
 other = "German presentation"
 
+[PublicAssistanceVerificationStep]
+other = "Public assistance verification"
+
 [CategoryVerificationStep]
 other = "Category verification"
 

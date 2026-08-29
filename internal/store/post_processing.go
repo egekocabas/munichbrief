@@ -231,23 +231,65 @@ func validatePostProcessingPlan(plan PostProcessingPlan) error {
 
 func postProcessingInputValuesTx(ctx context.Context, tx *sql.Tx, runID int64, kinds []string) (map[string]string, error) {
 	values := make(map[string]string, len(kinds))
-	rows, err := tx.QueryContext(ctx, `SELECT kind,value FROM presentation_values WHERE presentation_run_id=?`, runID)
-	if err != nil {
-		return nil, err
+	present := make(map[string]bool, len(kinds))
+	needOriginalTitle, needIncidentBody := false, false
+	presentationKinds := make([]string, 0, len(kinds))
+	for _, kind := range kinds {
+		switch kind {
+		case "original_title":
+			needOriginalTitle = true
+		case "incident_body":
+			needIncidentBody = true
+		default:
+			presentationKinds = append(presentationKinds, kind)
+		}
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var kind, value string
-		if err := rows.Scan(&kind, &value); err != nil {
+	if needOriginalTitle || needIncidentBody {
+		var originalTitle, incidentBody string
+		if err := tx.QueryRowContext(ctx, `SELECT i.title_de,COALESCE(i.body_de,'') FROM presentation_runs r
+			JOIN incidents i ON i.id=r.incident_id AND i.content_hash=r.source_hash WHERE r.id=?`, runID).Scan(&originalTitle, &incidentBody); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, ErrNotFound
+			}
 			return nil, err
 		}
-		values[kind] = value
+		if needOriginalTitle {
+			values["original_title"], present["original_title"] = originalTitle, true
+		}
+		if needIncidentBody {
+			values["incident_body"], present["incident_body"] = incidentBody, true
+		}
 	}
-	if err := rows.Err(); err != nil {
-		return nil, err
+	if len(presentationKinds) > 0 {
+		placeholders := strings.TrimSuffix(strings.Repeat("?,", len(presentationKinds)), ",")
+		args := make([]any, 0, len(presentationKinds)+1)
+		args = append(args, runID)
+		for _, kind := range presentationKinds {
+			args = append(args, kind)
+		}
+		rows, err := tx.QueryContext(ctx, `SELECT kind,value FROM presentation_values WHERE presentation_run_id=? AND kind IN (`+placeholders+`)`, args...)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			var kind, value string
+			if err := rows.Scan(&kind, &value); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			values[kind] = value
+			present[kind] = true
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		if err := rows.Close(); err != nil {
+			return nil, err
+		}
 	}
 	for _, kind := range kinds {
-		if strings.TrimSpace(values[kind]) == "" {
+		if !present[kind] || kind != "incident_body" && strings.TrimSpace(values[kind]) == "" {
 			return nil, ErrNotFound
 		}
 	}
@@ -255,8 +297,10 @@ func postProcessingInputValuesTx(ctx context.Context, tx *sql.Tx, runID int64, k
 }
 
 // ClaimPostProcessingJob atomically claims the next eligible job for a
-// registered processor and loads its immutable canonical inputs.
-func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string, allowScheduled bool, blockedModels []string, now time.Time) (PostProcessingJob, bool, error) {
+// registered processor. Inputs are materialized only when the queued prompt
+// still matches the registered contract, allowing stale jobs to be claimed and
+// failed by the worker's prompt-version guard after a deployment.
+func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string, contracts PostProcessingContract, allowScheduled bool, blockedModels []string, now time.Time) (PostProcessingJob, bool, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return PostProcessingJob{}, false, err
@@ -282,6 +326,7 @@ func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string,
 	err = tx.QueryRowContext(ctx, `SELECT job.id,job.presentation_run_id,r.incident_id,job.processor_key,job.scope_key,job.request_kind,
 		job.model_identity,job.prompt_version,job.input_hash,job.attempt_count
 		FROM post_processing_jobs job JOIN presentation_runs r ON r.id=job.presentation_run_id
+		JOIN incidents i ON i.id=r.incident_id AND i.content_hash=r.source_hash
 		WHERE job.processor_key=? AND job.status='pending' AND (job.next_retry_at IS NULL OR job.next_retry_at<=?)
 		AND (job.request_kind='manual' OR ?)`+blockedCondition+`
 		ORDER BY CASE job.request_kind WHEN 'manual' THEN 0 WHEN 'scheduled' THEN 1 ELSE 2 END,job.created_at,job.id LIMIT 1`, args...).Scan(
@@ -297,25 +342,17 @@ func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string,
 	if err != nil {
 		return PostProcessingJob{}, false, err
 	}
+	contract, registered := contracts[job.ScopeKey]
+	if !registered || contract.PromptVersion == "" || len(contract.InputKinds) == 0 || len(contract.OutputKinds) == 0 {
+		return PostProcessingJob{}, false, fmt.Errorf("post-processing scope %s/%s has no valid registered value contract", job.ProcessorKey, job.ScopeKey)
+	}
 	job.InputValues = make(map[string]string)
-	rows, err := tx.QueryContext(ctx, `SELECT kind,value FROM presentation_values WHERE presentation_run_id=?`, job.PresentationRunID)
-	if err != nil {
-		return PostProcessingJob{}, false, err
-	}
-	for rows.Next() {
-		var kind, value string
-		if err := rows.Scan(&kind, &value); err != nil {
-			rows.Close()
-			return PostProcessingJob{}, false, err
+	if contract.PromptVersion == job.PromptVersion {
+		job.OutputKinds = append([]string(nil), contract.OutputKinds...)
+		job.InputValues, err = postProcessingInputValuesTx(ctx, tx, job.PresentationRunID, contract.InputKinds)
+		if err != nil {
+			return PostProcessingJob{}, false, fmt.Errorf("load claimed post-processing inputs: %w", err)
 		}
-		job.InputValues[kind] = value
-	}
-	if err := rows.Err(); err != nil {
-		rows.Close()
-		return PostProcessingJob{}, false, err
-	}
-	if err := rows.Close(); err != nil {
-		return PostProcessingJob{}, false, err
 	}
 	job.AttemptCount++
 	result, err := tx.ExecContext(ctx, `UPDATE post_processing_jobs SET status='running',attempt_count=?,next_retry_at=NULL,
@@ -335,8 +372,14 @@ func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string,
 // CompletePostProcessingJob stores validated named values and succeeds the job
 // atomically, leaving older successful attempts available until this commit.
 func (s *Store) CompletePostProcessingJob(ctx context.Context, job PostProcessingJob, values []PipelineValue, modelIdentity, inputHash string, now time.Time) error {
-	if len(values) == 0 {
-		return errors.New("post-processing output values are required")
+	if err := validatePostProcessingOutputs(values, job.OutputKinds); err != nil {
+		return err
+	}
+	if strings.TrimSpace(modelIdentity) == "" || strings.TrimSpace(inputHash) == "" {
+		return errors.New("post-processing model identity and input hash are required")
+	}
+	if inputHash != job.InputHash {
+		return errors.New("post-processing input hash changed after claim")
 	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -360,6 +403,36 @@ func (s *Store) CompletePostProcessingJob(ctx context.Context, job PostProcessin
 		return errors.New("post-processing job is no longer running")
 	}
 	return tx.Commit()
+}
+
+func validatePostProcessingOutputs(values []PipelineValue, expectedKinds []string) error {
+	if len(expectedKinds) == 0 || len(values) != len(expectedKinds) {
+		return errors.New("post-processing output values must exactly match the registered contract")
+	}
+	expected := make(map[string]struct{}, len(expectedKinds))
+	for _, kind := range expectedKinds {
+		if strings.TrimSpace(kind) == "" {
+			return errors.New("post-processing output contract contains an empty kind")
+		}
+		if _, duplicate := expected[kind]; duplicate {
+			return fmt.Errorf("post-processing output contract kind %q is duplicated", kind)
+		}
+		expected[kind] = struct{}{}
+	}
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		if strings.TrimSpace(value.Kind) == "" || strings.TrimSpace(value.Value) == "" {
+			return errors.New("post-processing output kind and value are required")
+		}
+		if _, declared := expected[value.Kind]; !declared {
+			return fmt.Errorf("post-processing output kind %q is not declared", value.Kind)
+		}
+		if _, duplicate := seen[value.Kind]; duplicate {
+			return fmt.Errorf("post-processing output kind %q is duplicated", value.Kind)
+		}
+		seen[value.Kind] = struct{}{}
+	}
+	return nil
 }
 
 func (s *Store) FailPostProcessingJob(ctx context.Context, job PostProcessingJob, status, failureKind string, retryAt *time.Time, now time.Time, processingError error) error {

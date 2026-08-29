@@ -64,6 +64,7 @@ type incidentStore interface {
 	ListAdminIncidents(context.Context, int, int, string, store.PresentationScope, store.AdminIncidentFilter) ([]store.IncidentRecord, int, error)
 	ListAdminTranslations(context.Context, []int64, []string) ([]store.AdminTranslation, error)
 	ListAdminCategoryVerifications(context.Context, []int64) ([]store.AdminCategoryVerification, error)
+	ListAdminPublicAssistanceVerifications(context.Context, []int64) ([]store.AdminPublicAssistanceVerification, error)
 	ListPipelineHistory(context.Context, string, int, *store.PipelineHistoryCursor, *store.PipelineHistoryCursor) (store.PipelineHistoryPage, error)
 	Ready(context.Context) error
 }

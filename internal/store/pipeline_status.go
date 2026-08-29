@@ -165,8 +165,14 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 	}
 	for _, spec := range counterSpecs {
 		var count int
-		if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM post_processing_jobs job JOIN post_processing_values value ON value.job_id=job.id
-			WHERE job.processor_key=? AND job.scope_key=? AND job.status='succeeded' AND value.kind=? AND value.value=?`, spec.ProcessorKey, spec.ScopeKey, spec.OutputKind, spec.EqualsValue).Scan(&count); err != nil {
+		query := `SELECT COUNT(*) FROM post_processing_jobs job JOIN post_processing_values value ON value.job_id=job.id
+			WHERE job.processor_key=? AND job.scope_key=? AND job.status='succeeded' AND value.kind=? AND value.value=?`
+		args := []any{spec.ProcessorKey, spec.ScopeKey, spec.OutputKind, spec.EqualsValue}
+		for _, kind := range spec.RequiredOutputKinds {
+			query += ` AND EXISTS (SELECT 1 FROM post_processing_values required WHERE required.job_id=job.id AND required.kind=?)`
+			args = append(args, kind)
+		}
+		if err := s.db.QueryRowContext(ctx, query, args...).Scan(&count); err != nil {
 			return snapshot, fmt.Errorf("read post-processing counter %s: %w", spec.CounterKey, err)
 		}
 		for index := range snapshot.PostProcessing {

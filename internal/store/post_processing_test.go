@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+func testPostProcessingContract(scope, promptVersion string, outputKinds []string, inputKinds ...string) PostProcessingContract {
+	return PostProcessingContract{scope: {PromptVersion: promptVersion, InputKinds: inputKinds, OutputKinds: outputKinds}}
+}
+
 func TestPostProcessingGenericLifecycleKeepsSuccessfulValueDuringForcedReplacement(t *testing.T) {
 	ctx := context.Background()
 	database, err := Open(ctx, filepath.Join(t.TempDir(), "post-processing.db"))
@@ -37,9 +41,12 @@ func TestPostProcessingGenericLifecycleKeepsSuccessfulValueDuringForcedReplaceme
 	if queued, err := database.QueuePostProcessingForAll(ctx, "fixture", []PostProcessingPlan{plan}, false, now.Add(3*time.Minute)); err != nil || queued != 0 {
 		t.Fatalf("deduplicated scheduled queue = %d/%v", queued, err)
 	}
-	job, found, err := database.ClaimPostProcessingJob(ctx, "translation", true, nil, now.Add(4*time.Minute))
+	job, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", plan.PromptVersion, []string{"title", "summary"}, "title_de", "summary_de"), true, nil, now.Add(4*time.Minute))
 	if err != nil || !found || job.PresentationRunID != runID || job.RequestKind != "scheduled" || job.AttemptCount != 1 {
 		t.Fatalf("scheduled claim = %#v/%t/%v", job, found, err)
+	}
+	if len(job.InputValues) != 2 || job.InputValues["title_de"] != "Titel" || job.InputValues["summary_de"] != "Zusammenfassung." {
+		t.Fatalf("translation claim received undeclared inputs: %#v", job.InputValues)
 	}
 	if err := database.CompletePostProcessingJob(ctx, job, []PipelineValue{{Kind: "title", Value: "First title"}, {Kind: "summary", Value: "First summary."}}, "translate:4b", job.InputHash, now.Add(5*time.Minute)); err != nil {
 		t.Fatal(err)
@@ -52,7 +59,7 @@ func TestPostProcessingGenericLifecycleKeepsSuccessfulValueDuringForcedReplaceme
 	if err != nil || visible.AITranslatedTitle != "First title" {
 		t.Fatalf("successful fallback during replacement = %#v/%v", visible, err)
 	}
-	replacement, found, err := database.ClaimPostProcessingJob(ctx, "translation", false, nil, now.Add(7*time.Minute))
+	replacement, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", plan.PromptVersion, []string{"title", "summary"}, "title_de", "summary_de"), false, nil, now.Add(7*time.Minute))
 	if err != nil || !found || replacement.RequestKind != "manual" {
 		t.Fatalf("manual replacement claim = %#v/%t/%v", replacement, found, err)
 	}
@@ -79,6 +86,93 @@ func TestPostProcessingGenericLifecycleKeepsSuccessfulValueDuringForcedReplaceme
 	}
 }
 
+func TestPostProcessingReadersRequireCompleteSuccessesAcrossProcessors(t *testing.T) {
+	ctx := context.Background()
+	database, err := Open(ctx, filepath.Join(t.TempDir(), "post-processing-complete-readers.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 12, 30, 0, 0, time.UTC)
+	insertPipelineDocuments(t, ctx, database, now, "complete-readers")
+	var incidentID int64
+	var sourceHash string
+	if err := database.db.QueryRowContext(ctx, `SELECT id,content_hash FROM incidents LIMIT 1`).Scan(&incidentID, &sourceHash); err != nil {
+		t.Fatal(err)
+	}
+	runID := insertCompletedPresentationRun(t, ctx, database, incidentID, sourceHash, PipelineVersion, now, map[string]string{
+		"title_de": "Titel", "summary_de": "Zusammenfassung.", "category": "traffic",
+		"report_kind": "incident", "public_assistance_status": "not_requested", "public_assistance_types": "[]",
+	})
+	if err := database.EnsurePostProcessingScopes(ctx, []PostProcessingScope{{ProcessorKey: "category_verification", ScopeKey: "default"}}, now); err != nil {
+		t.Fatal(err)
+	}
+	insertSuccess := func(processor, scope, model string, completedAt time.Time, values ...PipelineValue) {
+		t.Helper()
+		formatted := formatTime(completedAt)
+		result, err := database.db.ExecContext(ctx, `INSERT INTO post_processing_jobs(
+			presentation_run_id,processor_key,scope_key,request_kind,status,model_identity,prompt_version,input_hash,
+			attempt_count,started_at,completed_at,created_at,updated_at
+		) VALUES(?,?,?,'manual','succeeded',?,'test-v1','hash',1,?,?,?,?)`, runID, processor, scope, model, formatted, formatted, formatted, formatted)
+		if err != nil {
+			t.Fatal(err)
+		}
+		jobID, err := result.LastInsertId()
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, value := range values {
+			if _, err := database.db.ExecContext(ctx, `INSERT INTO post_processing_values(job_id,kind,value) VALUES(?,?,?)`, jobID, value.Kind, value.Value); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	insertSuccess("category_verification", "default", "category-complete:4b", now.Add(time.Minute),
+		PipelineValue{Kind: "is_correct", Value: "false"}, PipelineValue{Kind: "corrected_category", Value: "other"})
+	insertSuccess("category_verification", "default", "category-incomplete:4b", now.Add(2*time.Minute),
+		PipelineValue{Kind: "is_correct", Value: "false"})
+	insertSuccess("translation", "en", "translation-complete:4b", now.Add(3*time.Minute),
+		PipelineValue{Kind: "title", Value: "Complete title"}, PipelineValue{Kind: "summary", Value: "Complete summary."})
+	insertSuccess("translation", "en", "translation-incomplete:4b", now.Add(4*time.Minute),
+		PipelineValue{Kind: "title", Value: "Partial title"})
+	insertSuccess("translation", "fr", "translation-incomplete:4b", now.Add(5*time.Minute),
+		PipelineValue{Kind: "title", Value: "Titre partiel"})
+
+	record, err := database.GetPresentationIncident(ctx, incidentID, PresentationScope{Language: "en", TranslationLanguage: "en", PublicOnly: true})
+	if err != nil || record.AICategory != "other" || record.AICategoryVerificationModel != "category-complete:4b" || record.AITranslatedTitle != "Complete title" || record.AITranslatedSummary != "Complete summary." || record.AITranslationModel != "translation-complete:4b" {
+		t.Fatalf("complete reader selection = %#v/%v", record, err)
+	}
+	if _, err := database.GetPresentationIncident(ctx, incidentID, PresentationScope{Language: "fr", TranslationLanguage: "fr", PublicOnly: true}); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("incomplete-only translation became public: %v", err)
+	}
+	categories, err := database.ListAdminCategoryVerifications(ctx, []int64{incidentID})
+	if err != nil || len(categories) != 1 || categories[0].EffectiveCategory != "other" || categories[0].Model != "category-complete:4b" {
+		t.Fatalf("admin category complete selection = %#v/%v", categories, err)
+	}
+	translations, err := database.ListAdminTranslations(ctx, []int64{incidentID}, []string{"en"})
+	if err != nil || len(translations) != 1 || translations[0].Title != "Complete title" || translations[0].Summary != "Complete summary." || translations[0].Model != "translation-complete:4b" || translations[0].Status != "succeeded" {
+		t.Fatalf("admin translation complete selection = %#v/%v", translations, err)
+	}
+	snapshot, err := database.PipelineSnapshot(ctx, "fixture", nil, []PostProcessingCounterSpec{{
+		ProcessorKey: "category_verification", ScopeKey: "default", CounterKey: "corrected",
+		OutputKind: "is_correct", EqualsValue: "false", RequiredOutputKinds: []string{"is_correct", "corrected_category"},
+	}}, now.Add(6*time.Minute))
+	corrected := -1
+	for _, stat := range snapshot.PostProcessing {
+		if stat.ProcessorKey == "category_verification" && stat.ScopeKey == "default" {
+			corrected = stat.Counters["corrected"]
+		}
+	}
+	if err != nil || corrected != 1 {
+		t.Fatalf("complete corrected counter = %#v/%v", snapshot.PostProcessing, err)
+	}
+	links, err := database.ListPublicIncidentLinks(ctx, "fixture", PresentationScope{Language: "en"})
+	if err != nil || len(links) != 1 || !links[0].ModifiedAt.Equal(now.Add(3*time.Minute)) {
+		t.Fatalf("complete modification time = %#v/%v", links, err)
+	}
+}
+
 func TestPostProcessingRetryRecoveryAndTransactionalCompletion(t *testing.T) {
 	ctx := context.Background()
 	database, err := Open(ctx, filepath.Join(t.TempDir(), "post-processing-recovery.db"))
@@ -100,7 +194,7 @@ func TestPostProcessingRetryRecoveryAndTransactionalCompletion(t *testing.T) {
 	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{plan}, "manual", false, now); err != nil || queued != 1 {
 		t.Fatalf("queue retry job = %d/%v", queued, err)
 	}
-	job, found, err := database.ClaimPostProcessingJob(ctx, "test_processor", false, nil, now)
+	job, found, err := database.ClaimPostProcessingJob(ctx, "test_processor", testPostProcessingContract("default", plan.PromptVersion, []string{"note"}, "title_de"), false, nil, now)
 	if err != nil || !found {
 		t.Fatalf("claim retry job = %#v/%t/%v", job, found, err)
 	}
@@ -108,17 +202,17 @@ func TestPostProcessingRetryRecoveryAndTransactionalCompletion(t *testing.T) {
 	if err := database.FailPostProcessingJob(ctx, job, "pending", "transient", &retryAt, now, errors.New("private provider failure")); err != nil {
 		t.Fatal(err)
 	}
-	if _, found, err := database.ClaimPostProcessingJob(ctx, "test_processor", false, nil, now.Add(30*time.Second)); err != nil || found {
+	if _, found, err := database.ClaimPostProcessingJob(ctx, "test_processor", testPostProcessingContract("default", plan.PromptVersion, []string{"note"}, "title_de"), false, nil, now.Add(30*time.Second)); err != nil || found {
 		t.Fatalf("early retry claim = %t/%v", found, err)
 	}
-	retried, found, err := database.ClaimPostProcessingJob(ctx, "test_processor", false, nil, retryAt)
+	retried, found, err := database.ClaimPostProcessingJob(ctx, "test_processor", testPostProcessingContract("default", plan.PromptVersion, []string{"note"}, "title_de"), false, nil, retryAt)
 	if err != nil || !found || retried.AttemptCount != 2 {
 		t.Fatalf("due retry claim = %#v/%t/%v", retried, found, err)
 	}
 	if err := database.RecoverPostProcessing(ctx, now.Add(2*time.Minute)); err != nil {
 		t.Fatal(err)
 	}
-	recovered, found, err := database.ClaimPostProcessingJob(ctx, "test_processor", false, nil, now.Add(2*time.Minute))
+	recovered, found, err := database.ClaimPostProcessingJob(ctx, "test_processor", testPostProcessingContract("default", plan.PromptVersion, []string{"note"}, "title_de"), false, nil, now.Add(2*time.Minute))
 	if err != nil || !found || recovered.ID != job.ID || recovered.AttemptCount != 3 {
 		t.Fatalf("recovered claim = %#v/%t/%v", recovered, found, err)
 	}
@@ -135,6 +229,298 @@ func TestPostProcessingRetryRecoveryAndTransactionalCompletion(t *testing.T) {
 	}
 	if status != "running" || valueCount != 0 {
 		t.Fatalf("failed completion was not transactional: status=%s values=%d", status, valueCount)
+	}
+	if err := database.CompletePostProcessingJob(ctx, recovered, []PipelineValue{{Kind: "note", Value: "valid"}}, recovered.ModelIdentity, "changed-hash", now.Add(3*time.Minute)); err == nil {
+		t.Fatal("changed post-processing input hash unexpectedly committed")
+	}
+	if err := database.db.QueryRowContext(ctx, `SELECT status FROM post_processing_jobs WHERE id=?`, recovered.ID).Scan(&status); err != nil {
+		t.Fatal(err)
+	}
+	if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM post_processing_values WHERE job_id=?`, recovered.ID).Scan(&valueCount); err != nil {
+		t.Fatal(err)
+	}
+	if status != "running" || valueCount != 0 {
+		t.Fatalf("hash mismatch was not transactional: status=%s values=%d", status, valueCount)
+	}
+}
+
+func TestPostProcessingLoadsImmutableRawGermanSourceIncludingEmptyBody(t *testing.T) {
+	ctx := context.Background()
+	database, err := Open(ctx, filepath.Join(t.TempDir(), "post-processing-source.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 13, 30, 0, 0, time.UTC)
+	insertPipelineDocuments(t, ctx, database, now, "source")
+	var incidentID int64
+	var sourceHash, originalTitle string
+	if err := database.db.QueryRowContext(ctx, `SELECT id,content_hash,title_de FROM incidents LIMIT 1`).Scan(&incidentID, &sourceHash, &originalTitle); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.db.ExecContext(ctx, `UPDATE incidents SET body_de='' WHERE id=?`, incidentID); err != nil {
+		t.Fatal(err)
+	}
+	runID := insertCompletedPresentationRun(t, ctx, database, incidentID, sourceHash, PipelineVersion, now, map[string]string{
+		"title_de": "Generated title", "summary_de": "Generated summary.", "category": "other",
+		"public_assistance_status": "not_requested", "public_assistance_types": "[]",
+	})
+	plan := PostProcessingPlan{ProcessorKey: "public_assistance_verification", ScopeKey: "default", PromptVersion: "assistance-v1", Model: "verify:4b", InputKinds: []string{"original_title", "incident_body", "public_assistance_status", "public_assistance_types"}}
+	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{plan}, "manual", false, now); err != nil || queued != 1 {
+		t.Fatalf("queue raw-source verifier = %d/%v", queued, err)
+	}
+	expectedHash := HashPipelineInput(
+		"processor", plan.ProcessorKey, "scope", plan.ScopeKey,
+		"original_title", originalTitle, "incident_body", "",
+		"public_assistance_status", "not_requested", "public_assistance_types", "[]",
+		plan.PromptVersion, plan.Model,
+	)
+	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, plan.InputKinds...), false, nil, now)
+	if err != nil || !found {
+		t.Fatalf("claim raw-source verifier = %#v/%t/%v", job, found, err)
+	}
+	if len(job.InputValues) != len(plan.InputKinds) || job.InputValues["original_title"] != originalTitle || job.InputValues["incident_body"] != "" || job.InputHash != expectedHash {
+		t.Fatalf("raw source inputs/hash = %#v/%s, want title %q and hash %s", job.InputValues, job.InputHash, originalTitle, expectedHash)
+	}
+	if _, leaked := job.InputValues["title_de"]; leaked {
+		t.Fatalf("raw-source verifier claim included undeclared generated presentation: %#v", job.InputValues)
+	}
+}
+
+func TestPostProcessingClaimsStalePromptWithoutMaterializingCurrentInputs(t *testing.T) {
+	ctx := context.Background()
+	database, err := Open(ctx, filepath.Join(t.TempDir(), "post-processing-stale-prompt.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 13, 45, 0, 0, time.UTC)
+	insertPipelineDocuments(t, ctx, database, now, "stale-prompt")
+	var incidentID int64
+	var sourceHash string
+	if err := database.db.QueryRowContext(ctx, `SELECT id,content_hash FROM incidents LIMIT 1`).Scan(&incidentID, &sourceHash); err != nil {
+		t.Fatal(err)
+	}
+	runID := insertCompletedPresentationRun(t, ctx, database, incidentID, sourceHash, PipelineVersion, now, map[string]string{
+		"title_de": "Titel", "summary_de": "Zusammenfassung.", "category": "other",
+	})
+	stalePlan := PostProcessingPlan{
+		ProcessorKey: "future_processor", ScopeKey: "default", PromptVersion: "future-v1",
+		Model: "verify:4b", InputKinds: []string{"category"},
+	}
+	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{stalePlan}, "manual", false, now); err != nil || queued != 1 {
+		t.Fatalf("queue stale prompt = %d/%v", queued, err)
+	}
+	job, found, err := database.ClaimPostProcessingJob(ctx, stalePlan.ProcessorKey, testPostProcessingContract("default", "future-v2", []string{"new_output"}, "new_required_input"), false, nil, now)
+	if err != nil || !found {
+		t.Fatalf("claim stale prompt = %#v/%t/%v", job, found, err)
+	}
+	if job.PromptVersion != stalePlan.PromptVersion || len(job.InputValues) != 0 || len(job.OutputKinds) != 0 || job.AttemptCount != 1 {
+		t.Fatalf("stale prompt claim = %#v", job)
+	}
+	if err := database.CompletePostProcessingJob(ctx, job, []PipelineValue{{Kind: "new_output", Value: "unsafe"}}, job.ModelIdentity, job.InputHash, now); err == nil {
+		t.Fatal("stale prompt job unexpectedly completed with the current output contract")
+	}
+}
+
+func TestPublicAssistanceVerificationKeepsLatestSuccessfulResult(t *testing.T) {
+	ctx := context.Background()
+	database, err := Open(ctx, filepath.Join(t.TempDir(), "public-assistance-selection.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 14, 0, 0, 0, time.UTC)
+	insertPipelineDocuments(t, ctx, database, now, "assistance-selection")
+	var incidentID int64
+	var sourceHash string
+	if err := database.db.QueryRowContext(ctx, `SELECT id,content_hash FROM incidents LIMIT 1`).Scan(&incidentID, &sourceHash); err != nil {
+		t.Fatal(err)
+	}
+	runID := insertCompletedPresentationRun(t, ctx, database, incidentID, sourceHash, PipelineVersion, now, map[string]string{
+		"title_de": "Titel", "summary_de": "Zusammenfassung.", "category": "other",
+		"public_assistance_status": "not_requested", "public_assistance_types": "[]",
+	})
+	plan := PostProcessingPlan{ProcessorKey: "public_assistance_verification", ScopeKey: "default", PromptVersion: "assistance-v1", Model: "verify:4b", InputKinds: []string{"original_title", "incident_body", "public_assistance_status", "public_assistance_types"}}
+
+	assertEffective := func(status, types string) {
+		t.Helper()
+		record, err := database.GetPresentationIncident(ctx, incidentID, PresentationScope{Language: "de"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if record.AIPublicAssistanceStatus != status || record.AIPublicAssistanceTypes != types {
+			t.Fatalf("effective assistance = %s/%s, want %s/%s", record.AIPublicAssistanceStatus, record.AIPublicAssistanceTypes, status, types)
+		}
+	}
+	assertEffective("not_requested", "[]")
+
+	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{plan}, "manual", false, now.Add(time.Minute)); err != nil || queued != 1 {
+		t.Fatalf("queue first verification = %d/%v", queued, err)
+	}
+	first, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, plan.InputKinds...), false, nil, now.Add(2*time.Minute))
+	if err != nil || !found {
+		t.Fatalf("claim first verification = %#v/%t/%v", first, found, err)
+	}
+	if err := database.CompletePostProcessingJob(ctx, first, []PipelineValue{
+		{Kind: "is_correct", Value: "false"},
+		{Kind: "corrected_public_assistance_status", Value: "requested"},
+		{Kind: "corrected_public_assistance_types", Value: `["identify_person"]`},
+	}, first.ModelIdentity, first.InputHash, now.Add(3*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	assertEffective("requested", `["identify_person"]`)
+	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{plan}, "manual", true, now.Add(3*time.Minute+10*time.Second)); err != nil || queued != 1 {
+		t.Fatalf("queue incomplete replacement = %d/%v", queued, err)
+	}
+	incomplete, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, plan.InputKinds...), false, nil, now.Add(3*time.Minute+20*time.Second))
+	if err != nil || !found {
+		t.Fatalf("claim incomplete replacement = %#v/%t/%v", incomplete, found, err)
+	}
+	if err := database.CompletePostProcessingJob(ctx, incomplete, []PipelineValue{
+		{Kind: "corrected_public_assistance_status", Value: "not_requested"},
+	}, incomplete.ModelIdentity, incomplete.InputHash, now.Add(3*time.Minute+30*time.Second)); err == nil {
+		t.Fatal("incomplete output contract unexpectedly succeeded")
+	}
+	var incompleteStatus string
+	var incompleteValues int
+	if err := database.db.QueryRowContext(ctx, `SELECT status FROM post_processing_jobs WHERE id=?`, incomplete.ID).Scan(&incompleteStatus); err != nil {
+		t.Fatal(err)
+	}
+	if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM post_processing_values WHERE job_id=?`, incomplete.ID).Scan(&incompleteValues); err != nil {
+		t.Fatal(err)
+	}
+	if incompleteStatus != "running" || incompleteValues != 0 {
+		t.Fatalf("incomplete completion was not transactional: status=%s values=%d", incompleteStatus, incompleteValues)
+	}
+	// Simulate an incomplete success left by an older implementation or manual
+	// database corruption; readers must retain the prior complete result.
+	if _, err := database.db.ExecContext(ctx, `INSERT INTO post_processing_values(job_id,kind,value) VALUES(?,?,?)`, incomplete.ID, "corrected_public_assistance_status", "not_requested"); err != nil {
+		t.Fatal(err)
+	}
+	completedAt := formatTime(now.Add(3*time.Minute + 30*time.Second))
+	if _, err := database.db.ExecContext(ctx, `UPDATE post_processing_jobs SET status='succeeded',completed_at=?,updated_at=? WHERE id=?`, completedAt, completedAt, incomplete.ID); err != nil {
+		t.Fatal(err)
+	}
+	assertEffective("requested", `["identify_person"]`)
+
+	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{plan}, "manual", true, now.Add(4*time.Minute)); err != nil || queued != 1 {
+		t.Fatalf("queue failed replacement = %d/%v", queued, err)
+	}
+	failed, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, plan.InputKinds...), false, nil, now.Add(5*time.Minute))
+	if err != nil || !found {
+		t.Fatalf("claim failed replacement = %#v/%t/%v", failed, found, err)
+	}
+	if err := database.FailPostProcessingJob(ctx, failed, "needs_review", "invalid_response", nil, now.Add(6*time.Minute), errors.New("private model output")); err != nil {
+		t.Fatal(err)
+	}
+	assertEffective("requested", `["identify_person"]`)
+
+	admin, err := database.ListAdminPublicAssistanceVerifications(ctx, []int64{incidentID})
+	if err != nil || len(admin) != 1 || admin[0].Status != "needs_review" || admin[0].EffectiveStatus != "requested" || admin[0].IsCorrect == nil || *admin[0].IsCorrect {
+		t.Fatalf("admin fallback = %#v/%v", admin, err)
+	}
+
+	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{plan}, "manual", true, now.Add(7*time.Minute)); err != nil || queued != 1 {
+		t.Fatalf("queue later replacement = %d/%v", queued, err)
+	}
+	later, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, plan.InputKinds...), false, nil, now.Add(8*time.Minute))
+	if err != nil || !found {
+		t.Fatalf("claim later replacement = %#v/%t/%v", later, found, err)
+	}
+	if err := database.CompletePostProcessingJob(ctx, later, []PipelineValue{
+		{Kind: "is_correct", Value: "true"},
+		{Kind: "corrected_public_assistance_status", Value: "not_requested"},
+		{Kind: "corrected_public_assistance_types", Value: "[]"},
+	}, later.ModelIdentity, later.InputHash, now.Add(9*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	assertEffective("not_requested", "[]")
+}
+
+func TestPublicAssistanceVerificationCutoverRequiresManualHistoricalBackfill(t *testing.T) {
+	ctx := context.Background()
+	database, err := Open(ctx, filepath.Join(t.TempDir(), "public-assistance-cutover.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 15, 0, 0, 0, time.UTC)
+	insertPipelineDocuments(t, ctx, database, now, "old")
+	var oldIncidentID int64
+	var oldHash string
+	if err := database.db.QueryRowContext(ctx, `SELECT id,content_hash FROM incidents WHERE title_de='Titel old'`).Scan(&oldIncidentID, &oldHash); err != nil {
+		t.Fatal(err)
+	}
+	values := map[string]string{
+		"title_de": "Titel", "summary_de": "Zusammenfassung.", "category": "other",
+		"public_assistance_status": "not_requested", "public_assistance_types": "[]",
+	}
+	insertCompletedPresentationRun(t, ctx, database, oldIncidentID, oldHash, PipelineVersion, now, values)
+	cutover := now.Add(time.Minute)
+	if err := database.EnsurePostProcessingScopes(ctx, []PostProcessingScope{{ProcessorKey: "public_assistance_verification", ScopeKey: "default"}}, cutover); err != nil {
+		t.Fatal(err)
+	}
+	plan := PostProcessingPlan{ProcessorKey: "public_assistance_verification", ScopeKey: "default", PromptVersion: "assistance-v1", Model: "verify:4b", InputKinds: []string{"original_title", "incident_body", "public_assistance_status", "public_assistance_types"}}
+	if queued, err := database.QueuePostProcessingForAll(ctx, "fixture", []PostProcessingPlan{plan}, false, now.Add(2*time.Minute)); err != nil || queued != 0 {
+		t.Fatalf("automatic historical queue = %d/%v, want 0", queued, err)
+	}
+
+	insertPipelineDocuments(t, ctx, database, now.Add(3*time.Minute), "new")
+	var newIncidentID int64
+	var newHash string
+	if err := database.db.QueryRowContext(ctx, `SELECT id,content_hash FROM incidents WHERE title_de='Titel new'`).Scan(&newIncidentID, &newHash); err != nil {
+		t.Fatal(err)
+	}
+	insertCompletedPresentationRun(t, ctx, database, newIncidentID, newHash, PipelineVersion, now.Add(4*time.Minute), values)
+	if queued, err := database.QueuePostProcessingForAll(ctx, "fixture", []PostProcessingPlan{plan}, false, now.Add(5*time.Minute)); err != nil || queued != 1 {
+		t.Fatalf("automatic post-cutover queue = %d/%v, want 1", queued, err)
+	}
+	if queued, err := database.QueuePostProcessingForAll(ctx, "fixture", []PostProcessingPlan{plan}, true, now.Add(6*time.Minute)); err != nil || queued != 1 {
+		t.Fatalf("manual historical backfill queue = %d/%v, want 1", queued, err)
+	}
+	manual, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, plan.InputKinds...), false, nil, now.Add(7*time.Minute))
+	if err != nil || !found || manual.IncidentID != oldIncidentID || manual.RequestKind != "manual" {
+		t.Fatalf("historical manual claim = %#v/%t/%v", manual, found, err)
+	}
+}
+
+func TestGenericAdminVerificationSelectionSupportsAnotherProcessor(t *testing.T) {
+	ctx := context.Background()
+	database, err := Open(ctx, filepath.Join(t.TempDir(), "generic-verification-selection.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 15, 30, 0, 0, time.UTC)
+	insertPipelineDocuments(t, ctx, database, now, "generic")
+	var incidentID int64
+	var sourceHash string
+	if err := database.db.QueryRowContext(ctx, `SELECT id,content_hash FROM incidents LIMIT 1`).Scan(&incidentID, &sourceHash); err != nil {
+		t.Fatal(err)
+	}
+	runID := insertCompletedPresentationRun(t, ctx, database, incidentID, sourceHash, PipelineVersion, now, map[string]string{
+		"title_de": "Titel", "summary_de": "Zusammenfassung.", "category": "other",
+	})
+	plan := PostProcessingPlan{ProcessorKey: "future_verification", ScopeKey: "default", PromptVersion: "future-v1", Model: "verify:4b", InputKinds: []string{"category"}}
+	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{plan}, "manual", false, now); err != nil || queued != 1 {
+		t.Fatalf("queue future verifier = %d/%v", queued, err)
+	}
+	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_value"}, plan.InputKinds...), false, nil, now)
+	if err != nil || !found {
+		t.Fatalf("claim future verifier = %#v/%t/%v", job, found, err)
+	}
+	if err := database.CompletePostProcessingJob(ctx, job, []PipelineValue{
+		{Kind: "is_correct", Value: "false"}, {Kind: "corrected_value", Value: "traffic"},
+	}, job.ModelIdentity, job.InputHash, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	selected, err := database.listAdminVerificationSelections(ctx, []int64{incidentID}, plan.ProcessorKey, "default", "is_correct", []adminVerificationValuePair{{OriginalKind: "category", CorrectedKind: "corrected_value"}})
+	if err != nil || len(selected) != 1 {
+		t.Fatalf("generic verifier selection = %#v/%v", selected, err)
+	}
+	if selected[0].OriginalValues[0] != "other" || selected[0].EffectiveValues[0] != "traffic" || selected[0].IsCorrect == nil || *selected[0].IsCorrect || selected[0].Model != "verify:4b" {
+		t.Fatalf("generic verifier state = %#v", selected[0])
 	}
 }
 

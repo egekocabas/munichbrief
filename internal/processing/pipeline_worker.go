@@ -35,7 +35,7 @@ type PipelineRepository interface {
 	QueuePostProcessingForRun(context.Context, int64, []store.PostProcessingPlan, string, bool, time.Time) (int, error)
 	QueueIncidentPostProcessing(context.Context, int64, []store.PostProcessingPlan, time.Time) (int, error)
 	QueuePostProcessingForAll(context.Context, string, []store.PostProcessingPlan, bool, time.Time) (int, error)
-	ClaimPostProcessingJob(context.Context, string, bool, []string, time.Time) (store.PostProcessingJob, bool, error)
+	ClaimPostProcessingJob(context.Context, string, store.PostProcessingContract, bool, []string, time.Time) (store.PostProcessingJob, bool, error)
 	CompletePostProcessingJob(context.Context, store.PostProcessingJob, []store.PipelineValue, string, string, time.Time) error
 	FailPostProcessingJob(context.Context, store.PostProcessingJob, string, string, *time.Time, time.Time, error) error
 	RecoverPostProcessing(context.Context, time.Time) error
@@ -366,6 +366,14 @@ func (w *PipelineWorker) processAvailable(ctx context.Context) {
 
 		processedPostJob := false
 		for _, definition := range w.postProcessors.Definitions() {
+			contracts := make(store.PostProcessingContract, len(definition.Scopes))
+			for _, scope := range definition.Scopes {
+				contracts[scope.Key] = store.PostProcessingScopeContract{
+					PromptVersion: scope.Step.PromptVersion,
+					InputKinds:    append([]string(nil), scope.Step.InputKinds...),
+					OutputKinds:   append([]string(nil), scope.Step.OutputKinds...),
+				}
+			}
 			preferred, preferredErr := w.repository.PreferredPipelineModels(ctx, []string{definition.ModelSettingKey})
 			model := preferred[definition.ModelSettingKey]
 			if definition.Automatic && preferredErr == nil && catalog.Available() && catalog.Has(model) && windowOpen {
@@ -383,7 +391,7 @@ func (w *PipelineWorker) processAvailable(ctx context.Context) {
 					w.logger.Info("AI post-processing jobs discovered", "processor", definition.Key, "jobs", queued, "request_kind", "scheduled")
 				}
 			}
-			job, found, err := w.repository.ClaimPostProcessingJob(ctx, definition.Key, windowOpen, w.blockedModels(definition.Key, now), now)
+			job, found, err := w.repository.ClaimPostProcessingJob(ctx, definition.Key, contracts, windowOpen, w.blockedModels(definition.Key, now), now)
 			if err != nil {
 				w.logger.Error("claim AI post-processing job", "processor", definition.Key, "error", err)
 				return
@@ -780,7 +788,11 @@ func (w *PipelineWorker) postProcessingCounterSpecs() []store.PostProcessingCoun
 	for _, definition := range w.postProcessors.Definitions() {
 		for _, scope := range definition.Scopes {
 			for _, counter := range definition.Counters {
-				specs = append(specs, store.PostProcessingCounterSpec{ProcessorKey: definition.Key, ScopeKey: scope.Key, CounterKey: counter.Key, OutputKind: counter.OutputKind, EqualsValue: counter.EqualsValue})
+				specs = append(specs, store.PostProcessingCounterSpec{
+					ProcessorKey: definition.Key, ScopeKey: scope.Key, CounterKey: counter.Key,
+					OutputKind: counter.OutputKind, EqualsValue: counter.EqualsValue,
+					RequiredOutputKinds: append([]string(nil), scope.Step.OutputKinds...),
+				})
 			}
 		}
 	}
