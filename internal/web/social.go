@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	xdraw "golang.org/x/image/draw"
@@ -37,10 +38,11 @@ const (
 )
 
 var (
-	socialInk   = color.RGBA{R: 20, G: 32, B: 43, A: 255}
-	socialCivic = color.RGBA{R: 23, G: 75, B: 115, A: 255}
-	socialAlert = color.RGBA{R: 163, G: 58, B: 48, A: 255}
-	socialPaper = color.RGBA{R: 255, G: 254, B: 250, A: 255}
+	socialInk                = color.RGBA{R: 20, G: 32, B: 43, A: 255}
+	socialCivic              = color.RGBA{R: 23, G: 75, B: 115, A: 255}
+	socialAlert              = color.RGBA{R: 163, G: 58, B: 48, A: 255}
+	socialPaper              = color.RGBA{R: 255, G: 254, B: 250, A: 255}
+	sharedSocialCardRenderer = sync.OnceValues(buildSocialCardRenderer)
 )
 
 type socialCardRenderer struct {
@@ -60,12 +62,19 @@ type socialCardSpec struct {
 }
 
 func newSocialCardRenderer() (*socialCardRenderer, error) {
+	return sharedSocialCardRenderer()
+}
+
+func buildSocialCardRenderer() (*socialCardRenderer, error) {
 	source, err := png.Decode(bytes.NewReader(socialCardBackground))
 	if err != nil {
 		return nil, fmt.Errorf("decode background: %w", err)
 	}
+	if source.Bounds().Dx() != socialCardWidth || source.Bounds().Dy() != socialCardHeight {
+		return nil, fmt.Errorf("background dimensions are %dx%d, want %dx%d", source.Bounds().Dx(), source.Bounds().Dy(), socialCardWidth, socialCardHeight)
+	}
 	background := image.NewRGBA(image.Rect(0, 0, socialCardWidth, socialCardHeight))
-	xdraw.CatmullRom.Scale(background, background.Bounds(), source, source.Bounds(), draw.Src, nil)
+	draw.Draw(background, background.Bounds(), source, source.Bounds().Min, draw.Src)
 	aiLabel, err := png.Decode(bytes.NewReader(euAISocialLabel))
 	if err != nil {
 		return nil, fmt.Errorf("decode EU AI social label: %w", err)
