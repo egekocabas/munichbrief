@@ -11,6 +11,10 @@ import (
 // PipelineVersion identifies the persisted semantics of the staged pipeline.
 const PipelineVersion = "incident-pipeline-v2"
 
+// PostProcessingStatusReasonMissingInput marks a processor as ineligible
+// because one of its declared required inputs was unavailable.
+const PostProcessingStatusReasonMissingInput = "missing_input"
+
 var ErrPipelineUnconfigured = errors.New("AI pipeline models are not configured")
 
 // PipelineStepPlan freezes a registry step and selected model for one cycle.
@@ -58,7 +62,8 @@ type PipelineJob struct {
 }
 
 // PostProcessingPlan freezes one processor scope, prompt, model, and ordered
-// canonical inputs for an independently executed job.
+// required inputs for an independently executed job. A missing or blank
+// declared input makes the job ineligible and is persisted as a skip.
 type PostProcessingPlan struct {
 	ProcessorKey  string
 	ScopeKey      string
@@ -74,7 +79,7 @@ type PostProcessingScope struct {
 }
 
 // PostProcessingScopeContract identifies the current prompt and exact
-// immutable input/output contract for one registered processor scope.
+// immutable required-input/output contract for one registered processor scope.
 type PostProcessingScopeContract struct {
 	PromptVersion string
 	InputKinds    []string
@@ -111,6 +116,7 @@ type PostProcessingQueueStats struct {
 	Retrying         int            `json:"retrying"`
 	NeedsReview      int            `json:"needs_review"`
 	Failed           int            `json:"failed"`
+	Skipped          int            `json:"skipped"`
 	Succeeded        int            `json:"succeeded"`
 	RunningStartedAt *time.Time     `json:"running_started_at,omitempty"`
 	Counters         map[string]int `json:"counters,omitempty"`
@@ -165,6 +171,8 @@ type PipelineEvent struct {
 	ScopeKey     string    `json:"scope_key,omitempty"`
 	ExecutionKey string    `json:"execution_key"`
 	Status       string    `json:"status"`
+	StatusReason string    `json:"status_reason,omitempty"`
+	StatusDetail string    `json:"status_detail,omitempty"`
 	FailureKind  string    `json:"failure_kind,omitempty"`
 }
 
@@ -185,6 +193,8 @@ type PipelineHistoryEntry struct {
 	ExecutionKey  string
 	RequestKind   string
 	Status        string
+	StatusReason  string
+	StatusDetail  string
 	AttemptCount  int
 	FailureKind   string
 	ModelIdentity string

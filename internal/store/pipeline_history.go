@@ -58,7 +58,8 @@ func (s *Store) listPipelineHistoryEntries(ctx context.Context, sourceMode strin
 			c.id AS cycle_id, c.kind AS cycle_kind, c.status AS cycle_status,
 			ci.incident_id, j.step_key, '' AS processor_key, '' AS scope_key,
 			j.step_key AS execution_key, '' AS request_kind,
-			j.status, j.attempt_count, COALESCE(j.failure_kind,'') AS failure_kind,
+			j.status, '' AS status_reason, '' AS status_detail,
+			j.attempt_count, COALESCE(j.failure_kind,'') AS failure_kind,
 			j.model_identity, j.prompt_version
 		FROM processing_step_jobs j
 		JOIN processing_cycle_items ci ON ci.id=j.cycle_item_id
@@ -70,7 +71,7 @@ func (s *Store) listPipelineHistoryEntries(ctx context.Context, sourceMode strin
 			COALESCE(c.status,'') AS cycle_status,r.incident_id,
 			'' AS step_key,post.processor_key,post.scope_key,
 			post.processor_key || '/' || post.scope_key AS execution_key,
-			post.request_kind,post.status,post.attempt_count,
+			post.request_kind,post.status,COALESCE(post.status_reason,''),COALESCE(post.status_detail,''),post.attempt_count,
 			COALESCE(post.failure_kind,'') AS failure_kind,post.model_identity,post.prompt_version
 		FROM post_processing_jobs post
 		JOIN presentation_runs r ON r.id=post.presentation_run_id
@@ -84,7 +85,7 @@ func (s *Store) listPipelineHistoryEntries(ctx context.Context, sourceMode strin
 		WHERE ` + sourceCondition + `
 	)
 	SELECT job_id, updated_at, kind, cycle_id, cycle_kind, cycle_status,
-		incident_id, step_key, processor_key, scope_key, execution_key, request_kind, status, attempt_count,
+		incident_id, step_key, processor_key, scope_key, execution_key, request_kind, status,status_reason,status_detail,attempt_count,
 		failure_kind, model_identity, prompt_version, kind_order
 	FROM history WHERE 1=1`
 	args := []any{sourceMode}
@@ -129,7 +130,7 @@ func (s *Store) listPipelineHistoryEntries(ctx context.Context, sourceMode strin
 		if err := rows.Scan(
 			&entry.JobID, &updatedAt, &entry.Kind, &entry.CycleID, &entry.CycleKind,
 			&entry.CycleStatus, &entry.IncidentID, &entry.StepKey, &entry.ProcessorKey, &entry.ScopeKey, &entry.ExecutionKey,
-			&entry.RequestKind, &entry.Status, &entry.AttemptCount, &entry.FailureKind,
+			&entry.RequestKind, &entry.Status, &entry.StatusReason, &entry.StatusDetail, &entry.AttemptCount, &entry.FailureKind,
 			&entry.ModelIdentity, &entry.PromptVersion, &kindOrder,
 		); err != nil {
 			return nil, err

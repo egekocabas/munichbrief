@@ -77,6 +77,13 @@
     if (element) element.textContent = String(value);
   };
 
+  const postProcessingStatusReason = (reason, detail) => {
+    if (reason !== "missing_input") return String(reason || "").replaceAll("_", " ");
+    if (detail === "incident_body") return "Original incident text unavailable";
+    if (!detail) return "Required input unavailable";
+    return `Required input ${String(detail).replaceAll("_", " ")} unavailable`;
+  };
+
   const schedule = (delay) => {
     window.clearTimeout(timer);
     if (!document.hidden) timer = window.setTimeout(refresh, delay);
@@ -140,7 +147,7 @@
       const card = panel.querySelector(`[data-post-processing-stat="${CSS.escape(key)}"]`);
       if (!card) continue;
       const counters = Object.entries(processor.counters || {}).map(([name, value]) => ` · ${name} ${value}`).join("");
-      setText(card.querySelector("[data-post-processing-details]"), `Pending ${processor.pending || 0} · Running ${processor.running || 0} · Retrying ${processor.retrying || 0} · Review ${processor.needs_review || 0} · Failed ${processor.failed || 0} · Completed ${processor.succeeded || 0}${counters}`);
+      setText(card.querySelector("[data-post-processing-details]"), `Pending ${processor.pending || 0} · Running ${processor.running || 0} · Retrying ${processor.retrying || 0} · Review ${processor.needs_review || 0} · Failed ${processor.failed || 0} · Skipped ${processor.skipped || 0} · Completed ${processor.succeeded || 0}${counters}`);
       const runningStartedAt = processor.running_started_at && new Date(processor.running_started_at);
       if (runningStartedAt && !Number.isNaN(runningStartedAt.getTime())) {
         const seconds = Math.max(0, Math.floor((new Date(status.generated_at) - runningStartedAt) / 1000));
@@ -154,7 +161,10 @@
       events.replaceChildren(...(queue.recent_events || []).map((event) => {
         const item = document.createElement("li");
         const context = event.cycle_id ? `Cycle #${event.cycle_id}` : "Independent";
-        item.textContent = `${context} · incident #${event.incident_id} · ${event.execution_key || event.step_key} · ${event.status}${event.failure_kind ? ` (${event.failure_kind})` : ""}`;
+        const detail = event.status_reason
+          ? postProcessingStatusReason(event.status_reason, event.status_detail)
+          : event.failure_kind;
+        item.textContent = `${context} · incident #${event.incident_id} · ${event.execution_key || event.step_key} · ${event.status}${detail ? ` (${detail})` : ""}`;
         return item;
       }));
       if (!events.childElementCount) {

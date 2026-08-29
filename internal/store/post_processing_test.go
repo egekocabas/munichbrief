@@ -244,7 +244,7 @@ func TestPostProcessingRetryRecoveryAndTransactionalCompletion(t *testing.T) {
 	}
 }
 
-func TestPostProcessingLoadsImmutableRawGermanSourceIncludingEmptyBody(t *testing.T) {
+func TestPostProcessingSkipsAndDeduplicatesUnavailableRequiredInput(t *testing.T) {
 	ctx := context.Background()
 	database, err := Open(ctx, filepath.Join(t.TempDir(), "post-processing-source.db"))
 	if err != nil {
@@ -266,8 +266,8 @@ func TestPostProcessingLoadsImmutableRawGermanSourceIncludingEmptyBody(t *testin
 		"public_assistance_status": "not_requested", "public_assistance_types": "[]",
 	})
 	plan := PostProcessingPlan{ProcessorKey: "public_assistance_verification", ScopeKey: "default", PromptVersion: "assistance-v1", Model: "verify:4b", InputKinds: []string{"original_title", "incident_body", "public_assistance_status", "public_assistance_types"}}
-	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{plan}, "manual", false, now); err != nil || queued != 1 {
-		t.Fatalf("queue raw-source verifier = %d/%v", queued, err)
+	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{plan}, "manual", false, now); err != nil || queued != 0 {
+		t.Fatalf("skip raw-source verifier = %d/%v", queued, err)
 	}
 	expectedHash := HashPipelineInput(
 		"processor", plan.ProcessorKey, "scope", plan.ScopeKey,
@@ -275,15 +275,115 @@ func TestPostProcessingLoadsImmutableRawGermanSourceIncludingEmptyBody(t *testin
 		"public_assistance_status", "not_requested", "public_assistance_types", "[]",
 		plan.PromptVersion, plan.Model,
 	)
-	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, plan.InputKinds...), false, nil, now)
+	var status, reason, detail, inputHash string
+	var attempts int
+	if err := database.db.QueryRowContext(ctx, `SELECT status,status_reason,status_detail,input_hash,attempt_count
+		FROM post_processing_jobs WHERE presentation_run_id=? AND processor_key=? AND scope_key=?`, runID, plan.ProcessorKey, plan.ScopeKey).
+		Scan(&status, &reason, &detail, &inputHash, &attempts); err != nil {
+		t.Fatal(err)
+	}
+	if status != "skipped" || reason != PostProcessingStatusReasonMissingInput || detail != "incident_body" || inputHash != expectedHash || attempts != 0 {
+		t.Fatalf("skip audit = %q/%q/%q/%q/%d, want missing incident body and hash %s", status, reason, detail, inputHash, attempts, expectedHash)
+	}
+	if job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, plan.InputKinds...), false, nil, now); err != nil || found {
+		t.Fatalf("skipped verifier became claimable = %#v/%t/%v", job, found, err)
+	}
+	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{plan}, "manual", false, now.Add(time.Minute)); err != nil || queued != 0 {
+		t.Fatalf("deduplicate skipped verifier = %d/%v", queued, err)
+	}
+	var jobs int
+	if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM post_processing_jobs WHERE presentation_run_id=? AND processor_key=?`, runID, plan.ProcessorKey).Scan(&jobs); err != nil || jobs != 1 {
+		t.Fatalf("deduplicated skip count = %d/%v", jobs, err)
+	}
+	history, err := database.ListPipelineHistory(ctx, "fixture", 10, nil, nil)
+	if err != nil || len(history.Entries) != 1 {
+		t.Fatalf("skipped history = %#v/%v", history, err)
+	}
+	entry := history.Entries[0]
+	if entry.Status != "skipped" || entry.StatusReason != PostProcessingStatusReasonMissingInput || entry.StatusDetail != "incident_body" || entry.AttemptCount != 0 {
+		t.Fatalf("skipped history entry = %#v", entry)
+	}
+}
+
+func TestPostProcessingClaimSkipsInputThatBecameUnavailable(t *testing.T) {
+	ctx := context.Background()
+	database, err := Open(ctx, filepath.Join(t.TempDir(), "post-processing-late-skip.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 13, 40, 0, 0, time.UTC)
+	insertPipelineDocuments(t, ctx, database, now, "late-skip")
+	var incidentID int64
+	var sourceHash string
+	if err := database.db.QueryRowContext(ctx, `SELECT id,content_hash FROM incidents LIMIT 1`).Scan(&incidentID, &sourceHash); err != nil {
+		t.Fatal(err)
+	}
+	runID := insertCompletedPresentationRun(t, ctx, database, incidentID, sourceHash, PipelineVersion, now, map[string]string{
+		"title_de": "Generated title", "summary_de": "Generated summary.", "category": "other",
+		"public_assistance_status": "not_requested", "public_assistance_types": "[]",
+	})
+	plan := PostProcessingPlan{ProcessorKey: "public_assistance_verification", ScopeKey: "default", PromptVersion: "assistance-v1", Model: "verify:4b", InputKinds: []string{"original_title", "incident_body", "public_assistance_status", "public_assistance_types"}}
+	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{plan}, "manual", false, now); err != nil || queued != 1 {
+		t.Fatalf("queue verifier before source removal = %d/%v", queued, err)
+	}
+	contract := testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, plan.InputKinds...)
+	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, contract, false, nil, now.Add(time.Minute))
 	if err != nil || !found {
-		t.Fatalf("claim raw-source verifier = %#v/%t/%v", job, found, err)
+		t.Fatalf("claim verifier before source removal = %#v/%t/%v", job, found, err)
 	}
-	if len(job.InputValues) != len(plan.InputKinds) || job.InputValues["original_title"] != originalTitle || job.InputValues["incident_body"] != "" || job.InputHash != expectedHash {
-		t.Fatalf("raw source inputs/hash = %#v/%s, want title %q and hash %s", job.InputValues, job.InputHash, originalTitle, expectedHash)
+	retryAt := now.Add(2 * time.Minute)
+	if err := database.FailPostProcessingJob(ctx, job, "pending", "transient", &retryAt, now.Add(time.Minute), errors.New("provider unavailable")); err != nil {
+		t.Fatal(err)
 	}
-	if _, leaked := job.InputValues["title_de"]; leaked {
-		t.Fatalf("raw-source verifier claim included undeclared generated presentation: %#v", job.InputValues)
+	if _, err := database.db.ExecContext(ctx, `UPDATE incidents SET body_de='' WHERE id=?`, incidentID); err != nil {
+		t.Fatal(err)
+	}
+	if job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, contract, false, nil, retryAt); err != nil || found {
+		t.Fatalf("unavailable retrying verifier became claimable = %#v/%t/%v", job, found, err)
+	}
+	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{plan}, "manual", false, now.Add(3*time.Minute)); err != nil || queued != 0 {
+		t.Fatalf("deduplicate late skip = %d/%v", queued, err)
+	}
+	var status, reason, detail, nextRetryAt, failureKind string
+	var attempts, jobs int
+	if err := database.db.QueryRowContext(ctx, `SELECT status,status_reason,status_detail,COALESCE(next_retry_at,''),COALESCE(failure_kind,''),attempt_count
+		FROM post_processing_jobs WHERE presentation_run_id=?`, runID).Scan(&status, &reason, &detail, &nextRetryAt, &failureKind, &attempts); err != nil {
+		t.Fatal(err)
+	}
+	if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM post_processing_jobs WHERE presentation_run_id=?`, runID).Scan(&jobs); err != nil {
+		t.Fatal(err)
+	}
+	if status != "skipped" || reason != PostProcessingStatusReasonMissingInput || detail != "incident_body" || nextRetryAt != "" || failureKind != "" || attempts != 1 || jobs != 1 {
+		t.Fatalf("late skip audit = %q/%q/%q retry=%q failure=%q attempts=%d jobs=%d", status, reason, detail, nextRetryAt, failureKind, attempts, jobs)
+	}
+}
+
+func TestPostProcessingSkipsAnyUnavailableDeclaredInput(t *testing.T) {
+	ctx := context.Background()
+	database, err := Open(ctx, filepath.Join(t.TempDir(), "post-processing-generic-skip.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 13, 50, 0, 0, time.UTC)
+	insertPipelineDocuments(t, ctx, database, now, "generic-skip")
+	var incidentID int64
+	var sourceHash string
+	if err := database.db.QueryRowContext(ctx, `SELECT id,content_hash FROM incidents LIMIT 1`).Scan(&incidentID, &sourceHash); err != nil {
+		t.Fatal(err)
+	}
+	runID := insertCompletedPresentationRun(t, ctx, database, incidentID, sourceHash, PipelineVersion, now, map[string]string{"title_de": "Titel"})
+	plan := PostProcessingPlan{ProcessorKey: "quality_note", ScopeKey: "default", PromptVersion: "quality-v1", Model: "quality:4b", InputKinds: []string{"title_de", "required_note"}}
+	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{plan}, "manual", false, now); err != nil || queued != 0 {
+		t.Fatalf("generic unavailable input queue = %d/%v", queued, err)
+	}
+	var status, reason, detail string
+	if err := database.db.QueryRowContext(ctx, `SELECT status,status_reason,status_detail FROM post_processing_jobs WHERE presentation_run_id=?`, runID).Scan(&status, &reason, &detail); err != nil {
+		t.Fatal(err)
+	}
+	if status != "skipped" || reason != PostProcessingStatusReasonMissingInput || detail != "required_note" {
+		t.Fatalf("generic skip audit = %q/%q/%q", status, reason, detail)
 	}
 }
 

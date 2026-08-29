@@ -172,7 +172,7 @@ func queuePostProcessingTx(ctx context.Context, tx *sql.Tx, runID, incidentID in
 	if err := validatePostProcessingPlan(plan); err != nil {
 		return false, err
 	}
-	values, err := postProcessingInputValuesTx(ctx, tx, runID, plan.InputKinds)
+	values, unavailableKind, err := postProcessingInputValuesTx(ctx, tx, runID, plan.InputKinds)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return false, nil
@@ -180,6 +180,7 @@ func queuePostProcessingTx(ctx context.Context, tx *sql.Tx, runID, incidentID in
 		return false, err
 	}
 	formatted := formatTime(now.UTC())
+	inputHash := postProcessingInputHash(plan.ProcessorKey, plan.ScopeKey, plan.InputKinds, values, plan.PromptVersion, plan.Model)
 	if _, err := tx.ExecContext(ctx, `UPDATE post_processing_jobs SET status='superseded',completed_at=?,updated_at=?
 		WHERE status='pending' AND processor_key=? AND scope_key=? AND presentation_run_id IN (
 			SELECT older.id FROM presentation_runs older
@@ -187,22 +188,28 @@ func queuePostProcessingTx(ctx context.Context, tx *sql.Tx, runID, incidentID in
 		)`, formatted, formatted, plan.ProcessorKey, plan.ScopeKey, runID, incidentID, sourceHash, PipelineVersion); err != nil {
 		return false, fmt.Errorf("supersede older pending post-processing jobs: %w", err)
 	}
-	var active, succeeded int
+	var active, succeeded, matchingSkip int
 	if err := tx.QueryRowContext(ctx, `SELECT
 		COALESCE(SUM(CASE WHEN status IN ('pending','running') THEN 1 ELSE 0 END),0),
-		COALESCE(SUM(CASE WHEN status='succeeded' THEN 1 ELSE 0 END),0)
-		FROM post_processing_jobs WHERE presentation_run_id=? AND processor_key=? AND scope_key=?`, runID, plan.ProcessorKey, plan.ScopeKey).Scan(&active, &succeeded); err != nil {
+		COALESCE(SUM(CASE WHEN status='succeeded' THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN status='skipped' AND input_hash=? THEN 1 ELSE 0 END),0)
+		FROM post_processing_jobs WHERE presentation_run_id=? AND processor_key=? AND scope_key=?`, inputHash, runID, plan.ProcessorKey, plan.ScopeKey).Scan(&active, &succeeded, &matchingSkip); err != nil {
 		return false, err
 	}
-	if active > 0 || (!force && succeeded > 0) {
+	if active > 0 || (!force && (succeeded > 0 || matchingSkip > 0)) {
 		return false, nil
 	}
-	hashParts := []string{"processor", plan.ProcessorKey, "scope", plan.ScopeKey}
-	for _, kind := range plan.InputKinds {
-		hashParts = append(hashParts, kind, values[kind])
+	if unavailableKind != "" {
+		_, err = tx.ExecContext(ctx, `INSERT INTO post_processing_jobs(
+			presentation_run_id,processor_key,scope_key,request_kind,status,status_reason,status_detail,
+			model_identity,prompt_version,input_hash,completed_at,created_at,updated_at
+		) VALUES(?,?,?,?,'skipped',?,?,?,?,?,?,?,?)`, runID, plan.ProcessorKey, plan.ScopeKey, requestKind,
+			PostProcessingStatusReasonMissingInput, unavailableKind, plan.Model, plan.PromptVersion, inputHash, formatted, formatted, formatted)
+		if err != nil {
+			return false, fmt.Errorf("record skipped %s/%s: %w", plan.ProcessorKey, plan.ScopeKey, err)
+		}
+		return false, nil
 	}
-	hashParts = append(hashParts, plan.PromptVersion, plan.Model)
-	inputHash := HashPipelineInput(hashParts...)
 	_, err = tx.ExecContext(ctx, `INSERT INTO post_processing_jobs(
 		presentation_run_id,processor_key,scope_key,request_kind,status,model_identity,prompt_version,input_hash,created_at,updated_at
 	) VALUES(?,?,?,?,'pending',?,?,?,?,?)`, runID, plan.ProcessorKey, plan.ScopeKey, requestKind, plan.Model, plan.PromptVersion, inputHash, formatted, formatted)
@@ -229,7 +236,16 @@ func validatePostProcessingPlan(plan PostProcessingPlan) error {
 	return nil
 }
 
-func postProcessingInputValuesTx(ctx context.Context, tx *sql.Tx, runID int64, kinds []string) (map[string]string, error) {
+func postProcessingInputHash(processorKey, scopeKey string, kinds []string, values map[string]string, promptVersion, model string) string {
+	hashParts := []string{"processor", processorKey, "scope", scopeKey}
+	for _, kind := range kinds {
+		hashParts = append(hashParts, kind, values[kind])
+	}
+	hashParts = append(hashParts, promptVersion, model)
+	return HashPipelineInput(hashParts...)
+}
+
+func postProcessingInputValuesTx(ctx context.Context, tx *sql.Tx, runID int64, kinds []string) (map[string]string, string, error) {
 	values := make(map[string]string, len(kinds))
 	present := make(map[string]bool, len(kinds))
 	needOriginalTitle, needIncidentBody := false, false
@@ -249,9 +265,9 @@ func postProcessingInputValuesTx(ctx context.Context, tx *sql.Tx, runID int64, k
 		if err := tx.QueryRowContext(ctx, `SELECT i.title_de,COALESCE(i.body_de,'') FROM presentation_runs r
 			JOIN incidents i ON i.id=r.incident_id AND i.content_hash=r.source_hash WHERE r.id=?`, runID).Scan(&originalTitle, &incidentBody); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return nil, ErrNotFound
+				return nil, "", ErrNotFound
 			}
-			return nil, err
+			return nil, "", err
 		}
 		if needOriginalTitle {
 			values["original_title"], present["original_title"] = originalTitle, true
@@ -269,31 +285,31 @@ func postProcessingInputValuesTx(ctx context.Context, tx *sql.Tx, runID int64, k
 		}
 		rows, err := tx.QueryContext(ctx, `SELECT kind,value FROM presentation_values WHERE presentation_run_id=? AND kind IN (`+placeholders+`)`, args...)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		for rows.Next() {
 			var kind, value string
 			if err := rows.Scan(&kind, &value); err != nil {
 				rows.Close()
-				return nil, err
+				return nil, "", err
 			}
 			values[kind] = value
 			present[kind] = true
 		}
 		if err := rows.Err(); err != nil {
 			rows.Close()
-			return nil, err
+			return nil, "", err
 		}
 		if err := rows.Close(); err != nil {
-			return nil, err
+			return nil, "", err
 		}
 	}
 	for _, kind := range kinds {
-		if !present[kind] || kind != "incident_body" && strings.TrimSpace(values[kind]) == "" {
-			return nil, ErrNotFound
+		if !present[kind] || strings.TrimSpace(values[kind]) == "" {
+			return values, kind, nil
 		}
 	}
-	return values, nil
+	return values, "", nil
 }
 
 // ClaimPostProcessingJob atomically claims the next eligible job for a
@@ -349,9 +365,26 @@ func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string,
 	job.InputValues = make(map[string]string)
 	if contract.PromptVersion == job.PromptVersion {
 		job.OutputKinds = append([]string(nil), contract.OutputKinds...)
-		job.InputValues, err = postProcessingInputValuesTx(ctx, tx, job.PresentationRunID, contract.InputKinds)
+		var unavailableKind string
+		job.InputValues, unavailableKind, err = postProcessingInputValuesTx(ctx, tx, job.PresentationRunID, contract.InputKinds)
 		if err != nil {
 			return PostProcessingJob{}, false, fmt.Errorf("load claimed post-processing inputs: %w", err)
+		}
+		if unavailableKind != "" {
+			inputHash := postProcessingInputHash(job.ProcessorKey, job.ScopeKey, contract.InputKinds, job.InputValues, job.PromptVersion, job.ModelIdentity)
+			result, err := tx.ExecContext(ctx, `UPDATE post_processing_jobs SET status='skipped',status_reason=?,status_detail=?,input_hash=?,
+				next_retry_at=NULL,failure_kind=NULL,error_message=NULL,completed_at=?,updated_at=? WHERE id=? AND status='pending'`,
+				PostProcessingStatusReasonMissingInput, unavailableKind, inputHash, formatted, formatted, job.ID)
+			if err != nil {
+				return PostProcessingJob{}, false, err
+			}
+			if affected, _ := result.RowsAffected(); affected != 1 {
+				return PostProcessingJob{}, false, errors.New("post-processing job was claimed concurrently")
+			}
+			if err := tx.Commit(); err != nil {
+				return PostProcessingJob{}, false, err
+			}
+			return PostProcessingJob{}, false, nil
 		}
 	}
 	job.AttemptCount++

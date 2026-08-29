@@ -37,6 +37,8 @@ type AdminTranslation struct {
 	PromptVersion string
 	GeneratedAt   *time.Time
 	Status        string
+	StatusReason  string
+	StatusDetail  string
 	Attempts      int
 	NextRetryAt   *time.Time
 	FailureKind   string
@@ -54,6 +56,8 @@ type AdminCategoryVerification struct {
 	PromptVersion     string
 	GeneratedAt       *time.Time
 	Status            string
+	StatusReason      string
+	StatusDetail      string
 	Attempts          int
 	NextRetryAt       *time.Time
 	FailureKind       string
@@ -73,6 +77,8 @@ type AdminPublicAssistanceVerification struct {
 	PromptVersion     string
 	GeneratedAt       *time.Time
 	Status            string
+	StatusReason      string
+	StatusDetail      string
 	Attempts          int
 	NextRetryAt       *time.Time
 	FailureKind       string
@@ -93,6 +99,8 @@ type adminVerificationSelection struct {
 	PromptVersion     string
 	GeneratedAt       *time.Time
 	Status            string
+	StatusReason      string
+	StatusDetail      string
 	Attempts          int
 	NextRetryAt       *time.Time
 	FailureKind       string
@@ -461,7 +469,8 @@ func (s *Store) ListAdminTranslations(ctx context.Context, incidentIDs []int64, 
 			COALESCE((SELECT value FROM post_processing_values WHERE job_id=selected.id AND kind='title'),''),
 			COALESCE((SELECT value FROM post_processing_values WHERE job_id=selected.id AND kind='summary'),''),
 			COALESCE(selected.model_identity, ''), COALESCE(selected.prompt_version, ''), COALESCE(selected.completed_at, ''),
-			COALESCE(attempt.status, ''), COALESCE(attempt.attempt_count, 0), COALESCE(attempt.next_retry_at, ''), COALESCE(attempt.failure_kind, '')
+			COALESCE(attempt.status, ''), COALESCE(attempt.status_reason, ''), COALESCE(attempt.status_detail, ''),
+			COALESCE(attempt.attempt_count, 0), COALESCE(attempt.next_retry_at, ''), COALESCE(attempt.failure_kind, '')
 		FROM requested_incidents requested
 		CROSS JOIN requested_languages language
 		LEFT JOIN canonical_runs canonical ON canonical.incident_id = requested.incident_id
@@ -480,7 +489,8 @@ func (s *Store) ListAdminTranslations(ctx context.Context, incidentIDs []int64, 
 		if err := rows.Scan(
 			&translation.IncidentID, &translation.Language, &translation.Title, &translation.Summary,
 			&translation.Model, &translation.PromptVersion, &generatedAt,
-			&translation.Status, &translation.Attempts, &nextRetryAt, &translation.FailureKind,
+			&translation.Status, &translation.StatusReason, &translation.StatusDetail,
+			&translation.Attempts, &nextRetryAt, &translation.FailureKind,
 		); err != nil {
 			return nil, fmt.Errorf("scan admin translation: %w", err)
 		}
@@ -519,7 +529,8 @@ func (s *Store) ListAdminCategoryVerifications(ctx context.Context, incidentIDs 
 			IncidentID: item.IncidentID, PresentationRunID: item.PresentationRunID,
 			OriginalCategory: item.OriginalValues[0], EffectiveCategory: item.EffectiveValues[0], IsCorrect: item.IsCorrect,
 			Model: item.Model, PromptVersion: item.PromptVersion, GeneratedAt: item.GeneratedAt,
-			Status: item.Status, Attempts: item.Attempts, NextRetryAt: item.NextRetryAt, FailureKind: item.FailureKind,
+			Status: item.Status, StatusReason: item.StatusReason, StatusDetail: item.StatusDetail,
+			Attempts: item.Attempts, NextRetryAt: item.NextRetryAt, FailureKind: item.FailureKind,
 		})
 	}
 	return results, nil
@@ -542,7 +553,8 @@ func (s *Store) ListAdminPublicAssistanceVerifications(ctx context.Context, inci
 			OriginalStatus: item.OriginalValues[0], OriginalTypes: item.OriginalValues[1],
 			EffectiveStatus: item.EffectiveValues[0], EffectiveTypes: item.EffectiveValues[1], IsCorrect: item.IsCorrect,
 			Model: item.Model, PromptVersion: item.PromptVersion, GeneratedAt: item.GeneratedAt,
-			Status: item.Status, Attempts: item.Attempts, NextRetryAt: item.NextRetryAt, FailureKind: item.FailureKind,
+			Status: item.Status, StatusReason: item.StatusReason, StatusDetail: item.StatusDetail,
+			Attempts: item.Attempts, NextRetryAt: item.NextRetryAt, FailureKind: item.FailureKind,
 		})
 	}
 	return results, nil
@@ -593,7 +605,8 @@ func (s *Store) listAdminVerificationSelections(ctx context.Context, incidentIDs
 		COALESCE((SELECT value FROM post_processing_values WHERE job_id=successful.id AND kind=@verdict_kind LIMIT 1),''),
 		COALESCE(successful.model_identity,attempt.model_identity,''),
 		COALESCE(successful.prompt_version,attempt.prompt_version,''),
-		COALESCE(successful.completed_at,''),COALESCE(attempt.status,''),COALESCE(attempt.attempt_count,0),
+		COALESCE(successful.completed_at,''),COALESCE(attempt.status,''),
+		COALESCE(attempt.status_reason,''),COALESCE(attempt.status_detail,''),COALESCE(attempt.attempt_count,0),
 		COALESCE(attempt.next_retry_at,''),COALESCE(attempt.failure_kind,'')
 	FROM selected_runs selected
 	LEFT JOIN post_processing_jobs successful ON successful.id=(
@@ -618,7 +631,8 @@ func (s *Store) listAdminVerificationSelections(ctx context.Context, incidentIDs
 		for index := range valuePairs {
 			destinations = append(destinations, &result.OriginalValues[index], &result.EffectiveValues[index])
 		}
-		destinations = append(destinations, &correct, &result.Model, &result.PromptVersion, &generatedAt, &result.Status, &result.Attempts, &nextRetryAt, &result.FailureKind)
+		destinations = append(destinations, &correct, &result.Model, &result.PromptVersion, &generatedAt,
+			&result.Status, &result.StatusReason, &result.StatusDetail, &result.Attempts, &nextRetryAt, &result.FailureKind)
 		if err := rows.Scan(destinations...); err != nil {
 			return nil, err
 		}

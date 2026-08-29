@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/egekocabas/munichbrief/internal/processing"
+	"github.com/egekocabas/munichbrief/internal/source"
 	"github.com/egekocabas/munichbrief/internal/store"
 )
 
@@ -634,10 +635,108 @@ func TestAdminShowsPublicAssistanceVerificationControlsAndSafeHistory(t *testing
 	}
 }
 
+func TestAdminShowsUnavailableSourceVerificationAsSkipped(t *testing.T) {
+	ctx := context.Background()
+	database := fixtureStore(t)
+	now := time.Date(2026, time.August, 29, 16, 30, 0, 0, time.UTC)
+	job := seedV2Presentation(t, database, testPresentation{
+		TitleDE: "Deutscher Titel", SummaryDE: "Deutsche Zusammenfassung.",
+		TitleEN: "English title", SummaryEN: "English summary.",
+	}, now)
+	documents, err := source.NewFixtureProvider().Load(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	foundSource := false
+	for documentIndex := range documents {
+		for incidentIndex := range documents[documentIndex].Incidents {
+			incident := &documents[documentIndex].Incidents[incidentIndex]
+			if incident.TitleDE == job.TitleDE {
+				incident.BodyDE = ""
+				foundSource = true
+			}
+		}
+	}
+	if !foundSource {
+		t.Fatal("test incident source not found")
+	}
+	if err := database.UpsertDocuments(ctx, documents, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if err := database.EnsurePostProcessingScopes(ctx, []store.PostProcessingScope{{ProcessorKey: processing.PublicAssistanceVerificationStep, ScopeKey: "default"}}, now); err != nil {
+		t.Fatal(err)
+	}
+	plan := store.PostProcessingPlan{
+		ProcessorKey: processing.PublicAssistanceVerificationStep, ScopeKey: "default", PromptVersion: processing.PublicAssistanceVerificationPromptVersion,
+		Model: "qwen3.5:4b", InputKinds: []string{"original_title", "incident_body", "public_assistance_status", "public_assistance_types"},
+	}
+	if queued, err := database.QueuePostProcessingForRun(ctx, job.PresentationRunID, []store.PostProcessingPlan{plan}, "manual", false, now.Add(time.Minute)); err != nil || queued != 0 {
+		t.Fatalf("skip assistance verification = %d/%v", queued, err)
+	}
+	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "review", AdminEnabled: true,
+		Processor: fakeProcessingRequester{database: database},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dashboard := httptest.NewRecorder()
+	server.Handler().ServeHTTP(dashboard, httptest.NewRequest(http.MethodGet, "/admin", nil))
+	for _, expected := range []string{"Not checked · skipped · attempts 0 · Original incident text unavailable", "Skipped 1", "public_assistance_verification/default · skipped (Original incident text unavailable)"} {
+		if !strings.Contains(dashboard.Body.String(), expected) {
+			t.Errorf("admin skipped state does not contain %q", expected)
+		}
+	}
+	for _, unexpected := range []string{"Public assistance verifier provenance", "Recheck public assistance now"} {
+		if strings.Contains(dashboard.Body.String(), unexpected) {
+			t.Errorf("admin skipped state unexpectedly contains %q", unexpected)
+		}
+	}
+
+	history := httptest.NewRecorder()
+	server.Handler().ServeHTTP(history, httptest.NewRequest(http.MethodGet, "/admin/history", nil))
+	for _, expected := range []string{"public_assistance_verification/default", "skipped", "Attempts 0 · Original incident text unavailable", "Not invoked"} {
+		if !strings.Contains(history.Body.String(), expected) {
+			t.Errorf("skipped history does not contain %q", expected)
+		}
+	}
+
+	status := httptest.NewRecorder()
+	server.Handler().ServeHTTP(status, httptest.NewRequest(http.MethodGet, "/api/admin/ai/status", nil))
+	for _, expected := range []string{`"status":"skipped"`, `"status_reason":"missing_input"`, `"status_detail":"incident_body"`} {
+		if !strings.Contains(status.Body.String(), expected) {
+			t.Errorf("status API does not contain %q", expected)
+		}
+	}
+
+	adminScript := httptest.NewRecorder()
+	server.Handler().ServeHTTP(adminScript, httptest.NewRequest(http.MethodGet, staticAssets["admin.js"].path, nil))
+	for _, expected := range []string{"event.status_reason", "event.status_detail", "Original incident text unavailable"} {
+		if adminScript.Code != http.StatusOK || !strings.Contains(adminScript.Body.String(), expected) {
+			t.Errorf("live admin event renderer does not preserve %q", expected)
+		}
+	}
+}
+
 func TestAdminTranslationLabelKeepsCurrentFailureVisibleWithPreviousSuccess(t *testing.T) {
 	translation := store.AdminTranslation{Model: "translate:4b", Status: "failed", FailureKind: "output"}
 	if label := adminTranslationLabel(translation); label != "Failed · previous success retained" {
 		t.Fatalf("retained translation label = %q", label)
+	}
+}
+
+func TestVisiblePostProcessingModelDistinguishesZeroAttemptSkip(t *testing.T) {
+	model := "verify:4b"
+	if visible := visiblePostProcessingModel(model, "skipped", 0, nil); visible != "" {
+		t.Fatalf("zero-attempt skipped model = %q", visible)
+	}
+	if visible := visiblePostProcessingModel(model, "skipped", 1, nil); visible != model {
+		t.Fatalf("attempted skipped model = %q", visible)
+	}
+	generatedAt := time.Now()
+	if visible := visiblePostProcessingModel(model, "skipped", 0, &generatedAt); visible != model {
+		t.Fatalf("retained successful model = %q", visible)
 	}
 }
 
