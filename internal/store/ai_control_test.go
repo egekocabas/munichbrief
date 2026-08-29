@@ -158,8 +158,14 @@ func TestAutomaticControlGatesScheduledPostProcessingClaimsAndDiscovery(t *testi
 	if _, found, err := database.ClaimPostProcessingJob(ctx, "translation", contract, true, nil, now.Add(2*time.Second)); err != nil || found {
 		t.Fatalf("disabled scheduled post-processing claim found=%t err=%v", found, err)
 	}
+	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{{ProcessorKey: "category_verification", ScopeKey: "default", PromptVersion: "category-v1", Model: "verify:4b", InputKinds: []string{"title_de", "summary_de"}}}, "scheduled", false, now.Add(2*time.Second)); err != nil || queued != 0 {
+		t.Fatalf("disabled scheduled completion enqueue = %d/%v", queued, err)
+	}
 	if queued, err := database.QueuePostProcessingForAll(ctx, "fixture", []PostProcessingPlan{{ProcessorKey: "category_verification", ScopeKey: "default", PromptVersion: "category-v1", Model: "verify:4b", InputKinds: []string{"title_de", "summary_de"}}}, false, now.Add(2*time.Second)); err != nil || queued != 0 {
 		t.Fatalf("disabled scheduled discovery = %d/%v", queued, err)
+	}
+	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{{ProcessorKey: "category_verification", ScopeKey: "default", PromptVersion: "category-v1", Model: "verify:4b", InputKinds: []string{"title_de", "summary_de"}}}, "manual", false, now.Add(3*time.Second)); err != nil || queued != 1 {
+		t.Fatalf("disabled manual completion enqueue = %d/%v", queued, err)
 	}
 }
 

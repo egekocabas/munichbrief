@@ -25,9 +25,11 @@ MUNICHBRIEF_SOURCE_MODE=live \
 MUNICHBRIEF_DATABASE_PATH=.data/munichbrief-live.db \
 go run ./cmd/munichbrief sync
 
+MUNICHBRIEF_AI_ENABLED=true \
 MUNICHBRIEF_DATABASE_PATH=.data/munichbrief-live.db \
 go run ./cmd/munichbrief ai-process --incident 123
 
+MUNICHBRIEF_AI_ENABLED=true \
 MUNICHBRIEF_DATABASE_PATH=.data/munichbrief-live.db \
 go run ./cmd/munichbrief ai-process --all
 ```
@@ -48,9 +50,10 @@ timeout bounds a single Ollama request. Unless immediate mode is enabled, new
 Ollama requests start only during the configured Europe/Berlin processing
 window; a frozen canonical cycle is allowed to finish after the window closes.
 An explicit admin or `ai-process` request persists manual intent and bypasses
-only this window. Processing remains sequential and retains privacy validation,
-the circuit breaker, and normal retry delays. A command-line request is picked
-up by the running server on its next idle worker check.
+only this window. The CLI still requires the deployment-level
+`MUNICHBRIEF_AI_ENABLED=true` gate. Processing remains sequential and retains
+privacy validation, the circuit breaker, and normal retry delays. A command-line
+request is picked up by the running server on its next idle worker check.
 
 The protected admin dashboard also has a durable automatic-processing master
 switch. Disabling it overrides an open window for scheduled canonical work and

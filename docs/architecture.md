@@ -142,8 +142,10 @@ resumes with the same frozen progress.
 The protected admin runtime control is a durable gate above the schedule. When
 automatic processing is disabled, no new scheduled canonical or post-processing
 request starts even inside the window; explicit admin and CLI work remains
-eligible. An automatic request already in flight finishes, then its frozen cycle
-is suspended without losing accepted results or its window authorization.
+eligible. The deployment-level `MUNICHBRIEF_AI_ENABLED` setting remains the
+absolute gate for both interfaces; the CLI bypasses only the durable runtime
+switch and schedule. An automatic request already in flight finishes, then its
+frozen cycle is suspended without losing accepted results or its window authorization.
 The same boundary suspension applies when that request ends in a retryable
 provider or configuration failure, so a disabled cycle never retains the
 running-cycle lease while it waits.

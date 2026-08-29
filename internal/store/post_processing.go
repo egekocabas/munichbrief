@@ -51,6 +51,18 @@ func (s *Store) QueuePostProcessingForRun(ctx context.Context, runID int64, plan
 		return 0, err
 	}
 	defer tx.Rollback()
+	if requestKind == "scheduled" {
+		enabled, err := automaticProcessingEnabledTx(ctx, tx)
+		if err != nil {
+			return 0, err
+		}
+		if !enabled {
+			if err := tx.Commit(); err != nil {
+				return 0, err
+			}
+			return 0, nil
+		}
+	}
 	var incidentID int64
 	var sourceHash string
 	if err := tx.QueryRowContext(ctx, `SELECT r.incident_id,r.source_hash FROM presentation_runs r JOIN incidents i ON i.id=r.incident_id WHERE r.id=? AND r.status='complete' AND r.pipeline_version=? AND r.legacy=0 AND r.source_hash=i.content_hash`, runID, PipelineVersion).Scan(&incidentID, &sourceHash); err != nil {
