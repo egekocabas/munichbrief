@@ -275,9 +275,6 @@ other = "Step"
 [Translation]
 other = "Translation"
 
-[GermanAnalysisStep]
-other = "German analysis"
-
 [IncidentMetadataStep]
 other = "Incident metadata"
 
@@ -290,20 +287,11 @@ other = "Category verification"
 [EnglishTranslationStep]
 other = "English translation"
 
-[LegacyBilingualStep]
-other = "Bilingual presentation"
-
 [StagedPipeline]
 other = "Staged pipeline"
 
 [MetadataFirstPipeline]
 other = "Metadata-first pipeline v2"
-
-[V1FallbackPipeline]
-other = "Pipeline v1 fallback"
-
-[LegacyPipeline]
-other = "Legacy pipeline"
 
 [Generated]
 other = "Generated"
