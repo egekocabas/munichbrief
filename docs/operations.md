@@ -103,8 +103,8 @@ installed model and either one registered language or all languages. They can
 also recheck one incident's category or all reader-selectable presentations.
 These explicit focused actions are manual-priority jobs, rerun successful work,
 and leave the previous successful translation or effective category available
-until the replacement succeeds. The narrower retry and historical-backfill
-actions remain available; backfills respect the processing window. The
+until the replacement succeeds. They replace the former model-card history
+backfill controls; narrower per-incident retry actions remain available. The
 application does not authenticate users itself: enable the dashboard only when
 the ingress protects `/admin*` and `/api/admin*`, and keep both prefixes absent
 from public ingress.
