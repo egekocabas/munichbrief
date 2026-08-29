@@ -8,13 +8,14 @@ import (
 )
 
 const (
-	pipelineHistoryKindCycle       = "cycle"
-	pipelineHistoryKindTranslation = "translation"
+	pipelineHistoryKindCycle                = "cycle"
+	pipelineHistoryKindTranslation          = "translation"
+	pipelineHistoryKindCategoryVerification = "category_verification"
 )
 
 // ListPipelineHistory returns a stable, reverse-chronological page of persisted
-// canonical and independent translation job states. Waiting canonical jobs are
-// omitted to match the dashboard preview.
+// canonical and independent post-processing job states. Waiting canonical jobs
+// are omitted to match the dashboard preview.
 func (s *Store) ListPipelineHistory(ctx context.Context, sourceMode string, limit int, before, after *PipelineHistoryCursor) (PipelineHistoryPage, error) {
 	var page PipelineHistoryPage
 	if limit < 1 {
@@ -80,6 +81,23 @@ func (s *Store) listPipelineHistoryEntries(ctx context.Context, sourceMode strin
 		)
 		LEFT JOIN processing_cycles c ON c.id=ci.cycle_id
 		WHERE ` + sourceCondition + ` AND t.request_kind<>'imported'
+		UNION ALL
+		SELECT verification.id AS job_id, verification.updated_at, 'category_verification' AS kind, 2 AS kind_order,
+			COALESCE(c.id,0) AS cycle_id, COALESCE(c.kind,'') AS cycle_kind,
+			COALESCE(c.status,'') AS cycle_status, r.incident_id,
+			'category_verification' AS step_key, '' AS language, verification.request_kind,
+			verification.status, verification.attempt_count,
+			COALESCE(verification.failure_kind,'') AS failure_kind, verification.model_identity, verification.prompt_version
+		FROM presentation_category_verifications verification
+		JOIN presentation_runs r ON r.id=verification.presentation_run_id
+		JOIN incidents i ON i.id=r.incident_id
+		JOIN source_documents d ON d.id=i.source_document_id
+		LEFT JOIN processing_cycle_items ci ON ci.id=(
+			SELECT linked.id FROM processing_cycle_items linked
+			WHERE linked.presentation_run_id=r.id ORDER BY linked.id DESC LIMIT 1
+		)
+		LEFT JOIN processing_cycles c ON c.id=ci.cycle_id
+		WHERE ` + sourceCondition + `
 	)
 	SELECT job_id, updated_at, kind, cycle_id, cycle_kind, cycle_status,
 		incident_id, step_key, language, request_kind, status, attempt_count,
@@ -159,6 +177,8 @@ func pipelineHistoryKindOrder(kind string) (int, error) {
 		return 0, nil
 	case pipelineHistoryKindTranslation:
 		return 1, nil
+	case pipelineHistoryKindCategoryVerification:
+		return 2, nil
 	default:
 		return 0, fmt.Errorf("invalid pipeline history kind %q", kind)
 	}

@@ -20,7 +20,7 @@ type PipelineRepository interface {
 	PipelineStepSettings(context.Context) ([]store.StepSetting, error)
 	SetPipelineStepModel(context.Context, string, string, time.Time) error
 	PreferredPipelineModels(context.Context, []string) (map[string]string, error)
-	CreateManualPipelineCycle(context.Context, string, []store.PipelineStepPlan, string, *int64, bool, time.Time) (store.PipelineRequestResult, error)
+	CreateManualPipelineCycleWithPostProcessing(context.Context, string, []store.PipelineStepPlan, string, string, *int64, bool, time.Time) (store.PipelineRequestResult, error)
 	ActivateNextPipelineCycle(context.Context, string, []store.PipelineStepPlan, bool, time.Time) (store.PipelineCycle, bool, error)
 	RecoverPipeline(context.Context, time.Time) error
 	ClaimPipelineJob(context.Context, int64, int, time.Time) (store.PipelineJob, bool, error)
@@ -39,6 +39,39 @@ type PipelineRepository interface {
 	CompleteTranslationJob(context.Context, store.TranslationJob, string, string, string, string, time.Time) error
 	FailTranslationJob(context.Context, store.TranslationJob, string, string, *time.Time, time.Time, error) error
 	RecoverTranslations(context.Context, time.Time) error
+	QueueCategoryVerificationForRun(context.Context, int64, store.CategoryVerificationPlan, string, bool, time.Time) (int, error)
+	QueueIncidentCategoryVerification(context.Context, int64, store.CategoryVerificationPlan, time.Time) (int, error)
+	QueueMissingCategoryVerifications(context.Context, string, store.CategoryVerificationPlan, bool, time.Time) (int, error)
+	ClaimCategoryVerificationJob(context.Context, bool, []string, time.Time) (store.CategoryVerificationJob, bool, error)
+	CompleteCategoryVerificationJob(context.Context, store.CategoryVerificationJob, bool, string, string, string, time.Time) error
+	FailCategoryVerificationJob(context.Context, store.CategoryVerificationJob, string, string, *time.Time, time.Time, error) error
+	RecoverCategoryVerifications(context.Context, time.Time) error
+}
+
+func (w *PipelineWorker) RetryCategoryVerification(ctx context.Context, incidentID int64, model string) (int, error) {
+	if !w.catalog.Snapshot().Has(model) {
+		return 0, fmt.Errorf("%w: %s", ErrModelUnavailable, model)
+	}
+	queued, err := w.repository.QueueIncidentCategoryVerification(ctx, incidentID, store.CategoryVerificationPlan{
+		PromptVersion: CategoryVerificationPromptVersion, Model: model,
+	}, w.clock())
+	if err == nil && queued > 0 {
+		w.signal()
+	}
+	return queued, err
+}
+
+func (w *PipelineWorker) BackfillCategoryVerifications(ctx context.Context, model string) (int, error) {
+	if !w.catalog.Snapshot().Has(model) {
+		return 0, fmt.Errorf("%w: %s", ErrModelUnavailable, model)
+	}
+	queued, err := w.repository.QueueMissingCategoryVerifications(ctx, w.sourceMode, store.CategoryVerificationPlan{
+		PromptVersion: CategoryVerificationPromptVersion, Model: model,
+	}, true, w.clock())
+	if err == nil && queued > 0 {
+		w.signal()
+	}
+	return queued, err
 }
 
 // RetryTranslation queues one immediate translation attempt for the incident's
@@ -99,13 +132,15 @@ type StepModelStatus struct {
 
 // PipelineModelStatus is the review-facing model configuration snapshot.
 type PipelineModelStatus struct {
-	Steps            []StepModelStatus `json:"steps"`
-	Translation      StepModelStatus   `json:"translation"`
-	Models           []string          `json:"models"`
-	CatalogAvailable bool              `json:"catalog_available"`
-	CatalogError     string            `json:"catalog_error,omitempty"`
-	Ready            bool              `json:"ready"`
-	TranslationReady bool              `json:"translation_ready"`
+	Steps                     []StepModelStatus `json:"steps"`
+	Translation               StepModelStatus   `json:"translation"`
+	CategoryVerification      StepModelStatus   `json:"category_verification"`
+	Models                    []string          `json:"models"`
+	CatalogAvailable          bool              `json:"catalog_available"`
+	CatalogError              string            `json:"catalog_error,omitempty"`
+	Ready                     bool              `json:"ready"`
+	TranslationReady          bool              `json:"translation_ready"`
+	CategoryVerificationReady bool              `json:"category_verification_ready"`
 }
 
 // PipelineRuntimeStatus combines model, schedule, worker, and queue readiness.
@@ -190,7 +225,11 @@ func (w *PipelineWorker) RequestNow(ctx context.Context, sourceMode string, mode
 	if translationModel != "" && !snapshot.Has(translationModel) {
 		return store.PipelineRequestResult{}, fmt.Errorf("%w: %s", ErrModelUnavailable, translationModel)
 	}
-	result, err := w.repository.CreateManualPipelineCycle(ctx, sourceMode, plans, translationModel, incidentID, reprocessAll, w.clock())
+	categoryModel := models[CategoryVerificationStep]
+	if categoryModel != "" && !snapshot.Has(categoryModel) {
+		return store.PipelineRequestResult{}, fmt.Errorf("%w: %s", ErrModelUnavailable, categoryModel)
+	}
+	result, err := w.repository.CreateManualPipelineCycleWithPostProcessing(ctx, sourceMode, plans, translationModel, categoryModel, incidentID, reprocessAll, w.clock())
 	if err == nil && result.Requested > 0 {
 		w.signal()
 	}
@@ -199,7 +238,7 @@ func (w *PipelineWorker) RequestNow(ctx context.Context, sourceMode string, mode
 
 // SetPreferredStepModel changes the model used when future work is frozen.
 func (w *PipelineWorker) SetPreferredStepModel(ctx context.Context, stepKey, model string) error {
-	if _, found := StepByKey(stepKey); !found && stepKey != TranslationModelStep {
+	if _, found := StepByKey(stepKey); !found && stepKey != TranslationModelStep && stepKey != CategoryVerificationStep {
 		return store.ErrNotFound
 	}
 	snapshot := w.catalog.Snapshot()
@@ -213,7 +252,7 @@ func (w *PipelineWorker) SetPreferredStepModel(ctx context.Context, stepKey, mod
 	return nil
 }
 
-// ModelStatus reports canonical and translation readiness independently.
+// ModelStatus reports canonical and post-processing readiness independently.
 func (w *PipelineWorker) ModelStatus(ctx context.Context) (PipelineModelStatus, error) {
 	settings, err := w.repository.PipelineStepSettings(ctx)
 	if err != nil {
@@ -237,6 +276,9 @@ func (w *PipelineWorker) ModelStatus(ctx context.Context) (PipelineModelStatus, 
 	translationModel := byKey[TranslationModelStep]
 	status.Translation = StepModelStatus{Key: TranslationModelStep, DisplayName: "Translations", PromptVersion: "per language", Preferred: translationModel, PreferredAvailable: translationModel != "" && catalog.Available() && catalog.Has(translationModel)}
 	status.TranslationReady = status.Translation.PreferredAvailable
+	categoryModel := byKey[CategoryVerificationStep]
+	status.CategoryVerification = StepModelStatus{Key: CategoryVerificationStep, DisplayName: "Category verification", PromptVersion: CategoryVerificationPromptVersion, Preferred: categoryModel, PreferredAvailable: categoryModel != "" && catalog.Available() && catalog.Has(categoryModel)}
+	status.CategoryVerificationReady = status.CategoryVerification.PreferredAvailable
 	return status, nil
 }
 
@@ -265,6 +307,9 @@ func (w *PipelineWorker) Run(ctx context.Context) {
 	}
 	if err := w.repository.RecoverTranslations(ctx, w.clock()); err != nil {
 		w.logger.Error("recover translations", "error", err)
+	}
+	if err := w.repository.RecoverCategoryVerifications(ctx, w.clock()); err != nil {
+		w.logger.Error("recover category verifications", "error", err)
 	}
 	w.processAvailable(ctx)
 	ticker := time.NewTicker(w.interval)
@@ -313,9 +358,40 @@ func (w *PipelineWorker) processAvailable(ctx context.Context) {
 			continue
 		}
 
-		// Canonical work is always checked first. Reaching this point means it is
-		// absent or waiting, so one translation may run before canonical work is
-		// checked again at the next job boundary.
+		// Canonical work is always checked first. Category verification has the
+		// first independent slot so corrections converge before translations.
+		categoryModels, categoryModelsErr := w.repository.PreferredPipelineModels(ctx, []string{CategoryVerificationStep})
+		categoryModel := categoryModels[CategoryVerificationStep]
+		if categoryModelsErr == nil && catalog.Available() && catalog.Has(categoryModel) && windowOpen {
+			if _, err := w.repository.QueueMissingCategoryVerifications(ctx, w.sourceMode, store.CategoryVerificationPlan{PromptVersion: CategoryVerificationPromptVersion, Model: categoryModel}, false, now); err != nil {
+				w.logger.Error("queue missing category verifications", "error", err)
+				return
+			}
+		}
+		categoryJob, categoryFound, err := w.repository.ClaimCategoryVerificationJob(ctx, windowOpen, w.blockedModels(CategoryVerificationStep, now), now)
+		if err != nil {
+			w.logger.Error("claim category verification job", "error", err)
+			return
+		}
+		if categoryFound {
+			if !catalog.Has(categoryJob.ModelIdentity) {
+				retry := now.Add(30 * time.Second)
+				if err := w.repository.FailCategoryVerificationJob(ctx, categoryJob, "pending", string(ErrorConfiguration), &retry, now, fmt.Errorf("selected category verification model is unavailable")); err != nil {
+					w.logger.Error("defer unavailable category verification model", "verification_id", categoryJob.ID, "error", err)
+				}
+				w.openCircuit(CategoryVerificationStep, categoryJob.ModelIdentity, retry)
+				w.publishSnapshot(ctx)
+				continue
+			}
+			if !w.processCategoryVerificationJob(ctx, categoryJob) {
+				w.publishSnapshot(ctx)
+				return
+			}
+			continue
+		}
+
+		// Reaching this point means canonical and category work are absent or
+		// waiting, so one translation may run before the next canonical check.
 		translationModels, translationErr := w.repository.PreferredPipelineModels(ctx, []string{TranslationModelStep})
 		translationModel := translationModels[TranslationModelStep]
 		if translationErr == nil && catalog.Available() && catalog.Has(translationModel) && windowOpen {
@@ -324,7 +400,7 @@ func (w *PipelineWorker) processAvailable(ctx context.Context) {
 				return
 			}
 		}
-		translationJob, translationFound, err := w.repository.ClaimTranslationJob(ctx, windowOpen, w.blockedTranslationModels(now), now)
+		translationJob, translationFound, err := w.repository.ClaimTranslationJob(ctx, windowOpen, w.blockedModels(TranslationModelStep, now), now)
 		if err != nil {
 			w.logger.Error("claim translation job", "error", err)
 			return
@@ -459,9 +535,22 @@ func (w *PipelineWorker) processJob(ctx context.Context, job store.PipelineJob) 
 		return w.handleJobFailure(ctx, job, err)
 	}
 	if finalCanonical {
-		// German publication is already committed. Translation enqueueing is a
-		// separate best-effort action so its failure cannot roll back canonical
-		// availability.
+		// German publication is already committed. Independent enqueueing is
+		// best-effort so neither verifier nor translation failures can roll it back.
+		categoryModel := job.CategoryVerificationModel
+		categoryRequestKind := "manual"
+		if job.CycleKind != "manual" {
+			categoryRequestKind = "scheduled"
+			models, err := w.repository.PreferredPipelineModels(ctx, []string{CategoryVerificationStep})
+			if err == nil && w.catalog.Snapshot().Has(models[CategoryVerificationStep]) {
+				categoryModel = models[CategoryVerificationStep]
+			}
+		}
+		if categoryModel != "" {
+			if _, err := w.repository.QueueCategoryVerificationForRun(ctx, job.PresentationRunID, store.CategoryVerificationPlan{PromptVersion: CategoryVerificationPromptVersion, Model: categoryModel}, categoryRequestKind, false, completed); err != nil {
+				w.logger.Error("queue category verification", "presentation_run_id", job.PresentationRunID, "error", err)
+			}
+		}
 		translationModel := job.TranslationModel
 		requestKind := "manual"
 		if job.CycleKind != "manual" {
@@ -486,6 +575,76 @@ func (w *PipelineWorker) processJob(ctx context.Context, job store.PipelineJob) 
 	w.logger.Info("staged AI request completed", "cycle_id", job.CycleID, "job_id", job.ID, "incident_id", job.IncidentID, "step", step.Key, "model", modelIdentity, "duration", completed.Sub(started).Round(time.Millisecond))
 	w.publishSnapshot(ctx)
 	return true
+}
+
+func (w *PipelineWorker) processCategoryVerificationJob(ctx context.Context, job store.CategoryVerificationJob) bool {
+	definition := CategoryVerificationDefinition()
+	if definition.PromptVersion != job.PromptVersion {
+		return w.handleCategoryVerificationFailure(ctx, job, errorOf(ErrorConfiguration, "unknown category verification prompt %q", job.PromptVersion))
+	}
+	started := w.clock()
+	if w.observer != nil {
+		w.observer.RecordPipelineAttempt(CategoryVerificationStep)
+	}
+	w.logger.Info("category verification started", "verification_id", job.ID, "incident_id", job.IncidentID, "model", job.ModelIdentity, "attempt", job.AttemptCount)
+	generator, err := w.providers.StepGenerator(job.ModelIdentity)
+	if err != nil {
+		return w.handleCategoryVerificationFailure(ctx, job, errorOf(ErrorConfiguration, "create category verification generator: %v", err))
+	}
+	input := StepInput{Values: map[string]string{"title_de": job.TitleDE, "summary_de": job.SummaryDE, "category": job.InputCategory}}
+	inputHash := store.HashPipelineInput("title_de", job.TitleDE, "summary_de", job.SummaryDE, "category", job.InputCategory, job.PromptVersion, job.ModelIdentity)
+	output, modelIdentity, err := generator.GenerateStep(ctx, definition, input)
+	if err != nil {
+		return w.handleCategoryVerificationFailure(ctx, job, err)
+	}
+	if output.CategoryVerification == nil {
+		return w.handleCategoryVerificationFailure(ctx, job, errorOf(ErrorOutput, "category verification returned no result"))
+	}
+	completed := w.clock()
+	if err := w.repository.CompleteCategoryVerificationJob(ctx, job, output.CategoryVerification.IsCorrect, output.CategoryVerification.CorrectedCategory, modelIdentity, inputHash, completed); err != nil {
+		return w.handleCategoryVerificationFailure(ctx, job, err)
+	}
+	w.closeCircuit(CategoryVerificationStep, job.ModelIdentity)
+	if w.observer != nil {
+		w.observer.RecordPipelineSuccess(CategoryVerificationStep, completed)
+		w.observer.RecordPipelineDuration(CategoryVerificationStep, completed.Sub(started))
+	}
+	w.logger.Info("category verification completed", "verification_id", job.ID, "incident_id", job.IncidentID, "model", modelIdentity, "correct", output.CategoryVerification.IsCorrect, "duration", completed.Sub(started).Round(time.Millisecond))
+	w.publishSnapshot(ctx)
+	return true
+}
+
+func (w *PipelineWorker) handleCategoryVerificationFailure(ctx context.Context, job store.CategoryVerificationJob, processingError error) bool {
+	kind := KindOf(processingError)
+	now := w.clock()
+	status := "pending"
+	var retryAt *time.Time
+	if (kind == ErrorOutput || kind == ErrorPrivacy) && job.AttemptCount >= contentMaxAttempts {
+		status = "needs_review"
+	} else {
+		delay := contentRetryDelay(job.AttemptCount)
+		if kind == ErrorTransient {
+			delay = transientRetryDelay(job.AttemptCount)
+		} else if kind == ErrorConfiguration {
+			delay = configurationRetryDelay(job.AttemptCount)
+		}
+		next := now.Add(jitter(delay, job.ID, job.AttemptCount))
+		retryAt = &next
+	}
+	if err := w.repository.FailCategoryVerificationJob(ctx, job, status, string(kind), retryAt, now, processingError); err != nil {
+		w.logger.Error("record category verification failure", "verification_id", job.ID, "error", err)
+		return false
+	}
+	if kind == ErrorTransient || kind == ErrorConfiguration {
+		if retryAt != nil {
+			w.openCircuit(CategoryVerificationStep, job.ModelIdentity, *retryAt)
+		}
+	}
+	if w.observer != nil {
+		w.observer.RecordPipelineFailure(CategoryVerificationStep, string(kind))
+	}
+	w.logger.Warn("category verification failed", "verification_id", job.ID, "incident_id", job.IncidentID, "failure_kind", kind, "status", status, "retry_at", retryAt)
+	return kind == ErrorOutput || kind == ErrorPrivacy
 }
 
 func (w *PipelineWorker) processTranslationJob(ctx context.Context, job store.TranslationJob) bool {
@@ -615,10 +774,10 @@ func (w *PipelineWorker) circuitOpen(step, model string, now time.Time) bool {
 	return now.Before(until)
 }
 
-// blockedTranslationModels returns only translation models whose systemic
+// blockedModels returns models for one independent processor whose systemic
 // failure backoff is still active. Other manual overrides remain claimable.
-func (w *PipelineWorker) blockedTranslationModels(now time.Time) []string {
-	prefix := TranslationModelStep + "\x00"
+func (w *PipelineWorker) blockedModels(step string, now time.Time) []string {
+	prefix := step + "\x00"
 	w.mu.RLock()
 	models := make([]string, 0, len(w.circuits))
 	for key, until := range w.circuits {
@@ -629,6 +788,12 @@ func (w *PipelineWorker) blockedTranslationModels(now time.Time) []string {
 	w.mu.RUnlock()
 	sort.Strings(models)
 	return models
+}
+
+// blockedTranslationModels is retained for focused worker tests and callers
+// migrating to the generic independent-processor circuit helper.
+func (w *PipelineWorker) blockedTranslationModels(now time.Time) []string {
+	return w.blockedModels(TranslationModelStep, now)
 }
 
 func (w *PipelineWorker) openCircuit(step, model string, until time.Time) {

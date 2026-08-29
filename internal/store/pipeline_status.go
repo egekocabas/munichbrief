@@ -19,6 +19,15 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 		return snapshot, fmt.Errorf("parse pipeline cutover: %w", err)
 	}
 	snapshot.ScheduledAfter = &cutover
+	var categoryVerificationAfter string
+	if err := s.db.QueryRowContext(ctx, `SELECT automatic_after FROM category_verification_cutover WHERE id=1`).Scan(&categoryVerificationAfter); err != nil {
+		return snapshot, fmt.Errorf("read category verification cutover: %w", err)
+	}
+	categoryCutover, err := time.Parse(time.RFC3339Nano, categoryVerificationAfter)
+	if err != nil {
+		return snapshot, fmt.Errorf("parse category verification cutover: %w", err)
+	}
+	snapshot.CategoryVerificationAfter = &categoryCutover
 	var cycle PipelineCycle
 	var authorized int
 	var started, completed string
@@ -151,6 +160,22 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 	}
 	if err := translationRows.Close(); err != nil {
 		return snapshot, err
+	}
+	if err := s.db.QueryRowContext(ctx, `SELECT
+		COALESCE(SUM(CASE WHEN status='pending' AND attempt_count=0 THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN status='running' THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN status='pending' AND attempt_count>0 THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN status='needs_review' THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN status='succeeded' THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN status='succeeded' AND is_correct=0 THEN 1 ELSE 0 END),0)
+		FROM presentation_category_verifications`).Scan(
+		&snapshot.CategoryVerification.Pending, &snapshot.CategoryVerification.Running,
+		&snapshot.CategoryVerification.Retrying, &snapshot.CategoryVerification.NeedsReview,
+		&snapshot.CategoryVerification.Failed, &snapshot.CategoryVerification.Succeeded,
+		&snapshot.CategoryVerification.Corrected,
+	); err != nil {
+		return snapshot, fmt.Errorf("read category verification queue stats: %w", err)
 	}
 	history, err := s.listPipelineHistoryEntries(ctx, sourceMode, 12, nil, nil)
 	if err != nil {

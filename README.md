@@ -23,7 +23,7 @@ Visit the live reader at [munichbrief.de](https://munichbrief.de).
 - Deterministic fixture mode for offline development and tests.
 - Bounded, low-rate ingestion of RSS-linked official articles.
 - Metadata-first Ollama processing: a two-stage canonical German pipeline plus
-  independent per-language translation jobs.
+  independent category verification and per-language translation jobs.
 - Fail-closed public presentation: retained source text is never rendered on a
   public host.
 - Protected operational review, structured logs, health checks, and Prometheus
@@ -69,10 +69,12 @@ flowchart LR
     RSS["Official Munich RSS feed"] --> Sync["Bounded synchronizer"]
     Sync --> Parser["Incident parser"]
     Parser --> DB[("SQLite")]
-	DB --> Pipeline["Canonical: metadata → German"]
+    DB --> Pipeline["Canonical: metadata → German"]
     Pipeline --> DB
-	DB --> Translation["Independent translation jobs"]
-	Translation --> DB
+    DB --> Category["Independent category verification"]
+    Category --> DB
+    DB --> Translation["Independent translation jobs"]
+    Translation --> DB
     DB --> Reader["German and English reader"]
     Reader --> Source["Authoritative source links"]
 ```

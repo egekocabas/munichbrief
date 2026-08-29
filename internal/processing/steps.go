@@ -15,11 +15,12 @@ import (
 )
 
 const (
-	PipelineVersion        = store.PipelineVersion
-	IncidentMetadataStep   = "incident_metadata"
-	GermanPresentationStep = "german_presentation"
-	TranslationModelStep   = "translation"
-	EnglishLanguage        = "en"
+	PipelineVersion          = store.PipelineVersion
+	IncidentMetadataStep     = "incident_metadata"
+	GermanPresentationStep   = "german_presentation"
+	TranslationModelStep     = "translation"
+	CategoryVerificationStep = "category_verification"
+	EnglishLanguage          = "en"
 	// GermanAnalysisStep is retained as a source-compatible alias for callers
 	// migrating to the metadata-first pipeline.
 	GermanAnalysisStep     = GermanPresentationStep
@@ -86,20 +87,26 @@ func (i StepInput) clone() StepInput {
 }
 
 type StepOutput struct {
-	TitleDE                string                  `json:"title_de,omitempty"`
-	SummaryDE              string                  `json:"summary_de,omitempty"`
-	Category               string                  `json:"category,omitempty"`
-	AreaName               *string                 `json:"area_name"`
-	AreaType               *string                 `json:"area_type"`
-	EventStartDate         *string                 `json:"event_start_date"`
-	EventStartTime         *string                 `json:"event_start_time"`
-	EventDayPart           *string                 `json:"event_day_part"`
-	ReportKind             string                  `json:"report_kind,omitempty"`
-	PublicAssistanceStatus string                  `json:"public_assistance_status,omitempty"`
-	PublicAssistanceTypes  []string                `json:"public_assistance_types,omitempty"`
-	PrivacyStatus          string                  `json:"privacy_status,omitempty"`
-	PrivacyFlags           []string                `json:"privacy_flags,omitempty"`
-	Translation            *TranslatedPresentation `json:"-"`
+	TitleDE                string                      `json:"title_de,omitempty"`
+	SummaryDE              string                      `json:"summary_de,omitempty"`
+	Category               string                      `json:"category,omitempty"`
+	AreaName               *string                     `json:"area_name"`
+	AreaType               *string                     `json:"area_type"`
+	EventStartDate         *string                     `json:"event_start_date"`
+	EventStartTime         *string                     `json:"event_start_time"`
+	EventDayPart           *string                     `json:"event_day_part"`
+	ReportKind             string                      `json:"report_kind,omitempty"`
+	PublicAssistanceStatus string                      `json:"public_assistance_status,omitempty"`
+	PublicAssistanceTypes  []string                    `json:"public_assistance_types,omitempty"`
+	PrivacyStatus          string                      `json:"privacy_status,omitempty"`
+	PrivacyFlags           []string                    `json:"privacy_flags,omitempty"`
+	Translation            *TranslatedPresentation     `json:"-"`
+	CategoryVerification   *CategoryVerificationResult `json:"-"`
+}
+
+type CategoryVerificationResult struct {
+	IsCorrect         bool
+	CorrectedCategory string
 }
 
 // TranslatedPresentation is the normalized result returned by a translation
@@ -164,6 +171,13 @@ var englishTranslationSchema = json.RawMessage(`{
   "required":["title_en","summary_en"],"additionalProperties":false
 }`)
 
+var categoryVerificationSchema = json.RawMessage(`{
+  "type":"object","properties":{
+    "is_correct":{"type":"boolean"},
+    "corrected_category":{"type":"string","enum":["Verkehr","Diebstahl und Einbruch","Raub und Erpressung","Gewalt","Sexualdelikte","Betrug und Cyberkriminalität","Rauschgift","Brand und Gefahrenlage","Sachbeschädigung","Vermisstensuche und Fahndung","Polizeieinsatz","Sonstiges"]}
+  },"required":["is_correct","corrected_category"],"additionalProperties":false
+}`)
+
 var metadataOutputKinds = []string{
 	"category", "area_name", "area_type", "event_start_date", "event_start_time",
 	"event_day_part", "report_kind", "public_assistance_status", "public_assistance_types",
@@ -188,6 +202,18 @@ var registeredTranslations = []TranslationDefinition{{
 		Generator: translationInputGenerator(EnglishTranslationPromptVersion), OutputDecoder: translationOutputDecoder("title_en", "summary_en"),
 		Validator: func(_ StepInput, output *StepOutput) error { return validateTranslation(output) }},
 }}
+
+var categoryVerificationDefinition = StepDefinition{
+	Key: CategoryVerificationStep, DisplayName: "Category verification", PromptVersion: CategoryVerificationPromptVersion,
+	InputKinds: []string{"title_de", "summary_de", "category"}, OutputKinds: []string{"is_correct", "corrected_category"},
+	SystemPrompt: mustPromptByVersion(CategoryVerificationPromptVersion).SystemPrompt, Schema: categoryVerificationSchema,
+	Generator: categoryVerificationInputGenerator, OutputDecoder: categoryVerificationOutputDecoder,
+	Validator: validateCategoryVerification,
+}
+
+func CategoryVerificationDefinition() StepDefinition {
+	return cloneStepDefinition(categoryVerificationDefinition)
+}
 
 func RegisteredSteps() []StepDefinition {
 	steps := make([]StepDefinition, len(registeredSteps))
@@ -222,7 +248,7 @@ func StepKeys() []string {
 }
 
 func ModelSettingKeys() []string {
-	return append(StepKeys(), TranslationModelStep)
+	return append(StepKeys(), TranslationModelStep, CategoryVerificationStep)
 }
 
 func RegisteredTranslations() []TranslationDefinition {
@@ -374,6 +400,63 @@ func translationOutputDecoder(titleField, summaryField string) func(string) (Ste
 	}
 }
 
+func categoryVerificationInputGenerator(input StepInput) (StepInput, string, error) {
+	category, found := categoryLabels[input.Value("category")]
+	if !found {
+		return StepInput{}, "", errorOf(ErrorOutput, "invalid category verification input category")
+	}
+	requestInput := StepInput{Values: map[string]string{
+		"title_de": input.Value("title_de"), "summary_de": input.Value("summary_de"), "category": category[0],
+	}}
+	encoded, err := json.Marshal(struct {
+		TitleDE   string `json:"title_de"`
+		SummaryDE string `json:"summary_de"`
+		Category  string `json:"category"`
+	}{requestInput.Value("title_de"), requestInput.Value("summary_de"), requestInput.Value("category")})
+	if err != nil {
+		return StepInput{}, "", errorOf(ErrorOutput, "encode category verification input: %v", err)
+	}
+	return requestInput, promptUserMessage(CategoryVerificationPromptVersion, string(encoded)), nil
+}
+
+func categoryVerificationOutputDecoder(content string) (StepOutput, error) {
+	var fields map[string]json.RawMessage
+	if err := decodeStrictJSON(content, &fields); err != nil {
+		return StepOutput{}, err
+	}
+	if len(fields) != 2 {
+		return StepOutput{}, errors.New("category verification output must contain exactly is_correct and corrected_category")
+	}
+	var result CategoryVerificationResult
+	correct, correctFound := fields["is_correct"]
+	category, categoryFound := fields["corrected_category"]
+	if !correctFound || !categoryFound {
+		return StepOutput{}, errors.New("category verification output is missing a required field")
+	}
+	if err := json.Unmarshal(correct, &result.IsCorrect); err != nil {
+		return StepOutput{}, fmt.Errorf("decode category verification verdict: %w", err)
+	}
+	if err := json.Unmarshal(category, &result.CorrectedCategory); err != nil {
+		return StepOutput{}, fmt.Errorf("decode corrected category: %w", err)
+	}
+	code, found := categoryCodeForGermanLabel(result.CorrectedCategory)
+	if !found {
+		return StepOutput{}, fmt.Errorf("decode corrected category: unknown German category %q", result.CorrectedCategory)
+	}
+	result.CorrectedCategory = code
+	return StepOutput{CategoryVerification: &result}, nil
+}
+
+func categoryCodeForGermanLabel(label string) (string, bool) {
+	label = strings.TrimSpace(label)
+	for code, labels := range categoryLabels {
+		if labels[0] == label {
+			return code, true
+		}
+	}
+	return "", false
+}
+
 func decodeStrictJSON(content string, destination any) error {
 	decoder := json.NewDecoder(strings.NewReader(content))
 	decoder.DisallowUnknownFields()
@@ -491,6 +574,25 @@ func validateTranslation(output *StepOutput) error {
 		return err
 	}
 	return validatePublicText(output.Translation.Title + "\n" + output.Translation.Summary)
+}
+
+func validateCategoryVerification(input StepInput, output *StepOutput) error {
+	if output.CategoryVerification == nil {
+		return errorOf(ErrorOutput, "model output contains no category verification")
+	}
+	original, ok := categoryCodeForGermanLabel(input.Value("category"))
+	corrected := strings.TrimSpace(output.CategoryVerification.CorrectedCategory)
+	if !ok {
+		return errorOf(ErrorOutput, "invalid input category")
+	}
+	if _, ok := categoryLabels[corrected]; !ok {
+		return errorOf(ErrorOutput, "invalid corrected category")
+	}
+	if output.CategoryVerification.IsCorrect != (corrected == original) {
+		return errorOf(ErrorOutput, "category verdict and corrected category are inconsistent")
+	}
+	output.CategoryVerification.CorrectedCategory = corrected
+	return nil
 }
 
 func normalizeLimitedField(name string, value *string, limit int) error {

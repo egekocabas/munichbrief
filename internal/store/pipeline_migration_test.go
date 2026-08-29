@@ -215,3 +215,77 @@ func TestStagedMigrationMovesPreferenceAndPreservesLegacyPresentation(t *testing
 		t.Fatalf("staged provenance = %#v", record)
 	}
 }
+
+func TestCategoryVerificationMigrationPreservesPresentationValues(t *testing.T) {
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "category-upgrade.db")
+	raw, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := raw.Exec(`CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)`); err != nil {
+		t.Fatal(err)
+	}
+	migrations := []string{
+		"001_initial.sql", "002_ai_titles.sql", "003_processing_privacy.sql",
+		"004_manual_processing.sql", "005_runtime_models.sql", "006_staged_pipeline.sql",
+		"007_metadata_pipeline.sql", "008_pipeline_history.sql", "009_translation_history.sql",
+	}
+	for index, name := range migrations {
+		contents, err := migrationFiles.ReadFile("migrations/" + name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := raw.Exec(string(contents)); err != nil {
+			t.Fatalf("apply %s: %v", name, err)
+		}
+		if _, err := raw.Exec(`INSERT INTO schema_migrations(version,applied_at) VALUES(?,?)`, index+1, "2026-08-29T08:00:00Z"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := raw.Exec(`INSERT INTO source_documents(id,external_id,source_url,title,published_at,discovered_at,last_seen_at,feed_fingerprint,fetch_status,source_hash)
+		VALUES(1,'one','https://fixture.invalid/one','Release','2026-08-29T08:00:00Z','2026-08-29T08:00:00Z','2026-08-29T08:00:00Z','feed','fixture','source')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := raw.Exec(`INSERT INTO incidents(id,source_document_id,incident_number,position,title_de,body_de,content_hash,created_at,updated_at)
+		VALUES(1,1,'1',0,'Original','Original body','content','2026-08-29T08:00:00Z','2026-08-29T08:00:00Z')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := raw.Exec(`INSERT INTO presentation_runs(id,incident_id,source_hash,pipeline_version,status,legacy,created_at,completed_at)
+		VALUES(1,1,'content','incident-pipeline-v2','complete',0,'2026-08-29T08:00:00Z','2026-08-29T08:01:00Z')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := raw.Exec(`INSERT INTO presentation_values(presentation_run_id,kind,value,model_identity,prompt_version,generated_at)
+		VALUES(1,'category','traffic','metadata:4b','incident-metadata-v1','2026-08-29T08:00:30Z'),
+		(1,'title_de','Titel','presenter:4b','incident-presentation-de-v2','2026-08-29T08:01:00Z'),
+		(1,'summary_de','Zusammenfassung.','presenter:4b','incident-presentation-de-v2','2026-08-29T08:01:00Z')`); err != nil {
+		t.Fatal(err)
+	}
+	contents, err := migrationFiles.ReadFile("migrations/010_category_verification.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := raw.Exec(string(contents)); err != nil {
+		t.Fatalf("apply category verification migration: %v", err)
+	}
+	var value, model, prompt string
+	if err := raw.QueryRowContext(ctx, `SELECT value,model_identity,prompt_version FROM presentation_values WHERE presentation_run_id=1 AND kind='category'`).Scan(&value, &model, &prompt); err != nil {
+		t.Fatal(err)
+	}
+	if value != "traffic" || model != "metadata:4b" || prompt != "incident-metadata-v1" {
+		t.Fatalf("original category provenance changed: %q/%q/%q", value, model, prompt)
+	}
+	var values, verifications int
+	if err := raw.QueryRowContext(ctx, `SELECT COUNT(*) FROM presentation_values WHERE presentation_run_id=1`).Scan(&values); err != nil {
+		t.Fatal(err)
+	}
+	if err := raw.QueryRowContext(ctx, `SELECT COUNT(*) FROM presentation_category_verifications`).Scan(&verifications); err != nil {
+		t.Fatal(err)
+	}
+	if values != 3 || verifications != 0 {
+		t.Fatalf("upgrade values/verifications = %d/%d, want 3/0", values, verifications)
+	}
+	if err := raw.Close(); err != nil {
+		t.Fatal(err)
+	}
+}

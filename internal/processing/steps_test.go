@@ -39,6 +39,57 @@ func TestRegisteredPipelineStepsAreStableAndOrdered(t *testing.T) {
 	}
 }
 
+func TestCategoryVerificationUsesOnlySummaryAndEnforcesVerdictInvariant(t *testing.T) {
+	step := CategoryVerificationDefinition()
+	input := StepInput{Values: map[string]string{
+		"title_de": "Kontrolle in München", "summary_de": "Die Polizei kontrollierte Fahrzeuge.",
+		"category": "traffic", "incident_body": "must never be sent", "original_title": "must never be sent",
+	}}
+	generated, message, err := step.Generator(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(generated.Values) != 3 || generated.Value("category") != "Verkehr" || generated.Value("incident_body") != "" || strings.Contains(message, "must never be sent") {
+		t.Fatalf("category verifier leaked undeclared source input: %s", message)
+	}
+	for _, expected := range []string{`"title_de":"Kontrolle in München"`, `"summary_de":"Die Polizei kontrollierte Fahrzeuge."`, `"category":"Verkehr"`} {
+		if !strings.Contains(message, expected) {
+			t.Errorf("category verification input omitted %s: %s", expected, message)
+		}
+	}
+	if strings.Contains(step.SystemPrompt, "traffic") || strings.Contains(message, `"category":"traffic"`) {
+		t.Fatal("category verifier exposed an internal category code to the German model")
+	}
+	cases := []struct {
+		name    string
+		content string
+		valid   bool
+	}{
+		{"confirmed", `{"is_correct":true,"corrected_category":"Verkehr"}`, true},
+		{"corrected", `{"is_correct":false,"corrected_category":"Polizeieinsatz"}`, true},
+		{"true but changed", `{"is_correct":true,"corrected_category":"Polizeieinsatz"}`, false},
+		{"false but unchanged", `{"is_correct":false,"corrected_category":"Verkehr"}`, false},
+		{"unknown enum", `{"is_correct":false,"corrected_category":"not-a-category"}`, false},
+		{"malformed JSON", `{"is_correct":`, false},
+		{"extra explanation", `{"is_correct":true,"corrected_category":"Verkehr","reason":"x"}`, false},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			output, decodeErr := step.OutputDecoder(test.content)
+			if decodeErr == nil {
+				decodeErr = ValidateStepOutput(step, generated, &output)
+			}
+			if (decodeErr == nil) != test.valid {
+				t.Fatalf("validation error = %v, valid=%t", decodeErr, test.valid)
+			}
+		})
+	}
+	corrected, err := step.OutputDecoder(`{"is_correct":false,"corrected_category":"Polizeieinsatz"}`)
+	if err != nil || corrected.CategoryVerification == nil || corrected.CategoryVerification.CorrectedCategory != "police_operation" {
+		t.Fatalf("German category mapping = %#v/%v", corrected.CategoryVerification, err)
+	}
+}
+
 func TestRegisteredStepsReturnsDeepCopy(t *testing.T) {
 	steps := RegisteredSteps()
 	steps[0].InputKinds[0] = "modified"

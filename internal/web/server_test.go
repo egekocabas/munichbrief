@@ -55,14 +55,14 @@ func (p fakeProcessingRequester) RequestNow(ctx context.Context, sourceMode stri
 	if err != nil {
 		return store.PipelineRequestResult{}, err
 	}
-	return p.database.CreateManualPipelineCycle(ctx, sourceMode, plans, models[processing.TranslationModelStep], incidentID, reprocessAll, time.Now())
+	return p.database.CreateManualPipelineCycleWithPostProcessing(ctx, sourceMode, plans, models[processing.TranslationModelStep], models[processing.CategoryVerificationStep], incidentID, reprocessAll, time.Now())
 }
 
 func (p fakeProcessingRequester) ModelStatus(ctx context.Context) (processing.PipelineModelStatus, error) {
 	if p.status != nil {
 		return *p.status, nil
 	}
-	return processing.PipelineModelStatus{Steps: defaultTestStepStatus("qwen3.5:4b"), Translation: processing.StepModelStatus{Key: processing.TranslationModelStep, DisplayName: "Translations", Preferred: "qwen3.5:4b", PreferredAvailable: true}, Models: []string{"granite4:3b", "qwen3.5:4b"}, CatalogAvailable: true, Ready: true, TranslationReady: true}, nil
+	return processing.PipelineModelStatus{Steps: defaultTestStepStatus("qwen3.5:4b"), Translation: processing.StepModelStatus{Key: processing.TranslationModelStep, DisplayName: "Translations", Preferred: "qwen3.5:4b", PreferredAvailable: true}, CategoryVerification: processing.StepModelStatus{Key: processing.CategoryVerificationStep, DisplayName: "Category verification", Preferred: "qwen3.5:4b", PreferredAvailable: true}, Models: []string{"granite4:3b", "qwen3.5:4b"}, CatalogAvailable: true, Ready: true, TranslationReady: true, CategoryVerificationReady: true}, nil
 }
 
 func (p fakeProcessingRequester) SetPreferredStepModel(ctx context.Context, step, model string) error {
@@ -89,6 +89,14 @@ func (p fakeProcessingRequester) BackfillTranslations(ctx context.Context, langu
 		return 0, store.ErrNotFound
 	}
 	return p.database.QueueMissingTranslations(ctx, "fixture", []store.TranslationPlan{{Language: language, PromptVersion: definition.PromptVersion, Model: model}}, true, time.Now())
+}
+
+func (p fakeProcessingRequester) RetryCategoryVerification(ctx context.Context, incidentID int64, model string) (int, error) {
+	return p.database.QueueIncidentCategoryVerification(ctx, incidentID, store.CategoryVerificationPlan{PromptVersion: processing.CategoryVerificationPromptVersion, Model: model}, time.Now())
+}
+
+func (p fakeProcessingRequester) BackfillCategoryVerifications(ctx context.Context, model string) (int, error) {
+	return p.database.QueueMissingCategoryVerifications(ctx, "fixture", store.CategoryVerificationPlan{PromptVersion: processing.CategoryVerificationPromptVersion, Model: model}, true, time.Now())
 }
 
 func (p fakeProcessingRequester) Status(ctx context.Context) (processing.PipelineRuntimeStatus, error) {
