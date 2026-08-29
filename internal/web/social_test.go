@@ -75,6 +75,20 @@ func TestSocialCardCacheIdentityChangesAfterCategoryCorrection(t *testing.T) {
 	}
 }
 
+func TestSocialCardRendererIsShared(t *testing.T) {
+	first, err := newSocialCardRenderer()
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := newSocialCardRenderer()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first != second {
+		t.Fatal("social card renderer was initialized more than once")
+	}
+}
+
 func TestSocialCardTextStaysInsideSkySafeArea(t *testing.T) {
 	const longestPublishedTitle = "Verkehrsunfall am Mittleren Ring verursacht längere Sperrungen während des Berufsverkehrs."
 	if length := utf8.RuneCountInString(longestPublishedTitle); length != 90 {
