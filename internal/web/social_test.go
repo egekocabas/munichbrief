@@ -11,14 +11,12 @@ import (
 	"unicode/utf8"
 
 	xfont "golang.org/x/image/font"
-
-	"github.com/egekocabas/munichbrief/internal/store"
 )
 
 func TestSocialCardsRenderURLSpecificPNGResponses(t *testing.T) {
-	server, job := publicDiscoveryServer(t, fixtureStore(t), store.AIPresentation{
+	server, job := publicDiscoveryServer(t, fixtureStore(t), testPresentation{
 		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
-		TitleEN: "Safe title", SummaryEN: "Safe summary.", PrivacyStatus: "safe",
+		TitleEN: "Safe title", SummaryEN: "Safe summary.",
 	})
 	handler := server.Handler()
 
@@ -63,9 +61,9 @@ func TestSocialCardsRenderURLSpecificPNGResponses(t *testing.T) {
 }
 
 func TestSocialCardCacheIdentityChangesAfterCategoryCorrection(t *testing.T) {
-	server, _ := publicDiscoveryServer(t, fixtureStore(t), store.AIPresentation{
+	server, _ := publicDiscoveryServer(t, fixtureStore(t), testPresentation{
 		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
-		TitleEN: "Safe title", SummaryEN: "Safe summary.", PrivacyStatus: "safe",
+		TitleEN: "Safe title", SummaryEN: "Safe summary.",
 	})
 	request := publicDiscoveryRequest(http.MethodGet, "/social/en/incidents/1")
 	before := httptest.NewRecorder()

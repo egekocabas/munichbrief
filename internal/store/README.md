@@ -15,10 +15,8 @@ The files are grouped by responsibility:
   model preferences.
 - `pipeline_cycles.go`, `pipeline_jobs.go`, and `pipeline_status.go`: cycle
   lifecycle, atomic job transitions, and operational snapshots.
-- `category_verifications.go` and `translations.go`: independent, run-scoped
-  post-processing queues whose failures never roll back canonical publication.
-- `processing.go` and `settings.go`: compatibility persistence for the earlier
-  single-stage processing workflow.
+- `post_processing.go`: the registry-neutral, run-scoped post-processing queue
+  whose failures never roll back canonical publication.
 - `backup.go`: SQLite online backup with destination safety checks.
 
 Pipeline cycles freeze their ordered steps, prompt versions, models, and target

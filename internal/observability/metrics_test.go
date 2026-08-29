@@ -19,11 +19,6 @@ func TestMetricsExposeSynchronizationAndHTTPState(t *testing.T) {
 	metrics.SetNextFeedSync(time.Unix(2345, 0))
 	metrics.ObserveSourceResponse("feed", http.StatusNotModified)
 	metrics.ObserveSourceResponse("article", 0)
-	metrics.RecordProcessingAttempt()
-	metrics.RecordProcessingSuccess(time.Unix(3456, 0))
-	metrics.RecordProcessingDuration(2500 * time.Millisecond)
-	metrics.RecordProcessingFailure("privacy")
-	metrics.SetProcessingStats(store.ProcessingStats{Queued: 2, Running: 1, Retrying: 3, NeedsReview: 4, Failed: 5, OldestPendingAge: 45 * time.Second})
 	metrics.SetProcessorAvailable(false)
 	metrics.SetProcessingWindowOpen(true)
 
@@ -53,16 +48,7 @@ func TestMetricsExposeSynchronizationAndHTTPState(t *testing.T) {
 		`munichbrief_http_responses_total{class="5xx"} 1`,
 		`munichbrief_source_http_responses_total{resource="feed",class="3xx"} 1`,
 		`munichbrief_source_http_responses_total{resource="article",class="error"} 1`,
-		"munichbrief_processing_attempts_total 1",
-		"munichbrief_processing_successes_total 1",
-		"munichbrief_processing_failures_total 1",
-		"munichbrief_processing_duration_seconds_sum 2.500000",
-		"munichbrief_processing_duration_seconds_count 1",
-		"munichbrief_last_processing_success_timestamp_seconds 3456",
-		`munichbrief_processing_failures_by_kind_total{kind="privacy"} 1`,
-		`munichbrief_processing_jobs{state="queued"} 2`,
-		`munichbrief_processing_jobs{state="needs_review"} 4`,
-		"munichbrief_processing_oldest_job_age_seconds 45",
+		"munichbrief_last_processing_success_timestamp_seconds 0",
 		"munichbrief_ai_processor_available 0",
 		"munichbrief_ai_processing_window_open 1",
 		"munichbrief_retention_deletions_total 0",
@@ -106,21 +92,24 @@ func TestMetricsExposeStagedPipelineState(t *testing.T) {
 	metrics := NewMetrics("test", time.Now())
 	metrics.RecordPipelineAttempt("incident_metadata")
 	metrics.RecordPipelineAttempt("german_presentation")
-	metrics.RecordPipelineAttempt("category_verification")
+	metrics.RecordPipelineAttempt("category_verification/default")
 	metrics.RecordPipelineAttempt("translation/en")
 	metrics.RecordPipelineSuccess("incident_metadata", time.Unix(4567, 0))
-	metrics.RecordPipelineSuccess("category_verification", time.Unix(4568, 0))
+	metrics.RecordPipelineSuccess("category_verification/default", time.Unix(4568, 0))
 	metrics.RecordPipelineFailure("translation/en", "output")
-	metrics.RecordPipelineDuration("category_verification", 1250*time.Millisecond)
+	metrics.RecordPipelineDuration("category_verification/default", 1250*time.Millisecond)
 	metrics.RecordPipelineDuration("translation/en", 1750*time.Millisecond)
 	metrics.SetPipelineSnapshot(store.PipelineSnapshot{
-		ActiveCycle: &store.PipelineCycle{Kind: "manual", ActiveStep: 1},
+		ActiveCycle:   &store.PipelineCycle{Kind: "manual", ActiveStep: 1},
+		ActiveStepKey: "german_presentation",
 		Steps: []store.StepQueueStats{
 			{StepKey: "incident_metadata", Queued: 2, Succeeded: 3},
 			{StepKey: "german_presentation", Retrying: 1},
 		},
-		CategoryVerification: store.CategoryVerificationQueueStats{Pending: 2, Running: 1, Retrying: 3, NeedsReview: 4, Failed: 5, Succeeded: 6},
-		Translations:         []store.TranslationQueueStats{{Language: "en", Running: 1, NeedsReview: 4}},
+		PostProcessing: []store.PostProcessingQueueStats{
+			{ProcessorKey: "category_verification", ScopeKey: "default", Pending: 2, Running: 1, Retrying: 3, NeedsReview: 4, Failed: 5, Succeeded: 6, Counters: map[string]int{"corrected": 7}},
+			{ProcessorKey: "translation", ScopeKey: "en", Running: 1, NeedsReview: 4},
+		},
 	})
 
 	recorder := httptest.NewRecorder()
@@ -128,21 +117,23 @@ func TestMetricsExposeStagedPipelineState(t *testing.T) {
 	for _, expected := range []string{
 		`munichbrief_pipeline_attempts_total{step="incident_metadata"} 1`,
 		`munichbrief_pipeline_attempts_total{step="german_presentation"} 1`,
-		`munichbrief_pipeline_attempts_total{step="category_verification"} 1`,
+		`munichbrief_pipeline_attempts_total{step="category_verification/default"} 1`,
 		`munichbrief_pipeline_successes_total{step="incident_metadata"} 1`,
-		`munichbrief_pipeline_successes_total{step="category_verification"} 1`,
+		`munichbrief_pipeline_successes_total{step="category_verification/default"} 1`,
 		`munichbrief_pipeline_failures_total{step="translation/en"} 1`,
-		`munichbrief_pipeline_duration_seconds_sum{step="category_verification"} 1.250000`,
+		`munichbrief_pipeline_failures_by_kind_total{step="translation/en",kind="output"} 1`,
+		`munichbrief_pipeline_duration_seconds_sum{step="category_verification/default"} 1.250000`,
 		`munichbrief_pipeline_duration_seconds_sum{step="translation/en"} 1.750000`,
 		`munichbrief_pipeline_jobs{step="incident_metadata",state="queued"} 2`,
 		`munichbrief_pipeline_jobs{step="german_presentation",state="retrying"} 1`,
-		`munichbrief_pipeline_jobs{step="category_verification",state="queued"} 2`,
-		`munichbrief_pipeline_jobs{step="category_verification",state="running"} 1`,
-		`munichbrief_pipeline_jobs{step="category_verification",state="retrying"} 3`,
-		`munichbrief_pipeline_jobs{step="category_verification",state="needs_review"} 4`,
-		`munichbrief_pipeline_jobs{step="category_verification",state="failed"} 5`,
-		`munichbrief_pipeline_jobs{step="category_verification",state="succeeded"} 6`,
+		`munichbrief_pipeline_jobs{step="category_verification/default",state="queued"} 2`,
+		`munichbrief_pipeline_jobs{step="category_verification/default",state="running"} 1`,
+		`munichbrief_pipeline_jobs{step="category_verification/default",state="retrying"} 3`,
+		`munichbrief_pipeline_jobs{step="category_verification/default",state="needs_review"} 4`,
+		`munichbrief_pipeline_jobs{step="category_verification/default",state="failed"} 5`,
+		`munichbrief_pipeline_jobs{step="category_verification/default",state="succeeded"} 6`,
 		`munichbrief_pipeline_jobs{step="translation/en",state="needs_review"} 4`,
+		`munichbrief_post_processing_results{processor="category_verification",scope="default",counter="corrected"} 7`,
 		`munichbrief_pipeline_active_cycle{kind="manual"} 1`,
 		`munichbrief_pipeline_active_step{step="german_presentation"} 1`,
 		"munichbrief_last_processing_success_timestamp_seconds 4568",

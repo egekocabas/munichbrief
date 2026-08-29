@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"net/http"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/egekocabas/munichbrief/internal/processing"
@@ -63,7 +62,7 @@ type incidentStore interface {
 	ListPublicIncidentLinks(context.Context, string, store.PresentationScope) ([]store.PublicIncidentLink, error)
 	GetPresentationIncident(context.Context, int64, store.PresentationScope) (store.IncidentRecord, error)
 	ListAdminIncidents(context.Context, int, int, string, store.PresentationScope, store.AdminIncidentFilter) ([]store.IncidentRecord, int, error)
-	ListAdminTranslations(context.Context, []int64, []string, string) ([]store.AdminTranslation, error)
+	ListAdminTranslations(context.Context, []int64, []string) ([]store.AdminTranslation, error)
 	ListAdminCategoryVerifications(context.Context, []int64) ([]store.AdminCategoryVerification, error)
 	ListPipelineHistory(context.Context, string, int, *store.PipelineHistoryCursor, *store.PipelineHistoryCursor) (store.PipelineHistoryPage, error)
 	Ready(context.Context) error
@@ -76,10 +75,7 @@ type ProcessingRequester interface {
 	RequestNow(context.Context, string, map[string]string, *int64, bool) (store.PipelineRequestResult, error)
 	ModelStatus(context.Context) (processing.PipelineModelStatus, error)
 	SetPreferredStepModel(context.Context, string, string) error
-	RetryTranslation(context.Context, int64, string, string) (int, error)
-	BackfillTranslations(context.Context, string, string) (int, error)
-	RetryCategoryVerification(context.Context, int64, string) (int, error)
-	BackfillCategoryVerifications(context.Context, string) (int, error)
+	RequestPostProcessing(context.Context, processing.PostProcessingRequest) (int, error)
 	Status(context.Context) (processing.PipelineRuntimeStatus, error)
 }
 
@@ -89,7 +85,6 @@ type Options struct {
 	PageSize         int
 	SourceMode       string
 	PresentationMode string
-	PromptVersion    string
 	SecureCookies    bool
 	AdminEnabled     bool
 	PublicHosts      []string
@@ -139,9 +134,6 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 	}
 	if options.PresentationMode != "review" && options.PresentationMode != "public" {
 		return nil, errors.New("presentation mode must be review or public")
-	}
-	if strings.TrimSpace(options.PromptVersion) == "" {
-		return nil, errors.New("presentation prompt version is required")
 	}
 	if (options.Build.Commit == "") != options.Build.BuiltAt.IsZero() {
 		return nil, errors.New("build commit and build time must be provided together")
@@ -236,10 +228,7 @@ func (s *Server) Handler() http.Handler {
 		mux.HandleFunc("POST /api/admin/ai/process-all-now", s.processAllNow)
 		mux.HandleFunc("POST /api/admin/ai/reprocess-all", s.reprocessAll)
 		mux.HandleFunc("POST /api/admin/ai/step-model", s.updatePreferredStepModel)
-		mux.HandleFunc("POST /api/admin/ai/translation-retry", s.retryTranslation)
-		mux.HandleFunc("POST /api/admin/ai/translation-backfill", s.backfillTranslations)
-		mux.HandleFunc("POST /api/admin/ai/category-verification-retry", s.retryCategoryVerification)
-		mux.HandleFunc("POST /api/admin/ai/category-verification-backfill", s.backfillCategoryVerifications)
+		mux.HandleFunc("POST /api/admin/ai/post-processing/process", s.processPostProcessing)
 	}
 	return s.requestLogger(s.accessBoundary(mux))
 }

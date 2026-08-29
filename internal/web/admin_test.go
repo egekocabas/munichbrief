@@ -50,10 +50,57 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	if page.Code != http.StatusOK || page.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("admin page = %d/%q", page.Code, page.Header().Get("Cache-Control"))
 	}
-	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", "Installed and ready", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/translation-backfill", "/api/admin/ai/status", "/admin/history", "Pipeline history", "Open reader", "View full history", "Confirm AI request", staticAssets["theme.js"].path, "data-theme-toggle", staticAssets["admin.js"].path, "Active stage", "Canonical pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover", "Independent translation queues"} {
+	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", "Installed and ready", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/post-processing/process", "/api/admin/ai/status", "/admin/history", "Pipeline history", "Open reader", "View full history", "Confirm AI request", staticAssets["theme.js"].path, "data-theme-toggle", staticAssets["admin.js"].path, "Active stage", "Canonical pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover", "Independent post-processing queues", "Post-processing only", "All registered languages", "Translations only", "Category verification only"} {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("admin page does not contain %q", expected)
 		}
+	}
+	for _, removed := range []string{"Backfill English history", "Backfill category history", "/api/admin/ai/translation-backfill", "/api/admin/ai/category-verification-backfill"} {
+		if strings.Contains(page.Body.String(), removed) {
+			t.Errorf("admin page still contains removed backfill control %q", removed)
+		}
+	}
+	translationsOnly := httptest.NewRecorder()
+	handler.ServeHTTP(translationsOnly, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=translation&scope=all&target=all&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
+	if translationsOnly.Code != http.StatusSeeOther || !strings.Contains(translationsOnly.Header().Get("Location"), "post_processing_queued=0") || !strings.Contains(translationsOnly.Header().Get("Location"), "processor=translation") {
+		t.Fatalf("all-language focused processing = %d/%q", translationsOnly.Code, translationsOnly.Header().Get("Location"))
+	}
+	categoryOnly := httptest.NewRecorder()
+	handler.ServeHTTP(categoryOnly, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=category_verification&scope=default&target=all&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
+	if categoryOnly.Code != http.StatusSeeOther || !strings.Contains(categoryOnly.Header().Get("Location"), "post_processing_queued=0") {
+		t.Fatalf("all-category focused processing = %d/%q", categoryOnly.Code, categoryOnly.Header().Get("Location"))
+	}
+	invalidLanguage := httptest.NewRecorder()
+	handler.ServeHTTP(invalidLanguage, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=translation&scope=unknown&target=all&model=qwen3.5%3A4b"))
+	if invalidLanguage.Code != http.StatusBadRequest {
+		t.Fatalf("unknown focused translation language = %d, want 400", invalidLanguage.Code)
+	}
+	invalidScope := httptest.NewRecorder()
+	handler.ServeHTTP(invalidScope, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=category_verification&scope=default&target=current&model=qwen3.5%3A4b"))
+	if invalidScope.Code != http.StatusBadRequest {
+		t.Fatalf("unknown focused category scope = %d, want 400", invalidScope.Code)
+	}
+	invalidModel := httptest.NewRecorder()
+	handler.ServeHTTP(invalidModel, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=translation&scope=en&target=all&model=missing%3A4b"))
+	if invalidModel.Code != http.StatusServiceUnavailable {
+		t.Fatalf("unavailable focused model = %d, want 503", invalidModel.Code)
+	}
+	unexpectedIncident := httptest.NewRecorder()
+	handler.ServeHTTP(unexpectedIncident, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=translation&scope=en&target=all&incident_id=1&model=qwen3.5%3A4b"))
+	if unexpectedIncident.Code != http.StatusBadRequest {
+		t.Fatalf("incident ID on all target = %d, want 400", unexpectedIncident.Code)
+	}
+	unconfirmedFocused := httptest.NewRecorder()
+	handler.ServeHTTP(unconfirmedFocused, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "processor=translation&scope=all&target=all&model=qwen3.5%3A4b"))
+	if unconfirmedFocused.Code != http.StatusBadRequest {
+		t.Fatalf("unconfirmed focused translation = %d, want 400", unconfirmedFocused.Code)
+	}
+	crossSiteFocusedRequest := formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=category_verification&scope=default&target=all&model=qwen3.5%3A4b")
+	crossSiteFocusedRequest.Header.Set("Sec-Fetch-Site", "cross-site")
+	crossSiteFocused := httptest.NewRecorder()
+	handler.ServeHTTP(crossSiteFocused, crossSiteFocusedRequest)
+	if crossSiteFocused.Code != http.StatusForbidden {
+		t.Fatalf("cross-site focused category request = %d, want 403", crossSiteFocused.Code)
 	}
 
 	for _, attack := range []struct {
@@ -130,11 +177,51 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	}
 }
 
+func TestAdminUsesInjectedPostProcessorMetadataWithoutHandlerBranches(t *testing.T) {
+	database := fixtureStore(t)
+	status := processing.PipelineModelStatus{
+		Steps:            defaultTestStepStatus("qwen3.5:4b"),
+		Models:           []string{"qwen3.5:4b"},
+		CatalogAvailable: true,
+		Ready:            true,
+		PostProcessors: []processing.PostProcessorModelStatus{{
+			Key: "quality_note", DisplayName: "Quality note", Description: "Run an independent quality note.",
+			ModelSettingKey: "quality_note", Manual: true, Preferred: "qwen3.5:4b", PreferredAvailable: true,
+			Scopes: []processing.PostProcessorScopeStatus{{Key: "brief", DisplayName: "Brief"}, {Key: "detailed", DisplayName: "Detailed"}},
+		}},
+	}
+	var received processing.PostProcessingRequest
+	requester := fakeProcessingRequester{database: database, status: &status, postRequest: func(_ context.Context, request processing.PostProcessingRequest) (int, error) {
+		received = request
+		return 2, nil
+	}}
+	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "review", AdminEnabled: true, Processor: requester,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	page := httptest.NewRecorder()
+	server.Handler().ServeHTTP(page, httptest.NewRequest(http.MethodGet, "/admin", nil))
+	for _, expected := range []string{"Quality note only", "Run an independent quality note.", `name="processor" type="hidden" value="quality_note"`, `value="brief"`, `value="detailed"`} {
+		if page.Code != http.StatusOK || !strings.Contains(page.Body.String(), expected) {
+			t.Fatalf("injected post-processor card = %d, missing %q", page.Code, expected)
+		}
+	}
+
+	response := httptest.NewRecorder()
+	server.Handler().ServeHTTP(response, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=quality_note&scope=all&target=all&model=qwen3.5%3A4b"))
+	if response.Code != http.StatusSeeOther || received.ProcessorKey != "quality_note" || received.Model != "qwen3.5:4b" || received.IncidentID != nil || len(received.ScopeKeys) != 0 {
+		t.Fatalf("injected post-processor request = %d/%#v", response.Code, received)
+	}
+}
+
 func TestAdminProcessingReturnsUnavailableWhenAIIsDisabled(t *testing.T) {
 	database := fixtureStore(t)
 	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
-		PromptVersion: processing.PipelineVersion, AdminEnabled: true,
+		AdminEnabled: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -146,7 +233,7 @@ func TestAdminProcessingReturnsUnavailableWhenAIIsDisabled(t *testing.T) {
 	}
 }
 
-func TestAdminRetriesMissingTranslationAndConfirmsHistoricalBackfill(t *testing.T) {
+func TestAdminRetriesPostProcessingAndRejectsRemovedBackfillRoutes(t *testing.T) {
 	ctx := context.Background()
 	database := fixtureStore(t)
 	records, _, err := database.ListIncidents(ctx, 1, 0)
@@ -161,7 +248,7 @@ func TestAdminRetriesMissingTranslationAndConfirmsHistoricalBackfill(t *testing.
 		t.Fatal(err)
 	}
 	now := time.Date(2026, 8, 27, 13, 0, 0, 0, time.UTC)
-	request, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, "", &records[0].ID, false, now)
+	request, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, nil, &records[0].ID, false, now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -195,40 +282,40 @@ func TestAdminRetriesMissingTranslationAndConfirmsHistoricalBackfill(t *testing.
 	handler := adminTestServer(t, database, nil).Handler()
 	page := httptest.NewRecorder()
 	handler.ServeHTTP(page, httptest.NewRequest(http.MethodGet, "/admin", nil))
-	for _, expected := range []string{"Kanonischer Titel", "English state", "Missing", "/api/admin/ai/translation-retry", "Category verification", "Not checked", "/api/admin/ai/category-verification-retry"} {
+	for _, expected := range []string{"Kanonischer Titel", "English state", "Missing", "/api/admin/ai/post-processing/process", "Category verification", "Not checked"} {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("admin missing-translation page does not contain %q", expected)
 		}
 	}
 	unconfirmed := httptest.NewRecorder()
-	handler.ServeHTTP(unconfirmed, formRequest(http.MethodPost, "/api/admin/ai/translation-retry", "incident_id="+formatID(records[0].ID)+"&language=en&model=qwen3.5%3A4b"))
+	handler.ServeHTTP(unconfirmed, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "processor=translation&scope=en&target=incident&incident_id="+formatID(records[0].ID)+"&model=qwen3.5%3A4b"))
 	if unconfirmed.Code != http.StatusBadRequest {
 		t.Fatalf("unconfirmed translation retry = %d", unconfirmed.Code)
 	}
 	retry := httptest.NewRecorder()
-	handler.ServeHTTP(retry, formRequest(http.MethodPost, "/api/admin/ai/translation-retry", "confirmed=true&incident_id="+formatID(records[0].ID)+"&language=en&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
-	if retry.Code != http.StatusSeeOther || !strings.Contains(retry.Header().Get("Location"), "translations_queued=1") {
+	handler.ServeHTTP(retry, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=translation&scope=en&target=incident&incident_id="+formatID(records[0].ID)+"&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
+	if retry.Code != http.StatusSeeOther || !strings.Contains(retry.Header().Get("Location"), "post_processing_queued=1") {
 		t.Fatalf("translation retry = %d/%q", retry.Code, retry.Header().Get("Location"))
 	}
 	backfill := httptest.NewRecorder()
 	handler.ServeHTTP(backfill, formRequest(http.MethodPost, "/api/admin/ai/translation-backfill", "confirmed=true&language=en&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
-	if backfill.Code != http.StatusSeeOther || !strings.Contains(backfill.Header().Get("Location"), "translations_queued=0") {
-		t.Fatalf("translation backfill = %d/%q", backfill.Code, backfill.Header().Get("Location"))
+	if backfill.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("removed translation backfill route = %d, want 405", backfill.Code)
 	}
 	categoryUnconfirmed := httptest.NewRecorder()
-	handler.ServeHTTP(categoryUnconfirmed, formRequest(http.MethodPost, "/api/admin/ai/category-verification-retry", "incident_id="+formatID(records[0].ID)+"&model=qwen3.5%3A4b"))
+	handler.ServeHTTP(categoryUnconfirmed, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "processor=category_verification&scope=default&target=incident&incident_id="+formatID(records[0].ID)+"&model=qwen3.5%3A4b"))
 	if categoryUnconfirmed.Code != http.StatusBadRequest {
 		t.Fatalf("unconfirmed category retry = %d", categoryUnconfirmed.Code)
 	}
 	categoryRetry := httptest.NewRecorder()
-	handler.ServeHTTP(categoryRetry, formRequest(http.MethodPost, "/api/admin/ai/category-verification-retry", "confirmed=true&incident_id="+formatID(records[0].ID)+"&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
-	if categoryRetry.Code != http.StatusSeeOther || !strings.Contains(categoryRetry.Header().Get("Location"), "category_verifications_queued=1") {
+	handler.ServeHTTP(categoryRetry, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=category_verification&scope=default&target=incident&incident_id="+formatID(records[0].ID)+"&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
+	if categoryRetry.Code != http.StatusSeeOther || !strings.Contains(categoryRetry.Header().Get("Location"), "post_processing_queued=1") {
 		t.Fatalf("category retry = %d/%q", categoryRetry.Code, categoryRetry.Header().Get("Location"))
 	}
 	categoryBackfill := httptest.NewRecorder()
 	handler.ServeHTTP(categoryBackfill, formRequest(http.MethodPost, "/api/admin/ai/category-verification-backfill", "confirmed=true&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
-	if categoryBackfill.Code != http.StatusSeeOther || !strings.Contains(categoryBackfill.Header().Get("Location"), "category_verifications_queued=0") {
-		t.Fatalf("category backfill = %d/%q", categoryBackfill.Code, categoryBackfill.Header().Get("Location"))
+	if categoryBackfill.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("removed category backfill route = %d, want 405", categoryBackfill.Code)
 	}
 }
 
@@ -243,7 +330,7 @@ func TestAdminDistinguishesUnavailableAndMissingPreferredModels(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			database := fixtureStore(t)
 			server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
-				PageSize: 20, SourceMode: "fixture", PresentationMode: "review", PromptVersion: processing.PipelineVersion,
+				PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
 				AdminEnabled: true, Processor: fakeProcessingRequester{database: database, status: &test.status},
 			})
 			if err != nil {
@@ -261,21 +348,15 @@ func TestAdminDistinguishesUnavailableAndMissingPreferredModels(t *testing.T) {
 func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
 	ctx := context.Background()
 	database := fixtureStore(t)
-	job, found, err := database.QueueAndClaimProcessingJob(ctx, legacyOperation("qwen3.5:4b"), time.Now())
-	if err != nil || !found {
-		t.Fatalf("claim admin presentation job = %t/%v", found, err)
-	}
-	presentation := store.AIPresentation{
+	presentation := testPresentation{
 		TitleDE: "Deutscher Admin-Titel", SummaryDE: "Deutsche Admin-Zusammenfassung.",
-		TitleEN: "English admin title", SummaryEN: "English admin summary.", PrivacyStatus: "safe",
+		TitleEN: "English admin title", SummaryEN: "English admin summary.",
 	}
-	if err := database.CompleteProcessingJob(ctx, job, presentation, "qwen3.5:4b", processing.LegacyBilingualPromptVersion, time.Now()); err != nil {
-		t.Fatal(err)
-	}
+	job := seedV2Presentation(t, database, presentation, time.Now())
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	server, err := NewWithOptions(database, logger, Options{
 		PageSize: 2, SourceMode: "fixture", PresentationMode: "public",
-		PromptVersion: processing.PipelineVersion, AdminEnabled: true,
+		AdminEnabled: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -305,15 +386,11 @@ func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
 		}
 	}
 
-	expectedUnprocessed, _, err := database.ListAdminIncidents(ctx, 2, 2, "fixture", store.PresentationScope{
-		Operation: legacyOperation("qwen3.5:4b"), ModelIdentity: "qwen3.5:4b", PromptVersion: processing.PipelineVersion,
-	}, store.AdminIncidentsUnprocessed)
+	expectedUnprocessed, _, err := database.ListAdminIncidents(ctx, 2, 2, "fixture", store.PresentationScope{}, store.AdminIncidentsUnprocessed)
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedAll, _, err := database.ListAdminIncidents(ctx, 2, 4, "fixture", store.PresentationScope{
-		Operation: legacyOperation("qwen3.5:4b"), ModelIdentity: "qwen3.5:4b", PromptVersion: processing.PipelineVersion,
-	}, store.AdminIncidentsAll)
+	expectedAll, _, err := database.ListAdminIncidents(ctx, 2, 4, "fixture", store.PresentationScope{}, store.AdminIncidentsAll)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -363,7 +440,7 @@ func TestAdminPipelineHistoryCombinesCanonicalAndPostProcessingJobs(t *testing.T
 		t.Fatal(err)
 	}
 	requestedAt := time.Date(2026, 8, 27, 14, 0, 0, 0, time.UTC)
-	result, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, "translategemma:4b", &records[0].ID, false, requestedAt)
+	result, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, nil, &records[0].ID, false, requestedAt)
 	if err != nil || result.Requested != 1 {
 		t.Fatalf("create history fixture = %#v/%v", result, err)
 	}
@@ -394,32 +471,32 @@ func TestAdminPipelineHistoryCombinesCanonicalAndPostProcessingJobs(t *testing.T
 	if completed, err := database.AdvancePipelineCycle(ctx, cycle, len(plans), requestedAt); err != nil || !completed.Completed {
 		t.Fatalf("complete history cycle = %#v/%v", completed, err)
 	}
-	translationPlan := store.TranslationPlan{Language: "en", PromptVersion: "incident-translation-en-v1", Model: "translategemma:4b"}
-	if queued, err := database.QueueTranslationsForRun(ctx, german.PresentationRunID, []store.TranslationPlan{translationPlan}, "manual", requestedAt); err != nil || queued != 1 {
+	translationPlan := store.PostProcessingPlan{ProcessorKey: "translation", ScopeKey: "en", PromptVersion: "incident-translation-en-v1", Model: "translategemma:4b", InputKinds: []string{"title_de", "summary_de"}}
+	if queued, err := database.QueuePostProcessingForRun(ctx, german.PresentationRunID, []store.PostProcessingPlan{translationPlan}, "manual", false, requestedAt); err != nil || queued != 1 {
 		t.Fatalf("queue history translation = %d/%v", queued, err)
 	}
-	translation, found, err := database.ClaimTranslationJob(ctx, false, nil, requestedAt)
+	translation, found, err := database.ClaimPostProcessingJob(ctx, "translation", false, nil, requestedAt)
 	if err != nil || !found {
 		t.Fatalf("claim history translation = %#v/%t/%v", translation, found, err)
 	}
-	if err := database.CompleteTranslationJob(ctx, translation, "Title", "Summary.", translation.ModelIdentity, translation.InputHash, requestedAt); err != nil {
+	if err := database.CompletePostProcessingJob(ctx, translation, []store.PipelineValue{{Kind: "title", Value: "Title"}, {Kind: "summary", Value: "Summary."}}, translation.ModelIdentity, translation.InputHash, requestedAt); err != nil {
 		t.Fatal(err)
 	}
-	verificationPlan := store.CategoryVerificationPlan{PromptVersion: processing.CategoryVerificationPromptVersion, Model: "qwen3.5:4b"}
-	if queued, err := database.QueueCategoryVerificationForRun(ctx, german.PresentationRunID, verificationPlan, "manual", false, requestedAt); err != nil || queued != 1 {
+	verificationPlan := store.PostProcessingPlan{ProcessorKey: "category_verification", ScopeKey: "default", PromptVersion: processing.CategoryVerificationPromptVersion, Model: "qwen3.5:4b", InputKinds: []string{"title_de", "summary_de", "category"}}
+	if queued, err := database.QueuePostProcessingForRun(ctx, german.PresentationRunID, []store.PostProcessingPlan{verificationPlan}, "manual", false, requestedAt); err != nil || queued != 1 {
 		t.Fatalf("queue history category verification = %d/%v", queued, err)
 	}
-	verification, found, err := database.ClaimCategoryVerificationJob(ctx, false, nil, requestedAt)
+	verification, found, err := database.ClaimPostProcessingJob(ctx, "category_verification", false, nil, requestedAt)
 	if err != nil || !found {
 		t.Fatalf("claim history category verification = %#v/%t/%v", verification, found, err)
 	}
-	if err := database.CompleteCategoryVerificationJob(ctx, verification, true, "other", verification.ModelIdentity, verification.InputHash, requestedAt); err != nil {
+	if err := database.CompletePostProcessingJob(ctx, verification, []store.PipelineValue{{Kind: "is_correct", Value: "true"}, {Kind: "corrected_category", Value: "other"}}, verification.ModelIdentity, verification.InputHash, requestedAt); err != nil {
 		t.Fatal(err)
 	}
 	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
 		PageSize: 2, SourceMode: "fixture", PresentationMode: "review",
-		PromptVersion: processing.PipelineVersion, AdminEnabled: true,
-		Processor: fakeProcessingRequester{database: database},
+		AdminEnabled: true,
+		Processor:    fakeProcessingRequester{database: database},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -431,7 +508,7 @@ func TestAdminPipelineHistoryCombinesCanonicalAndPostProcessingJobs(t *testing.T
 	if first.Code != http.StatusOK || first.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("pipeline history = %d/%q", first.Code, first.Header().Get("Cache-Control"))
 	}
-	for _, expected := range []string{"Pipeline history", "Open reader", `aria-current="page"`, "2 job states shown", "category_verification", "category verification · manual", "qwen3.5:4b", "translation:en", "translategemma:4b", "translation · manual", "Older →"} {
+	for _, expected := range []string{"Pipeline history", "Open reader", `aria-current="page"`, "2 job states shown", "category_verification/default", "post-processing · manual", "qwen3.5:4b", "translation/en", "translategemma:4b", "Older →"} {
 		if !strings.Contains(first.Body.String(), expected) {
 			t.Errorf("pipeline history does not contain %q", expected)
 		}
@@ -441,12 +518,12 @@ func TestAdminPipelineHistoryCombinesCanonicalAndPostProcessingJobs(t *testing.T
 	}
 	dashboard := httptest.NewRecorder()
 	handler.ServeHTTP(dashboard, httptest.NewRequest(http.MethodGet, "/admin", nil))
-	if dashboard.Code != http.StatusOK || !strings.Contains(dashboard.Body.String(), "category_verification") || !strings.Contains(dashboard.Body.String(), "translation:en") || !strings.Contains(dashboard.Body.String(), "Cycle #"+formatID(result.CycleID)) {
+	if dashboard.Code != http.StatusOK || !strings.Contains(dashboard.Body.String(), "category_verification/default") || !strings.Contains(dashboard.Body.String(), "translation/en") || !strings.Contains(dashboard.Body.String(), "Cycle #"+formatID(result.CycleID)) {
 		t.Fatalf("admin dashboard post-processing history = %d/%q", dashboard.Code, dashboard.Body.String())
 	}
 	status := httptest.NewRecorder()
 	handler.ServeHTTP(status, httptest.NewRequest(http.MethodGet, "/api/admin/ai/status", nil))
-	if status.Code != http.StatusOK || !strings.Contains(status.Body.String(), `"kind":"category_verification"`) || !strings.Contains(status.Body.String(), `"step_key":"category_verification"`) || !strings.Contains(status.Body.String(), `"kind":"translation"`) || !strings.Contains(status.Body.String(), `"step_key":"translation:en"`) {
+	if status.Code != http.StatusOK || !strings.Contains(status.Body.String(), `"kind":"post_processing"`) || !strings.Contains(status.Body.String(), `"processor_key":"category_verification"`) || !strings.Contains(status.Body.String(), `"execution_key":"category_verification/default"`) || !strings.Contains(status.Body.String(), `"execution_key":"translation/en"`) {
 		t.Fatalf("live admin post-processing history = %d/%q", status.Code, status.Body.String())
 	}
 	match := regexp.MustCompile(`href="(/admin/history\?before=[^"]+)"`).FindStringSubmatch(first.Body.String())
@@ -472,10 +549,10 @@ func TestAdminPipelineHistoryCombinesCanonicalAndPostProcessingJobs(t *testing.T
 	}
 }
 
-func TestAdminTranslationLabelKeepsCurrentFailureVisibleWithFallback(t *testing.T) {
-	translation := store.AdminTranslation{Model: "translate:4b", Status: "failed", FailureKind: "output", Fallback: true}
-	if label := adminTranslationLabel(translation); label != "Failed · older translated fallback" {
-		t.Fatalf("fallback translation label = %q", label)
+func TestAdminTranslationLabelKeepsCurrentFailureVisibleWithPreviousSuccess(t *testing.T) {
+	translation := store.AdminTranslation{Model: "translate:4b", Status: "failed", FailureKind: "output"}
+	if label := adminTranslationLabel(translation); label != "Failed · previous success retained" {
+		t.Fatalf("retained translation label = %q", label)
 	}
 }
 
@@ -484,7 +561,7 @@ func TestAdminReportsStoreErrors(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	retryServer, err := NewWithOptions(database, logger, Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
-		PromptVersion: processing.PipelineVersion, AdminEnabled: true, Processor: fakeProcessingRequester{err: errors.New("processing unavailable")},
+		AdminEnabled: true, Processor: fakeProcessingRequester{err: errors.New("processing unavailable")},
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -18,7 +18,7 @@ func TestPipelineHistoryCombinesCanonicalAndPostProcessingJobsWithStableCursors(
 	now := time.Date(2026, 8, 27, 10, 0, 0, 0, time.UTC)
 	insertPipelineDocuments(t, ctx, database, now, "one")
 	plans := testPipelinePlans()
-	request, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, "translate:4b", nil, true, now)
+	request, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, nil, nil, true, now)
 	if err != nil || request.Requested != 1 {
 		t.Fatalf("create pipeline history cycle = %#v/%v", request, err)
 	}
@@ -51,25 +51,26 @@ func TestPipelineHistoryCombinesCanonicalAndPostProcessingJobsWithStableCursors(
 	if err != nil || !completed.Completed {
 		t.Fatalf("complete canonical cycle = %#v/%v", completed, err)
 	}
-	if queued, err := database.QueueTranslationsForRun(ctx, german.PresentationRunID, []TranslationPlan{{Language: "en", PromptVersion: "incident-translation-en-v1", Model: "translate:4b"}}, "manual", now); err != nil || queued != 1 {
+	translationPlan := PostProcessingPlan{ProcessorKey: "translation", ScopeKey: "en", PromptVersion: "incident-translation-en-v1", Model: "translate:4b", InputKinds: []string{"title_de", "summary_de"}}
+	if queued, err := database.QueuePostProcessingForRun(ctx, german.PresentationRunID, []PostProcessingPlan{translationPlan}, "manual", false, now); err != nil || queued != 1 {
 		t.Fatalf("queue translation = %d/%v", queued, err)
 	}
-	translation, found, err := database.ClaimTranslationJob(ctx, false, nil, now)
+	translation, found, err := database.ClaimPostProcessingJob(ctx, "translation", false, nil, now)
 	if err != nil || !found {
 		t.Fatalf("claim translation = %#v/%t/%v", translation, found, err)
 	}
-	if err := database.CompleteTranslationJob(ctx, translation, "Title", "Summary.", translation.ModelIdentity, translation.InputHash, now); err != nil {
+	if err := database.CompletePostProcessingJob(ctx, translation, []PipelineValue{{Kind: "title", Value: "Title"}, {Kind: "summary", Value: "Summary."}}, translation.ModelIdentity, translation.InputHash, now); err != nil {
 		t.Fatal(err)
 	}
-	verificationPlan := CategoryVerificationPlan{PromptVersion: "incident-category-verification-v1", Model: "verify:4b"}
-	if queued, err := database.QueueCategoryVerificationForRun(ctx, german.PresentationRunID, verificationPlan, "manual", false, now); err != nil || queued != 1 {
+	verificationPlan := PostProcessingPlan{ProcessorKey: "category_verification", ScopeKey: "default", PromptVersion: "incident-category-verification-v1", Model: "verify:4b", InputKinds: []string{"title_de", "summary_de", "category"}}
+	if queued, err := database.QueuePostProcessingForRun(ctx, german.PresentationRunID, []PostProcessingPlan{verificationPlan}, "manual", false, now); err != nil || queued != 1 {
 		t.Fatalf("queue category verification = %d/%v", queued, err)
 	}
-	verification, found, err := database.ClaimCategoryVerificationJob(ctx, false, nil, now)
+	verification, found, err := database.ClaimPostProcessingJob(ctx, "category_verification", false, nil, now)
 	if err != nil || !found {
 		t.Fatalf("claim category verification = %#v/%t/%v", verification, found, err)
 	}
-	if err := database.CompleteCategoryVerificationJob(ctx, verification, true, "other", verification.ModelIdentity, verification.InputHash, now); err != nil {
+	if err := database.CompletePostProcessingJob(ctx, verification, []PipelineValue{{Kind: "is_correct", Value: "true"}, {Kind: "corrected_category", Value: "other"}}, verification.ModelIdentity, verification.InputHash, now); err != nil {
 		t.Fatal(err)
 	}
 
@@ -81,11 +82,11 @@ func TestPipelineHistoryCombinesCanonicalAndPostProcessingJobsWithStableCursors(
 		t.Fatalf("first pipeline history page = %#v", first)
 	}
 	verified := first.Entries[0]
-	if verified.Kind != pipelineHistoryKindCategoryVerification || verified.StepKey != "category_verification" || verified.RequestKind != "manual" || verified.Status != "succeeded" || verified.ModelIdentity != "verify:4b" || verified.CycleID != request.CycleID {
+	if verified.Kind != pipelineHistoryKindPostProcessing || verified.ProcessorKey != "category_verification" || verified.ExecutionKey != "category_verification/default" || verified.ScopeKey != "default" || verified.RequestKind != "manual" || verified.Status != "succeeded" || verified.ModelIdentity != "verify:4b" || verified.CycleID != request.CycleID {
 		t.Fatalf("category verification history entry = %#v", verified)
 	}
 	translated := first.Entries[1]
-	if translated.Kind != pipelineHistoryKindTranslation || translated.StepKey != "translation:en" || translated.Language != "en" || translated.RequestKind != "manual" || translated.Status != "succeeded" || translated.ModelIdentity != "translate:4b" || translated.CycleID != request.CycleID {
+	if translated.Kind != pipelineHistoryKindPostProcessing || translated.ProcessorKey != "translation" || translated.ExecutionKey != "translation/en" || translated.ScopeKey != "en" || translated.RequestKind != "manual" || translated.Status != "succeeded" || translated.ModelIdentity != "translate:4b" || translated.CycleID != request.CycleID {
 		t.Fatalf("translation history entry = %#v", translated)
 	}
 
@@ -103,15 +104,15 @@ func TestPipelineHistoryCombinesCanonicalAndPostProcessingJobsWithStableCursors(
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(newer.Entries) != 2 || newer.Entries[0].Kind != pipelineHistoryKindTranslation || newer.Entries[1].StepKey != "german_presentation" {
+	if len(newer.Entries) != 2 || newer.Entries[0].Kind != pipelineHistoryKindPostProcessing || newer.Entries[1].StepKey != "german_presentation" {
 		t.Fatalf("newer pipeline history page = %#v, want %#v", newer, first)
 	}
 
-	snapshot, err := database.PipelineSnapshot(ctx, "fixture", []string{"incident_metadata", "german_presentation"}, now)
+	snapshot, err := database.PipelineSnapshot(ctx, "fixture", []string{"incident_metadata", "german_presentation"}, nil, now)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(snapshot.RecentEvents) != 4 || snapshot.RecentEvents[0].Kind != pipelineHistoryKindCategoryVerification || snapshot.RecentEvents[0].StepKey != "category_verification" || snapshot.RecentEvents[0].CycleID != request.CycleID || snapshot.RecentEvents[1].Kind != pipelineHistoryKindTranslation {
+	if len(snapshot.RecentEvents) != 4 || snapshot.RecentEvents[0].Kind != pipelineHistoryKindPostProcessing || snapshot.RecentEvents[0].ProcessorKey != "category_verification" || snapshot.RecentEvents[0].ExecutionKey != "category_verification/default" || snapshot.RecentEvents[0].CycleID != request.CycleID || snapshot.RecentEvents[1].Kind != pipelineHistoryKindPostProcessing {
 		t.Fatalf("combined recent events = %#v", snapshot.RecentEvents)
 	}
 }

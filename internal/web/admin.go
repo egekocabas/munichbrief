@@ -27,7 +27,7 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 		http.Error(response, "invalid all_page", http.StatusBadRequest)
 		return
 	}
-	scope := store.PresentationScope{PromptVersion: s.options.PromptVersion, Language: canonicalReaderLanguage().Code}
+	scope := store.PresentationScope{Language: canonicalReaderLanguage().Code}
 	if translations := translatedReaderLanguages(); len(translations) > 0 {
 		scope.TranslationLanguage = translations[0].Code
 	}
@@ -78,12 +78,11 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 	data := adminPage{
-		ProcessingEnabled:    s.options.Processor != nil,
-		UnprocessedPage:      unprocessedPage,
-		AllPage:              allPage,
-		Models:               models,
-		Runtime:              runtime,
-		TranslationLanguages: adminTranslationLanguages(),
+		ProcessingEnabled: s.options.Processor != nil,
+		UnprocessedPage:   unprocessedPage,
+		AllPage:           allPage,
+		Models:            models,
+		Runtime:           runtime,
 		Unprocessed: s.adminList(unprocessed, unprocessedTotal, unprocessedPage, unprocessedPages,
 			adminPaginationURL(unprocessedPage-1, allPage), adminPaginationURL(unprocessedPage+1, allPage), true, allPage, "unprocessed", translationViews, categoryViews),
 		AllIncidents: s.adminList(allIncidents, allTotal, allPage, allPages,
@@ -100,17 +99,10 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 	if updated := request.URL.Query().Get("step_model"); updated != "" {
 		data.Notice = fmt.Sprintf("Preferred model for %s updated. Future scheduled cycles will use it.", updated)
 	}
-	if queued, ok := nonNegativeQueryInt(request, "translations_queued"); ok {
-		language := request.URL.Query().Get("translation_language")
-		displayName := language
-		if definition, found := processing.TranslationByLanguage(language); found {
-			displayName = definition.DisplayName
-		}
-		data.Notice = fmt.Sprintf("Queued %d %s translation job(s). Canonical German presentations remain available independently.", queued, displayName)
-		data.NoticeIsWarning = queued == 0
-	}
-	if queued, ok := nonNegativeQueryInt(request, "category_verifications_queued"); ok {
-		data.Notice = fmt.Sprintf("Queued %d category verification job(s). Existing German presentations remain available while checks run.", queued)
+	if queued, ok := nonNegativeQueryInt(request, "post_processing_queued"); ok {
+		processor := request.URL.Query().Get("processor")
+		scope := request.URL.Query().Get("scope")
+		data.Notice = fmt.Sprintf("Queued %d %s/%s post-processing job(s). Existing successful results remain available while replacements run.", queued, processor, scope)
 		data.NoticeIsWarning = queued == 0
 	}
 	response.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -127,17 +119,9 @@ func (s *Server) adminList(records []store.IncidentRecord, total, page, totalPag
 		state := record.ProcessingState()
 		presentationLabel := ""
 		if record.HasAI {
-			presentationLabel = "Legacy presentation retained"
-			if record.AIPipelineVersion == processing.PipelineVersion {
-				presentationLabel = "Pipeline v2 presentation"
-			} else if record.AIPipelineVersion == store.PreviousPipelineVersion {
-				presentationLabel = "Pipeline v1 fallback"
-			}
+			presentationLabel = "Pipeline v2 presentation"
 		}
-		primaryProvenanceLabel := "Presentation provenance"
-		if record.AIPipelineVersion == processing.PipelineVersion || record.AIPipelineVersion == store.PreviousPipelineVersion {
-			primaryProvenanceLabel = "German provenance"
-		}
+		primaryProvenanceLabel := "German provenance"
 		publicView := s.incidentForLanguage(record, "en")
 		incidents = append(incidents, adminIncidentView{
 			Record: record, ProcessingState: strings.ReplaceAll(state, "_", "-"),
@@ -223,7 +207,7 @@ func (s *Server) adminTranslations(request *http.Request, records []store.Incide
 		languages = append(languages, definition.Language)
 		displayNames[definition.Language] = definition.DisplayName
 	}
-	translations, err := s.store.ListAdminTranslations(request.Context(), incidentIDs, languages, s.options.PromptVersion)
+	translations, err := s.store.ListAdminTranslations(request.Context(), incidentIDs, languages)
 	if err != nil {
 		return nil, err
 	}
@@ -237,19 +221,10 @@ func (s *Server) adminTranslations(request *http.Request, records []store.Incide
 			Title: translation.Title, Summary: translation.Summary,
 			Model: translation.Model, PromptVersion: translation.PromptVersion,
 			StatusLabel: adminTranslationLabel(translation), FailureKind: translation.FailureKind,
-			CanRetry: canonicalReady[translation.IncidentID] && (translation.Model == "" || translation.Fallback) && translation.Status != "pending" && translation.Status != "running",
+			CanRetry: canonicalReady[translation.IncidentID] && translation.Status != "pending" && translation.Status != "running",
 		})
 	}
 	return views, nil
-}
-
-func adminTranslationLanguages() []adminTranslationLanguage {
-	definitions := processing.RegisteredTranslations()
-	languages := make([]adminTranslationLanguage, 0, len(definitions))
-	for _, definition := range definitions {
-		languages = append(languages, adminTranslationLanguage{Code: definition.Language, DisplayName: definition.DisplayName})
-	}
-	return languages
 }
 
 func (s *Server) processIncidentNow(response http.ResponseWriter, request *http.Request) {
@@ -304,9 +279,14 @@ func (s *Server) processNow(response http.ResponseWriter, request *http.Request,
 		}
 		models[step.Key] = model
 	}
-	translationModel := strings.TrimSpace(request.PostForm.Get("model_" + processing.TranslationModelStep))
-	models[processing.TranslationModelStep] = translationModel
-	models[processing.CategoryVerificationStep] = strings.TrimSpace(request.PostForm.Get("model_" + processing.CategoryVerificationStep))
+	modelStatus, err := s.options.Processor.ModelStatus(request.Context())
+	if err != nil {
+		s.internalError(response, request, "read post-processing registry", err)
+		return
+	}
+	for _, processor := range modelStatus.PostProcessors {
+		models[processor.ModelSettingKey] = strings.TrimSpace(request.PostForm.Get("model_" + processor.ModelSettingKey))
+	}
 	result, err := s.options.Processor.RequestNow(request.Context(), s.options.SourceMode, models, incidentID, reprocessAll)
 	if errors.Is(err, store.ErrNotFound) {
 		http.NotFound(response, request)
@@ -331,138 +311,130 @@ func (s *Server) processNow(response http.ResponseWriter, request *http.Request,
 	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
 }
 
-func (s *Server) retryTranslation(response http.ResponseWriter, request *http.Request) {
-	s.translationMutation(response, request, false)
-}
-
-func (s *Server) backfillTranslations(response http.ResponseWriter, request *http.Request) {
-	s.translationMutation(response, request, true)
-}
-
-func (s *Server) retryCategoryVerification(response http.ResponseWriter, request *http.Request) {
-	s.categoryVerificationMutation(response, request, false)
-}
-
-func (s *Server) backfillCategoryVerifications(response http.ResponseWriter, request *http.Request) {
-	s.categoryVerificationMutation(response, request, true)
-}
-
-func (s *Server) categoryVerificationMutation(response http.ResponseWriter, request *http.Request, backfill bool) {
-	if !validAdminMutation(request) {
-		http.Error(response, "cross-site request blocked", http.StatusForbidden)
+func (s *Server) processPostProcessing(response http.ResponseWriter, request *http.Request) {
+	if !s.preparePostProcessingMutation(response, request, "post-processing") {
 		return
 	}
-	if !isFormPost(request) {
-		http.Error(response, "form content type required", http.StatusUnsupportedMediaType)
-		return
-	}
-	request.Body = http.MaxBytesReader(response, request.Body, 4096)
-	if err := request.ParseForm(); err != nil {
-		http.Error(response, "invalid form", http.StatusBadRequest)
-		return
-	}
-	if request.PostForm.Get("confirmed") != "true" {
-		http.Error(response, "category verification confirmation is required", http.StatusBadRequest)
-		return
-	}
-	if s.options.Processor == nil {
-		http.Error(response, "AI processing is disabled", http.StatusServiceUnavailable)
-		return
-	}
+	processorKey := strings.TrimSpace(request.PostForm.Get("processor"))
+	scopeKey := strings.TrimSpace(request.PostForm.Get("scope"))
 	model := strings.TrimSpace(request.PostForm.Get("model"))
-	if model == "" {
-		http.Error(response, "model is required", http.StatusBadRequest)
+	if processorKey == "" || scopeKey == "" || model == "" {
+		http.Error(response, "processor, scope, and model are required", http.StatusBadRequest)
 		return
 	}
-	var queued int
-	var err error
-	if backfill {
-		queued, err = s.options.Processor.BackfillCategoryVerifications(request.Context(), model)
-	} else {
-		incidentID, parseErr := strconv.ParseInt(request.PostForm.Get("incident_id"), 10, 64)
-		if parseErr != nil || incidentID < 1 {
-			http.Error(response, "incident_id must be a positive integer", http.StatusBadRequest)
-			return
+	models, err := s.options.Processor.ModelStatus(request.Context())
+	if err != nil {
+		s.internalError(response, request, "read post-processing registry", err)
+		return
+	}
+	var selected *processing.PostProcessorModelStatus
+	for index := range models.PostProcessors {
+		if models.PostProcessors[index].Key == processorKey {
+			selected = &models.PostProcessors[index]
+			break
 		}
-		queued, err = s.options.Processor.RetryCategoryVerification(request.Context(), incidentID, model)
 	}
-	if errors.Is(err, store.ErrNotFound) {
-		http.NotFound(response, request)
+	if selected == nil || !selected.Manual {
+		http.Error(response, "unsupported post-processing processor", http.StatusBadRequest)
 		return
 	}
-	if errors.Is(err, processing.ErrModelUnavailable) {
+	modelAvailable := false
+	for _, available := range models.Models {
+		modelAvailable = modelAvailable || available == model
+	}
+	if !models.CatalogAvailable || !modelAvailable {
 		http.Error(response, "selected Ollama model is unavailable", http.StatusServiceUnavailable)
 		return
 	}
-	if err != nil {
-		s.internalError(response, request, "queue category verification work", err)
+	var scopeKeys []string
+	if scopeKey != "all" {
+		valid := false
+		for _, scope := range selected.Scopes {
+			valid = valid || scope.Key == scopeKey
+		}
+		if !valid {
+			http.Error(response, "unsupported post-processing scope", http.StatusBadRequest)
+			return
+		}
+		scopeKeys = []string{scopeKey}
+	}
+	incidentID, ok := postProcessingIncidentID(response, request.PostForm)
+	if !ok {
+		return
+	}
+	queued, err := s.options.Processor.RequestPostProcessing(request.Context(), processing.PostProcessingRequest{ProcessorKey: processorKey, ScopeKeys: scopeKeys, IncidentID: incidentID, Model: model})
+	if s.handlePostProcessingError(response, request, "queue post-processing work", err) {
 		return
 	}
 	target, _ := url.Parse(adminPaginationURL(positiveFormInt(request.PostForm.Get("unprocessed_page")), positiveFormInt(request.PostForm.Get("all_page"))))
 	query := target.Query()
-	query.Set("category_verifications_queued", strconv.Itoa(queued))
+	query.Set("post_processing_queued", strconv.Itoa(queued))
+	query.Set("processor", processorKey)
+	query.Set("scope", scopeKey)
 	target.RawQuery = query.Encode()
 	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
 }
 
-func (s *Server) translationMutation(response http.ResponseWriter, request *http.Request, backfill bool) {
+func (s *Server) preparePostProcessingMutation(response http.ResponseWriter, request *http.Request, label string) bool {
 	if !validAdminMutation(request) {
 		http.Error(response, "cross-site request blocked", http.StatusForbidden)
-		return
+		return false
 	}
 	if !isFormPost(request) {
 		http.Error(response, "form content type required", http.StatusUnsupportedMediaType)
-		return
+		return false
 	}
 	request.Body = http.MaxBytesReader(response, request.Body, 4096)
 	if err := request.ParseForm(); err != nil {
 		http.Error(response, "invalid form", http.StatusBadRequest)
-		return
+		return false
 	}
 	if request.PostForm.Get("confirmed") != "true" {
-		http.Error(response, "translation confirmation is required", http.StatusBadRequest)
-		return
+		http.Error(response, label+" confirmation is required", http.StatusBadRequest)
+		return false
 	}
 	if s.options.Processor == nil {
 		http.Error(response, "AI processing is disabled", http.StatusServiceUnavailable)
-		return
+		return false
 	}
-	language := strings.TrimSpace(request.PostForm.Get("language"))
-	model := strings.TrimSpace(request.PostForm.Get("model"))
-	if language == "" || model == "" {
-		http.Error(response, "language and model are required", http.StatusBadRequest)
-		return
-	}
-	var queued int
-	var err error
-	if backfill {
-		queued, err = s.options.Processor.BackfillTranslations(request.Context(), language, model)
-	} else {
-		incidentID, parseErr := strconv.ParseInt(request.PostForm.Get("incident_id"), 10, 64)
-		if parseErr != nil || incidentID < 1 {
-			http.Error(response, "incident_id must be a positive integer", http.StatusBadRequest)
-			return
+	return true
+}
+
+func postProcessingIncidentID(response http.ResponseWriter, form url.Values) (*int64, bool) {
+	switch form.Get("target") {
+	case "all":
+		if strings.TrimSpace(form.Get("incident_id")) != "" {
+			http.Error(response, "incident_id is only valid for an incident target", http.StatusBadRequest)
+			return nil, false
 		}
-		queued, err = s.options.Processor.RetryTranslation(request.Context(), incidentID, language, model)
+		return nil, true
+	case "incident":
+		incidentID, err := strconv.ParseInt(form.Get("incident_id"), 10, 64)
+		if err != nil || incidentID < 1 {
+			http.Error(response, "incident_id must be a positive integer", http.StatusBadRequest)
+			return nil, false
+		}
+		return &incidentID, true
+	default:
+		http.Error(response, "target must be incident or all", http.StatusBadRequest)
+		return nil, false
+	}
+}
+
+func (s *Server) handlePostProcessingError(response http.ResponseWriter, request *http.Request, operation string, err error) bool {
+	if err == nil {
+		return false
 	}
 	if errors.Is(err, store.ErrNotFound) {
 		http.NotFound(response, request)
-		return
+		return true
 	}
 	if errors.Is(err, processing.ErrModelUnavailable) {
 		http.Error(response, "selected Ollama model is unavailable", http.StatusServiceUnavailable)
-		return
+		return true
 	}
-	if err != nil {
-		s.internalError(response, request, "queue translation work", err)
-		return
-	}
-	target, _ := url.Parse(adminPaginationURL(positiveFormInt(request.PostForm.Get("unprocessed_page")), positiveFormInt(request.PostForm.Get("all_page"))))
-	query := target.Query()
-	query.Set("translations_queued", strconv.Itoa(queued))
-	query.Set("translation_language", language)
-	target.RawQuery = query.Encode()
-	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
+	s.internalError(response, request, operation, err)
+	return true
 }
 
 func (s *Server) updatePreferredStepModel(response http.ResponseWriter, request *http.Request) {
@@ -523,16 +495,15 @@ func (s *Server) pipelineStatus(response http.ResponseWriter, request *http.Requ
 }
 
 type adminPage struct {
-	Notice               string
-	NoticeIsWarning      bool
-	Unprocessed          adminIncidentList
-	AllIncidents         adminIncidentList
-	ProcessingEnabled    bool
-	UnprocessedPage      int
-	AllPage              int
-	Models               processing.PipelineModelStatus
-	Runtime              processing.PipelineRuntimeStatus
-	TranslationLanguages []adminTranslationLanguage
+	Notice            string
+	NoticeIsWarning   bool
+	Unprocessed       adminIncidentList
+	AllIncidents      adminIncidentList
+	ProcessingEnabled bool
+	UnprocessedPage   int
+	AllPage           int
+	Models            processing.PipelineModelStatus
+	Runtime           processing.PipelineRuntimeStatus
 }
 
 type adminIncidentList struct {
@@ -582,11 +553,6 @@ type adminCategoryVerificationView struct {
 	CanRetry          bool
 }
 
-type adminTranslationLanguage struct {
-	Code        string
-	DisplayName string
-}
-
 type adminTranslationView struct {
 	Language      string
 	DisplayName   string
@@ -623,29 +589,29 @@ func adminProcessingLabel(state string) string {
 }
 
 func adminTranslationLabel(translation store.AdminTranslation) string {
-	label := ""
-	if translation.Model != "" && !translation.Fallback {
+	label := "Missing"
+	switch translation.Status {
+	case "succeeded":
 		label = "Completed"
-	} else {
-		switch translation.Status {
-		case "pending":
-			if translation.Attempts > 0 {
-				label = "Retrying"
-			} else {
-				label = "Pending"
-			}
-		case "running":
-			label = "Running"
-		case "needs_review":
-			label = "Needs review"
-		case "failed":
-			label = "Failed"
-		default:
-			label = "Missing"
+	case "pending":
+		if translation.Attempts > 0 {
+			label = "Retrying"
+		} else {
+			label = "Pending"
+		}
+	case "running":
+		label = "Running"
+	case "needs_review":
+		label = "Needs review"
+	case "failed":
+		label = "Failed"
+	default:
+		if translation.Model != "" {
+			label = "Completed"
 		}
 	}
-	if translation.Fallback {
-		label += " · older translated fallback"
+	if translation.Model != "" && translation.Status != "" && translation.Status != "succeeded" {
+		label += " · previous success retained"
 	}
 	return label
 }

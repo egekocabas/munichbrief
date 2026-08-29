@@ -17,7 +17,7 @@ func TestPipelineSnapshotSeparatesActiveWaitingWorkAndNewCandidates(t *testing.T
 	now := time.Date(2026, 8, 26, 1, 0, 0, 0, time.UTC)
 	insertPipelineDocuments(t, ctx, database, now, "one", "two")
 	plans := testPipelinePlans()
-	request, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, "translate:4b", nil, true, now)
+	request, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, nil, nil, true, now)
 	if err != nil || request.Requested != 2 {
 		t.Fatalf("create manual cycle = %#v/%v", request, err)
 	}
@@ -35,7 +35,7 @@ func TestPipelineSnapshotSeparatesActiveWaitingWorkAndNewCandidates(t *testing.T
 	}
 
 	stepKeys := []string{"incident_metadata", "german_presentation"}
-	snapshot, err := database.PipelineSnapshot(ctx, "fixture", stepKeys, now.Add(time.Minute))
+	snapshot, err := database.PipelineSnapshot(ctx, "fixture", stepKeys, nil, now.Add(time.Minute))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +59,7 @@ func TestPipelineSnapshotSeparatesActiveWaitingWorkAndNewCandidates(t *testing.T
 	}
 
 	insertPipelineDocuments(t, ctx, database, now.Add(2*time.Minute), "three")
-	snapshot, err = database.PipelineSnapshot(ctx, "fixture", stepKeys, now.Add(2*time.Minute))
+	snapshot, err = database.PipelineSnapshot(ctx, "fixture", stepKeys, nil, now.Add(2*time.Minute))
 	if err != nil || snapshot.ScheduledCandidates != 1 {
 		t.Fatalf("new candidate outside frozen cycle = %#v/%v", snapshot, err)
 	}

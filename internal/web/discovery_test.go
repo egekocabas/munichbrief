@@ -12,22 +12,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/egekocabas/munichbrief/internal/processing"
 	"github.com/egekocabas/munichbrief/internal/store"
 )
 
-func publicDiscoveryServer(t *testing.T, database *store.Store, presentation store.AIPresentation) (*Server, store.ProcessingJob) {
+func publicDiscoveryServer(t *testing.T, database *store.Store, presentation testPresentation) (*Server, testPresentationJob) {
 	t.Helper()
-	job, found, err := database.QueueAndClaimProcessingJob(context.Background(), legacyOperation("qwen3.5:4b"), time.Now())
-	if err != nil || !found {
-		t.Fatalf("claim presentation job = %t/%v", found, err)
-	}
-	if err := database.CompleteProcessingJob(context.Background(), job, presentation, "qwen3.5:4b", processing.LegacyBilingualPromptVersion, time.Now()); err != nil {
-		t.Fatal(err)
-	}
+	job := seedV2Presentation(t, database, presentation, time.Now())
 	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "public",
-		PromptVersion: processing.PipelineVersion, SecureCookies: true,
+		SecureCookies:   true,
 		PublicHosts:     []string{"munichbrief.egekocabas.com", "munichbrief.de"},
 		CanonicalOrigin: "https://munichbrief.de",
 	})
@@ -44,9 +37,9 @@ func publicDiscoveryRequest(method, target string) *http.Request {
 }
 
 func TestRobotsAdvertisesCrawlAndContentUsePolicy(t *testing.T) {
-	server, _ := publicDiscoveryServer(t, fixtureStore(t), store.AIPresentation{
+	server, _ := publicDiscoveryServer(t, fixtureStore(t), testPresentation{
 		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
-		TitleEN: "Safe title", SummaryEN: "Safe summary.", PrivacyStatus: "safe",
+		TitleEN: "Safe title", SummaryEN: "Safe summary.",
 	})
 	response := httptest.NewRecorder()
 	server.Handler().ServeHTTP(response, publicDiscoveryRequest(http.MethodGet, "/robots.txt"))
@@ -71,9 +64,9 @@ func TestRobotsAdvertisesCrawlAndContentUsePolicy(t *testing.T) {
 }
 
 func TestSitemapContainsOnlyCanonicalPublicDocuments(t *testing.T) {
-	server, job := publicDiscoveryServer(t, fixtureStore(t), store.AIPresentation{
+	server, job := publicDiscoveryServer(t, fixtureStore(t), testPresentation{
 		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
-		TitleEN: "Safe title", SummaryEN: "Safe summary.", PrivacyStatus: "safe",
+		TitleEN: "Safe title", SummaryEN: "Safe summary.",
 	})
 	response := httptest.NewRecorder()
 	server.Handler().ServeHTTP(response, publicDiscoveryRequest(http.MethodGet, "/sitemap.xml"))
@@ -121,9 +114,9 @@ func TestSitemapContainsOnlyCanonicalPublicDocuments(t *testing.T) {
 }
 
 func TestPublicDocumentsExposeCanonicalAndAlternateLinks(t *testing.T) {
-	server, job := publicDiscoveryServer(t, fixtureStore(t), store.AIPresentation{
+	server, job := publicDiscoveryServer(t, fixtureStore(t), testPresentation{
 		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
-		TitleEN: "Safe title", SummaryEN: "Safe summary.", PrivacyStatus: "safe",
+		TitleEN: "Safe title", SummaryEN: "Safe summary.",
 	})
 
 	timeline := httptest.NewRecorder()
@@ -255,9 +248,9 @@ func TestPublicMarkdownNegotiationPreservesPrivacyBoundary(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	presentation := store.AIPresentation{
+	presentation := testPresentation{
 		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
-		TitleEN: "[Safe] # title", SummaryEN: "Summary with *untrusted* _markup_ and [link].", PrivacyStatus: "safe",
+		TitleEN: "[Safe] # title", SummaryEN: "Summary with *untrusted* _markup_ and [link].",
 	}
 	server, job := publicDiscoveryServer(t, database, presentation)
 	target := "/en/incidents/" + formatID(job.IncidentID)
@@ -311,9 +304,9 @@ func TestPublicMarkdownNegotiationPreservesPrivacyBoundary(t *testing.T) {
 func TestCanonicalOriginMustMatchPublicHost(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	for _, options := range []Options{
-		{PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PromptVersion: processing.PipelineVersion, PublicHosts: []string{"munichbrief.de"}},
-		{PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PromptVersion: processing.PipelineVersion, PublicHosts: []string{"munichbrief.de"}, CanonicalOrigin: "http://munichbrief.de"},
-		{PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PromptVersion: processing.PipelineVersion, PublicHosts: []string{"munichbrief.de"}, CanonicalOrigin: "https://example.com"},
+		{PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PublicHosts: []string{"munichbrief.de"}},
+		{PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PublicHosts: []string{"munichbrief.de"}, CanonicalOrigin: "http://munichbrief.de"},
+		{PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PublicHosts: []string{"munichbrief.de"}, CanonicalOrigin: "https://example.com"},
 	} {
 		if _, err := NewWithOptions(fixtureStore(t), logger, options); err == nil {
 			t.Fatalf("NewWithOptions(%#v) error = nil", options)

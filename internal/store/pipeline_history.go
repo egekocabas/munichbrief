@@ -8,9 +8,8 @@ import (
 )
 
 const (
-	pipelineHistoryKindCycle                = "cycle"
-	pipelineHistoryKindTranslation          = "translation"
-	pipelineHistoryKindCategoryVerification = "category_verification"
+	pipelineHistoryKindCycle          = "cycle"
+	pipelineHistoryKindPostProcessing = "post_processing"
 )
 
 // ListPipelineHistory returns a stable, reverse-chronological page of persisted
@@ -57,7 +56,8 @@ func (s *Store) listPipelineHistoryEntries(ctx context.Context, sourceMode strin
 	query := `WITH history AS (
 		SELECT j.id AS job_id, j.updated_at, 'cycle' AS kind, 0 AS kind_order,
 			c.id AS cycle_id, c.kind AS cycle_kind, c.status AS cycle_status,
-			ci.incident_id, j.step_key, '' AS language, '' AS request_kind,
+			ci.incident_id, j.step_key, '' AS processor_key, '' AS scope_key,
+			j.step_key AS execution_key, '' AS request_kind,
 			j.status, j.attempt_count, COALESCE(j.failure_kind,'') AS failure_kind,
 			j.model_identity, j.prompt_version
 		FROM processing_step_jobs j
@@ -65,31 +65,15 @@ func (s *Store) listPipelineHistoryEntries(ctx context.Context, sourceMode strin
 		JOIN processing_cycles c ON c.id=ci.cycle_id
 		WHERE c.source_mode=? AND j.status<>'waiting'
 		UNION ALL
-		SELECT t.id AS job_id, t.updated_at, 'translation' AS kind, 1 AS kind_order,
+		SELECT post.id AS job_id, post.updated_at, 'post_processing' AS kind, 1 AS kind_order,
 			COALESCE(c.id,0) AS cycle_id, COALESCE(c.kind,'') AS cycle_kind,
-			COALESCE(c.status,'') AS cycle_status, r.incident_id,
-			'translation:' || t.language_code AS step_key, t.language_code AS language,
-			t.request_kind, t.status, t.attempt_count,
-			COALESCE(t.failure_kind,'') AS failure_kind, t.model_identity, t.prompt_version
-		FROM presentation_translations t
-		JOIN presentation_runs r ON r.id=t.presentation_run_id
-		JOIN incidents i ON i.id=r.incident_id
-		JOIN source_documents d ON d.id=i.source_document_id
-		LEFT JOIN processing_cycle_items ci ON ci.id=(
-			SELECT linked.id FROM processing_cycle_items linked
-			WHERE linked.presentation_run_id=r.id ORDER BY linked.id DESC LIMIT 1
-		)
-		LEFT JOIN processing_cycles c ON c.id=ci.cycle_id
-		WHERE ` + sourceCondition + ` AND t.request_kind<>'imported'
-		UNION ALL
-		SELECT verification.id AS job_id, verification.updated_at, 'category_verification' AS kind, 2 AS kind_order,
-			COALESCE(c.id,0) AS cycle_id, COALESCE(c.kind,'') AS cycle_kind,
-			COALESCE(c.status,'') AS cycle_status, r.incident_id,
-			'category_verification' AS step_key, '' AS language, verification.request_kind,
-			verification.status, verification.attempt_count,
-			COALESCE(verification.failure_kind,'') AS failure_kind, verification.model_identity, verification.prompt_version
-		FROM presentation_category_verifications verification
-		JOIN presentation_runs r ON r.id=verification.presentation_run_id
+			COALESCE(c.status,'') AS cycle_status,r.incident_id,
+			'' AS step_key,post.processor_key,post.scope_key,
+			post.processor_key || '/' || post.scope_key AS execution_key,
+			post.request_kind,post.status,post.attempt_count,
+			COALESCE(post.failure_kind,'') AS failure_kind,post.model_identity,post.prompt_version
+		FROM post_processing_jobs post
+		JOIN presentation_runs r ON r.id=post.presentation_run_id
 		JOIN incidents i ON i.id=r.incident_id
 		JOIN source_documents d ON d.id=i.source_document_id
 		LEFT JOIN processing_cycle_items ci ON ci.id=(
@@ -100,7 +84,7 @@ func (s *Store) listPipelineHistoryEntries(ctx context.Context, sourceMode strin
 		WHERE ` + sourceCondition + `
 	)
 	SELECT job_id, updated_at, kind, cycle_id, cycle_kind, cycle_status,
-		incident_id, step_key, language, request_kind, status, attempt_count,
+		incident_id, step_key, processor_key, scope_key, execution_key, request_kind, status, attempt_count,
 		failure_kind, model_identity, prompt_version, kind_order
 	FROM history WHERE 1=1`
 	args := []any{sourceMode}
@@ -144,7 +128,7 @@ func (s *Store) listPipelineHistoryEntries(ctx context.Context, sourceMode strin
 		var kindOrder int
 		if err := rows.Scan(
 			&entry.JobID, &updatedAt, &entry.Kind, &entry.CycleID, &entry.CycleKind,
-			&entry.CycleStatus, &entry.IncidentID, &entry.StepKey, &entry.Language,
+			&entry.CycleStatus, &entry.IncidentID, &entry.StepKey, &entry.ProcessorKey, &entry.ScopeKey, &entry.ExecutionKey,
 			&entry.RequestKind, &entry.Status, &entry.AttemptCount, &entry.FailureKind,
 			&entry.ModelIdentity, &entry.PromptVersion, &kindOrder,
 		); err != nil {
@@ -175,10 +159,8 @@ func pipelineHistoryKindOrder(kind string) (int, error) {
 	switch kind {
 	case pipelineHistoryKindCycle:
 		return 0, nil
-	case pipelineHistoryKindTranslation:
+	case pipelineHistoryKindPostProcessing:
 		return 1, nil
-	case pipelineHistoryKindCategoryVerification:
-		return 2, nil
 	default:
 		return 0, fmt.Errorf("invalid pipeline history kind %q", kind)
 	}

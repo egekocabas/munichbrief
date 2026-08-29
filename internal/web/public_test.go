@@ -89,7 +89,6 @@ func TestReaderFooterShowsBuildProvenance(t *testing.T) {
 	commit := "28c9a1265115c07d46e61fa26bd489e07acf95c4"
 	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
-		PromptVersion: processing.PipelineVersion,
 		Build: BuildInfo{
 			Commit:  commit,
 			BuiltAt: time.Date(2026, time.August, 24, 19, 2, 0, 0, time.UTC),
@@ -118,7 +117,6 @@ func TestReaderFooterShowsDevelopmentBuildPlaceholder(t *testing.T) {
 	database := fixtureStore(t)
 	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
-		PromptVersion: processing.PipelineVersion,
 		Build: BuildInfo{
 			Commit:  "dev",
 			BuiltAt: time.Date(2026, time.August, 27, 8, 15, 0, 0, time.UTC),
@@ -171,19 +169,10 @@ func TestTemplatesEscapeIncidentContent(t *testing.T) {
 	if err := database.UpsertDocuments(ctx, documents, time.Now()); err != nil {
 		t.Fatalf("UpsertDocuments() error = %v", err)
 	}
-	job, found, err := database.QueueAndClaimProcessingJob(ctx, legacyOperation("qwen3.5:4b"), time.Now())
-	if err != nil || !found {
-		t.Fatalf("QueueAndClaimProcessingJob() = found:%t err:%v", found, err)
-	}
-	if err := database.CompleteProcessingJob(ctx, job, store.AIPresentation{
-		TitleDE:       "<script>alert('title')</script>",
-		SummaryDE:     "<img src=x onerror=alert('body')>",
-		TitleEN:       "<script>alert('english-title')</script>",
-		SummaryEN:     "<img src=x onerror=alert('english-body')>",
-		PrivacyStatus: "safe",
-	}, "qwen3.5:4b", processing.LegacyBilingualPromptVersion, time.Now()); err != nil {
-		t.Fatalf("CompleteProcessingJob() error = %v", err)
-	}
+	job := seedV2Presentation(t, database, testPresentation{
+		TitleDE: "<script>alert('title')</script>", SummaryDE: "<img src=x onerror=alert('body')>",
+		TitleEN: "<script>alert('english-title')</script>", SummaryEN: "<img src=x onerror=alert('english-body')>",
+	}, time.Now())
 
 	recorder := httptest.NewRecorder()
 	testServer(t, database).Handler().ServeHTTP(recorder, englishRequest(http.MethodGet, "/en", nil))
@@ -210,24 +199,13 @@ func TestTemplatesEscapeIncidentContent(t *testing.T) {
 }
 
 func TestTimelineAndDetailRenderAIContentWithProvenance(t *testing.T) {
-	ctx := context.Background()
 	database := fixtureStore(t)
 	generatedAt := time.Date(2026, time.August, 23, 9, 0, 0, 0, time.UTC)
-	operation := legacyOperation("qwen3.5:4b")
-	job, found, err := database.QueueAndClaimProcessingJob(ctx, operation, generatedAt)
-	if err != nil || !found {
-		t.Fatalf("QueueAndClaimProcessingJob() = found:%t err:%v", found, err)
+	presentation := testPresentation{
+		TitleDE: "Kurzer deutscher Titel", SummaryDE: "Eine sachliche deutsche Zusammenfassung.",
+		TitleEN: "Short English title", SummaryEN: "A factual English summary.",
 	}
-	presentation := store.AIPresentation{
-		TitleDE:       "Kurzer deutscher Titel",
-		SummaryDE:     "Eine sachliche deutsche Zusammenfassung.",
-		TitleEN:       "Short English title",
-		SummaryEN:     "A factual English summary.",
-		PrivacyStatus: "safe",
-	}
-	if err := database.CompleteProcessingJob(ctx, job, presentation, "qwen3.5:4b", processing.LegacyBilingualPromptVersion, generatedAt); err != nil {
-		t.Fatalf("CompleteProcessingJob() error = %v", err)
-	}
+	job := seedV2Presentation(t, database, presentation, generatedAt)
 
 	handler := testServer(t, database).Handler()
 	timeline := httptest.NewRecorder()
@@ -243,15 +221,12 @@ func TestTimelineAndDetailRenderAIContentWithProvenance(t *testing.T) {
 	for _, expected := range []string{
 		"AI-generated summary", presentation.TitleEN, presentation.SummaryEN,
 		"Original German text", "Visible only for quality review",
-		"AI processing", "Legacy pipeline", "Bilingual presentation",
-		"Model", "qwen3.5:4b", "Prompt version", processing.LegacyBilingualPromptVersion,
+		"AI processing", "German presentation", "English translation",
+		"Model", "qwen3.5:4b", "Prompt version", processing.GermanPresentationPromptVersion,
 	} {
 		if !strings.Contains(detail.Body.String(), expected) {
 			t.Errorf("detail body does not contain %q", expected)
 		}
-	}
-	if strings.Contains(detail.Body.String(), "English translation") {
-		t.Error("legacy presentation was rendered as a separate translation step")
 	}
 }
 
@@ -273,7 +248,7 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 		t.Fatal(err)
 	}
 	startedAt := time.Date(2026, time.August, 25, 9, 0, 0, 0, time.UTC)
-	request, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, "translate:4b", &incidentID, false, startedAt)
+	request, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, nil, &incidentID, false, startedAt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -314,14 +289,14 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	}, german.ModelIdentity, store.HashPipelineInput("de"), startedAt.Add(4*time.Minute)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := database.GetPresentationIncident(ctx, incidentID, store.PresentationScope{PromptVersion: processing.PipelineVersion, Language: "de", PublicOnly: true}); err != nil {
+	if _, err := database.GetPresentationIncident(ctx, incidentID, store.PresentationScope{Language: "de", PublicOnly: true}); err != nil {
 		t.Fatalf("German was not public immediately after canonical success: %v", err)
 	}
-	if _, err := database.GetPresentationIncident(ctx, incidentID, store.PresentationScope{PromptVersion: processing.PipelineVersion, Language: "en", PublicOnly: true}); !errors.Is(err, store.ErrNotFound) {
+	if _, err := database.GetPresentationIncident(ctx, incidentID, store.PresentationScope{Language: "en", PublicOnly: true}); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("English was public before translation completion: %v", err)
 	}
 	canonicalOnlyServer, err := NewWithOptions(database, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), Options{
-		PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PromptVersion: processing.PipelineVersion,
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "public",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -340,14 +315,15 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	if err != nil || !advance.Completed {
 		t.Fatalf("AdvancePipelineCycle(german) = %#v, err=%v", advance, err)
 	}
-	if queued, err := database.QueueTranslationsForRun(ctx, german.PresentationRunID, []store.TranslationPlan{{Language: processing.EnglishLanguage, PromptVersion: processing.EnglishTranslationPromptVersion, Model: "translate:4b"}}, "manual", startedAt.Add(6*time.Minute)); err != nil || queued != 1 {
+	translationPlan := store.PostProcessingPlan{ProcessorKey: "translation", ScopeKey: processing.EnglishLanguage, PromptVersion: processing.EnglishTranslationPromptVersion, Model: "translate:4b", InputKinds: []string{"title_de", "summary_de"}}
+	if queued, err := database.QueuePostProcessingForRun(ctx, german.PresentationRunID, []store.PostProcessingPlan{translationPlan}, "manual", false, startedAt.Add(6*time.Minute)); err != nil || queued != 1 {
 		t.Fatalf("QueueTranslationsForRun() = %d, err=%v", queued, err)
 	}
-	translation, found, err := database.ClaimTranslationJob(ctx, false, nil, startedAt.Add(6*time.Minute))
+	translation, found, err := database.ClaimPostProcessingJob(ctx, "translation", false, nil, startedAt.Add(6*time.Minute))
 	if err != nil || !found {
 		t.Fatalf("ClaimTranslationJob() = %#v, found=%t, err=%v", translation, found, err)
 	}
-	if err := database.CompleteTranslationJob(ctx, translation, "Crash at Harras", "A traffic crash occurred at Harras.", translation.ModelIdentity, translation.InputHash, startedAt.Add(7*time.Minute)); err != nil {
+	if err := database.CompletePostProcessingJob(ctx, translation, []store.PipelineValue{{Kind: "title", Value: "Crash at Harras"}, {Kind: "summary", Value: "A traffic crash occurred at Harras."}}, translation.ModelIdentity, translation.InputHash, startedAt.Add(7*time.Minute)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -457,7 +433,7 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 
 	markdown := httptest.NewRecorder()
 	publicServer, err := NewWithOptions(database, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), Options{
-		PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PromptVersion: processing.PipelineVersion,
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "public",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -548,7 +524,6 @@ func TestLiveTimelineFallbackAndIncidentAttribution(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	server, err := NewWithOptions(database, logger, Options{
 		PageSize: 20, SourceMode: "live", PresentationMode: "review",
-		PromptVersion: processing.PipelineVersion,
 	})
 	if err != nil {
 		t.Fatalf("NewWithOptions() error = %v", err)
@@ -592,19 +567,12 @@ func TestUnknownIncidentReturnsNotFound(t *testing.T) {
 }
 
 func TestPublicHostUsesFailClosedPresentationAndRejectsAdmin(t *testing.T) {
-	ctx := context.Background()
 	database := fixtureStore(t)
-	job, found, err := database.QueueAndClaimProcessingJob(ctx, legacyOperation("qwen3.5:4b"), time.Now())
-	if err != nil || !found {
-		t.Fatalf("claim public fixture job = %t/%v", found, err)
-	}
-	presentation := store.AIPresentation{
+	presentation := testPresentation{
 		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
-		TitleEN: "Safe title", SummaryEN: "Safe summary.", PrivacyStatus: "safe",
+		TitleEN: "Safe title", SummaryEN: "Safe summary.",
 	}
-	if err := database.CompleteProcessingJob(ctx, job, presentation, "qwen3.5:4b", processing.LegacyBilingualPromptVersion, time.Now()); err != nil {
-		t.Fatal(err)
-	}
+	job := seedV2Presentation(t, database, presentation, time.Now())
 	publicHosts := []string{"munichbrief.egekocabas.com", "munichbrief.de"}
 	server := adminTestServer(t, database, publicHosts)
 	handler := server.Handler()
@@ -739,7 +707,7 @@ func TestLocalizedRoutesAndLanguagePreference(t *testing.T) {
 
 	secureServer, err := NewWithOptions(fixtureStore(t), slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
-		PromptVersion: processing.PipelineVersion, SecureCookies: true,
+		SecureCookies: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -826,7 +794,6 @@ func TestPublicModeHidesUnprocessedStaleAndOriginalContent(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	publicServer, err := NewWithOptions(database, logger, Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "public",
-		PromptVersion: processing.PipelineVersion,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -845,14 +812,8 @@ func TestPublicModeHidesUnprocessedStaleAndOriginalContent(t *testing.T) {
 		t.Fatalf("unprocessed public detail status = %d, want 404", notFound.Code)
 	}
 
-	job, found, err := database.QueueAndClaimProcessingJob(ctx, legacyOperation("qwen3.5:4b"), time.Now())
-	if err != nil || !found {
-		t.Fatalf("claim current job = %t/%v", found, err)
-	}
-	presentation := store.AIPresentation{TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.", TitleEN: "Safe title", SummaryEN: "Safe summary.", PrivacyStatus: "safe"}
-	if err := database.CompleteProcessingJob(ctx, job, presentation, "qwen3.5:4b", processing.LegacyBilingualPromptVersion, time.Now()); err != nil {
-		t.Fatal(err)
-	}
+	presentation := testPresentation{TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.", TitleEN: "Safe title", SummaryEN: "Safe summary."}
+	job := seedV2Presentation(t, database, presentation, time.Now())
 	processedRecord, err := database.GetIncident(ctx, job.IncidentID)
 	if err != nil {
 		t.Fatal(err)
@@ -874,28 +835,5 @@ func TestPublicModeHidesUnprocessedStaleAndOriginalContent(t *testing.T) {
 	}
 	if strings.Contains(readyTimeline.Body.String(), "AI-generated summary") || strings.Contains(readyTimeline.Body.String(), "Not yet summarized or translated") {
 		t.Fatal("public timeline retained a redundant processing badge")
-	}
-}
-
-func TestPublicModeRetainsCompleteLegacyPromptDerivations(t *testing.T) {
-	ctx := context.Background()
-	database := fixtureStore(t)
-	job, found, err := database.QueueAndClaimProcessingJob(ctx, legacyOperation("qwen3.5:4b"), time.Now())
-	if err != nil || !found {
-		t.Fatalf("claim job = %t/%v", found, err)
-	}
-	value := store.AIPresentation{TitleDE: "Alt", SummaryDE: "Alt.", TitleEN: "Old", SummaryEN: "Old.", PrivacyStatus: "safe"}
-	if err := database.CompleteProcessingJob(ctx, job, value, "qwen3.5:4b", "incident-presentation-v1", time.Now()); err != nil {
-		t.Fatal(err)
-	}
-	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
-	server, err := NewWithOptions(database, logger, Options{PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PromptVersion: processing.PipelineVersion})
-	if err != nil {
-		t.Fatal(err)
-	}
-	response := httptest.NewRecorder()
-	server.Handler().ServeHTTP(response, englishRequest(http.MethodGet, "/en/incidents/"+formatID(job.IncidentID), nil))
-	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), value.SummaryEN) {
-		t.Fatalf("legacy prompt detail was not retained: status=%d body=%q", response.Code, response.Body.String())
 	}
 }

@@ -275,9 +275,6 @@ other = "Schritt"
 [Translation]
 other = "Übersetzung"
 
-[GermanAnalysisStep]
-other = "Deutsche Analyse"
-
 [IncidentMetadataStep]
 other = "Vorfallsmetadaten"
 
@@ -290,20 +287,11 @@ other = "Kategorieprüfung"
 [EnglishTranslationStep]
 other = "Englische Übersetzung"
 
-[LegacyBilingualStep]
-other = "Bilinguale Darstellung"
-
 [StagedPipeline]
 other = "Mehrstufige Pipeline"
 
 [MetadataFirstPipeline]
 other = "Metadaten-Pipeline v2"
-
-[V1FallbackPipeline]
-other = "Pipeline v1 (Fallback)"
-
-[LegacyPipeline]
-other = "Altsystem"
 
 [Generated]
 other = "Erstellt"

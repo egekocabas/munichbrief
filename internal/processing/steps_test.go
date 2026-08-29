@@ -85,8 +85,8 @@ func TestCategoryVerificationUsesOnlySummaryAndEnforcesVerdictInvariant(t *testi
 		})
 	}
 	corrected, err := step.OutputDecoder(`{"is_correct":false,"corrected_category":"Polizeieinsatz"}`)
-	if err != nil || corrected.CategoryVerification == nil || corrected.CategoryVerification.CorrectedCategory != "police_operation" {
-		t.Fatalf("German category mapping = %#v/%v", corrected.CategoryVerification, err)
+	if err != nil || corrected.Values["corrected_category"] != "police_operation" {
+		t.Fatalf("German category mapping = %#v/%v", corrected.Values, err)
 	}
 }
 
@@ -262,7 +262,7 @@ func TestEnglishTranslationReceivesOnlyDeclaredGermanPresentation(t *testing.T) 
 		"original_title": "private original title", "incident_body": "private original body",
 		"title_de": "Sicherer Titel", "summary_de": "Sichere Zusammenfassung.",
 	}})
-	if err != nil || output.Translation == nil || output.Translation.Title != "Safe title" || output.Translation.Summary != "Safe summary." {
+	if err != nil || output.Values["title"] != "Safe title" || output.Values["summary"] != "Safe summary." {
 		t.Fatalf("translation output = %#v, err=%v", output, err)
 	}
 }

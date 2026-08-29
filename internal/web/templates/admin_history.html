@@ -32,7 +32,7 @@
       <div class="max-w-3xl">
         <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Operations</p>
         <h1 class="mt-1 font-serif text-4xl font-bold tracking-tight">Pipeline history</h1>
-        <p class="mt-3 text-muted">Persisted latest state for canonical pipeline, category verification, and independent translation jobs. Incident text, generated output, and internal error messages are excluded.</p>
+        <p class="mt-3 text-muted">Persisted state for canonical pipeline and registered post-processing jobs. Incident text, generated output, and internal error messages are excluded.</p>
       </div>
       <p class="text-sm font-semibold text-muted">{{len .Entries}} job states shown</p>
     </div>
@@ -47,9 +47,9 @@
           {{range .Entries}}
           <tr class="align-top">
             <td class="whitespace-nowrap px-4 py-4"><time datetime="{{.UpdatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime "en" .UpdatedAt}}</time></td>
-            <td class="whitespace-nowrap px-4 py-4"><strong>{{if .CycleID}}Cycle #{{.CycleID}}{{else}}Independent{{end}}</strong><span class="mt-1 block text-xs text-muted">{{if eq .Kind "translation"}}translation · {{.RequestKind}}{{else if eq .Kind "category_verification"}}category verification · {{.RequestKind}}{{else}}{{.CycleKind}} · {{.CycleStatus}}{{end}}</span></td>
+            <td class="whitespace-nowrap px-4 py-4"><strong>{{if .CycleID}}Cycle #{{.CycleID}}{{else}}Independent{{end}}</strong><span class="mt-1 block text-xs text-muted">{{if eq .Kind "post_processing"}}post-processing · {{.RequestKind}}{{else}}{{.CycleKind}} · {{.CycleStatus}}{{end}}</span></td>
             <td class="whitespace-nowrap px-4 py-4 font-bold">#{{.IncidentID}}</td>
-            <td class="px-4 py-4 font-mono text-xs font-bold">{{.StepKey}}</td>
+            <td class="px-4 py-4 font-mono text-xs font-bold">{{.ExecutionKey}}</td>
             <td class="whitespace-nowrap px-4 py-4"><strong>{{.Status}}</strong><span class="mt-1 block text-xs text-muted">Attempts {{.AttemptCount}}{{if .FailureKind}} · {{.FailureKind}}{{end}}</span></td>
             <td class="px-4 py-4"><span class="block font-mono text-xs font-bold">{{.ModelIdentity}}</span><span class="mt-1 block font-mono text-xs text-muted">{{.PromptVersion}}</span></td>
           </tr>
@@ -65,7 +65,7 @@
     {{else}}
     <div class="mt-8 rounded-lg border border-dashed border-rule bg-paper px-6 py-12 text-center">
       <h2 class="font-serif text-2xl font-bold">No pipeline history yet</h2>
-      <p class="mt-2 text-sm text-muted">Job states will appear after a pipeline cycle, category verification, or translation is queued.</p>
+      <p class="mt-2 text-sm text-muted">Job states will appear after a pipeline cycle or registered post-processing job is queued.</p>
     </div>
     {{end}}
   </main>

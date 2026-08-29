@@ -283,7 +283,7 @@ func (s *Server) socialIncident(response http.ResponseWriter, request *http.Requ
 		return
 	}
 	scope := store.PresentationScope{
-		PromptVersion: s.options.PromptVersion, Language: language, TranslationLanguage: language,
+		Language: language, TranslationLanguage: language,
 		PublicOnly: s.options.PresentationMode == "public" || s.isPublicRequest(request),
 	}
 	incident, err := s.store.GetPresentationIncident(request.Context(), id, scope)

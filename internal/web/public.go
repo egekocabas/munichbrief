@@ -24,7 +24,7 @@ func (s *Server) scope(request *http.Request) store.PresentationScope {
 		language = preferredLanguage(request)
 	}
 	return store.PresentationScope{
-		PromptVersion: s.options.PromptVersion, Language: language, TranslationLanguage: language,
+		Language: language, TranslationLanguage: language,
 		PublicOnly: s.options.PresentationMode == "public" || s.isPublicRequest(request),
 	}
 }
@@ -346,42 +346,22 @@ func (s *Server) incidentForLanguage(record store.IncidentRecord, language strin
 		} else {
 			view.Title, view.Summary = record.AITitleDE, record.AISummaryDE
 		}
-		if record.AILegacy {
-			view.ProcessingSystem = s.localization.Text(language, "LegacyPipeline")
-			view.ProcessingSteps = []processingStepView{{
-				Number: 1, Name: s.localization.Text(language, "LegacyBilingualStep"),
-				Model: record.AIModel, PromptVersion: record.AIPromptVersion, GeneratedAt: record.AIGeneratedAt,
-			}}
-		} else if record.AIPipelineVersion == processing.PipelineVersion {
-			view.ProcessingSystem = s.localization.Text(language, "MetadataFirstPipeline")
-			view.ProcessingSteps = []processingStepView{
-				{Number: 1, Name: s.localization.Text(language, "IncidentMetadataStep"), Model: record.AIMetadataModel, PromptVersion: record.AIMetadataPromptVersion, GeneratedAt: record.AIMetadataGeneratedAt},
-				{Number: 2, Name: s.localization.Text(language, "GermanPresentationStep"), Model: record.AIModel, PromptVersion: record.AIPromptVersion, GeneratedAt: record.AIGeneratedAt},
-			}
-			if record.AICategoryVerificationModel != "" {
-				view.ProcessingSteps = append(view.ProcessingSteps, processingStepView{
-					Name: s.localization.Text(language, "CategoryVerificationStep"), Model: record.AICategoryVerificationModel,
-					PromptVersion: record.AICategoryVerificationPromptVersion, GeneratedAt: record.AICategoryVerificationGeneratedAt,
-				})
-			}
-			if !languageDefinition.Canonical {
-				view.ProcessingSteps = append(view.ProcessingSteps, processingStepView{
-					Name:  s.localization.Text(language, languageDefinition.StepMessageID),
-					Model: record.AITranslationModel, PromptVersion: record.AITranslationPromptVersion, GeneratedAt: record.AITranslationGeneratedAt,
-				})
-			}
-		} else {
-			view.ProcessingSystem = s.localization.Text(language, "V1FallbackPipeline")
-			view.ProcessingSteps = []processingStepView{{
-				Number: 1, Name: s.localization.Text(language, "GermanAnalysisStep"),
-				Model: record.AIModel, PromptVersion: record.AIPromptVersion, GeneratedAt: record.AIGeneratedAt,
-			}}
-			if !languageDefinition.Canonical {
-				view.ProcessingSteps = append(view.ProcessingSteps, processingStepView{
-					Name:  s.localization.Text(language, languageDefinition.StepMessageID),
-					Model: record.AITranslationModel, PromptVersion: record.AITranslationPromptVersion, GeneratedAt: record.AITranslationGeneratedAt,
-				})
-			}
+		view.ProcessingSystem = s.localization.Text(language, "MetadataFirstPipeline")
+		view.ProcessingSteps = []processingStepView{
+			{Number: 1, Name: s.localization.Text(language, "IncidentMetadataStep"), Model: record.AIMetadataModel, PromptVersion: record.AIMetadataPromptVersion, GeneratedAt: record.AIMetadataGeneratedAt},
+			{Number: 2, Name: s.localization.Text(language, "GermanPresentationStep"), Model: record.AIModel, PromptVersion: record.AIPromptVersion, GeneratedAt: record.AIGeneratedAt},
+		}
+		if record.AICategoryVerificationModel != "" {
+			view.ProcessingSteps = append(view.ProcessingSteps, processingStepView{
+				Name: s.localization.Text(language, "CategoryVerificationStep"), Model: record.AICategoryVerificationModel,
+				PromptVersion: record.AICategoryVerificationPromptVersion, GeneratedAt: record.AICategoryVerificationGeneratedAt,
+			})
+		}
+		if !languageDefinition.Canonical {
+			view.ProcessingSteps = append(view.ProcessingSteps, processingStepView{
+				Name:  s.localization.Text(language, languageDefinition.StepMessageID),
+				Model: record.AITranslationModel, PromptVersion: record.AITranslationPromptVersion, GeneratedAt: record.AITranslationGeneratedAt,
+			})
 		}
 		return view
 	}

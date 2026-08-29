@@ -23,11 +23,45 @@ type pipelineTestProvider struct {
 	onTranslation func()
 	calls         map[string]int
 	fail          func(string, int) error
+	generate      func(StepDefinition, StepInput) (StepOutput, bool)
 }
 
 type testModelCatalog struct{ snapshot ModelCatalogSnapshot }
 
 func (c testModelCatalog) Snapshot() ModelCatalogSnapshot { return c.snapshot }
+
+type pipelineTestObserver struct {
+	attempts  map[string]int
+	failures  map[string]int
+	durations map[string]int
+}
+
+func (o *pipelineTestObserver) RecordPipelineAttempt(step string) {
+	if o.attempts == nil {
+		o.attempts = make(map[string]int)
+	}
+	o.attempts[step]++
+}
+
+func (o *pipelineTestObserver) RecordPipelineSuccess(string, time.Time) {}
+
+func (o *pipelineTestObserver) RecordPipelineFailure(step, _ string) {
+	if o.failures == nil {
+		o.failures = make(map[string]int)
+	}
+	o.failures[step]++
+}
+
+func (o *pipelineTestObserver) RecordPipelineDuration(step string, _ time.Duration) {
+	if o.durations == nil {
+		o.durations = make(map[string]int)
+	}
+	o.durations[step]++
+}
+
+func (*pipelineTestObserver) SetPipelineSnapshot(store.PipelineSnapshot) {}
+func (*pipelineTestObserver) SetProcessorAvailable(bool)                 {}
+func (*pipelineTestObserver) SetProcessingWindowOpen(bool)               {}
 
 func (p *pipelineTestProvider) StepGenerator(model string) (StepGenerator, error) {
 	return pipelineTestGenerator{model: model, provider: p}, nil
@@ -52,6 +86,7 @@ func (g pipelineTestGenerator) GenerateStep(_ context.Context, step StepDefiniti
 	if g.provider.fail != nil {
 		failure = g.provider.fail(step.Key, call)
 	}
+	generate := g.provider.generate
 	callback := g.provider.onGerman
 	if step.Key == GermanPresentationStep {
 		g.provider.onGerman = nil
@@ -63,6 +98,11 @@ func (g pipelineTestGenerator) GenerateStep(_ context.Context, step StepDefiniti
 	g.provider.mu.Unlock()
 	if failure != nil {
 		return StepOutput{}, "", failure
+	}
+	if generate != nil {
+		if output, handled := generate(step, input); handled {
+			return output, g.model, nil
+		}
 	}
 	if step.Key == IncidentMetadataStep {
 		return StepOutput{
@@ -79,7 +119,7 @@ func (g pipelineTestGenerator) GenerateStep(_ context.Context, step StepDefiniti
 		if input.Value("title_de") != "Sicherer Titel" || input.Value("summary_de") != "Sichere Zusammenfassung." || input.Value("category") != "other" || input.Value("incident_body") != "" {
 			return StepOutput{}, "", fmt.Errorf("category verifier received invalid inputs")
 		}
-		return StepOutput{CategoryVerification: &CategoryVerificationResult{IsCorrect: true, CorrectedCategory: "other"}}, g.model, nil
+		return StepOutput{Values: map[string]string{"is_correct": "true", "corrected_category": "other"}}, g.model, nil
 	}
 	if input.Value("title_de") != "Sicherer Titel" || input.Value("summary_de") != "Sichere Zusammenfassung." {
 		return StepOutput{}, "", fmt.Errorf("translation received incomplete German presentation")
@@ -87,7 +127,7 @@ func (g pipelineTestGenerator) GenerateStep(_ context.Context, step StepDefiniti
 	if translationCallback != nil {
 		translationCallback()
 	}
-	return StepOutput{Translation: &TranslatedPresentation{Title: "Safe title", Summary: "Safe summary."}}, g.model, nil
+	return StepOutput{Values: map[string]string{"title": "Safe title", "summary": "Safe summary."}}, g.model, nil
 }
 
 func (p *pipelineTestProvider) callCount(step string) int {
@@ -116,7 +156,7 @@ func TestPipelineWorkerGroupsModelsFreezesTargetsAndStartsNextCycle(t *testing.T
 	}
 	provider := &pipelineTestProvider{}
 	provider.onGerman = func() { insertWorkerDocument(t, ctx, database, now.Add(2*time.Second), "three") }
-	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +180,7 @@ func TestPipelineWorkerGroupsModelsFreezesTargetsAndStartsNextCycle(t *testing.T
 			t.Fatalf("event %d = %q, want %s/%s grouped order", index, event, wantStep, wantModel)
 		}
 	}
-	snapshot, err := database.PipelineSnapshot(ctx, "fixture", StepKeys(), now)
+	snapshot, err := database.PipelineSnapshot(ctx, "fixture", StepKeys(), nil, now)
 	if err != nil || snapshot.ActiveCycle != nil || snapshot.ScheduledCandidates != 0 {
 		t.Fatalf("completed pipeline snapshot = %#v, err=%v", snapshot, err)
 	}
@@ -167,7 +207,7 @@ func TestPipelineWorkerPrioritizesCategoryVerificationBeforeTranslation(t *testi
 		t.Fatal(err)
 	}
 	provider := &pipelineTestProvider{}
-	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b", "verify:4b"}, CheckedAt: now}}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b", "verify:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,6 +223,142 @@ func TestPipelineWorkerPrioritizesCategoryVerificationBeforeTranslation(t *testi
 		if !strings.HasPrefix(events[index], step+":") {
 			t.Fatalf("event %d = %q, want %s", index, events[index], step)
 		}
+	}
+}
+
+func TestInjectedPostProcessorUsesGenericSchedulingManualExecutionStatusAndHistory(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-injected-processor.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 10, 30, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "one")
+
+	definitions := DefaultPostProcessorRegistry().Definitions()
+	definitions = append(definitions, PostProcessorDefinition{
+		Key: "quality_note", DisplayName: "Quality note", Description: "Test-only independent review note.", Priority: 30,
+		ModelSettingKey: "quality_note", Automatic: true, Manual: true,
+		Scopes: []PostProcessorScope{{Key: DefaultPostProcessingScope, DisplayName: "Default", Step: StepDefinition{
+			Key: "quality_note_step", DisplayName: "Quality note", PromptVersion: "quality-note-v1",
+			InputKinds: []string{"title_de", "summary_de"}, OutputKinds: []string{"note"}, OutputValues: postProcessingOutputValues,
+		}}},
+	})
+	registry, err := NewPostProcessorRegistry(definitions...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := database.EnsurePostProcessingScopes(ctx, registry.StoreScopes(), now.Add(-time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	for step, model := range map[string]string{
+		IncidentMetadataStep: "qwen:4b", GermanPresentationStep: "qwen:4b",
+		TranslationModelStep: "translate:4b", CategoryVerificationStep: "verify:4b", "quality_note": "quality:4b",
+	} {
+		if err := database.EnsurePipelineSteps(ctx, []string{step}, now); err != nil {
+			t.Fatal(err)
+		}
+		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	provider := &pipelineTestProvider{generate: func(step StepDefinition, input StepInput) (StepOutput, bool) {
+		if step.Key != "quality_note_step" {
+			return StepOutput{}, false
+		}
+		if input.Value("title_de") == "" || input.Value("summary_de") == "" {
+			return StepOutput{Values: map[string]string{}}, true
+		}
+		return StepOutput{Values: map[string]string{"note": "checked"}}, true
+	}}
+	catalog := testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"quality:4b", "qwen:4b", "translate:4b", "verify:4b"}, CheckedAt: now}}
+	worker, err := NewPipelineWorker(database, provider, catalog, registry, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker.processAvailable(ctx)
+	if provider.callCount("quality_note_step") != 1 {
+		status, _ := worker.Status(ctx)
+		t.Fatalf("scheduled injected processor calls = %d, want 1; events=%v models=%#v queue=%#v", provider.callCount("quality_note_step"), provider.events, status.Models.PostProcessors, status.Queue.PostProcessing)
+	}
+	status, err := worker.Status(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(status.Models.PostProcessors) != 3 || len(status.Queue.PostProcessing) != 3 {
+		t.Fatalf("injected processor status = %#v / %#v", status.Models.PostProcessors, status.Queue.PostProcessing)
+	}
+	records, _, err := database.ListIncidents(ctx, 1, 0)
+	if err != nil || len(records) != 1 {
+		t.Fatalf("list injected processor incident = %d/%v", len(records), err)
+	}
+	if queued, err := worker.RequestPostProcessing(ctx, PostProcessingRequest{ProcessorKey: "quality_note", IncidentID: &records[0].ID, Model: "quality:4b"}); err != nil || queued != 1 {
+		t.Fatalf("manual injected processor request = %d/%v", queued, err)
+	}
+	worker.processAvailable(ctx)
+	if provider.callCount("quality_note_step") != 2 {
+		t.Fatalf("manual injected processor calls = %d, want 2", provider.callCount("quality_note_step"))
+	}
+	history, err := database.ListPipelineHistory(ctx, "fixture", 20, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var automatic, manual bool
+	for _, entry := range history.Entries {
+		if entry.ProcessorKey != "quality_note" || entry.ExecutionKey != "quality_note/default" || entry.Status != "succeeded" {
+			continue
+		}
+		automatic = automatic || entry.RequestKind == "scheduled"
+		manual = manual || entry.RequestKind == "manual"
+	}
+	if !automatic || !manual {
+		t.Fatalf("injected processor history missing scheduled/manual successes: %#v", history.Entries)
+	}
+}
+
+func TestPipelineWorkerRequestsFocusedPostProcessing(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-focused-post-processing.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 11, 0, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "one")
+	if err := database.EnsurePipelineSteps(ctx, ModelSettingKeys(), now); err != nil {
+		t.Fatal(err)
+	}
+	for step, model := range pipelineTestModels() {
+		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := database.SetPipelineStepModel(ctx, CategoryVerificationStep, "verify:4b", now); err != nil {
+		t.Fatal(err)
+	}
+	provider := &pipelineTestProvider{}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b", "verify:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker.processAvailable(ctx)
+	records, _, err := database.ListIncidents(ctx, 1, 0)
+	if err != nil || len(records) != 1 {
+		t.Fatalf("list focused incident = %d/%v", len(records), err)
+	}
+	if queued, err := worker.RequestPostProcessing(ctx, PostProcessingRequest{ProcessorKey: TranslationModelStep, ScopeKeys: []string{"en"}, IncidentID: &records[0].ID, Model: "translate:4b"}); err != nil || queued != 1 {
+		t.Fatalf("focused translation request = %d/%v", queued, err)
+	}
+	if queued, err := worker.RequestPostProcessing(ctx, PostProcessingRequest{ProcessorKey: CategoryVerificationStep, Model: "verify:4b"}); err != nil || queued != 1 {
+		t.Fatalf("focused category request = %d/%v", queued, err)
+	}
+	if _, err := worker.RequestPostProcessing(ctx, PostProcessingRequest{ProcessorKey: TranslationModelStep, ScopeKeys: []string{"en"}, Model: "missing:4b"}); !errors.Is(err, ErrModelUnavailable) {
+		t.Fatalf("unavailable focused model error = %v", err)
+	}
+	worker.processAvailable(ctx)
+	if provider.callCount(EnglishTranslationStep) != 2 || provider.callCount(CategoryVerificationStep) != 2 {
+		t.Fatalf("focused post-processing calls = translation:%d category:%d", provider.callCount(EnglishTranslationStep), provider.callCount(CategoryVerificationStep))
 	}
 }
 
@@ -208,7 +384,7 @@ func TestPipelineWorkerFinishesAuthorizedCycleAfterWindowButDoesNotStartAnother(
 		current = time.Date(2026, 8, 25, 8, 1, 0, 0, time.UTC)
 		insertWorkerDocument(t, ctx, database, current, "two")
 	}
-	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: current}}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return current }, Schedule{Location: time.UTC, Start: 3 * time.Hour, End: 8 * time.Hour}, "fixture")
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: current}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return current }, Schedule{Location: time.UTC, Start: 3 * time.Hour, End: 8 * time.Hour}, "fixture")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -216,7 +392,7 @@ func TestPipelineWorkerFinishesAuthorizedCycleAfterWindowButDoesNotStartAnother(
 	if len(provider.events) != 2 || provider.events[0][:len(IncidentMetadataStep)] != IncidentMetadataStep || provider.events[1][:len(GermanPresentationStep)] != GermanPresentationStep {
 		t.Fatalf("authorized cycle events = %v", provider.events)
 	}
-	snapshot, err := database.PipelineSnapshot(ctx, "fixture", StepKeys(), current)
+	snapshot, err := database.PipelineSnapshot(ctx, "fixture", StepKeys(), nil, current)
 	if err != nil || snapshot.ActiveCycle != nil || snapshot.ScheduledCandidates != 1 {
 		t.Fatalf("closed-window snapshot = %#v, err=%v", snapshot, err)
 	}
@@ -251,7 +427,7 @@ func TestPipelineWorkerDoesNotCallModelsWhileRequiredStepIsUnset(t *testing.T) {
 	now := time.Date(2026, 8, 25, 4, 0, 0, 0, time.UTC)
 	insertWorkerDocument(t, ctx, database, now, "one")
 	provider := &pipelineTestProvider{}
-	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b"}, CheckedAt: now}}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -283,7 +459,7 @@ func TestMissingTranslationModelDoesNotBlockCanonicalGerman(t *testing.T) {
 		}
 	}
 	provider := &pipelineTestProvider{}
-	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b"}, CheckedAt: now}}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -295,14 +471,14 @@ func TestMissingTranslationModelDoesNotBlockCanonicalGerman(t *testing.T) {
 	if err != nil || len(records) != 1 {
 		t.Fatal(err)
 	}
-	if _, err := database.GetPresentationIncident(ctx, records[0].ID, store.PresentationScope{PromptVersion: PipelineVersion, Language: "de", PublicOnly: true}); err != nil {
+	if _, err := database.GetPresentationIncident(ctx, records[0].ID, store.PresentationScope{Language: "de", PublicOnly: true}); err != nil {
 		t.Fatalf("canonical German was not public: %v", err)
 	}
-	if _, err := database.GetPresentationIncident(ctx, records[0].ID, store.PresentationScope{PromptVersion: PipelineVersion, Language: "en", PublicOnly: true}); !errors.Is(err, store.ErrNotFound) {
+	if _, err := database.GetPresentationIncident(ctx, records[0].ID, store.PresentationScope{Language: "en", PublicOnly: true}); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("English was visible without a translation: %v", err)
 	}
 	status, err := worker.ModelStatus(ctx)
-	if err != nil || !status.Ready || status.TranslationReady {
+	if err != nil || !status.Ready || len(status.PostProcessors) != 2 || status.PostProcessors[1].PreferredAvailable {
 		t.Fatalf("split model readiness = %#v/%v", status, err)
 	}
 }
@@ -326,7 +502,7 @@ func TestCanonicalWorkPreemptsTranslationsAtJobBoundaries(t *testing.T) {
 	}
 	provider := &pipelineTestProvider{}
 	provider.onTranslation = func() { insertWorkerDocument(t, ctx, database, now.Add(time.Second), "two") }
-	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -369,7 +545,7 @@ func TestTranslationFailureDoesNotChangeCanonicalCompletion(t *testing.T) {
 		}
 		return nil
 	}}
-	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -383,15 +559,15 @@ func TestTranslationFailureDoesNotChangeCanonicalCompletion(t *testing.T) {
 	if err != nil || len(records) != 1 {
 		t.Fatalf("incidents = %d, err=%v", len(records), err)
 	}
-	if _, err := database.GetPresentationIncident(ctx, records[0].ID, store.PresentationScope{PromptVersion: PipelineVersion, Language: "de", PublicOnly: true}); err != nil {
+	if _, err := database.GetPresentationIncident(ctx, records[0].ID, store.PresentationScope{Language: "de", PublicOnly: true}); err != nil {
 		t.Fatalf("canonical German was not public after translation failure: %v", err)
 	}
-	if _, err := database.GetPresentationIncident(ctx, records[0].ID, store.PresentationScope{PromptVersion: PipelineVersion, Language: "en", PublicOnly: true}); !errors.Is(err, store.ErrNotFound) {
+	if _, err := database.GetPresentationIncident(ctx, records[0].ID, store.PresentationScope{Language: "en", PublicOnly: true}); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("failed English translation became public: %v", err)
 	}
-	snapshot, err := database.PipelineSnapshot(ctx, "fixture", StepKeys(), now)
-	if err != nil || len(snapshot.Translations) != 1 || snapshot.Translations[0].NeedsReview != 1 {
-		t.Fatalf("translation failure snapshot = %#v, err=%v", snapshot.Translations, err)
+	snapshot, err := database.PipelineSnapshot(ctx, "fixture", StepKeys(), nil, now)
+	if err != nil || len(snapshot.PostProcessing) != 2 || snapshot.PostProcessing[1].NeedsReview != 1 {
+		t.Fatalf("translation failure snapshot = %#v, err=%v", snapshot.PostProcessing, err)
 	}
 }
 
@@ -418,7 +594,7 @@ func TestPipelineWorkerRetriesPrivacyFailurePerStepThenRequiresReview(t *testing
 		}
 		return nil
 	}}
-	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -431,7 +607,7 @@ func TestPipelineWorkerRetriesPrivacyFailurePerStepThenRequiresReview(t *testing
 	if provider.callCount(IncidentMetadataStep) != 1 || provider.callCount(GermanPresentationStep) != contentMaxAttempts || provider.callCount(EnglishTranslationStep) != 0 {
 		t.Fatalf("step calls = metadata:%d german:%d translation:%d", provider.callCount(IncidentMetadataStep), provider.callCount(GermanPresentationStep), provider.callCount(EnglishTranslationStep))
 	}
-	snapshot, err := database.PipelineSnapshot(ctx, "fixture", StepKeys(), now)
+	snapshot, err := database.PipelineSnapshot(ctx, "fixture", StepKeys(), nil, now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -463,7 +639,7 @@ func TestPipelineWorkerFailsClosedWhenMetadataRemainsInvalid(t *testing.T) {
 		}
 		return nil
 	}}
-	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -476,7 +652,7 @@ func TestPipelineWorkerFailsClosedWhenMetadataRemainsInvalid(t *testing.T) {
 	if provider.callCount(IncidentMetadataStep) != contentMaxAttempts || provider.callCount(GermanPresentationStep) != 0 || provider.callCount(EnglishTranslationStep) != 0 {
 		t.Fatalf("step calls = metadata:%d german:%d translation:%d", provider.callCount(IncidentMetadataStep), provider.callCount(GermanPresentationStep), provider.callCount(EnglishTranslationStep))
 	}
-	snapshot, err := database.PipelineSnapshot(ctx, "fixture", StepKeys(), now)
+	snapshot, err := database.PipelineSnapshot(ctx, "fixture", StepKeys(), nil, now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -508,13 +684,17 @@ func TestPipelineWorkerTransientFailureOpensPerStepModelCircuit(t *testing.T) {
 		}
 		return nil
 	}}
-	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	observer := &pipelineTestObserver{}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), observer, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
 	if err != nil {
 		t.Fatal(err)
 	}
 	worker.processAvailable(ctx)
 	if provider.callCount(IncidentMetadataStep) != 1 || provider.callCount(GermanPresentationStep) != 1 || !worker.circuitOpen(GermanPresentationStep, "qwen:4b", now) {
 		t.Fatalf("first transient failure calls/circuit = metadata:%d german:%d/%t", provider.callCount(IncidentMetadataStep), provider.callCount(GermanPresentationStep), worker.circuitOpen(GermanPresentationStep, "qwen:4b", now))
+	}
+	if observer.attempts[GermanPresentationStep] != 1 || observer.failures[GermanPresentationStep] != 1 || observer.durations[GermanPresentationStep] != 1 {
+		t.Fatalf("failed canonical observability = attempts:%d failures:%d durations:%d", observer.attempts[GermanPresentationStep], observer.failures[GermanPresentationStep], observer.durations[GermanPresentationStep])
 	}
 	worker.processAvailable(ctx)
 	if provider.callCount(GermanPresentationStep) != 1 {
@@ -550,13 +730,17 @@ func TestTranslationTransientFailureBacksOffFailedModel(t *testing.T) {
 		}
 		return nil
 	}}
-	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	observer := &pipelineTestObserver{}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), observer, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
 	if err != nil {
 		t.Fatal(err)
 	}
 	worker.processAvailable(ctx)
-	if provider.callCount(EnglishTranslationStep) != 1 || len(worker.blockedTranslationModels(now)) != 1 {
-		t.Fatalf("translation circuit = calls:%d blocked:%v", provider.callCount(EnglishTranslationStep), worker.blockedTranslationModels(now))
+	if provider.callCount(EnglishTranslationStep) != 1 || len(worker.blockedModels(TranslationModelStep, now)) != 1 {
+		t.Fatalf("translation circuit = calls:%d blocked:%v", provider.callCount(EnglishTranslationStep), worker.blockedModels(TranslationModelStep, now))
+	}
+	if observer.attempts[TranslationModelStep+"/en"] != 1 || observer.failures[TranslationModelStep+"/en"] != 1 || observer.durations[TranslationModelStep+"/en"] != 1 {
+		t.Fatalf("failed post-processing observability = attempts:%d failures:%d durations:%d", observer.attempts[TranslationModelStep+"/en"], observer.failures[TranslationModelStep+"/en"], observer.durations[TranslationModelStep+"/en"])
 	}
 	worker.processAvailable(ctx)
 	if provider.callCount(EnglishTranslationStep) != 1 {

@@ -19,8 +19,72 @@ import (
 	"github.com/egekocabas/munichbrief/internal/store"
 )
 
-func legacyOperation(model string) string {
-	return "incident-presentation/" + processing.LegacyBilingualPromptVersion + "/" + model
+type testPresentation struct {
+	TitleDE, SummaryDE, TitleEN, SummaryEN string
+}
+
+type testPresentationJob struct {
+	IncidentID int64
+	TitleDE    string
+	BodyDE     string
+}
+
+func seedV2Presentation(t *testing.T, database *store.Store, presentation testPresentation, now time.Time) testPresentationJob {
+	t.Helper()
+	ctx := context.Background()
+	records, _, err := database.ListAdminIncidents(ctx, 1, 0, "fixture", store.PresentationScope{Language: "de"}, store.AdminIncidentsUnprocessed)
+	if err != nil || len(records) != 1 {
+		t.Fatalf("find unprocessed presentation target = %d/%v", len(records), err)
+	}
+	incidentID := records[0].ID
+	plans, err := processing.StepPlans(map[string]string{processing.IncidentMetadataStep: "qwen3.5:4b", processing.GermanPresentationStep: "qwen3.5:4b"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	request, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, nil, &incidentID, false, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cycle, found, err := database.ActivateNextPipelineCycle(ctx, "fixture", nil, false, now)
+	if err != nil || !found || cycle.ID != request.CycleID {
+		t.Fatalf("activate test presentation cycle = %#v/%t/%v", cycle, found, err)
+	}
+	metadata, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 0, now)
+	if err != nil || !found {
+		t.Fatalf("claim test metadata = %#v/%t/%v", metadata, found, err)
+	}
+	metadataValues := []store.PipelineValue{{Kind: "category", Value: "other"}, {Kind: "report_kind", Value: "incident"}, {Kind: "public_assistance_status", Value: "not_requested"}, {Kind: "public_assistance_types", Value: "[]"}}
+	if err := database.CompletePipelineJob(ctx, metadata, metadataValues, metadata.ModelIdentity, store.HashPipelineInput("metadata", metadata.SourceHash), now); err != nil {
+		t.Fatal(err)
+	}
+	if advanced, err := database.AdvancePipelineCycle(ctx, cycle, len(plans), now); err != nil || !advanced.Advanced {
+		t.Fatalf("advance test metadata = %#v/%v", advanced, err)
+	}
+	cycle.ActiveStep = 1
+	german, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 1, now)
+	if err != nil || !found {
+		t.Fatalf("claim test German presentation = %#v/%t/%v", german, found, err)
+	}
+	values := []store.PipelineValue{{Kind: "title_de", Value: presentation.TitleDE}, {Kind: "summary_de", Value: presentation.SummaryDE}, {Kind: "privacy_status", Value: "safe"}, {Kind: "privacy_flags", Value: "[]"}}
+	if err := database.CompletePipelineJob(ctx, german, values, german.ModelIdentity, store.HashPipelineInput("german", german.SourceHash), now); err != nil {
+		t.Fatal(err)
+	}
+	if completed, err := database.AdvancePipelineCycle(ctx, cycle, len(plans), now); err != nil || !completed.Completed {
+		t.Fatalf("complete test presentation cycle = %#v/%v", completed, err)
+	}
+	translationPlan := store.PostProcessingPlan{ProcessorKey: "translation", ScopeKey: "en", PromptVersion: processing.EnglishTranslationPromptVersion, Model: "qwen3.5:4b", InputKinds: []string{"title_de", "summary_de"}}
+	if queued, err := database.QueuePostProcessingForRun(ctx, german.PresentationRunID, []store.PostProcessingPlan{translationPlan}, "manual", false, now); err != nil || queued != 1 {
+		t.Fatalf("queue test translation = %d/%v", queued, err)
+	}
+	translation, found, err := database.ClaimPostProcessingJob(ctx, "translation", false, nil, now)
+	if err != nil || !found {
+		t.Fatalf("claim test translation = %#v/%t/%v", translation, found, err)
+	}
+	translated := []store.PipelineValue{{Kind: "title", Value: presentation.TitleEN}, {Kind: "summary", Value: presentation.SummaryEN}}
+	if err := database.CompletePostProcessingJob(ctx, translation, translated, translation.ModelIdentity, translation.InputHash, now); err != nil {
+		t.Fatal(err)
+	}
+	return testPresentationJob{IncidentID: incidentID, TitleDE: records[0].TitleDE, BodyDE: records[0].BodyDE}
 }
 
 func fixtureStore(t *testing.T) *store.Store {
@@ -42,9 +106,10 @@ func fixtureStore(t *testing.T) *store.Store {
 }
 
 type fakeProcessingRequester struct {
-	database *store.Store
-	err      error
-	status   *processing.PipelineModelStatus
+	database    *store.Store
+	err         error
+	status      *processing.PipelineModelStatus
+	postRequest func(context.Context, processing.PostProcessingRequest) (int, error)
 }
 
 func (p fakeProcessingRequester) RequestNow(ctx context.Context, sourceMode string, models map[string]string, incidentID *int64, reprocessAll bool) (store.PipelineRequestResult, error) {
@@ -55,14 +120,31 @@ func (p fakeProcessingRequester) RequestNow(ctx context.Context, sourceMode stri
 	if err != nil {
 		return store.PipelineRequestResult{}, err
 	}
-	return p.database.CreateManualPipelineCycleWithPostProcessing(ctx, sourceMode, plans, models[processing.TranslationModelStep], models[processing.CategoryVerificationStep], incidentID, reprocessAll, time.Now())
+	var postPlans []store.PostProcessingPlan
+	registry := processing.DefaultPostProcessorRegistry()
+	for _, definition := range registry.Definitions() {
+		model := models[definition.ModelSettingKey]
+		if model == "" {
+			continue
+		}
+		selected, err := registry.Plans(definition.Key, nil, model)
+		if err != nil {
+			return store.PipelineRequestResult{}, err
+		}
+		postPlans = append(postPlans, selected...)
+	}
+	return p.database.CreateManualPipelineCycle(ctx, sourceMode, plans, postPlans, incidentID, reprocessAll, time.Now())
 }
 
 func (p fakeProcessingRequester) ModelStatus(ctx context.Context) (processing.PipelineModelStatus, error) {
 	if p.status != nil {
 		return *p.status, nil
 	}
-	return processing.PipelineModelStatus{Steps: defaultTestStepStatus("qwen3.5:4b"), Translation: processing.StepModelStatus{Key: processing.TranslationModelStep, DisplayName: "Translations", Preferred: "qwen3.5:4b", PreferredAvailable: true}, CategoryVerification: processing.StepModelStatus{Key: processing.CategoryVerificationStep, DisplayName: "Category verification", Preferred: "qwen3.5:4b", PreferredAvailable: true}, Models: []string{"granite4:3b", "qwen3.5:4b"}, CatalogAvailable: true, Ready: true, TranslationReady: true, CategoryVerificationReady: true}, nil
+	postProcessors := []processing.PostProcessorModelStatus{
+		{Key: processing.CategoryVerificationStep, DisplayName: "Category verification", Description: "Verify categories.", ModelSettingKey: processing.CategoryVerificationStep, Manual: true, Preferred: "qwen3.5:4b", PreferredAvailable: true, Scopes: []processing.PostProcessorScopeStatus{{Key: "default", DisplayName: "Default"}}},
+		{Key: processing.TranslationModelStep, DisplayName: "Translations", Description: "Translate presentations.", ModelSettingKey: processing.TranslationModelStep, Manual: true, Preferred: "qwen3.5:4b", PreferredAvailable: true, Scopes: []processing.PostProcessorScopeStatus{{Key: "en", DisplayName: "English"}}},
+	}
+	return processing.PipelineModelStatus{Steps: defaultTestStepStatus("qwen3.5:4b"), PostProcessors: postProcessors, Models: []string{"granite4:3b", "qwen3.5:4b"}, CatalogAvailable: true, Ready: true}, nil
 }
 
 func (p fakeProcessingRequester) SetPreferredStepModel(ctx context.Context, step, model string) error {
@@ -75,28 +157,18 @@ func (p fakeProcessingRequester) SetPreferredStepModel(ctx context.Context, step
 	return p.database.SetPipelineStepModel(ctx, step, model, time.Now())
 }
 
-func (p fakeProcessingRequester) RetryTranslation(ctx context.Context, incidentID int64, language, model string) (int, error) {
-	definition, found := processing.TranslationByLanguage(language)
-	if !found {
-		return 0, store.ErrNotFound
+func (p fakeProcessingRequester) RequestPostProcessing(ctx context.Context, request processing.PostProcessingRequest) (int, error) {
+	if p.postRequest != nil {
+		return p.postRequest(ctx, request)
 	}
-	return p.database.QueueIncidentTranslation(ctx, incidentID, store.TranslationPlan{Language: language, PromptVersion: definition.PromptVersion, Model: model}, time.Now())
-}
-
-func (p fakeProcessingRequester) BackfillTranslations(ctx context.Context, language, model string) (int, error) {
-	definition, found := processing.TranslationByLanguage(language)
-	if !found {
-		return 0, store.ErrNotFound
+	plans, err := processing.DefaultPostProcessorRegistry().Plans(request.ProcessorKey, request.ScopeKeys, request.Model)
+	if err != nil {
+		return 0, err
 	}
-	return p.database.QueueMissingTranslations(ctx, "fixture", []store.TranslationPlan{{Language: language, PromptVersion: definition.PromptVersion, Model: model}}, true, time.Now())
-}
-
-func (p fakeProcessingRequester) RetryCategoryVerification(ctx context.Context, incidentID int64, model string) (int, error) {
-	return p.database.QueueIncidentCategoryVerification(ctx, incidentID, store.CategoryVerificationPlan{PromptVersion: processing.CategoryVerificationPromptVersion, Model: model}, time.Now())
-}
-
-func (p fakeProcessingRequester) BackfillCategoryVerifications(ctx context.Context, model string) (int, error) {
-	return p.database.QueueMissingCategoryVerifications(ctx, "fixture", store.CategoryVerificationPlan{PromptVersion: processing.CategoryVerificationPromptVersion, Model: model}, true, time.Now())
+	if request.IncidentID != nil {
+		return p.database.QueueIncidentPostProcessing(ctx, *request.IncidentID, plans, time.Now())
+	}
+	return p.database.QueuePostProcessingForAll(ctx, "fixture", plans, true, time.Now())
 }
 
 func (p fakeProcessingRequester) Status(ctx context.Context) (processing.PipelineRuntimeStatus, error) {
@@ -104,7 +176,7 @@ func (p fakeProcessingRequester) Status(ctx context.Context) (processing.Pipelin
 	if err != nil {
 		return processing.PipelineRuntimeStatus{}, err
 	}
-	queue, err := p.database.PipelineSnapshot(ctx, "fixture", processing.StepKeys(), time.Now())
+	queue, err := p.database.PipelineSnapshot(ctx, "fixture", processing.StepKeys(), nil, time.Now())
 	return processing.PipelineRuntimeStatus{GeneratedAt: time.Now(), WindowOpen: true, ScheduledReady: models.Ready, ProcessorAvailable: true, Models: models, Queue: queue}, err
 }
 
@@ -121,7 +193,6 @@ func testServer(t *testing.T, database *store.Store) *Server {
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	server, err := NewWithOptions(database, logger, Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
-		PromptVersion: processing.PipelineVersion,
 	})
 	if err != nil {
 		t.Fatalf("NewWithOptions() error = %v", err)
@@ -134,7 +205,6 @@ func adminTestServer(t *testing.T, database *store.Store, publicHosts []string) 
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	server, err := NewWithOptions(database, logger, Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
-		PromptVersion: processing.PipelineVersion,
 		SecureCookies: true, AdminEnabled: true, PublicHosts: publicHosts,
 		CanonicalOrigin: canonicalOriginForHosts(publicHosts),
 		Processor:       fakeProcessingRequester{database: database},
