@@ -42,6 +42,9 @@ func TestRegisteredPipelineStepsAreStableAndOrdered(t *testing.T) {
 
 func TestCategoryVerificationUsesOnlySummaryAndEnforcesVerdictInvariant(t *testing.T) {
 	step := CategoryVerificationDefinition()
+	if step.PromptVersion != "incident-category-verification-v2" {
+		t.Fatalf("category verification prompt version = %q", step.PromptVersion)
+	}
 	input := StepInput{Values: map[string]string{
 		"title_de": "Kontrolle in München", "summary_de": "Die Polizei kontrollierte Fahrzeuge.",
 		"category": "traffic", "incident_body": "must never be sent", "original_title": "must never be sent",
@@ -53,13 +56,21 @@ func TestCategoryVerificationUsesOnlySummaryAndEnforcesVerdictInvariant(t *testi
 	if len(generated.Values) != 3 || generated.Value("category") != "Verkehr" || generated.Value("incident_body") != "" || strings.Contains(message, "must never be sent") {
 		t.Fatalf("category verifier leaked undeclared source input: %s", message)
 	}
-	for _, expected := range []string{`"title_de":"Kontrolle in München"`, `"summary_de":"Die Polizei kontrollierte Fahrzeuge."`, `"category":"Verkehr"`} {
+	for _, expected := range []string{`"title_de":"Kontrolle in München"`, `"summary_de":"Die Polizei kontrollierte Fahrzeuge."`, `"existing_category":"Verkehr"`} {
 		if !strings.Contains(message, expected) {
 			t.Errorf("category verification input omitted %s: %s", expected, message)
 		}
 	}
 	if strings.Contains(step.SystemPrompt, "traffic") || strings.Contains(message, `"category":"traffic"`) {
 		t.Fatal("category verifier exposed an internal category code to the German model")
+	}
+	if strings.Contains(message, `"category":"Verkehr"`) {
+		t.Fatal("category verifier used the ambiguous category field name")
+	}
+	for _, expected := range []string{"vollständig ignoriert", "Trickdiebstahl", "falsche Handwerker", "freiwillig etwas", "Gewalt nur gegen Sachen", "kein Polizeieinsatz", "Amtswechsel", "bloße Bedrohung", "Gleichheitsprüfung"} {
+		if !strings.Contains(step.SystemPrompt, expected) {
+			t.Errorf("German category prompt omitted %q", expected)
+		}
 	}
 	cases := []struct {
 		name    string
@@ -93,6 +104,9 @@ func TestCategoryVerificationUsesOnlySummaryAndEnforcesVerdictInvariant(t *testi
 
 func TestPublicAssistanceVerificationUsesRawGermanSourceAndEnforcesVerdictInvariant(t *testing.T) {
 	step := PublicAssistanceVerificationDefinition()
+	if step.PromptVersion != "incident-public-assistance-verification-v2" {
+		t.Fatalf("public assistance prompt version = %q", step.PromptVersion)
+	}
 	input := StepInput{Values: map[string]string{
 		"original_title":           "Zeugenaufruf nach Verkehrsunfall",
 		"incident_body":            "Die Polizei bittet Zeugen um Beobachtungen und Videos unter 089/123456.",
@@ -103,15 +117,20 @@ func TestPublicAssistanceVerificationUsesRawGermanSourceAndEnforcesVerdictInvari
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, expected := range []string{"Zeugenaufruf nach Verkehrsunfall", "089/123456", `"public_assistance_status":"requested"`, `"public_assistance_types":["witness_observations"]`} {
+	for _, expected := range []string{"Zeugenaufruf nach Verkehrsunfall", "089/123456", `"existing_public_assistance_status":"requested"`, `"existing_public_assistance_types":["witness_observations"]`} {
 		if !strings.Contains(message, expected) {
 			t.Errorf("public assistance verification input omitted %q: %s", expected, message)
+		}
+	}
+	for _, obsolete := range []string{`"public_assistance_status":`, `"public_assistance_types":`} {
+		if strings.Contains(message, obsolete) {
+			t.Errorf("public assistance verification input used ambiguous field %q: %s", obsolete, message)
 		}
 	}
 	if strings.Contains(message, "must never be sent") || generated.Value("title_de") != "" || generated.Value("summary_de") != "" {
 		t.Fatalf("public assistance verifier received undeclared presentation input: %s", message)
 	}
-	for _, expected := range []string{"deutscher Polizeipressebericht", "ausdrücklich", "öffentliche Bitte um Mithilfe"} {
+	for _, expected := range []string{"vollständig ignoriert", "Fahrzeugbeobachtungen", "is_correct nur dann", "Typenmenge exakt"} {
 		if !strings.Contains(step.SystemPrompt, expected) {
 			t.Errorf("German public assistance prompt omitted %q", expected)
 		}
