@@ -70,6 +70,28 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	if categoryOnly.Code != http.StatusSeeOther || !strings.Contains(categoryOnly.Header().Get("Location"), "category_verifications_queued=0") {
 		t.Fatalf("all-category focused processing = %d/%q", categoryOnly.Code, categoryOnly.Header().Get("Location"))
 	}
+	invalidLanguage := httptest.NewRecorder()
+	handler.ServeHTTP(invalidLanguage, formRequest(http.MethodPost, "/api/admin/ai/translations/process", "confirmed=true&scope=all&language=unknown&model=qwen3.5%3A4b"))
+	if invalidLanguage.Code != http.StatusBadRequest {
+		t.Fatalf("unknown focused translation language = %d, want 400", invalidLanguage.Code)
+	}
+	invalidScope := httptest.NewRecorder()
+	handler.ServeHTTP(invalidScope, formRequest(http.MethodPost, "/api/admin/ai/category-verifications/process", "confirmed=true&scope=current&model=qwen3.5%3A4b"))
+	if invalidScope.Code != http.StatusBadRequest {
+		t.Fatalf("unknown focused category scope = %d, want 400", invalidScope.Code)
+	}
+	unconfirmedFocused := httptest.NewRecorder()
+	handler.ServeHTTP(unconfirmedFocused, formRequest(http.MethodPost, "/api/admin/ai/translations/process", "scope=all&language=all&model=qwen3.5%3A4b"))
+	if unconfirmedFocused.Code != http.StatusBadRequest {
+		t.Fatalf("unconfirmed focused translation = %d, want 400", unconfirmedFocused.Code)
+	}
+	crossSiteFocusedRequest := formRequest(http.MethodPost, "/api/admin/ai/category-verifications/process", "confirmed=true&scope=all&model=qwen3.5%3A4b")
+	crossSiteFocusedRequest.Header.Set("Sec-Fetch-Site", "cross-site")
+	crossSiteFocused := httptest.NewRecorder()
+	handler.ServeHTTP(crossSiteFocused, crossSiteFocusedRequest)
+	if crossSiteFocused.Code != http.StatusForbidden {
+		t.Fatalf("cross-site focused category request = %d, want 403", crossSiteFocused.Code)
+	}
 
 	for _, attack := range []struct {
 		name, fetchSite, origin string

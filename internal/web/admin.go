@@ -365,6 +365,9 @@ func (s *Server) processTranslationsOnly(response http.ResponseWriter, request *
 		for _, definition := range processing.RegisteredTranslations() {
 			languages = append(languages, definition.Language)
 		}
+	} else if _, found := processing.TranslationByLanguage(language); !found {
+		http.Error(response, "unsupported translation language", http.StatusBadRequest)
+		return
 	}
 	incidentID, ok := postProcessingIncidentID(response, request.PostForm)
 	if !ok {
