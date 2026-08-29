@@ -353,13 +353,13 @@ func (s *Server) incidentForLanguage(record store.IncidentRecord, language strin
 		}
 		if record.AICategoryVerificationModel != "" {
 			view.ProcessingSteps = append(view.ProcessingSteps, processingStepView{
-				Name: s.localization.Text(language, "CategoryVerificationStep"), Model: record.AICategoryVerificationModel,
+				Label: s.localization.Text(language, "CategoryVerificationStep"), Name: s.localization.Text(language, "CategoryVerificationStep"), Model: record.AICategoryVerificationModel,
 				PromptVersion: record.AICategoryVerificationPromptVersion, GeneratedAt: record.AICategoryVerificationGeneratedAt,
 			})
 		}
 		if !languageDefinition.Canonical {
 			view.ProcessingSteps = append(view.ProcessingSteps, processingStepView{
-				Name:  s.localization.Text(language, languageDefinition.StepMessageID),
+				Label: s.localization.Text(language, "Translation"), Name: s.localization.Text(language, languageDefinition.StepMessageID),
 				Model: record.AITranslationModel, PromptVersion: record.AITranslationPromptVersion, GeneratedAt: record.AITranslationGeneratedAt,
 			})
 		}
@@ -590,6 +590,7 @@ type incidentView struct {
 
 type processingStepView struct {
 	Number        int
+	Label         string
 	Name          string
 	Model         string
 	PromptVersion string

@@ -206,6 +206,24 @@ func TestTimelineAndDetailRenderAIContentWithProvenance(t *testing.T) {
 		TitleEN: "Short English title", SummaryEN: "A factual English summary.",
 	}
 	job := seedV2Presentation(t, database, presentation, generatedAt)
+	verifications, err := database.ListAdminCategoryVerifications(context.Background(), []int64{job.IncidentID})
+	if err != nil || len(verifications) != 1 {
+		t.Fatalf("ListAdminCategoryVerifications() = %#v, err=%v", verifications, err)
+	}
+	verificationPlan := store.PostProcessingPlan{
+		ProcessorKey: "category_verification", ScopeKey: "default", PromptVersion: processing.CategoryVerificationPromptVersion,
+		Model: "qwen3.5:4b", InputKinds: []string{"title_de", "summary_de", "category"},
+	}
+	if queued, err := database.QueuePostProcessingForRun(context.Background(), verifications[0].PresentationRunID, []store.PostProcessingPlan{verificationPlan}, "manual", false, generatedAt); err != nil || queued != 1 {
+		t.Fatalf("queue category verification = %d/%v", queued, err)
+	}
+	verification, found, err := database.ClaimPostProcessingJob(context.Background(), "category_verification", false, nil, generatedAt)
+	if err != nil || !found {
+		t.Fatalf("claim category verification = %#v/%t/%v", verification, found, err)
+	}
+	if err := database.CompletePostProcessingJob(context.Background(), verification, []store.PipelineValue{{Kind: "is_correct", Value: "true"}, {Kind: "corrected_category", Value: "other"}}, verification.ModelIdentity, verification.InputHash, generatedAt); err != nil {
+		t.Fatal(err)
+	}
 
 	handler := testServer(t, database).Handler()
 	timeline := httptest.NewRecorder()
@@ -227,6 +245,12 @@ func TestTimelineAndDetailRenderAIContentWithProvenance(t *testing.T) {
 		if !strings.Contains(detail.Body.String(), expected) {
 			t.Errorf("detail body does not contain %q", expected)
 		}
+	}
+	if !strings.Contains(detail.Body.String(), `text-alert">Category verification</p>`) {
+		t.Error("category verification provenance card does not use its own label")
+	}
+	if !strings.Contains(detail.Body.String(), `text-alert">Translation</p>`) {
+		t.Error("translation provenance card does not retain its translation label")
 	}
 }
 
