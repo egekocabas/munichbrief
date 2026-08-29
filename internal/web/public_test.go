@@ -374,6 +374,9 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	if timelineReport < 0 || timelineLabel < 0 || timelineCategory < 0 || timelineReport > timelineLabel || timelineLabel > timelineCategory {
 		t.Error("timeline does not keep the police report first and group generated metadata after the AI label")
 	}
+	if !strings.Contains(timelineBody, `<dl class="contents text-xs">`) {
+		t.Error("timeline metadata tags do not wrap independently beside the AI label")
+	}
 
 	english := httptest.NewRecorder()
 	handler.ServeHTTP(english, englishRequest(http.MethodGet, "/en/incidents/"+formatID(incidentID), nil))
@@ -396,6 +399,9 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	detailCategory := strings.Index(englishBody, ">Category</dt>")
 	if detailReport < 0 || detailLabel < 0 || detailCategory < 0 || detailReport > detailLabel || detailLabel > detailCategory {
 		t.Error("detail does not keep the police report first and group generated metadata after the AI label")
+	}
+	if !strings.Contains(englishBody, `<dl class="contents text-xs">`) {
+		t.Error("detail metadata tags do not wrap independently beside the AI label")
 	}
 	if count := strings.Count(english.Body.String(), ">Crash at Harras</"); count != 1 {
 		t.Errorf("English detail renders the incident heading %d times, want 1", count)

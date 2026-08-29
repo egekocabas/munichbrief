@@ -38,7 +38,7 @@
             {{if or .Record.HasAI .CategoryLabel .AreaName .EventText .PublicAssistance}}
               <div class="mt-3 flex flex-wrap items-center gap-2">
                 {{if .Record.HasAI}}{{template "ai-generated-label" $}}{{end}}
-                {{if or .CategoryLabel .AreaName .EventText .PublicAssistance}}<dl class="flex flex-wrap items-center gap-2 text-xs">
+                {{if or .CategoryLabel .AreaName .EventText .PublicAssistance}}<dl class="contents text-xs">
                   {{if .CategoryLabel}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{t $.Lang "Category"}}</dt><dd class="font-bold text-civic">{{.CategoryLabel}}</dd></div>{{end}}
                   {{if .AreaName}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{t $.Lang "Area"}}</dt><dd class="font-bold text-civic">{{.AreaName}}</dd></div>{{end}}
                   {{if .EventText}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{.EventLabel}}</dt><dd class="font-bold text-civic">{{.EventText}}</dd></div>{{end}}

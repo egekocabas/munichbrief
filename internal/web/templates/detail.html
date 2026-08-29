@@ -14,7 +14,7 @@
     {{if or .Incident.Record.HasAI .Incident.CategoryLabel .Incident.AreaName .Incident.EventText .Incident.PublicAssistance}}
       <div class="mt-4 flex flex-wrap items-center gap-2">
         {{if .Incident.Record.HasAI}}{{template "ai-generated-label" .}}{{end}}
-        {{if or .Incident.CategoryLabel .Incident.AreaName .Incident.EventText .Incident.PublicAssistance}}<dl class="flex flex-wrap gap-2 text-xs">
+        {{if or .Incident.CategoryLabel .Incident.AreaName .Incident.EventText .Incident.PublicAssistance}}<dl class="contents text-xs">
           {{if .Incident.CategoryLabel}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{t .Lang "Category"}}</dt><dd class="font-bold text-civic">{{.Incident.CategoryLabel}}</dd></div>{{end}}
           {{if .Incident.AreaName}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{t .Lang "Area"}}</dt><dd class="font-bold text-civic">{{.Incident.AreaName}}</dd></div>{{end}}
           {{if .Incident.EventText}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{.Incident.EventLabel}}</dt><dd class="font-bold text-civic">{{.Incident.EventText}}</dd></div>{{end}}
