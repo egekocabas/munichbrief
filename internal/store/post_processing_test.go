@@ -48,6 +48,20 @@ func TestPostProcessingGenericLifecycleKeepsSuccessfulValueDuringForcedReplaceme
 	if len(job.InputValues) != 2 || job.InputValues["title_de"] != "Titel" || job.InputValues["summary_de"] != "Zusammenfassung." {
 		t.Fatalf("translation claim received undeclared inputs: %#v", job.InputValues)
 	}
+	activeSnapshot, err := database.PipelineSnapshot(ctx, "fixture", []string{"incident_metadata", "german_presentation"}, nil, now.Add(4*time.Minute+30*time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var activeTranslationStats *PostProcessingQueueStats
+	for index := range activeSnapshot.PostProcessing {
+		if activeSnapshot.PostProcessing[index].ProcessorKey == "translation" && activeSnapshot.PostProcessing[index].ScopeKey == "en" {
+			activeTranslationStats = &activeSnapshot.PostProcessing[index]
+			break
+		}
+	}
+	if activeTranslationStats == nil || activeTranslationStats.QueueStartedAt == nil || !activeTranslationStats.QueueStartedAt.Equal(now.Add(2*time.Minute)) || activeTranslationStats.RunningStartedAt == nil || !activeTranslationStats.RunningStartedAt.Equal(now.Add(4*time.Minute)) {
+		t.Fatalf("active translation timing stats = %#v", activeTranslationStats)
+	}
 	if err := database.CompletePostProcessingJob(ctx, job, []PipelineValue{{Kind: "title", Value: "First title"}, {Kind: "summary", Value: "First summary."}}, "translate:4b", job.InputHash, now.Add(5*time.Minute)); err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +88,7 @@ func TestPostProcessingGenericLifecycleKeepsSuccessfulValueDuringForcedReplaceme
 			break
 		}
 	}
-	if translationStats == nil || translationStats.Running != 1 || translationStats.RunningStartedAt == nil || !translationStats.RunningStartedAt.Equal(now.Add(7*time.Minute)) {
+	if translationStats == nil || translationStats.Running != 1 || translationStats.QueueStartedAt == nil || !translationStats.QueueStartedAt.Equal(now.Add(6*time.Minute)) || translationStats.RunningStartedAt == nil || !translationStats.RunningStartedAt.Equal(now.Add(7*time.Minute)) {
 		t.Fatalf("running translation stats = %#v", translationStats)
 	}
 	if err := database.CompletePostProcessingJob(ctx, replacement, []PipelineValue{{Kind: "title", Value: "Second title"}, {Kind: "summary", Value: "Second summary."}}, "translate:4b", replacement.InputHash, now.Add(8*time.Minute)); err != nil {
