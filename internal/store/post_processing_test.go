@@ -19,7 +19,14 @@ func TestPostProcessingGenericLifecycleKeepsSuccessfulValueDuringForcedReplaceme
 		t.Fatal(err)
 	}
 	defer database.Close()
-	now := time.Date(2026, 8, 29, 12, 0, 0, 0, time.UTC)
+	var automaticAfter string
+	if err := database.db.QueryRowContext(ctx, `SELECT automatic_after FROM post_processing_scopes WHERE processor_key='translation' AND scope_key='en'`).Scan(&automaticAfter); err != nil {
+		t.Fatal(err)
+	}
+	now, err := time.Parse(time.RFC3339Nano, automaticAfter)
+	if err != nil {
+		t.Fatal(err)
+	}
 	insertPipelineDocuments(t, ctx, database, now, "one")
 	var incidentID int64
 	var sourceHash string
