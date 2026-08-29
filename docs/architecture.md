@@ -65,6 +65,11 @@ scope; source-backed inputs are never added to another processor's claimed job.
 The claim contract includes the prompt version, so jobs left behind by a prompt
 upgrade are claimed without newly declared inputs and handled by the worker's
 configuration-failure path instead of blocking the queue.
+The same contract carries the complete output-kind set. Persistence rejects
+missing, duplicate, or undeclared outputs and a changed input hash before any
+value is committed. Reader, admin, readiness, and modification-time queries
+also select only complete successes for every verifier and translation scope,
+which preserves atomic fallback even for legacy or manually corrupted rows.
 Correction-style admin readers share one value-pair selection path for latest
 complete success, original-value fallback, and latest-attempt state, so another
 verifier does not require a new persistence algorithm.

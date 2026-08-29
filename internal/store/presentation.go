@@ -112,22 +112,32 @@ const latestCanonicalPresentationRun = `(SELECT r.id
 
 const latestPresentationRun = latestCanonicalPresentationRun
 
-const latestCompletePublicAssistanceVerificationJob = `(SELECT job.id
-	FROM post_processing_jobs job
-	WHERE job.presentation_run_id = ` + latestPresentationRun + `
-		AND job.processor_key='public_assistance_verification' AND job.scope_key='default' AND job.status='succeeded'
-		AND EXISTS (SELECT 1 FROM post_processing_values output WHERE output.job_id=job.id AND output.kind='is_correct')
-		AND EXISTS (SELECT 1 FROM post_processing_values output WHERE output.job_id=job.id AND output.kind='corrected_public_assistance_status')
-		AND EXISTS (SELECT 1 FROM post_processing_values output WHERE output.job_id=job.id AND output.kind='corrected_public_assistance_types')
-	ORDER BY job.completed_at DESC,job.id DESC
-	LIMIT 1)`
+func latestCompletePostProcessingJob(runExpression, processorKey, scopeExpression string, outputKinds ...string) string {
+	query := `(SELECT job.id FROM post_processing_jobs job WHERE job.presentation_run_id = ` + runExpression +
+		` AND job.processor_key=` + sqlStringLiteral(processorKey) + ` AND job.scope_key=` + scopeExpression + ` AND job.status='succeeded'`
+	for _, kind := range outputKinds {
+		query += ` AND EXISTS (SELECT 1 FROM post_processing_values output WHERE output.job_id=job.id AND output.kind=` + sqlStringLiteral(kind) + `)`
+	}
+	return query + ` ORDER BY job.completed_at DESC,job.id DESC LIMIT 1)`
+}
 
-const scopedAIColumns = `
+func sqlStringLiteral(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", "''") + "'"
+}
+
+var (
+	latestCompletePublicAssistanceVerificationJob = latestCompletePostProcessingJob(latestPresentationRun, "public_assistance_verification", "'default'", "is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types")
+	latestCompleteCategoryVerificationJob         = latestCompletePostProcessingJob(latestPresentationRun, "category_verification", "'default'", "is_correct", "corrected_category")
+	latestCompleteTranslationJob                  = latestCompletePostProcessingJob(latestPresentationRun, "translation", "@translation_language", "title", "summary")
+	latestCompletePublicTranslationJob            = latestCompletePostProcessingJob(latestPresentationRun, "translation", "@language", "title", "summary")
+)
+
+var scopedAIColumns = `
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'title_de' LIMIT 1), ''),
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
-				COALESCE((SELECT value.value FROM post_processing_jobs job JOIN post_processing_values value ON value.job_id=job.id WHERE job.presentation_run_id = ` + latestPresentationRun + ` AND job.processor_key='translation' AND job.scope_key=@translation_language AND job.status='succeeded' AND value.kind='title' ORDER BY job.completed_at DESC,job.id DESC LIMIT 1), ''),
-				COALESCE((SELECT value.value FROM post_processing_jobs job JOIN post_processing_values value ON value.job_id=job.id WHERE job.presentation_run_id = ` + latestPresentationRun + ` AND job.processor_key='translation' AND job.scope_key=@translation_language AND job.status='succeeded' AND value.kind='summary' ORDER BY job.completed_at DESC,job.id DESC LIMIT 1), ''),
-				COALESCE((SELECT value.value FROM post_processing_jobs job JOIN post_processing_values value ON value.job_id=job.id WHERE job.presentation_run_id = ` + latestPresentationRun + ` AND job.processor_key='category_verification' AND job.scope_key='default' AND job.status='succeeded' AND value.kind='corrected_category' ORDER BY job.completed_at DESC,job.id DESC LIMIT 1),
+				COALESCE((SELECT value FROM post_processing_values WHERE job_id = ` + latestCompleteTranslationJob + ` AND kind='title' LIMIT 1), ''),
+				COALESCE((SELECT value FROM post_processing_values WHERE job_id = ` + latestCompleteTranslationJob + ` AND kind='summary' LIMIT 1), ''),
+				COALESCE((SELECT value FROM post_processing_values WHERE job_id = ` + latestCompleteCategoryVerificationJob + ` AND kind='corrected_category' LIMIT 1),
 					(SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'category' LIMIT 1), ''),
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'category' LIMIT 1), ''),
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'area_name' LIMIT 1), ''),
@@ -148,15 +158,15 @@ const scopedAIColumns = `
 				COALESCE((SELECT model_identity FROM post_processing_jobs WHERE id = ` + latestCompletePublicAssistanceVerificationJob + `), ''),
 				COALESCE((SELECT prompt_version FROM post_processing_jobs WHERE id = ` + latestCompletePublicAssistanceVerificationJob + `), ''),
 				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompletePublicAssistanceVerificationJob + `), ''),
-				COALESCE((SELECT model_identity FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='category_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1), ''),
-				COALESCE((SELECT prompt_version FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='category_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1), ''),
-				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='category_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1), ''),
+				COALESCE((SELECT model_identity FROM post_processing_jobs WHERE id = ` + latestCompleteCategoryVerificationJob + `), ''),
+				COALESCE((SELECT prompt_version FROM post_processing_jobs WHERE id = ` + latestCompleteCategoryVerificationJob + `), ''),
+				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompleteCategoryVerificationJob + `), ''),
 				COALESCE((SELECT model_identity FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
 				COALESCE((SELECT prompt_version FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
 				COALESCE((SELECT generated_at FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
-				COALESCE((SELECT model_identity FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='translation' AND scope_key=@translation_language AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1), ''),
-				COALESCE((SELECT prompt_version FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='translation' AND scope_key=@translation_language AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1), ''),
-				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='translation' AND scope_key=@translation_language AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1), ''),
+				COALESCE((SELECT model_identity FROM post_processing_jobs WHERE id = ` + latestCompleteTranslationJob + `), ''),
+				COALESCE((SELECT prompt_version FROM post_processing_jobs WHERE id = ` + latestCompleteTranslationJob + `), ''),
+				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompleteTranslationJob + `), ''),
 				COALESCE((SELECT pipeline_version FROM presentation_runs WHERE id = ` + latestPresentationRun + `), ''),
 				COALESCE((SELECT j.status FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id = j.cycle_item_id WHERE ci.incident_id = i.id AND ci.source_hash = i.content_hash ORDER BY j.updated_at DESC, j.id DESC LIMIT 1), ''),
 				COALESCE((SELECT j.attempt_count FROM processing_step_jobs j JOIN processing_cycle_items ci ON ci.id = j.cycle_item_id WHERE ci.incident_id = i.id AND ci.source_hash = i.content_hash ORDER BY j.updated_at DESC, j.id DESC LIMIT 1), 0),
@@ -167,13 +177,10 @@ const scopedAIColumns = `
 				COALESCE((SELECT next_retry_at FROM post_processing_jobs WHERE presentation_run_id = ` + latestCanonicalPresentationRun + ` AND processor_key='translation' AND scope_key=@translation_language ORDER BY created_at DESC,id DESC LIMIT 1), ''),
 				COALESCE((SELECT failure_kind FROM post_processing_jobs WHERE presentation_run_id = ` + latestCanonicalPresentationRun + ` AND processor_key='translation' AND scope_key=@translation_language ORDER BY created_at DESC,id DESC LIMIT 1), '')`
 
-const publicReadyCondition = `EXISTS (
+var publicReadyCondition = `EXISTS (
 		SELECT 1 FROM presentation_runs r
 		WHERE r.id = ` + latestCanonicalPresentationRun + `
-			AND (@language = 'de' OR EXISTS (
-				SELECT 1 FROM post_processing_jobs translated
-				WHERE translated.presentation_run_id = r.id AND translated.processor_key='translation' AND translated.scope_key = @language AND translated.status = 'succeeded'
-			))
+			AND (@language = 'de' OR ` + latestCompletePublicTranslationJob + ` IS NOT NULL)
 )`
 
 func presentationArgs(scope PresentationScope) []any {
@@ -302,12 +309,12 @@ func (s *Store) ListPublicIncidentLinks(ctx context.Context, sourceMode string, 
 				COALESCE(NULLIF(MAX(
 					COALESCE((SELECT r.completed_at FROM presentation_runs r WHERE r.id = ` + latestPresentationRun + `),''),
 					COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompletePublicAssistanceVerificationJob + `),''),
-					COALESCE((SELECT completed_at FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='category_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),'')
+					COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompleteCategoryVerificationJob + `),'')
 				),''), i.updated_at)
 			ELSE COALESCE(NULLIF(MAX(
-				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='translation' AND scope_key=@language AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),''),
+				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompletePublicTranslationJob + `),''),
 				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompletePublicAssistanceVerificationJob + `),''),
-				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE presentation_run_id = ` + latestPresentationRun + ` AND processor_key='category_verification' AND scope_key='default' AND status='succeeded' ORDER BY completed_at DESC,id DESC LIMIT 1),'')
+				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompleteCategoryVerificationJob + `),'')
 			),''), i.updated_at) END
 		FROM incidents i
 		JOIN source_documents d ON d.id = i.source_document_id
@@ -438,6 +445,8 @@ func (s *Store) ListAdminTranslations(ctx context.Context, incidentIDs []int64, 
 			FROM canonical_runs canonical
 			JOIN post_processing_jobs translation ON translation.presentation_run_id=canonical.id AND translation.processor_key='translation' AND translation.status='succeeded'
 			JOIN requested_languages language ON language.language_code=translation.scope_key
+			WHERE EXISTS (SELECT 1 FROM post_processing_values output WHERE output.job_id=translation.id AND output.kind='title')
+				AND EXISTS (SELECT 1 FROM post_processing_values output WHERE output.job_id=translation.id AND output.kind='summary')
 		),
 		selected_translations AS (SELECT * FROM ranked_translations WHERE translation_rank = 1),
 		ranked_attempts AS (

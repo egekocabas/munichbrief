@@ -48,3 +48,18 @@ func TestPostProcessorRegistryRejectsCounterOutsideDeclaredOutputs(t *testing.T)
 		t.Fatal("counter for undeclared output unexpectedly registered")
 	}
 }
+
+func TestPostProcessorRegistryRejectsDefinitionWideCounterMissingFromOneScope(t *testing.T) {
+	_, err := NewPostProcessorRegistry(PostProcessorDefinition{
+		Key: "test", DisplayName: "Test", Description: "Test processor.", Priority: 1,
+		ModelSettingKey: "test", Automatic: true,
+		Scopes: []PostProcessorScope{
+			{Key: "one", DisplayName: "One", Step: StepDefinition{Key: "test/one", PromptVersion: "test-one-v1", InputKinds: []string{"title_de"}, OutputKinds: []string{"shared"}, OutputValues: postProcessingOutputValues}},
+			{Key: "two", DisplayName: "Two", Step: StepDefinition{Key: "test/two", PromptVersion: "test-two-v1", InputKinds: []string{"title_de"}, OutputKinds: []string{"different"}, OutputValues: postProcessingOutputValues}},
+		},
+		Counters: []PostProcessorCounter{{Key: "shared", OutputKind: "shared", EqualsValue: "true"}},
+	})
+	if err == nil {
+		t.Fatal("definition-wide counter missing from one scope unexpectedly registered")
+	}
+}

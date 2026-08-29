@@ -81,7 +81,7 @@ func TestPipelineFreezesTargetsGroupsStepsAndStartsNextCycleImmediately(t *testi
 	}
 	translations := 0
 	for {
-		job, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingInputs("en", "incident-translation-en-v1", "title_de", "summary_de"), true, nil, now)
+		job, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", "incident-translation-en-v1", []string{"title", "summary"}, "title_de", "summary_de"), true, nil, now)
 		if err != nil {
 			t.Fatal(err)
 		}

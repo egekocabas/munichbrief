@@ -207,7 +207,7 @@ func TestTimelineAndDetailRenderAIContentWithProvenance(t *testing.T) {
 	if queued, err := database.QueuePostProcessingForRun(context.Background(), job.PresentationRunID, []store.PostProcessingPlan{assistancePlan}, "manual", false, generatedAt.Add(time.Minute)); err != nil || queued != 1 {
 		t.Fatalf("queue public assistance verification = %d/%v", queued, err)
 	}
-	assistance, found, err := database.ClaimPostProcessingJob(context.Background(), processing.PublicAssistanceVerificationStep, testPostProcessingInputs("default", assistancePlan.PromptVersion, assistancePlan.InputKinds...), false, nil, generatedAt.Add(time.Minute))
+	assistance, found, err := database.ClaimPostProcessingJob(context.Background(), processing.PublicAssistanceVerificationStep, testPostProcessingContract("default", assistancePlan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, assistancePlan.InputKinds...), false, nil, generatedAt.Add(time.Minute))
 	if err != nil || !found {
 		t.Fatalf("claim public assistance verification = %#v/%t/%v", assistance, found, err)
 	}
@@ -229,7 +229,7 @@ func TestTimelineAndDetailRenderAIContentWithProvenance(t *testing.T) {
 	if queued, err := database.QueuePostProcessingForRun(context.Background(), verifications[0].PresentationRunID, []store.PostProcessingPlan{verificationPlan}, "manual", false, generatedAt); err != nil || queued != 1 {
 		t.Fatalf("queue category verification = %d/%v", queued, err)
 	}
-	verification, found, err := database.ClaimPostProcessingJob(context.Background(), "category_verification", testPostProcessingInputs("default", verificationPlan.PromptVersion, verificationPlan.InputKinds...), false, nil, generatedAt)
+	verification, found, err := database.ClaimPostProcessingJob(context.Background(), "category_verification", testPostProcessingContract("default", verificationPlan.PromptVersion, []string{"is_correct", "corrected_category"}, verificationPlan.InputKinds...), false, nil, generatedAt)
 	if err != nil || !found {
 		t.Fatalf("claim category verification = %#v/%t/%v", verification, found, err)
 	}
@@ -373,7 +373,7 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	if queued, err := database.QueuePostProcessingForRun(ctx, german.PresentationRunID, []store.PostProcessingPlan{translationPlan}, "manual", false, startedAt.Add(6*time.Minute)); err != nil || queued != 1 {
 		t.Fatalf("QueueTranslationsForRun() = %d, err=%v", queued, err)
 	}
-	translation, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingInputs("en", translationPlan.PromptVersion, translationPlan.InputKinds...), false, nil, startedAt.Add(6*time.Minute))
+	translation, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", translationPlan.PromptVersion, []string{"title", "summary"}, translationPlan.InputKinds...), false, nil, startedAt.Add(6*time.Minute))
 	if err != nil || !found {
 		t.Fatalf("ClaimTranslationJob() = %#v, found=%t, err=%v", translation, found, err)
 	}

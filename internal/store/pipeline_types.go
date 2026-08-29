@@ -73,16 +73,17 @@ type PostProcessingScope struct {
 	ScopeKey     string
 }
 
-// PostProcessingScopeInputContract identifies the current prompt and exact
-// immutable inputs for one registered processor scope.
-type PostProcessingScopeInputContract struct {
+// PostProcessingScopeContract identifies the current prompt and exact
+// immutable input/output contract for one registered processor scope.
+type PostProcessingScopeContract struct {
 	PromptVersion string
 	InputKinds    []string
+	OutputKinds   []string
 }
 
-// PostProcessingInputContract maps each scope of one processor to its current
-// prompt and immutable input contract.
-type PostProcessingInputContract map[string]PostProcessingScopeInputContract
+// PostProcessingContract maps each scope of one processor to its current
+// prompt and immutable value contract.
+type PostProcessingContract map[string]PostProcessingScopeContract
 
 // PostProcessingJob is one independently claimed job for an immutable current
 // canonical presentation.
@@ -98,6 +99,7 @@ type PostProcessingJob struct {
 	InputHash         string
 	AttemptCount      int
 	InputValues       map[string]string
+	OutputKinds       []string
 }
 
 // PostProcessingQueueStats summarizes one registered processor scope.
@@ -115,11 +117,12 @@ type PostProcessingQueueStats struct {
 }
 
 type PostProcessingCounterSpec struct {
-	ProcessorKey string
-	ScopeKey     string
-	CounterKey   string
-	OutputKind   string
-	EqualsValue  string
+	ProcessorKey        string
+	ScopeKey            string
+	CounterKey          string
+	OutputKind          string
+	EqualsValue         string
+	RequiredOutputKinds []string
 }
 
 // PipelineValue is one validated presentation field produced by a step.

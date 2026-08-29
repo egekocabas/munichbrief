@@ -55,7 +55,7 @@ func TestPipelineHistoryCombinesCanonicalAndPostProcessingJobsWithStableCursors(
 	if queued, err := database.QueuePostProcessingForRun(ctx, german.PresentationRunID, []PostProcessingPlan{translationPlan}, "manual", false, now); err != nil || queued != 1 {
 		t.Fatalf("queue translation = %d/%v", queued, err)
 	}
-	translation, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingInputs("en", translationPlan.PromptVersion, "title_de", "summary_de"), false, nil, now)
+	translation, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", translationPlan.PromptVersion, []string{"title", "summary"}, "title_de", "summary_de"), false, nil, now)
 	if err != nil || !found {
 		t.Fatalf("claim translation = %#v/%t/%v", translation, found, err)
 	}
@@ -66,7 +66,7 @@ func TestPipelineHistoryCombinesCanonicalAndPostProcessingJobsWithStableCursors(
 	if queued, err := database.QueuePostProcessingForRun(ctx, german.PresentationRunID, []PostProcessingPlan{verificationPlan}, "manual", false, now); err != nil || queued != 1 {
 		t.Fatalf("queue category verification = %d/%v", queued, err)
 	}
-	verification, found, err := database.ClaimPostProcessingJob(ctx, "category_verification", testPostProcessingInputs("default", verificationPlan.PromptVersion, "title_de", "summary_de", "category"), false, nil, now)
+	verification, found, err := database.ClaimPostProcessingJob(ctx, "category_verification", testPostProcessingContract("default", verificationPlan.PromptVersion, []string{"is_correct", "corrected_category"}, "title_de", "summary_de", "category"), false, nil, now)
 	if err != nil || !found {
 		t.Fatalf("claim category verification = %#v/%t/%v", verification, found, err)
 	}
