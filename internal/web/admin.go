@@ -158,9 +158,10 @@ func (s *Server) adminCategoryVerifications(request *http.Request, records []sto
 		views[result.IncidentID] = adminCategoryVerificationView{
 			OriginalCategory: result.OriginalCategory, EffectiveCategory: result.EffectiveCategory,
 			OriginalLabel: processing.CategoryLabel(result.OriginalCategory, "en"), EffectiveLabel: processing.CategoryLabel(result.EffectiveCategory, "en"),
-			Verdict: adminVerificationVerdict(result.IsCorrect), Status: adminPostProcessingStatus(result.Status, result.Attempts), Attempts: result.Attempts, FailureKind: result.FailureKind,
-			Model: result.Model, PromptVersion: result.PromptVersion, GeneratedAt: result.GeneratedAt,
-			CanRetry: result.PresentationRunID > 0 && result.OriginalCategory != "" && result.Status != "pending" && result.Status != "running",
+			Verdict: adminVerificationVerdict(result.IsCorrect), Status: adminPostProcessingStatus(result.Status, result.Attempts),
+			StatusReason: result.StatusReason, StatusDetail: result.StatusDetail, Attempts: result.Attempts, FailureKind: result.FailureKind,
+			Model: visiblePostProcessingModel(result.Model, result.Status, result.Attempts, result.GeneratedAt), PromptVersion: result.PromptVersion, GeneratedAt: result.GeneratedAt,
+			CanRetry: result.PresentationRunID > 0 && result.OriginalCategory != "" && canRetryPostProcessing(result.Status, result.StatusReason),
 		}
 	}
 	return views, nil
@@ -177,9 +178,10 @@ func (s *Server) adminPublicAssistanceVerifications(request *http.Request, recor
 			OriginalStatus: result.OriginalStatus, OriginalTypes: result.OriginalTypes,
 			EffectiveStatus: result.EffectiveStatus, EffectiveTypes: result.EffectiveTypes,
 			OriginalTypeLabels: s.adminAssistanceTypeLabels(result.OriginalTypes), EffectiveTypeLabels: s.adminAssistanceTypeLabels(result.EffectiveTypes),
-			Verdict: adminVerificationVerdict(result.IsCorrect), Status: adminPostProcessingStatus(result.Status, result.Attempts), Attempts: result.Attempts, FailureKind: result.FailureKind,
-			Model: result.Model, PromptVersion: result.PromptVersion, GeneratedAt: result.GeneratedAt, NextRetryAt: result.NextRetryAt,
-			CanRetry: result.PresentationRunID > 0 && result.OriginalStatus != "" && result.Status != "pending" && result.Status != "running",
+			Verdict: adminVerificationVerdict(result.IsCorrect), Status: adminPostProcessingStatus(result.Status, result.Attempts),
+			StatusReason: result.StatusReason, StatusDetail: result.StatusDetail, Attempts: result.Attempts, FailureKind: result.FailureKind,
+			Model: visiblePostProcessingModel(result.Model, result.Status, result.Attempts, result.GeneratedAt), PromptVersion: result.PromptVersion, GeneratedAt: result.GeneratedAt, NextRetryAt: result.NextRetryAt,
+			CanRetry: result.PresentationRunID > 0 && result.OriginalStatus != "" && canRetryPostProcessing(result.Status, result.StatusReason),
 		}
 	}
 	return views, nil
@@ -221,6 +223,30 @@ func adminPostProcessingStatus(status string, attempts int) string {
 	return status
 }
 
+func canRetryPostProcessing(status, statusReason string) bool {
+	return status != "pending" && status != "running" && !(status == "skipped" && statusReason == store.PostProcessingStatusReasonMissingInput)
+}
+
+func visiblePostProcessingModel(model, status string, attempts int, generatedAt *time.Time) string {
+	if status == "skipped" && attempts == 0 && generatedAt == nil {
+		return ""
+	}
+	return model
+}
+
+func postProcessingStatusReasonLabel(reason, detail string) string {
+	if reason != store.PostProcessingStatusReasonMissingInput {
+		return strings.ReplaceAll(reason, "_", " ")
+	}
+	if detail == "incident_body" {
+		return "Original incident text unavailable"
+	}
+	if detail == "" {
+		return "Required input unavailable"
+	}
+	return "Required input " + strings.ReplaceAll(detail, "_", " ") + " unavailable"
+}
+
 func (s *Server) adminAssistanceTypeLabels(encoded string) []string {
 	var types []string
 	if json.Unmarshal([]byte(encoded), &types) != nil {
@@ -257,8 +283,9 @@ func (s *Server) adminTranslations(request *http.Request, records []store.Incide
 			Language: translation.Language, DisplayName: displayNames[translation.Language],
 			Title: translation.Title, Summary: translation.Summary,
 			Model: translation.Model, PromptVersion: translation.PromptVersion,
-			StatusLabel: adminTranslationLabel(translation), FailureKind: translation.FailureKind,
-			CanRetry: canonicalReady[translation.IncidentID] && translation.Status != "pending" && translation.Status != "running",
+			StatusLabel: adminTranslationLabel(translation), StatusReason: translation.StatusReason, StatusDetail: translation.StatusDetail,
+			FailureKind: translation.FailureKind,
+			CanRetry:    canonicalReady[translation.IncidentID] && canRetryPostProcessing(translation.Status, translation.StatusReason),
 		})
 	}
 	return views, nil
@@ -583,6 +610,8 @@ type adminCategoryVerificationView struct {
 	EffectiveLabel    string
 	Verdict           string
 	Status            string
+	StatusReason      string
+	StatusDetail      string
 	Attempts          int
 	FailureKind       string
 	Model             string
@@ -600,6 +629,8 @@ type adminPublicAssistanceVerificationView struct {
 	EffectiveTypeLabels []string
 	Verdict             string
 	Status              string
+	StatusReason        string
+	StatusDetail        string
 	Attempts            int
 	FailureKind         string
 	Model               string
@@ -617,6 +648,8 @@ type adminTranslationView struct {
 	Model         string
 	PromptVersion string
 	StatusLabel   string
+	StatusReason  string
+	StatusDetail  string
 	FailureKind   string
 	CanRetry      bool
 }
@@ -661,6 +694,8 @@ func adminTranslationLabel(translation store.AdminTranslation) string {
 		label = "Needs review"
 	case "failed":
 		label = "Failed"
+	case "skipped":
+		label = "Skipped"
 	default:
 		if translation.Model != "" {
 			label = "Completed"

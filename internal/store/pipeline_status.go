@@ -130,6 +130,7 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 		COALESCE(SUM(CASE WHEN jobs.status='pending' AND jobs.attempt_count>0 THEN 1 ELSE 0 END),0),
 		COALESCE(SUM(CASE WHEN jobs.status='needs_review' THEN 1 ELSE 0 END),0),
 		COALESCE(SUM(CASE WHEN jobs.status='failed' THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN jobs.status='skipped' THEN 1 ELSE 0 END),0),
 		COALESCE(SUM(CASE WHEN jobs.status='succeeded' THEN 1 ELSE 0 END),0),
 		COALESCE(MIN(CASE WHEN jobs.status='running' THEN jobs.started_at END),'')
 		FROM post_processing_scopes scopes LEFT JOIN post_processing_jobs jobs
@@ -141,7 +142,7 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 	for postRows.Next() {
 		var stat PostProcessingQueueStats
 		var runningStartedAt string
-		if err := postRows.Scan(&stat.ProcessorKey, &stat.ScopeKey, &stat.Pending, &stat.Running, &stat.Retrying, &stat.NeedsReview, &stat.Failed, &stat.Succeeded, &runningStartedAt); err != nil {
+		if err := postRows.Scan(&stat.ProcessorKey, &stat.ScopeKey, &stat.Pending, &stat.Running, &stat.Retrying, &stat.NeedsReview, &stat.Failed, &stat.Skipped, &stat.Succeeded, &runningStartedAt); err != nil {
 			postRows.Close()
 			return snapshot, err
 		}
@@ -190,7 +191,7 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 		snapshot.RecentEvents = append(snapshot.RecentEvents, PipelineEvent{
 			At: entry.UpdatedAt, Kind: entry.Kind, CycleID: entry.CycleID,
 			IncidentID: entry.IncidentID, StepKey: entry.StepKey, ProcessorKey: entry.ProcessorKey, ScopeKey: entry.ScopeKey, ExecutionKey: entry.ExecutionKey,
-			Status: entry.Status, FailureKind: entry.FailureKind,
+			Status: entry.Status, StatusReason: entry.StatusReason, StatusDetail: entry.StatusDetail, FailureKind: entry.FailureKind,
 		})
 	}
 	return snapshot, nil
