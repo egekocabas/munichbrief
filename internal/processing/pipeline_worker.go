@@ -692,20 +692,24 @@ func (w *PipelineWorker) processJob(ctx, requestCtx context.Context, job store.P
 			requestKind = "scheduled"
 			postPlans = nil
 			postErr = nil
-			for _, definition := range w.postProcessors.Definitions() {
-				if !definition.Automatic {
-					continue
+			if w.schedule.Allows(completed) {
+				for _, definition := range w.postProcessors.Definitions() {
+					if !definition.Automatic {
+						continue
+					}
+					models, err := w.repository.PreferredPipelineModels(ctx, []string{definition.ModelSettingKey})
+					if err != nil || !w.catalog.Snapshot().Has(models[definition.ModelSettingKey]) {
+						continue
+					}
+					plans, err := w.postProcessors.Plans(definition.Key, nil, models[definition.ModelSettingKey])
+					if err != nil {
+						postErr = err
+						break
+					}
+					postPlans = append(postPlans, plans...)
 				}
-				models, err := w.repository.PreferredPipelineModels(ctx, []string{definition.ModelSettingKey})
-				if err != nil || !w.catalog.Snapshot().Has(models[definition.ModelSettingKey]) {
-					continue
-				}
-				plans, err := w.postProcessors.Plans(definition.Key, nil, models[definition.ModelSettingKey])
-				if err != nil {
-					postErr = err
-					break
-				}
-				postPlans = append(postPlans, plans...)
+			} else {
+				w.logger.Info("scheduled AI post-processing discovery deferred outside window", "cycle_id", job.CycleID, "presentation_run_id", job.PresentationRunID)
 			}
 		} else if postErr == nil {
 			postPlans, postErr = w.hydratePostProcessingPlans(postPlans)

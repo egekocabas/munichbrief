@@ -41,7 +41,9 @@ func (s *Store) EnsurePostProcessingScopes(ctx context.Context, scopes []PostPro
 }
 
 // QueuePostProcessingForRun creates independent jobs for one completed current
-// canonical presentation.
+// canonical presentation. The store enforces the durable switch for scheduled
+// callers; the worker separately authorizes their time window at its clock
+// boundary because schedule configuration is not persisted here.
 func (s *Store) QueuePostProcessingForRun(ctx context.Context, runID int64, plans []PostProcessingPlan, requestKind string, force bool, now time.Time) (int, error) {
 	if requestKind != "scheduled" && requestKind != "manual" {
 		return 0, errors.New("invalid post-processing request kind")

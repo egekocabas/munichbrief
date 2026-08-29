@@ -968,6 +968,11 @@ func TestPipelineWorkerFinishesAuthorizedCycleAfterWindowButDoesNotStartAnother(
 	if err != nil || snapshot.ActiveCycle != nil || snapshot.ScheduledCandidates != 1 {
 		t.Fatalf("closed-window snapshot = %#v, err=%v", snapshot, err)
 	}
+	for _, queue := range snapshot.PostProcessing {
+		if queue.Pending != 0 || queue.Running != 0 || queue.Retrying != 0 {
+			t.Fatalf("scheduled post-processing was discovered outside the window: %#v", snapshot.PostProcessing)
+		}
+	}
 
 	records, _, err := database.ListIncidents(ctx, 10, 0)
 	if err != nil {

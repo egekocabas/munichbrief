@@ -135,6 +135,9 @@ until the replacement succeeds.
 Scheduled work starts inside the configured Europe/Berlin window. A frozen
 cycle may finish after the window closes. Explicit admin or CLI requests persist
 manual priority but retain validation, circuit breaking, and retry delays.
+If a scheduled cycle publishes its final German result after the window closes,
+automatic post-processing discovery waits for the next open window; the German
+publication itself remains complete and available.
 When an automatic scheduled or continuation cycle is waiting on a retry or open
 circuit, it releases the running-cycle lease to a queued manual cycle and later
 resumes with the same frozen progress.
