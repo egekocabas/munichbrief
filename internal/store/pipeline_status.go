@@ -130,7 +130,8 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 		COALESCE(SUM(CASE WHEN jobs.status='pending' AND jobs.attempt_count>0 THEN 1 ELSE 0 END),0),
 		COALESCE(SUM(CASE WHEN jobs.status='needs_review' THEN 1 ELSE 0 END),0),
 		COALESCE(SUM(CASE WHEN jobs.status='failed' THEN 1 ELSE 0 END),0),
-		COALESCE(SUM(CASE WHEN jobs.status='succeeded' THEN 1 ELSE 0 END),0)
+		COALESCE(SUM(CASE WHEN jobs.status='succeeded' THEN 1 ELSE 0 END),0),
+		COALESCE(MIN(CASE WHEN jobs.status='running' THEN jobs.started_at END),'')
 		FROM post_processing_scopes scopes LEFT JOIN post_processing_jobs jobs
 		ON jobs.processor_key=scopes.processor_key AND jobs.scope_key=scopes.scope_key
 		GROUP BY scopes.processor_key,scopes.scope_key ORDER BY scopes.processor_key,scopes.scope_key`)
@@ -139,9 +140,18 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 	}
 	for postRows.Next() {
 		var stat PostProcessingQueueStats
-		if err := postRows.Scan(&stat.ProcessorKey, &stat.ScopeKey, &stat.Pending, &stat.Running, &stat.Retrying, &stat.NeedsReview, &stat.Failed, &stat.Succeeded); err != nil {
+		var runningStartedAt string
+		if err := postRows.Scan(&stat.ProcessorKey, &stat.ScopeKey, &stat.Pending, &stat.Running, &stat.Retrying, &stat.NeedsReview, &stat.Failed, &stat.Succeeded, &runningStartedAt); err != nil {
 			postRows.Close()
 			return snapshot, err
+		}
+		if runningStartedAt != "" {
+			value, err := time.Parse(time.RFC3339Nano, runningStartedAt)
+			if err != nil {
+				postRows.Close()
+				return snapshot, fmt.Errorf("parse %s/%s running start: %w", stat.ProcessorKey, stat.ScopeKey, err)
+			}
+			stat.RunningStartedAt = &value
 		}
 		stat.Counters = make(map[string]int)
 		snapshot.PostProcessing = append(snapshot.PostProcessing, stat)

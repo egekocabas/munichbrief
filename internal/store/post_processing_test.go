@@ -56,6 +56,20 @@ func TestPostProcessingGenericLifecycleKeepsSuccessfulValueDuringForcedReplaceme
 	if err != nil || !found || replacement.RequestKind != "manual" {
 		t.Fatalf("manual replacement claim = %#v/%t/%v", replacement, found, err)
 	}
+	snapshot, err := database.PipelineSnapshot(ctx, "fixture", []string{"incident_metadata", "german_presentation"}, nil, now.Add(7*time.Minute+30*time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var translationStats *PostProcessingQueueStats
+	for index := range snapshot.PostProcessing {
+		if snapshot.PostProcessing[index].ProcessorKey == "translation" && snapshot.PostProcessing[index].ScopeKey == "en" {
+			translationStats = &snapshot.PostProcessing[index]
+			break
+		}
+	}
+	if translationStats == nil || translationStats.Running != 1 || translationStats.RunningStartedAt == nil || !translationStats.RunningStartedAt.Equal(now.Add(7*time.Minute)) {
+		t.Fatalf("running translation stats = %#v", translationStats)
+	}
 	if err := database.CompletePostProcessingJob(ctx, replacement, []PipelineValue{{Kind: "title", Value: "Second title"}, {Kind: "summary", Value: "Second summary."}}, "translate:4b", replacement.InputHash, now.Add(8*time.Minute)); err != nil {
 		t.Fatal(err)
 	}

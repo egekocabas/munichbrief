@@ -91,15 +91,16 @@ type PostProcessingJob struct {
 
 // PostProcessingQueueStats summarizes one registered processor scope.
 type PostProcessingQueueStats struct {
-	ProcessorKey string         `json:"processor_key"`
-	ScopeKey     string         `json:"scope_key"`
-	Pending      int            `json:"pending"`
-	Running      int            `json:"running"`
-	Retrying     int            `json:"retrying"`
-	NeedsReview  int            `json:"needs_review"`
-	Failed       int            `json:"failed"`
-	Succeeded    int            `json:"succeeded"`
-	Counters     map[string]int `json:"counters,omitempty"`
+	ProcessorKey     string         `json:"processor_key"`
+	ScopeKey         string         `json:"scope_key"`
+	Pending          int            `json:"pending"`
+	Running          int            `json:"running"`
+	Retrying         int            `json:"retrying"`
+	NeedsReview      int            `json:"needs_review"`
+	Failed           int            `json:"failed"`
+	Succeeded        int            `json:"succeeded"`
+	RunningStartedAt *time.Time     `json:"running_started_at,omitempty"`
+	Counters         map[string]int `json:"counters,omitempty"`
 }
 
 type PostProcessingCounterSpec struct {
