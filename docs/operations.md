@@ -59,6 +59,9 @@ all registered post-processors, but does not block explicit admin or
 the cycle then waits with its frozen models, prompts, progress, and original
 window authorization. Re-enabling wakes the worker, and an already-authorized
 cycle may resume outside the window under the same finish-after-close rule.
+If a scheduled or continuation cycle is waiting on a retry or circuit breaker,
+a queued explicit canonical request takes its running lease and the automatic
+cycle resumes afterward with its accepted results intact.
 
 “Cancel all unfinished work” is the immediate-stop operation. It disables
 automatic processing, interrupts the current Ollama request, and terminalizes

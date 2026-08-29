@@ -178,10 +178,10 @@ func (s *Store) HasQueuedManualCycle(ctx context.Context) (bool, error) {
 	return count > 0, nil
 }
 
-// InterruptBlockedScheduledCycle yields automatic work to a queued manual cycle
-// without losing unfinished targets. The continuation retains its window lease,
-// accepted outputs, and remaining jobs.
-func (s *Store) InterruptBlockedScheduledCycle(ctx context.Context, cycleID int64, now time.Time) (int64, error) {
+// InterruptBlockedAutomaticCycle yields automatic work to a queued manual cycle
+// without losing unfinished targets. A scheduled cycle freezes its unfinished
+// work into a continuation; an existing continuation releases its running lease.
+func (s *Store) InterruptBlockedAutomaticCycle(ctx context.Context, cycleID int64, now time.Time) (int64, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, err
@@ -193,8 +193,21 @@ func (s *Store) InterruptBlockedScheduledCycle(ctx context.Context, cycleID int6
 	if err := tx.QueryRowContext(ctx, `SELECT kind, status, active_step FROM processing_cycles WHERE id = ?`, cycleID).Scan(&kind, &status, &activeStep); err != nil {
 		return 0, err
 	}
-	if kind != "scheduled" || status != "running" {
-		return 0, errors.New("only a running scheduled cycle may be interrupted")
+	if (kind != "scheduled" && kind != "continuation") || status != "running" {
+		return 0, errors.New("only a running automatic cycle may be interrupted")
+	}
+	if kind == "continuation" {
+		result, err := tx.ExecContext(ctx, `UPDATE processing_cycles SET status='queued',updated_at=? WHERE id=? AND status='running' AND kind='continuation'`, formatted, cycleID)
+		if err != nil {
+			return 0, err
+		}
+		if affected, _ := result.RowsAffected(); affected != 1 {
+			return 0, errors.New("continuation cycle was interrupted concurrently")
+		}
+		if err := tx.Commit(); err != nil {
+			return 0, err
+		}
+		return cycleID, nil
 	}
 	result, err := tx.ExecContext(ctx, `INSERT INTO processing_cycles(kind, source_mode, status, active_step, window_authorized, created_at, updated_at) SELECT 'continuation', source_mode, 'queued', ?, 1, ?, ? FROM processing_cycles WHERE id = ?`, activeStep, formatted, formatted, cycleID)
 	if err != nil {

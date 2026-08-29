@@ -124,7 +124,7 @@
     if (automaticValue instanceof HTMLInputElement) automaticValue.value = automaticEnabled ? "false" : "true";
     setText(automaticButton, automaticEnabled ? "Disable automatic processing" : "Enable automatic processing");
     setText(windowState, !automaticEnabled
-      ? "Automatic processing disabled · manual requests remain available"
+      ? `${status.window_open ? "Processing window open" : "Processing window closed"} · automatic processing disabled · manual requests remain available`
       : status.window_open
         ? (status.scheduled_ready ? "Processing window open · scheduled starts ready" : "Processing window open · model configuration incomplete")
         : "Processing window closed · active/manual cycles may continue");

@@ -140,7 +140,7 @@
         <div class="flex flex-wrap items-center justify-between gap-3"><h3 class="text-xs font-extrabold uppercase tracking-wider text-muted">Recent safe events</h3><a class="text-sm font-bold text-civic no-underline hover:text-civic-dark" href="/admin/history">View full history →</a></div>
         <ol class="mt-2 grid gap-1 text-sm text-muted" data-recent-events>{{range .Runtime.Queue.RecentEvents}}<li>{{if .CycleID}}Cycle #{{.CycleID}}{{else}}Independent{{end}} · incident #{{.IncidentID}} · {{.ExecutionKey}} · {{pipelineStatusLabel .Status .FailureKind .StatusReason}}{{if .StatusReason}} ({{postProcessingStatusReason .StatusReason .StatusDetail}}){{else if .FailureKind}} ({{postProcessingStatusReason .FailureKind ""}}){{end}}</li>{{else}}<li>No pipeline events yet.</li>{{end}}</ol>
       </div>
-      <p class="mt-4 text-sm font-semibold {{if and .Runtime.WindowOpen .Runtime.AutomaticProcessingEnabled}}text-emerald-700{{else}}text-muted{{end}}" data-window-state>{{if not .Runtime.AutomaticProcessingEnabled}}Automatic processing disabled · manual requests remain available{{else if .Runtime.WindowOpen}}Processing window open{{else}}Processing window closed{{end}}</p>
+      <p class="mt-4 text-sm font-semibold {{if and .Runtime.WindowOpen .Runtime.AutomaticProcessingEnabled}}text-emerald-700{{else}}text-muted{{end}}" data-window-state>{{if not .Runtime.AutomaticProcessingEnabled}}{{if .Runtime.WindowOpen}}Processing window open{{else}}Processing window closed{{end}} · automatic processing disabled · manual requests remain available{{else if .Runtime.WindowOpen}}Processing window open{{else}}Processing window closed{{end}}</p>
     </section>
 
     {{/* Manual controls freeze the selected models into each requested job. */}}

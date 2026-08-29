@@ -135,6 +135,9 @@ until the replacement succeeds.
 Scheduled work starts inside the configured Europe/Berlin window. A frozen
 cycle may finish after the window closes. Explicit admin or CLI requests persist
 manual priority but retain validation, circuit breaking, and retry delays.
+When an automatic scheduled or continuation cycle is waiting on a retry or open
+circuit, it releases the running-cycle lease to a queued manual cycle and later
+resumes with the same frozen progress.
 
 The protected admin runtime control is a durable gate above the schedule. When
 automatic processing is disabled, no new scheduled canonical or post-processing
@@ -152,6 +155,9 @@ after cancellation. Completed presentations and successful post-processing
 values are never removed. Canceled work remains auditable and can be discovered
 again under the normal cutover and window rules after automatic processing is
 re-enabled.
+Operator queue submissions, runtime-switch changes, and cancellation are
+serialized at their database mutation boundary, so a concurrent manual request
+is deterministically either included in the cancellation or accepted afterward.
 
 The v2 migration records an automatic-scheduling cutover. Each registered
 processor scope also has a persisted enablement time. The public-assistance

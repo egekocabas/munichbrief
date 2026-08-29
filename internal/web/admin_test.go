@@ -245,7 +245,7 @@ func TestAdminControlsAutomaticProcessingAndCancelsAllWork(t *testing.T) {
 	}
 	page := httptest.NewRecorder()
 	handler.ServeHTTP(page, httptest.NewRequest(http.MethodGet, cancel.Header().Get("Location"), nil))
-	if page.Code != http.StatusOK || !strings.Contains(page.Body.String(), "Automatic AI processing disabled") || !strings.Contains(page.Body.String(), "Automatic processing remains disabled") {
+	if page.Code != http.StatusOK || !strings.Contains(page.Body.String(), "Automatic AI processing disabled") || !strings.Contains(page.Body.String(), "Automatic processing remains disabled") || !strings.Contains(page.Body.String(), "Processing window open · automatic processing disabled · manual requests remain available") {
 		t.Fatalf("cancel notice page = %d/%q", page.Code, page.Body.String())
 	}
 	manualAfterCancel := httptest.NewRecorder()

@@ -28,7 +28,7 @@ type PipelineRepository interface {
 	FailPipelineJob(context.Context, store.PipelineJob, string, string, *time.Time, time.Time, error) error
 	AdvancePipelineCycle(context.Context, store.PipelineCycle, int, time.Time) (store.AdvanceResult, error)
 	HasQueuedManualCycle(context.Context) (bool, error)
-	InterruptBlockedScheduledCycle(context.Context, int64, time.Time) (int64, error)
+	InterruptBlockedAutomaticCycle(context.Context, int64, time.Time) (int64, error)
 	PipelineSnapshot(context.Context, string, []string, []store.PostProcessingCounterSpec, time.Time) (store.PipelineSnapshot, error)
 	PipelineStepModel(context.Context, int64, int) (string, string, error)
 	EnsurePostProcessingScopes(context.Context, []store.PostProcessingScope, time.Time) error
@@ -69,6 +69,8 @@ func (w *PipelineWorker) RequestPostProcessing(ctx context.Context, request Post
 	if err != nil {
 		return 0, err
 	}
+	w.executionMu.Lock()
+	defer w.executionMu.Unlock()
 	var queued int
 	if request.IncidentID == nil {
 		queued, err = w.repository.QueuePostProcessingForAll(ctx, w.sourceMode, plans, true, w.clock())
@@ -155,20 +157,22 @@ type PipelineRuntimeStatus struct {
 // PipelineWorker serially executes persisted cycles. Database claims protect
 // correctness across restarts; the worker mutex protects only in-memory status.
 type PipelineWorker struct {
-	repository          PipelineRepository
-	providers           StepGeneratorProvider
-	catalog             ModelCatalog
-	observer            PipelineObserver
-	logger              *slog.Logger
-	interval            time.Duration
-	clock               func() time.Time
-	schedule            Schedule
-	sourceMode          string
-	postProcessors      *PostProcessorRegistry
-	wake                chan struct{}
-	mu                  sync.RWMutex
-	available           bool
-	circuits            map[string]time.Time
+	repository     PipelineRepository
+	providers      StepGeneratorProvider
+	catalog        ModelCatalog
+	observer       PipelineObserver
+	logger         *slog.Logger
+	interval       time.Duration
+	clock          func() time.Time
+	schedule       Schedule
+	sourceMode     string
+	postProcessors *PostProcessorRegistry
+	wake           chan struct{}
+	mu             sync.RWMutex
+	available      bool
+	circuits       map[string]time.Time
+	// executionMu linearizes claims, manual queue mutations, automatic-cycle
+	// yielding, runtime switch changes, and cancel-all around the in-flight call.
 	executionMu         sync.Mutex
 	executionGeneration uint64
 	currentCancel       context.CancelFunc
@@ -239,7 +243,9 @@ func (w *PipelineWorker) RequestNow(ctx context.Context, sourceMode string, mode
 		}
 		postPlans = append(postPlans, processorPlans...)
 	}
+	w.executionMu.Lock()
 	result, err := w.repository.CreateManualPipelineCycle(ctx, sourceMode, plans, postPlans, incidentID, reprocessAll, w.clock())
+	w.executionMu.Unlock()
 	if err == nil && result.Requested > 0 {
 		w.signal()
 	}
@@ -271,6 +277,8 @@ func (w *PipelineWorker) SetPreferredStepModel(ctx context.Context, stepKey, mod
 // SetAutomaticProcessing changes the durable automatic-work gate. Manual
 // requests remain eligible, and disabling takes effect at the next job boundary.
 func (w *PipelineWorker) SetAutomaticProcessing(ctx context.Context, enabled bool) error {
+	w.executionMu.Lock()
+	defer w.executionMu.Unlock()
 	now := w.clock()
 	if err := w.repository.SetAutomaticProcessing(ctx, enabled, now); err != nil {
 		return err
@@ -481,6 +489,11 @@ func (w *PipelineWorker) processAvailable(ctx context.Context) {
 			if !catalog.Has(job.ModelIdentity) {
 				retry := now.Add(30 * time.Second)
 				if err := w.repository.FailPostProcessingJob(ctx, job, "pending", string(ErrorConfiguration), &retry, now, fmt.Errorf("selected post-processing model is unavailable")); err != nil {
+					if errors.Is(err, store.ErrJobNotRunning) {
+						finishExecution()
+						w.publishSnapshot(ctx)
+						return
+					}
 					w.logger.Error("defer unavailable AI post-processing model", "job_id", job.ID, "processor", job.ProcessorKey, "error", err)
 				} else {
 					if w.observer != nil {
@@ -553,6 +566,10 @@ func (w *PipelineWorker) processCycle(ctx context.Context, cycle store.PipelineC
 				now := w.clock()
 				retry := now.Add(30 * time.Second)
 				if err := w.repository.FailPipelineJob(ctx, job, "pending", string(ErrorConfiguration), &retry, now, fmt.Errorf("selected ollama model is unavailable")); err != nil {
+					if errors.Is(err, store.ErrJobNotRunning) {
+						finishExecution()
+						return false
+					}
 					w.logger.Error("defer unavailable staged AI model", "cycle_id", cycle.ID, "job_id", job.ID, "error", err)
 					finishExecution()
 					return false
@@ -615,19 +632,21 @@ func (w *PipelineWorker) processCycle(ctx context.Context, cycle store.PipelineC
 }
 
 func (w *PipelineWorker) yieldBlockedForManual(ctx context.Context, cycle store.PipelineCycle) bool {
-	if cycle.Kind != "scheduled" {
+	if cycle.Kind != "scheduled" && cycle.Kind != "continuation" {
 		return false
 	}
+	w.executionMu.Lock()
+	defer w.executionMu.Unlock()
 	manual, err := w.repository.HasQueuedManualCycle(ctx)
 	if err != nil || !manual {
 		return false
 	}
-	continuation, err := w.repository.InterruptBlockedScheduledCycle(ctx, cycle.ID, w.clock())
+	continuation, err := w.repository.InterruptBlockedAutomaticCycle(ctx, cycle.ID, w.clock())
 	if err != nil {
-		w.logger.Error("interrupt blocked scheduled AI cycle", "cycle_id", cycle.ID, "error", err)
+		w.logger.Error("interrupt blocked automatic AI cycle", "cycle_id", cycle.ID, "kind", cycle.Kind, "error", err)
 		return false
 	}
-	w.logger.Warn("blocked scheduled AI cycle yielded to manual work", "cycle_id", cycle.ID, "continuation_cycle_id", continuation)
+	w.logger.Warn("blocked automatic AI cycle yielded to manual work", "cycle_id", cycle.ID, "kind", cycle.Kind, "continuation_cycle_id", continuation)
 	return true
 }
 
@@ -649,7 +668,7 @@ func (w *PipelineWorker) processJob(ctx, requestCtx context.Context, job store.P
 	input, inputHash := stepInputAndHash(job, step)
 	output, modelIdentity, err := generator.GenerateStep(requestCtx, step, input)
 	if err != nil {
-		if errors.Is(err, context.Canceled) && ctx.Err() == nil {
+		if errors.Is(err, context.Canceled) && requestCtx.Err() != nil && ctx.Err() == nil {
 			return false
 		}
 		return w.handleJobFailure(ctx, job, err)
@@ -762,7 +781,7 @@ func (w *PipelineWorker) processPostProcessingJob(ctx, requestCtx context.Contex
 	inputHash := store.HashPipelineInput(hashParts...)
 	output, modelIdentity, err := generator.GenerateStep(requestCtx, scope.Step, StepInput{Values: inputValues})
 	if err != nil {
-		if errors.Is(err, context.Canceled) && ctx.Err() == nil {
+		if errors.Is(err, context.Canceled) && requestCtx.Err() != nil && ctx.Err() == nil {
 			return false
 		}
 		return w.handlePostProcessingFailure(ctx, job, err)
@@ -809,6 +828,9 @@ func (w *PipelineWorker) handlePostProcessingFailure(ctx context.Context, job st
 		retryAt = &next
 	}
 	if err := w.repository.FailPostProcessingJob(ctx, job, status, string(kind), retryAt, now, processingError); err != nil {
+		if errors.Is(err, store.ErrJobNotRunning) {
+			return false
+		}
 		w.logger.Error("record AI post-processing failure", "job_id", job.ID, "error", err)
 		return false
 	}
@@ -856,6 +878,9 @@ func (w *PipelineWorker) handleJobFailure(ctx context.Context, job store.Pipelin
 		retryAt = &next
 	}
 	if err := w.repository.FailPipelineJob(ctx, job, status, string(kind), retryAt, now, processingError); err != nil {
+		if errors.Is(err, store.ErrJobNotRunning) {
+			return false
+		}
 		w.logger.Error("record staged AI failure", "job_id", job.ID, "error", err)
 		return false
 	}

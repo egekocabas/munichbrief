@@ -163,6 +163,66 @@ func TestAutomaticControlGatesScheduledPostProcessingClaimsAndDiscovery(t *testi
 	}
 }
 
+func TestStartupRecoveryWhileDisabledRequeuesWithoutRestartingAutomaticWork(t *testing.T) {
+	ctx := context.Background()
+	database, err := Open(ctx, filepath.Join(t.TempDir(), "ai-control-disabled-recovery.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 14, 45, 0, 0, time.UTC)
+	insertPipelineDocuments(t, ctx, database, now, "one")
+	cycle, found, err := database.ActivateNextPipelineCycle(ctx, "fixture", testPipelinePlans(), true, now)
+	if err != nil || !found {
+		t.Fatalf("activate scheduled cycle = %#v/%t/%v", cycle, found, err)
+	}
+	canonical, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 0, now)
+	if err != nil || !found {
+		t.Fatalf("claim canonical job = %#v/%t/%v", canonical, found, err)
+	}
+	completedRun := insertCompletedPresentationRun(t, ctx, database, canonical.IncidentID, canonical.SourceHash, PipelineVersion, now, map[string]string{"title_de": "Titel", "summary_de": "Zusammenfassung."})
+	postPlan := PostProcessingPlan{ProcessorKey: "translation", ScopeKey: "en", PromptVersion: "translation-v1", Model: "translate:4b", InputKinds: []string{"title_de", "summary_de"}}
+	if queued, err := database.QueuePostProcessingForRun(ctx, completedRun, []PostProcessingPlan{postPlan}, "scheduled", false, now); err != nil || queued != 1 {
+		t.Fatalf("queue scheduled post-processing = %d/%v", queued, err)
+	}
+	contract := testPostProcessingContract("en", postPlan.PromptVersion, []string{"title", "summary"}, postPlan.InputKinds...)
+	postJob, found, err := database.ClaimPostProcessingJob(ctx, "translation", contract, true, nil, now)
+	if err != nil || !found {
+		t.Fatalf("claim post-processing job = %#v/%t/%v", postJob, found, err)
+	}
+	if err := database.SetAutomaticProcessing(ctx, false, now.Add(time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if err := database.RecoverPipeline(ctx, now.Add(2*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if err := database.RecoverPostProcessing(ctx, now.Add(2*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if _, found, err := database.ActivateNextPipelineCycle(ctx, "fixture", testPipelinePlans(), true, now.Add(3*time.Second)); err != nil || found {
+		t.Fatalf("disabled recovered cycle activation found=%t err=%v", found, err)
+	}
+	if _, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 0, now.Add(3*time.Second)); err != nil || found {
+		t.Fatalf("disabled recovered canonical claim found=%t err=%v", found, err)
+	}
+	if _, found, err := database.ClaimPostProcessingJob(ctx, "translation", contract, true, nil, now.Add(3*time.Second)); err != nil || found {
+		t.Fatalf("disabled recovered post-processing claim found=%t err=%v", found, err)
+	}
+	var cycleStatus, canonicalStatus, postStatus string
+	if err := database.db.QueryRowContext(ctx, `SELECT status FROM processing_cycles WHERE id=?`, cycle.ID).Scan(&cycleStatus); err != nil {
+		t.Fatal(err)
+	}
+	if err := database.db.QueryRowContext(ctx, `SELECT status FROM processing_step_jobs WHERE id=?`, canonical.ID).Scan(&canonicalStatus); err != nil {
+		t.Fatal(err)
+	}
+	if err := database.db.QueryRowContext(ctx, `SELECT status FROM post_processing_jobs WHERE id=?`, postJob.ID).Scan(&postStatus); err != nil {
+		t.Fatal(err)
+	}
+	if cycleStatus != "queued" || canonicalStatus != "pending" || postStatus != "pending" {
+		t.Fatalf("disabled recovery states = cycle:%s canonical:%s post:%s", cycleStatus, canonicalStatus, postStatus)
+	}
+}
+
 func TestCancelAllAIWorkIsAtomicAuditableAndIdempotent(t *testing.T) {
 	ctx := context.Background()
 	database, err := Open(ctx, filepath.Join(t.TempDir(), "cancel-all.db"))
