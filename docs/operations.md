@@ -52,6 +52,22 @@ only this window. Processing remains sequential and retains privacy validation,
 the circuit breaker, and normal retry delays. A command-line request is picked
 up by the running server on its next idle worker check.
 
+The protected admin dashboard also has a durable automatic-processing master
+switch. Disabling it overrides an open window for scheduled canonical work and
+all registered post-processors, but does not block explicit admin or
+`ai-process` requests. A running automatic Ollama request is allowed to finish;
+the cycle then waits with its frozen models, prompts, progress, and original
+window authorization. Re-enabling wakes the worker, and an already-authorized
+cycle may resume outside the window under the same finish-after-close rule.
+
+“Cancel all unfinished work” is the immediate-stop operation. It disables
+automatic processing, interrupts the current Ollama request, and terminalizes
+waiting, queued, retrying, and running canonical and post-processing jobs as
+operator-canceled. It preserves completed publications, successful correction
+and translation values, and audit history. The action is idempotent. Manual work
+can be requested immediately afterward; automatic eligibility is rediscovered
+only after the master switch is enabled again.
+
 The protected admin dashboard stores one preferred model for each canonical
 step and each registered post-processor. Translation scopes share their
 processor model setting. Fresh
@@ -109,6 +125,11 @@ same generic endpoint. There are no model-card history backfill controls. The
 application does not authenticate users itself: enable the dashboard only when
 the ingress protects `/admin*` and `/api/admin*`, and keep both prefixes absent
 from public ingress.
+
+Runtime status reports both the configured window and the durable automatic
+switch so an open window is not mistaken for runnable scheduled work. Switch
+changes and cancellation counts are logged without source text, prompts, or
+model output.
 
 Public-assistance verification is correction-only and has the highest
 post-processing priority after the canonical metadata and German-presentation

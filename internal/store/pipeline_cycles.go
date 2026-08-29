@@ -88,21 +88,34 @@ func (s *Store) ActivateNextPipelineCycle(ctx context.Context, sourceMode string
 		return PipelineCycle{}, false, fmt.Errorf("begin pipeline cycle activation: %w", err)
 	}
 	defer tx.Rollback()
+	automaticEnabled, err := automaticProcessingEnabledTx(ctx, tx)
+	if err != nil {
+		return PipelineCycle{}, false, fmt.Errorf("read automatic AI processing state: %w", err)
+	}
 	cycle, found, err := selectCycleTx(ctx, tx, `status = 'running'`, nil)
 	if err != nil {
 		return PipelineCycle{}, false, err
 	}
 	if found {
-		if err := tx.Commit(); err != nil {
-			return PipelineCycle{}, false, err
+		if automaticEnabled || cycle.Kind == "manual" {
+			if err := tx.Commit(); err != nil {
+				return PipelineCycle{}, false, err
+			}
+			return cycle, true, nil
 		}
-		return cycle, true, nil
+		if _, err := tx.ExecContext(ctx, `UPDATE processing_cycles SET status='queued',updated_at=? WHERE id=? AND status='running'`, formatTime(now.UTC()), cycle.ID); err != nil {
+			return PipelineCycle{}, false, fmt.Errorf("suspend disabled automatic AI cycle: %w", err)
+		}
 	}
-	cycle, found, err = selectCycleTx(ctx, tx, `status = 'queued'`, nil)
+	queuedCondition := `status = 'queued'`
+	if !automaticEnabled {
+		queuedCondition += ` AND kind = 'manual'`
+	}
+	cycle, found, err = selectCycleTx(ctx, tx, queuedCondition, nil)
 	if err != nil {
 		return PipelineCycle{}, false, err
 	}
-	if !found && allowScheduled {
+	if !found && allowScheduled && automaticEnabled {
 		condition, err := sourceStatusCondition(sourceMode)
 		if err != nil {
 			return PipelineCycle{}, false, err

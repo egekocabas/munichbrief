@@ -90,6 +90,25 @@
         <div><p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Live operations</p><h2 id="queue-heading" class="mt-1 font-serif text-2xl font-bold">Current cycle</h2></div>
         <p class="rounded-full border border-rule bg-white px-3 py-1 text-sm font-bold" data-live-connection>Connecting…</p>
       </div>
+      {{if .ProcessingEnabled}}
+      <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-rule bg-newsprint/60 p-4">
+        <div>
+          <p class="font-bold" data-automatic-state>{{if .Runtime.AutomaticProcessingEnabled}}Automatic AI processing enabled{{else}}Automatic AI processing disabled{{end}}</p>
+          <p class="mt-1 text-sm text-muted">The master switch controls scheduled canonical and post-processing work. Explicit admin and CLI requests remain available.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <form method="post" action="/api/admin/ai/automatic-processing" data-automatic-form>
+            <input name="enabled" type="hidden" value="{{if .Runtime.AutomaticProcessingEnabled}}false{{else}}true{{end}}" data-automatic-value>
+            <input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}"><input name="all_page" type="hidden" value="{{.AllPage}}">
+            <button class="rounded-md border border-civic bg-white px-4 py-2 font-bold text-civic hover:bg-civic-soft" type="submit" data-automatic-button>{{if .Runtime.AutomaticProcessingEnabled}}Disable automatic processing{{else}}Enable automatic processing{{end}}</button>
+          </form>
+          <form method="post" action="/api/admin/ai/cancel-all" data-confirm-processing data-confirm-description="Cancel every unfinished automatic and manual canonical and post-processing job. Completed results remain available and automatic processing will stay disabled." data-confirm-behavior="Immediately interrupts the current Ollama request, preserves completed results and audit history, clears retry delays, and leaves automatic processing disabled.">
+            <input name="confirmed" type="hidden" value="false"><input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}"><input name="all_page" type="hidden" value="{{.AllPage}}">
+            <button class="rounded-md bg-alert px-4 py-2 font-bold text-on-accent hover:opacity-90" type="submit">Cancel all unfinished work</button>
+          </form>
+        </div>
+      </div>
+      {{end}}
       <p class="mt-4 text-lg font-bold" data-worker-state>{{if .Runtime.Queue.ActiveCycle}}Cycle #{{.Runtime.Queue.ActiveCycle.ID}} · {{.Runtime.Queue.ActiveCycle.Kind}}{{else}}Idle{{end}}</p>
       <p class="mt-1 text-sm text-muted" data-active-step>{{if .Runtime.Queue.ActiveStepKey}}{{.Runtime.Queue.ActiveStepKey}} · {{.Runtime.Queue.ActiveModel}}{{else}}No active model{{end}}</p>
       <p class="mt-1 text-sm text-muted" data-cycle-elapsed>{{if .Runtime.Queue.ActiveCycle}}Elapsed time updates live{{else}}No active cycle{{end}}</p>
@@ -119,9 +138,9 @@
       <p class="mt-4 rounded-md border border-civic/20 bg-civic-soft px-3 py-2 text-sm text-civic"><strong>Waiting jobs are durable.</strong> “Ready after stage” means the previous step succeeded; those jobs unlock together when the current model batch finishes.</p>
       <div class="mt-5 border-t border-rule pt-4">
         <div class="flex flex-wrap items-center justify-between gap-3"><h3 class="text-xs font-extrabold uppercase tracking-wider text-muted">Recent safe events</h3><a class="text-sm font-bold text-civic no-underline hover:text-civic-dark" href="/admin/history">View full history →</a></div>
-        <ol class="mt-2 grid gap-1 text-sm text-muted" data-recent-events>{{range .Runtime.Queue.RecentEvents}}<li>{{if .CycleID}}Cycle #{{.CycleID}}{{else}}Independent{{end}} · incident #{{.IncidentID}} · {{.ExecutionKey}} · {{.Status}}{{if .StatusReason}} ({{postProcessingStatusReason .StatusReason .StatusDetail}}){{else if .FailureKind}} ({{.FailureKind}}){{end}}</li>{{else}}<li>No pipeline events yet.</li>{{end}}</ol>
+        <ol class="mt-2 grid gap-1 text-sm text-muted" data-recent-events>{{range .Runtime.Queue.RecentEvents}}<li>{{if .CycleID}}Cycle #{{.CycleID}}{{else}}Independent{{end}} · incident #{{.IncidentID}} · {{.ExecutionKey}} · {{pipelineStatusLabel .Status .FailureKind .StatusReason}}{{if .StatusReason}} ({{postProcessingStatusReason .StatusReason .StatusDetail}}){{else if .FailureKind}} ({{postProcessingStatusReason .FailureKind ""}}){{end}}</li>{{else}}<li>No pipeline events yet.</li>{{end}}</ol>
       </div>
-      <p class="mt-4 text-sm font-semibold {{if .Runtime.WindowOpen}}text-emerald-700{{else}}text-muted{{end}}" data-window-state>{{if .Runtime.WindowOpen}}Processing window open{{else}}Processing window closed{{end}}</p>
+      <p class="mt-4 text-sm font-semibold {{if and .Runtime.WindowOpen .Runtime.AutomaticProcessingEnabled}}text-emerald-700{{else}}text-muted{{end}}" data-window-state>{{if not .Runtime.AutomaticProcessingEnabled}}Automatic processing disabled · manual requests remain available{{else if .Runtime.WindowOpen}}Processing window open{{else}}Processing window closed{{end}}</p>
     </section>
 
     {{/* Manual controls freeze the selected models into each requested job. */}}
@@ -232,7 +251,7 @@
       <p id="processing-confirmation-description" class="mt-3 leading-relaxed text-muted"></p>
       <dl class="mt-5 grid gap-3 rounded-md border border-rule bg-newsprint/60 p-4 text-sm">
         <div><dt class="font-bold">Request</dt><dd id="processing-confirmation-request" class="mt-0.5 font-mono text-xs"></dd></div>
-        <div><dt class="font-bold">Behavior</dt><dd class="mt-0.5 text-muted">Bypasses the configured time window, wakes the worker, and runs asynchronously. Jobs remain sequential and keep normal privacy validation, circuit breaking, and retry delays.</dd></div>
+        <div><dt class="font-bold">Behavior</dt><dd id="processing-confirmation-behavior" class="mt-0.5 text-muted">Bypasses the configured time window, wakes the worker, and runs asynchronously. Jobs remain sequential and keep normal privacy validation, circuit breaking, and retry delays.</dd></div>
       </dl>
       <div class="mt-6 flex justify-end gap-3">
         <button class="rounded-md border border-rule bg-white px-4 py-2 font-bold text-ink hover:bg-newsprint" value="cancel">Cancel</button>

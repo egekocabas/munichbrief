@@ -110,6 +110,15 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 		data.Notice = fmt.Sprintf("Queued %d %s/%s post-processing job(s). Existing successful results remain available while replacements run.", queued, processor, scope)
 		data.NoticeIsWarning = queued == 0
 	}
+	if state := request.URL.Query().Get("automatic_processing"); state == "enabled" || state == "disabled" {
+		data.Notice = "Automatic AI processing " + state + ". Explicit admin and CLI requests remain available."
+	}
+	if canonical, ok := nonNegativeQueryInt(request, "canceled_canonical"); ok {
+		cycles, _ := nonNegativeQueryInt(request, "canceled_cycles")
+		postProcessing, _ := nonNegativeQueryInt(request, "canceled_post_processing")
+		data.Notice = fmt.Sprintf("Canceled %d unfinished canonical job(s) across %d cycle(s) and %d post-processing job(s). Automatic processing remains disabled.", canonical, cycles, postProcessing)
+		data.NoticeIsWarning = canonical+postProcessing == 0
+	}
 	response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	response.Header().Set("Cache-Control", "private, no-store")
 	response.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive")
@@ -158,7 +167,7 @@ func (s *Server) adminCategoryVerifications(request *http.Request, records []sto
 		views[result.IncidentID] = adminCategoryVerificationView{
 			OriginalCategory: result.OriginalCategory, EffectiveCategory: result.EffectiveCategory,
 			OriginalLabel: processing.CategoryLabel(result.OriginalCategory, "en"), EffectiveLabel: processing.CategoryLabel(result.EffectiveCategory, "en"),
-			Verdict: adminVerificationVerdict(result.IsCorrect), Status: adminPostProcessingStatus(result.Status, result.Attempts),
+			Verdict: adminVerificationVerdict(result.IsCorrect), Status: adminPostProcessingStatus(result.Status, result.StatusReason, result.Attempts),
 			StatusReason: result.StatusReason, StatusDetail: result.StatusDetail, Attempts: result.Attempts, FailureKind: result.FailureKind,
 			Model: visiblePostProcessingModel(result.Model, result.Status, result.Attempts, result.GeneratedAt), PromptVersion: result.PromptVersion, GeneratedAt: result.GeneratedAt,
 			CanRetry: result.PresentationRunID > 0 && result.OriginalCategory != "" && canRetryPostProcessing(result.Status, result.StatusReason),
@@ -178,7 +187,7 @@ func (s *Server) adminPublicAssistanceVerifications(request *http.Request, recor
 			OriginalStatus: result.OriginalStatus, OriginalTypes: result.OriginalTypes,
 			EffectiveStatus: result.EffectiveStatus, EffectiveTypes: result.EffectiveTypes,
 			OriginalTypeLabels: s.adminAssistanceTypeLabels(result.OriginalTypes), EffectiveTypeLabels: s.adminAssistanceTypeLabels(result.EffectiveTypes),
-			Verdict: adminVerificationVerdict(result.IsCorrect), Status: adminPostProcessingStatus(result.Status, result.Attempts),
+			Verdict: adminVerificationVerdict(result.IsCorrect), Status: adminPostProcessingStatus(result.Status, result.StatusReason, result.Attempts),
 			StatusReason: result.StatusReason, StatusDetail: result.StatusDetail, Attempts: result.Attempts, FailureKind: result.FailureKind,
 			Model: visiblePostProcessingModel(result.Model, result.Status, result.Attempts, result.GeneratedAt), PromptVersion: result.PromptVersion, GeneratedAt: result.GeneratedAt, NextRetryAt: result.NextRetryAt,
 			CanRetry: result.PresentationRunID > 0 && result.OriginalStatus != "" && canRetryPostProcessing(result.Status, result.StatusReason),
@@ -213,9 +222,12 @@ func adminVerificationVerdict(isCorrect *bool) string {
 	return "Corrected"
 }
 
-func adminPostProcessingStatus(status string, attempts int) string {
+func adminPostProcessingStatus(status, reason string, attempts int) string {
 	if status == "" {
 		return "missing"
+	}
+	if reason == store.ProcessingStatusReasonOperatorCanceled {
+		return "canceled"
 	}
 	if status == "pending" && attempts > 0 {
 		return "retrying"
@@ -235,6 +247,9 @@ func visiblePostProcessingModel(model, status string, attempts int, generatedAt 
 }
 
 func postProcessingStatusReasonLabel(reason, detail string) string {
+	if reason == store.ProcessingStatusReasonOperatorCanceled {
+		return "operator canceled"
+	}
 	if reason != store.PostProcessingStatusReasonMissingInput {
 		return strings.ReplaceAll(reason, "_", " ")
 	}
@@ -245,6 +260,13 @@ func postProcessingStatusReasonLabel(reason, detail string) string {
 		return "Required input unavailable"
 	}
 	return "Required input " + strings.ReplaceAll(detail, "_", " ") + " unavailable"
+}
+
+func pipelineStatusLabel(status, failureKind, statusReason string) string {
+	if failureKind == store.ProcessingStatusReasonOperatorCanceled || statusReason == store.ProcessingStatusReasonOperatorCanceled {
+		return "Canceled"
+	}
+	return strings.ReplaceAll(status, "_", " ")
 }
 
 func (s *Server) adminAssistanceTypeLabels(encoded string) []string {
@@ -540,6 +562,74 @@ func (s *Server) updatePreferredStepModel(response http.ResponseWriter, request 
 	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
 }
 
+func (s *Server) updateAutomaticProcessing(response http.ResponseWriter, request *http.Request) {
+	if !s.prepareAIControlMutation(response, request, false) {
+		return
+	}
+	raw := request.PostForm.Get("enabled")
+	if raw != "true" && raw != "false" {
+		http.Error(response, "enabled must be true or false", http.StatusBadRequest)
+		return
+	}
+	enabled := raw == "true"
+	if err := s.options.Processor.SetAutomaticProcessing(request.Context(), enabled); err != nil {
+		s.internalError(response, request, "update automatic AI processing", err)
+		return
+	}
+	target, _ := url.Parse(adminPaginationURL(positiveFormInt(request.PostForm.Get("unprocessed_page")), positiveFormInt(request.PostForm.Get("all_page"))))
+	query := target.Query()
+	if enabled {
+		query.Set("automatic_processing", "enabled")
+	} else {
+		query.Set("automatic_processing", "disabled")
+	}
+	target.RawQuery = query.Encode()
+	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
+}
+
+func (s *Server) cancelAllProcessing(response http.ResponseWriter, request *http.Request) {
+	if !s.prepareAIControlMutation(response, request, true) {
+		return
+	}
+	result, err := s.options.Processor.CancelAll(request.Context())
+	if err != nil {
+		s.internalError(response, request, "cancel unfinished AI processing", err)
+		return
+	}
+	target, _ := url.Parse(adminPaginationURL(positiveFormInt(request.PostForm.Get("unprocessed_page")), positiveFormInt(request.PostForm.Get("all_page"))))
+	query := target.Query()
+	query.Set("canceled_cycles", strconv.Itoa(result.Cycles))
+	query.Set("canceled_canonical", strconv.Itoa(result.CanonicalJobs))
+	query.Set("canceled_post_processing", strconv.Itoa(result.PostProcessingJobs))
+	target.RawQuery = query.Encode()
+	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
+}
+
+func (s *Server) prepareAIControlMutation(response http.ResponseWriter, request *http.Request, requireConfirmation bool) bool {
+	if !validAdminMutation(request) {
+		http.Error(response, "cross-site request blocked", http.StatusForbidden)
+		return false
+	}
+	if !isFormPost(request) {
+		http.Error(response, "form content type required", http.StatusUnsupportedMediaType)
+		return false
+	}
+	request.Body = http.MaxBytesReader(response, request.Body, 4096)
+	if err := request.ParseForm(); err != nil {
+		http.Error(response, "invalid form", http.StatusBadRequest)
+		return false
+	}
+	if requireConfirmation && request.PostForm.Get("confirmed") != "true" {
+		http.Error(response, "cancellation confirmation is required", http.StatusBadRequest)
+		return false
+	}
+	if s.options.Processor == nil {
+		http.Error(response, "AI processing is disabled", http.StatusServiceUnavailable)
+		return false
+	}
+	return true
+}
+
 func (s *Server) pipelineStatus(response http.ResponseWriter, request *http.Request) {
 	if s.options.Processor == nil {
 		http.Error(response, "AI processing is disabled", http.StatusServiceUnavailable)
@@ -696,6 +786,10 @@ func adminTranslationLabel(translation store.AdminTranslation) string {
 		label = "Failed"
 	case "skipped":
 		label = "Skipped"
+	case "superseded":
+		if translation.StatusReason == store.ProcessingStatusReasonOperatorCanceled {
+			label = "Canceled"
+		}
 	default:
 		if translation.Model != "" {
 			label = "Completed"

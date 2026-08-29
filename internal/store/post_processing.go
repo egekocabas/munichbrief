@@ -106,6 +106,18 @@ func (s *Store) QueuePostProcessingForAll(ctx context.Context, sourceMode string
 		return 0, err
 	}
 	defer tx.Rollback()
+	if !force {
+		enabled, err := automaticProcessingEnabledTx(ctx, tx)
+		if err != nil {
+			return 0, err
+		}
+		if !enabled {
+			if err := tx.Commit(); err != nil {
+				return 0, err
+			}
+			return 0, nil
+		}
+	}
 	requestKind := "scheduled"
 	if force {
 		requestKind = "manual"
@@ -344,7 +356,7 @@ func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string,
 		FROM post_processing_jobs job JOIN presentation_runs r ON r.id=job.presentation_run_id
 		JOIN incidents i ON i.id=r.incident_id AND i.content_hash=r.source_hash
 		WHERE job.processor_key=? AND job.status='pending' AND (job.next_retry_at IS NULL OR job.next_retry_at<=?)
-		AND (job.request_kind='manual' OR ?)`+blockedCondition+`
+		AND (job.request_kind='manual' OR (? AND (SELECT automatic_processing_enabled FROM ai_runtime_control WHERE id=1)=1))`+blockedCondition+`
 		ORDER BY CASE job.request_kind WHEN 'manual' THEN 0 WHEN 'scheduled' THEN 1 ELSE 2 END,job.created_at,job.id LIMIT 1`, args...).Scan(
 		&job.ID, &job.PresentationRunID, &job.IncidentID, &job.ProcessorKey, &job.ScopeKey, &job.RequestKind,
 		&job.ModelIdentity, &job.PromptVersion, &job.InputHash, &job.AttemptCount,
@@ -433,7 +445,7 @@ func (s *Store) CompletePostProcessingJob(ctx context.Context, job PostProcessin
 		return err
 	}
 	if affected, _ := result.RowsAffected(); affected != 1 {
-		return errors.New("post-processing job is no longer running")
+		return ErrJobNotRunning
 	}
 	return tx.Commit()
 }
@@ -484,7 +496,7 @@ func (s *Store) FailPostProcessingJob(ctx context.Context, job PostProcessingJob
 		return err
 	}
 	if affected, _ := result.RowsAffected(); affected != 1 {
-		return errors.New("post-processing job is no longer running")
+		return ErrJobNotRunning
 	}
 	return nil
 }

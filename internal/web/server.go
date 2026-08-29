@@ -78,6 +78,8 @@ type ProcessingRequester interface {
 	SetPreferredStepModel(context.Context, string, string) error
 	RequestPostProcessing(context.Context, processing.PostProcessingRequest) (int, error)
 	Status(context.Context) (processing.PipelineRuntimeStatus, error)
+	SetAutomaticProcessing(context.Context, bool) error
+	CancelAll(context.Context) (store.PipelineCancellationResult, error)
 }
 
 // Options controls presentation and access behavior for a Server.
@@ -171,6 +173,7 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 		"formatDateTime":             func(language string, value time.Time) string { return formatDateTime(language, value.In(location)) },
 		"incidentURL":                incidentURL,
 		"postProcessingStatusReason": postProcessingStatusReasonLabel,
+		"pipelineStatusLabel":        pipelineStatusLabel,
 		"t":                          translations.Text,
 		"tc":                         translations.Count,
 		"shownTotal":                 translations.ShownTotal,
@@ -231,6 +234,8 @@ func (s *Server) Handler() http.Handler {
 		mux.HandleFunc("POST /api/admin/ai/reprocess-all", s.reprocessAll)
 		mux.HandleFunc("POST /api/admin/ai/step-model", s.updatePreferredStepModel)
 		mux.HandleFunc("POST /api/admin/ai/post-processing/process", s.processPostProcessing)
+		mux.HandleFunc("POST /api/admin/ai/automatic-processing", s.updateAutomaticProcessing)
+		mux.HandleFunc("POST /api/admin/ai/cancel-all", s.cancelAllProcessing)
 	}
 	return s.requestLogger(s.accessBoundary(mux))
 }

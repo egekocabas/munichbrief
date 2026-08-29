@@ -41,6 +41,12 @@ after every job in the active stage reaches a terminal state. Automatic work
 obeys the configured schedule; manual review requests can wake the worker but do
 not bypass model availability or output validation.
 
+The durable automatic-processing control gates scheduled discovery and claims
+without gating manual admin or CLI work. Disabling takes effect after the current
+automatic provider call; cancel-all is the separate immediate operation that
+terminalizes unfinished work before canceling the provider context. Claim and
+completion transactions remain the authority in either race ordering.
+
 When adding a canonical step:
 
 1. Register a stable key, order, prompt version, schema, input generator,

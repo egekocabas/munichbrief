@@ -21,7 +21,10 @@ import (
 //go:embed migrations/*.sql
 var migrationFiles embed.FS
 
-var ErrNotFound = errors.New("incident not found")
+var (
+	ErrNotFound      = errors.New("incident not found")
+	ErrJobNotRunning = errors.New("AI job is no longer running")
+)
 
 // Store is the application's single SQLite persistence boundary.
 type Store struct {

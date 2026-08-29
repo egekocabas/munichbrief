@@ -17,13 +17,14 @@ import (
 )
 
 type pipelineTestProvider struct {
-	mu            sync.Mutex
-	events        []string
-	onGerman      func()
-	onTranslation func()
-	calls         map[string]int
-	fail          func(string, int) error
-	generate      func(StepDefinition, StepInput) (StepOutput, bool)
+	mu              sync.Mutex
+	events          []string
+	onGerman        func()
+	onTranslation   func()
+	calls           map[string]int
+	fail            func(string, int) error
+	generate        func(StepDefinition, StepInput) (StepOutput, bool)
+	generateContext func(context.Context, StepDefinition, StepInput) (StepOutput, bool, error)
 }
 
 type testModelCatalog struct{ snapshot ModelCatalogSnapshot }
@@ -74,7 +75,7 @@ type pipelineTestGenerator struct {
 
 func (g pipelineTestGenerator) ModelIdentity() string { return g.model }
 
-func (g pipelineTestGenerator) GenerateStep(_ context.Context, step StepDefinition, input StepInput) (StepOutput, string, error) {
+func (g pipelineTestGenerator) GenerateStep(ctx context.Context, step StepDefinition, input StepInput) (StepOutput, string, error) {
 	g.provider.mu.Lock()
 	g.provider.events = append(g.provider.events, step.Key+":"+g.model+":"+input.Value("original_title"))
 	if g.provider.calls == nil {
@@ -87,6 +88,7 @@ func (g pipelineTestGenerator) GenerateStep(_ context.Context, step StepDefiniti
 		failure = g.provider.fail(step.Key, call)
 	}
 	generate := g.provider.generate
+	generateContext := g.provider.generateContext
 	callback := g.provider.onGerman
 	if step.Key == GermanPresentationStep {
 		g.provider.onGerman = nil
@@ -98,6 +100,11 @@ func (g pipelineTestGenerator) GenerateStep(_ context.Context, step StepDefiniti
 	g.provider.mu.Unlock()
 	if failure != nil {
 		return StepOutput{}, "", failure
+	}
+	if generateContext != nil {
+		if output, handled, err := generateContext(ctx, step, input); handled || err != nil {
+			return output, g.model, err
+		}
 	}
 	if generate != nil {
 		if output, handled := generate(step, input); handled {
@@ -134,6 +141,182 @@ func (g pipelineTestGenerator) GenerateStep(_ context.Context, step StepDefiniti
 		translationCallback()
 	}
 	return StepOutput{Values: map[string]string{"title": "Safe title", "summary": "Safe summary."}}, g.model, nil
+}
+
+func TestAutomaticProcessingDisableFinishesCurrentRequestAndSuspendsCycle(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-automatic-control.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 16, 0, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "one")
+	if err := database.EnsurePipelineSteps(ctx, ModelSettingKeys(), now); err != nil {
+		t.Fatal(err)
+	}
+	for step, model := range pipelineTestModels() {
+		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	started := make(chan struct{})
+	release := make(chan struct{})
+	var once sync.Once
+	provider := &pipelineTestProvider{generateContext: func(_ context.Context, step StepDefinition, _ StepInput) (StepOutput, bool, error) {
+		if step.Key != IncidentMetadataStep {
+			return StepOutput{}, false, nil
+		}
+		once.Do(func() { close(started) })
+		<-release
+		return StepOutput{Category: "other", ReportKind: "incident", PublicAssistanceStatus: "not_requested", PublicAssistanceTypes: []string{}}, true, nil
+	}}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan struct{})
+	go func() {
+		worker.processAvailable(ctx)
+		close(done)
+	}()
+	<-started
+	if err := worker.SetAutomaticProcessing(ctx, false); err != nil {
+		t.Fatal(err)
+	}
+	close(release)
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("worker did not stop at automatic job boundary")
+	}
+	if provider.callCount(IncidentMetadataStep) != 1 || provider.callCount(GermanPresentationStep) != 0 {
+		t.Fatalf("calls while disabled: metadata=%d german=%d", provider.callCount(IncidentMetadataStep), provider.callCount(GermanPresentationStep))
+	}
+	status, err := worker.Status(ctx)
+	if err != nil || status.AutomaticProcessingEnabled || status.Queue.ActiveCycle != nil {
+		t.Fatalf("disabled worker status = %#v/%v", status, err)
+	}
+	if err := worker.SetAutomaticProcessing(ctx, true); err != nil {
+		t.Fatal(err)
+	}
+	worker.processAvailable(ctx)
+	if provider.callCount(GermanPresentationStep) != 1 {
+		t.Fatalf("German calls after resume = %d, want 1", provider.callCount(GermanPresentationStep))
+	}
+}
+
+func TestCancelAllInterruptsCurrentRequestWithoutRetryFailure(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-cancel-all.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 16, 30, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "one")
+	if err := database.EnsurePipelineSteps(ctx, ModelSettingKeys(), now); err != nil {
+		t.Fatal(err)
+	}
+	for step, model := range pipelineTestModels() {
+		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	started := make(chan struct{})
+	var once sync.Once
+	provider := &pipelineTestProvider{generateContext: func(requestCtx context.Context, step StepDefinition, _ StepInput) (StepOutput, bool, error) {
+		if step.Key != IncidentMetadataStep {
+			return StepOutput{}, false, nil
+		}
+		once.Do(func() { close(started) })
+		<-requestCtx.Done()
+		return StepOutput{}, true, requestCtx.Err()
+	}}
+	observer := &pipelineTestObserver{}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), observer, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan struct{})
+	go func() {
+		worker.processAvailable(ctx)
+		close(done)
+	}()
+	<-started
+	canceled, err := worker.CancelAll(ctx)
+	if err != nil || canceled.Cycles != 1 || canceled.CanonicalJobs != 2 {
+		t.Fatalf("worker cancel all = %#v/%v", canceled, err)
+	}
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("canceled provider request did not exit")
+	}
+	if observer.failures[IncidentMetadataStep] != 0 {
+		t.Fatalf("operator cancellation recorded as failure: %#v", observer.failures)
+	}
+	status, err := worker.Status(ctx)
+	if err != nil || status.AutomaticProcessingEnabled || status.Queue.ActiveCycle != nil || status.Queue.Steps[0].Retrying != 0 {
+		t.Fatalf("canceled worker status = %#v/%v", status, err)
+	}
+}
+
+func TestAutomaticProcessingDisableFinishesCurrentPostProcessingOnly(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-post-control.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 16, 45, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "one")
+	insertWorkerDocument(t, ctx, database, now.Add(time.Second), "two")
+	if err := database.EnsurePipelineSteps(ctx, ModelSettingKeys(), now); err != nil {
+		t.Fatal(err)
+	}
+	for step, model := range pipelineTestModels() {
+		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	started := make(chan struct{})
+	release := make(chan struct{})
+	var once sync.Once
+	provider := &pipelineTestProvider{generateContext: func(_ context.Context, step StepDefinition, _ StepInput) (StepOutput, bool, error) {
+		if step.Key != EnglishTranslationStep {
+			return StepOutput{}, false, nil
+		}
+		once.Do(func() { close(started) })
+		<-release
+		return StepOutput{Values: map[string]string{"title": "Safe title", "summary": "Safe summary."}}, true, nil
+	}}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan struct{})
+	go func() {
+		worker.processAvailable(ctx)
+		close(done)
+	}()
+	<-started
+	if err := worker.SetAutomaticProcessing(ctx, false); err != nil {
+		t.Fatal(err)
+	}
+	close(release)
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("post-processing worker did not stop after current request")
+	}
+	if provider.callCount(EnglishTranslationStep) != 1 {
+		t.Fatalf("translation calls while disabled = %d, want 1", provider.callCount(EnglishTranslationStep))
+	}
+	status, err := worker.Status(ctx)
+	if err != nil || status.Queue.PostProcessing[len(status.Queue.PostProcessing)-1].Pending != 1 {
+		t.Fatalf("disabled post-processing status = %#v/%v", status.Queue.PostProcessing, err)
+	}
 }
 
 func (p *pipelineTestProvider) callCount(step string) int {
