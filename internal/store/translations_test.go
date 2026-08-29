@@ -67,6 +67,20 @@ func TestTranslationJobsAreIndependentAuditableAndManualRetriesBypassWindow(t *t
 	if queued, err := database.QueueIncidentTranslation(ctx, incidentID, TranslationPlan{Language: "en", PromptVersion: plan.PromptVersion, Model: "translate:c"}, now.Add(4*time.Minute)); err != nil || queued != 0 {
 		t.Fatalf("model change rewrote completed translation = %d/%v", queued, err)
 	}
+	if queued, err := database.QueueIncidentTranslations(ctx, incidentID, []TranslationPlan{{Language: "en", PromptVersion: plan.PromptVersion, Model: "translate:c"}}, true, now.Add(4*time.Minute)); err != nil || queued != 1 {
+		t.Fatalf("explicit focused retranslation = %d/%v", queued, err)
+	}
+	forced, found, err := database.ClaimTranslationJob(ctx, false, nil, now.Add(4*time.Minute))
+	if err != nil || !found || forced.ModelIdentity != "translate:c" || forced.RequestKind != "manual" {
+		t.Fatalf("claim focused retranslation = %#v/%t/%v", forced, found, err)
+	}
+	if err := database.CompleteTranslationJob(ctx, forced, "New safe title", "New safe summary.", forced.ModelIdentity, forced.InputHash, now.Add(5*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	record, err = database.GetPresentationIncident(ctx, incidentID, PresentationScope{PromptVersion: PipelineVersion, Language: "en", PublicOnly: true})
+	if err != nil || record.AITranslatedTitle != "New safe title" || record.AITranslationModel != "translate:c" {
+		t.Fatalf("focused retranslation selection = %#v/%v", record, err)
+	}
 }
 
 func TestManualTranslationIgnoresUnrecognizedCompletedPipelines(t *testing.T) {

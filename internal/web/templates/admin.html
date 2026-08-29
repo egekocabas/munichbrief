@@ -200,6 +200,54 @@
       </div>
     </section>
 
+    {{/* Focused controls rerun only independent post-processing jobs. */}}
+    <section class="mt-10" aria-labelledby="post-processing-heading">
+      <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Focused processing</p>
+      <h2 id="post-processing-heading" class="mt-1 font-serif text-2xl font-bold">Post-processing only</h2>
+      <p class="mt-2 max-w-3xl text-sm text-muted">Run translations or category verification without rerunning metadata extraction or the German presentation. Explicit requests replace no published result until the new job succeeds.</p>
+      <div class="mt-5 grid gap-6 lg:grid-cols-2">
+        {{$translation := .Models.Translation}}
+        <article class="rounded-lg border border-civic/25 bg-paper p-5">
+          <h3 class="font-serif text-xl font-bold">Translations only</h3>
+          <p class="mt-2 text-sm text-muted">Choose one registered language or all languages and freeze the selected model into each job.</p>
+          <form class="mt-4 grid gap-3" method="post" action="/api/admin/ai/translations/process" data-confirm-processing data-confirm-description="Retranslate one incident without rerunning its canonical pipeline." data-incident-input="translation-incident-id">
+            <input name="confirmed" type="hidden" value="false"><input name="scope" type="hidden" value="incident"><input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}"><input name="all_page" type="hidden" value="{{.AllPage}}">
+            <h4 class="font-bold">Process one incident</h4>
+            <label class="text-sm font-bold" for="translation-incident-id">Incident ID</label><input class="rounded-md border border-rule bg-white px-3 py-2" id="translation-incident-id" name="incident_id" type="number" min="1" step="1" required inputmode="numeric">
+            <label class="text-sm font-bold" for="translation-incident-language">Language</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="translation-incident-language" name="language" required><option value="all">All registered languages</option>{{range .TranslationLanguages}}<option value="{{.Code}}">{{.DisplayName}}</option>{{end}}</select>
+            <label class="text-sm font-bold" for="translation-incident-model">Model</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="translation-incident-model" name="model" required {{if or (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>{{range .Models.Models}}<option value="{{.}}" {{if eq . $translation.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>
+            <button class="rounded-md bg-civic px-4 py-2 font-bold text-on-accent hover:bg-civic-dark" type="submit" {{if or (not .ProcessingEnabled) (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>Process incident translations</button>
+          </form>
+          <form class="mt-6 grid gap-3 border-t border-rule pt-5" method="post" action="/api/admin/ai/translations/process" data-confirm-processing data-confirm-description="Retranslate every eligible current incident. Existing translations stay published until replacements succeed.">
+            <input name="confirmed" type="hidden" value="false"><input name="scope" type="hidden" value="all"><input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}"><input name="all_page" type="hidden" value="{{.AllPage}}">
+            <h4 class="font-bold">Process all incidents</h4>
+            <label class="text-sm font-bold" for="translation-all-language">Language</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="translation-all-language" name="language" required><option value="all">All registered languages</option>{{range .TranslationLanguages}}<option value="{{.Code}}">{{.DisplayName}}</option>{{end}}</select>
+            <label class="text-sm font-bold" for="translation-all-model">Model</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="translation-all-model" name="model" required {{if or (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>{{range .Models.Models}}<option value="{{.}}" {{if eq . $translation.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>
+            <button class="rounded-md border border-civic bg-white px-4 py-2 font-bold text-civic hover:bg-newsprint" type="submit" {{if or (not .ProcessingEnabled) (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>Process all translations</button>
+          </form>
+        </article>
+
+        {{$category := .Models.CategoryVerification}}
+        <article class="rounded-lg border border-civic/25 bg-paper p-5">
+          <h3 class="font-serif text-xl font-bold">Category verification only</h3>
+          <p class="mt-2 text-sm text-muted">Rerun the independent verifier while keeping the current effective category until a new check succeeds.</p>
+          <form class="mt-4 grid gap-3" method="post" action="/api/admin/ai/category-verifications/process" data-confirm-processing data-confirm-description="Recheck one incident category without rerunning its canonical pipeline." data-incident-input="category-incident-id">
+            <input name="confirmed" type="hidden" value="false"><input name="scope" type="hidden" value="incident"><input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}"><input name="all_page" type="hidden" value="{{.AllPage}}">
+            <h4 class="font-bold">Process one incident</h4>
+            <label class="text-sm font-bold" for="category-incident-id">Incident ID</label><input class="rounded-md border border-rule bg-white px-3 py-2" id="category-incident-id" name="incident_id" type="number" min="1" step="1" required inputmode="numeric">
+            <label class="text-sm font-bold" for="category-incident-model">Model</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="category-incident-model" name="model" required {{if or (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>{{range .Models.Models}}<option value="{{.}}" {{if eq . $category.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>
+            <button class="rounded-md bg-civic px-4 py-2 font-bold text-on-accent hover:bg-civic-dark" type="submit" {{if or (not .ProcessingEnabled) (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>Verify incident category</button>
+          </form>
+          <form class="mt-6 grid gap-3 border-t border-rule pt-5" method="post" action="/api/admin/ai/category-verifications/process" data-confirm-processing data-confirm-description="Recheck categories for every eligible current presentation. Existing verified categories remain effective until replacements succeed.">
+            <input name="confirmed" type="hidden" value="false"><input name="scope" type="hidden" value="all"><input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}"><input name="all_page" type="hidden" value="{{.AllPage}}">
+            <h4 class="font-bold">Process all incidents</h4>
+            <label class="text-sm font-bold" for="category-all-model">Model</label><select class="rounded-md border border-rule bg-white px-3 py-2" id="category-all-model" name="model" required {{if or (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>{{range .Models.Models}}<option value="{{.}}" {{if eq . $category.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select>
+            <button class="rounded-md border border-civic bg-white px-4 py-2 font-bold text-civic hover:bg-newsprint" type="submit" {{if or (not .ProcessingEnabled) (not .Models.CatalogAvailable) (not .Models.Models)}}disabled aria-disabled="true"{{end}}>Verify all categories</button>
+          </form>
+        </article>
+      </div>
+    </section>
+
     {{/* Incidents without any current completed presentation. */}}
     <section class="mt-12 border-t border-rule pt-8" aria-labelledby="unprocessed-heading">
       <div class="flex flex-wrap items-end justify-between gap-3">

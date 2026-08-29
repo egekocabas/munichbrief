@@ -34,7 +34,9 @@ type PipelineRepository interface {
 	EnsureTranslationLanguages(context.Context, []string, time.Time) error
 	QueueTranslationsForRun(context.Context, int64, []store.TranslationPlan, string, time.Time) (int, error)
 	QueueIncidentTranslation(context.Context, int64, store.TranslationPlan, time.Time) (int, error)
+	QueueIncidentTranslations(context.Context, int64, []store.TranslationPlan, bool, time.Time) (int, error)
 	QueueMissingTranslations(context.Context, string, []store.TranslationPlan, bool, time.Time) (int, error)
+	QueueAllTranslations(context.Context, string, []store.TranslationPlan, bool, bool, time.Time) (int, error)
 	ClaimTranslationJob(context.Context, bool, []string, time.Time) (store.TranslationJob, bool, error)
 	CompleteTranslationJob(context.Context, store.TranslationJob, string, string, string, string, time.Time) error
 	FailTranslationJob(context.Context, store.TranslationJob, string, string, *time.Time, time.Time, error) error
@@ -42,10 +44,67 @@ type PipelineRepository interface {
 	QueueCategoryVerificationForRun(context.Context, int64, store.CategoryVerificationPlan, string, bool, time.Time) (int, error)
 	QueueIncidentCategoryVerification(context.Context, int64, store.CategoryVerificationPlan, time.Time) (int, error)
 	QueueMissingCategoryVerifications(context.Context, string, store.CategoryVerificationPlan, bool, time.Time) (int, error)
+	QueueAllCategoryVerifications(context.Context, string, store.CategoryVerificationPlan, bool, bool, time.Time) (int, error)
 	ClaimCategoryVerificationJob(context.Context, bool, []string, time.Time) (store.CategoryVerificationJob, bool, error)
 	CompleteCategoryVerificationJob(context.Context, store.CategoryVerificationJob, bool, string, string, string, time.Time) error
 	FailCategoryVerificationJob(context.Context, store.CategoryVerificationJob, string, string, *time.Time, time.Time, error) error
 	RecoverCategoryVerifications(context.Context, time.Time) error
+}
+
+// RequestCategoryVerifications queues only category-verification work. A nil
+// incident ID targets every eligible presentation; completed checks are rerun.
+func (w *PipelineWorker) RequestCategoryVerifications(ctx context.Context, incidentID *int64, model string) (int, error) {
+	if !w.catalog.Snapshot().Has(model) {
+		return 0, fmt.Errorf("%w: %s", ErrModelUnavailable, model)
+	}
+	plan := store.CategoryVerificationPlan{PromptVersion: CategoryVerificationPromptVersion, Model: model}
+	var queued int
+	var err error
+	if incidentID == nil {
+		queued, err = w.repository.QueueAllCategoryVerifications(ctx, w.sourceMode, plan, true, true, w.clock())
+	} else {
+		queued, err = w.repository.QueueIncidentCategoryVerification(ctx, *incidentID, plan, w.clock())
+	}
+	if err == nil && queued > 0 {
+		w.signal()
+	}
+	return queued, err
+}
+
+// RequestTranslations queues only translation work for the requested
+// languages. A nil incident ID targets every current eligible incident;
+// completed translations are deliberately rerun for this explicit action.
+func (w *PipelineWorker) RequestTranslations(ctx context.Context, incidentID *int64, languages []string, model string) (int, error) {
+	if !w.catalog.Snapshot().Has(model) {
+		return 0, fmt.Errorf("%w: %s", ErrModelUnavailable, model)
+	}
+	plans := make([]store.TranslationPlan, 0, len(languages))
+	seen := make(map[string]struct{}, len(languages))
+	for _, language := range languages {
+		translation, found := TranslationByLanguage(language)
+		if !found {
+			return 0, store.ErrNotFound
+		}
+		if _, duplicate := seen[language]; duplicate {
+			continue
+		}
+		seen[language] = struct{}{}
+		plans = append(plans, store.TranslationPlan{Language: language, PromptVersion: translation.PromptVersion, Model: model})
+	}
+	if len(plans) == 0 {
+		return 0, store.ErrNotFound
+	}
+	var queued int
+	var err error
+	if incidentID == nil {
+		queued, err = w.repository.QueueAllTranslations(ctx, w.sourceMode, plans, true, true, w.clock())
+	} else {
+		queued, err = w.repository.QueueIncidentTranslations(ctx, *incidentID, plans, true, w.clock())
+	}
+	if err == nil && queued > 0 {
+		w.signal()
+	}
+	return queued, err
 }
 
 func (w *PipelineWorker) RetryCategoryVerification(ctx context.Context, incidentID int64, model string) (int, error) {

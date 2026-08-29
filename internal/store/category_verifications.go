@@ -74,6 +74,13 @@ func (s *Store) QueueIncidentCategoryVerification(ctx context.Context, incidentI
 // source revision. Automatic work respects the deployment cutover; an explicit
 // backfill covers older current runs, including translated fallbacks.
 func (s *Store) QueueMissingCategoryVerifications(ctx context.Context, sourceMode string, plan CategoryVerificationPlan, backfill bool, now time.Time) (int, error) {
+	return s.QueueAllCategoryVerifications(ctx, sourceMode, plan, backfill, false, now)
+}
+
+// QueueAllCategoryVerifications scans reader-selectable presentations for the
+// active source revision. Force permits an explicit operator request to rerun
+// successful checks while still deduplicating active work.
+func (s *Store) QueueAllCategoryVerifications(ctx context.Context, sourceMode string, plan CategoryVerificationPlan, backfill, force bool, now time.Time) (int, error) {
 	condition, err := sourceStatusCondition(sourceMode)
 	if err != nil {
 		return 0, err
@@ -90,7 +97,9 @@ func (s *Store) QueueMissingCategoryVerifications(ctx context.Context, sourceMod
 	defer tx.Rollback()
 	cutoverCondition := ""
 	requestKind := "scheduled"
-	if backfill {
+	if force {
+		requestKind = "manual"
+	} else if backfill {
 		requestKind = "backfill"
 	} else {
 		cutoverCondition = ` AND julianday(r.completed_at) > julianday((SELECT automatic_after FROM category_verification_cutover WHERE id=1))`
@@ -140,7 +149,7 @@ func (s *Store) QueueMissingCategoryVerifications(ctx context.Context, sourceMod
 	}
 	total := 0
 	for _, item := range candidates {
-		queued, err := queueCategoryVerificationTx(ctx, tx, item.runID, item.title, item.summary, item.category, plan, requestKind, false, now)
+		queued, err := queueCategoryVerificationTx(ctx, tx, item.runID, item.title, item.summary, item.category, plan, requestKind, force, now)
 		if err != nil {
 			return 0, err
 		}

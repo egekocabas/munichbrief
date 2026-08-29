@@ -50,10 +50,20 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	if page.Code != http.StatusOK || page.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("admin page = %d/%q", page.Code, page.Header().Get("Cache-Control"))
 	}
-	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", "Installed and ready", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/translation-backfill", "/api/admin/ai/status", "/admin/history", "Pipeline history", "Open reader", "View full history", "Confirm AI request", staticAssets["theme.js"].path, "data-theme-toggle", staticAssets["admin.js"].path, "Active stage", "Canonical pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover", "Independent translation queues"} {
+	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", "Installed and ready", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/translation-backfill", "/api/admin/ai/translations/process", "/api/admin/ai/category-verifications/process", "/api/admin/ai/status", "/admin/history", "Pipeline history", "Open reader", "View full history", "Confirm AI request", staticAssets["theme.js"].path, "data-theme-toggle", staticAssets["admin.js"].path, "Active stage", "Canonical pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover", "Independent translation queues", "Post-processing only", "All registered languages", "Process all translations", "Verify all categories"} {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("admin page does not contain %q", expected)
 		}
+	}
+	translationsOnly := httptest.NewRecorder()
+	handler.ServeHTTP(translationsOnly, formRequest(http.MethodPost, "/api/admin/ai/translations/process", "confirmed=true&scope=all&language=all&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
+	if translationsOnly.Code != http.StatusSeeOther || !strings.Contains(translationsOnly.Header().Get("Location"), "translations_queued=0") || !strings.Contains(translationsOnly.Header().Get("Location"), "translation_language=all") {
+		t.Fatalf("all-language focused processing = %d/%q", translationsOnly.Code, translationsOnly.Header().Get("Location"))
+	}
+	categoryOnly := httptest.NewRecorder()
+	handler.ServeHTTP(categoryOnly, formRequest(http.MethodPost, "/api/admin/ai/category-verifications/process", "confirmed=true&scope=all&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
+	if categoryOnly.Code != http.StatusSeeOther || !strings.Contains(categoryOnly.Header().Get("Location"), "category_verifications_queued=0") {
+		t.Fatalf("all-category focused processing = %d/%q", categoryOnly.Code, categoryOnly.Header().Get("Location"))
 	}
 
 	for _, attack := range []struct {

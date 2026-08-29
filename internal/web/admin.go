@@ -103,7 +103,9 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 	if queued, ok := nonNegativeQueryInt(request, "translations_queued"); ok {
 		language := request.URL.Query().Get("translation_language")
 		displayName := language
-		if definition, found := processing.TranslationByLanguage(language); found {
+		if language == "all" {
+			displayName = "all registered languages"
+		} else if definition, found := processing.TranslationByLanguage(language); found {
 			displayName = definition.DisplayName
 		}
 		data.Notice = fmt.Sprintf("Queued %d %s translation job(s). Canonical German presentations remain available independently.", queued, displayName)
@@ -347,6 +349,54 @@ func (s *Server) backfillCategoryVerifications(response http.ResponseWriter, req
 	s.categoryVerificationMutation(response, request, true)
 }
 
+func (s *Server) processTranslationsOnly(response http.ResponseWriter, request *http.Request) {
+	if !s.preparePostProcessingMutation(response, request, "translation") {
+		return
+	}
+	model := strings.TrimSpace(request.PostForm.Get("model"))
+	language := strings.TrimSpace(request.PostForm.Get("language"))
+	if model == "" || language == "" {
+		http.Error(response, "language and model are required", http.StatusBadRequest)
+		return
+	}
+	languages := []string{language}
+	if language == "all" {
+		languages = languages[:0]
+		for _, definition := range processing.RegisteredTranslations() {
+			languages = append(languages, definition.Language)
+		}
+	}
+	incidentID, ok := postProcessingIncidentID(response, request.PostForm)
+	if !ok {
+		return
+	}
+	queued, err := s.options.Processor.RequestTranslations(request.Context(), incidentID, languages, model)
+	if s.handlePostProcessingError(response, request, "queue translation work", err) {
+		return
+	}
+	s.redirectPostProcessing(response, request, "translations_queued", queued, "translation_language", language)
+}
+
+func (s *Server) processCategoryVerificationsOnly(response http.ResponseWriter, request *http.Request) {
+	if !s.preparePostProcessingMutation(response, request, "category verification") {
+		return
+	}
+	model := strings.TrimSpace(request.PostForm.Get("model"))
+	if model == "" {
+		http.Error(response, "model is required", http.StatusBadRequest)
+		return
+	}
+	incidentID, ok := postProcessingIncidentID(response, request.PostForm)
+	if !ok {
+		return
+	}
+	queued, err := s.options.Processor.RequestCategoryVerifications(request.Context(), incidentID, model)
+	if s.handlePostProcessingError(response, request, "queue category verification work", err) {
+		return
+	}
+	s.redirectPostProcessing(response, request, "category_verifications_queued", queued, "", "")
+}
+
 func (s *Server) categoryVerificationMutation(response http.ResponseWriter, request *http.Request, backfill bool) {
 	if !validAdminMutation(request) {
 		http.Error(response, "cross-site request blocked", http.StatusForbidden)
@@ -461,6 +511,75 @@ func (s *Server) translationMutation(response http.ResponseWriter, request *http
 	query := target.Query()
 	query.Set("translations_queued", strconv.Itoa(queued))
 	query.Set("translation_language", language)
+	target.RawQuery = query.Encode()
+	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
+}
+
+func (s *Server) preparePostProcessingMutation(response http.ResponseWriter, request *http.Request, label string) bool {
+	if !validAdminMutation(request) {
+		http.Error(response, "cross-site request blocked", http.StatusForbidden)
+		return false
+	}
+	if !isFormPost(request) {
+		http.Error(response, "form content type required", http.StatusUnsupportedMediaType)
+		return false
+	}
+	request.Body = http.MaxBytesReader(response, request.Body, 4096)
+	if err := request.ParseForm(); err != nil {
+		http.Error(response, "invalid form", http.StatusBadRequest)
+		return false
+	}
+	if request.PostForm.Get("confirmed") != "true" {
+		http.Error(response, label+" confirmation is required", http.StatusBadRequest)
+		return false
+	}
+	if s.options.Processor == nil {
+		http.Error(response, "AI processing is disabled", http.StatusServiceUnavailable)
+		return false
+	}
+	return true
+}
+
+func postProcessingIncidentID(response http.ResponseWriter, form url.Values) (*int64, bool) {
+	switch form.Get("scope") {
+	case "all":
+		return nil, true
+	case "incident":
+		incidentID, err := strconv.ParseInt(form.Get("incident_id"), 10, 64)
+		if err != nil || incidentID < 1 {
+			http.Error(response, "incident_id must be a positive integer", http.StatusBadRequest)
+			return nil, false
+		}
+		return &incidentID, true
+	default:
+		http.Error(response, "scope must be incident or all", http.StatusBadRequest)
+		return nil, false
+	}
+}
+
+func (s *Server) handlePostProcessingError(response http.ResponseWriter, request *http.Request, operation string, err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, store.ErrNotFound) {
+		http.NotFound(response, request)
+		return true
+	}
+	if errors.Is(err, processing.ErrModelUnavailable) {
+		http.Error(response, "selected Ollama model is unavailable", http.StatusServiceUnavailable)
+		return true
+	}
+	s.internalError(response, request, operation, err)
+	return true
+}
+
+func (s *Server) redirectPostProcessing(response http.ResponseWriter, request *http.Request, countKey string, queued int, detailKey, detailValue string) {
+	target, _ := url.Parse(adminPaginationURL(positiveFormInt(request.PostForm.Get("unprocessed_page")), positiveFormInt(request.PostForm.Get("all_page"))))
+	query := target.Query()
+	query.Set(countKey, strconv.Itoa(queued))
+	if detailKey != "" {
+		query.Set(detailKey, detailValue)
+	}
 	target.RawQuery = query.Encode()
 	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
 }

@@ -29,6 +29,10 @@ func (s *Store) EnsureTranslationLanguages(ctx context.Context, languages []stri
 // presentation. Existing active or equivalent successful work is preserved,
 // while pending translations for older canonical runs are superseded.
 func (s *Store) QueueTranslationsForRun(ctx context.Context, runID int64, plans []TranslationPlan, requestKind string, now time.Time) (int, error) {
+	return s.queueTranslationsForRun(ctx, runID, plans, requestKind, false, now)
+}
+
+func (s *Store) queueTranslationsForRun(ctx context.Context, runID int64, plans []TranslationPlan, requestKind string, force bool, now time.Time) (int, error) {
 	if requestKind != "scheduled" && requestKind != "manual" && requestKind != "backfill" {
 		return 0, errors.New("invalid translation request kind")
 	}
@@ -49,7 +53,7 @@ func (s *Store) QueueTranslationsForRun(ctx context.Context, runID int64, plans 
 	}
 	count := 0
 	for _, plan := range plans {
-		queued, err := queueTranslationTx(ctx, tx, runID, title, summary, plan, requestKind, now)
+		queued, err := queueTranslationTx(ctx, tx, runID, title, summary, plan, requestKind, force, now)
 		if err != nil {
 			return 0, err
 		}
@@ -66,6 +70,13 @@ func (s *Store) QueueTranslationsForRun(ctx context.Context, runID int64, plans 
 // QueueIncidentTranslation requests one immediate target-language translation
 // for the newest completed canonical presentation of the current incident.
 func (s *Store) QueueIncidentTranslation(ctx context.Context, incidentID int64, plan TranslationPlan, now time.Time) (int, error) {
+	return s.QueueIncidentTranslations(ctx, incidentID, []TranslationPlan{plan}, false, now)
+}
+
+// QueueIncidentTranslations queues one or more translation languages for the
+// newest completed presentation. Force permits a new manual attempt after a
+// successful translation while still deduplicating active work.
+func (s *Store) QueueIncidentTranslations(ctx context.Context, incidentID int64, plans []TranslationPlan, force bool, now time.Time) (int, error) {
 	if incidentID < 1 {
 		return 0, errors.New("incident ID must be positive")
 	}
@@ -82,13 +93,20 @@ func (s *Store) QueueIncidentTranslation(ctx context.Context, incidentID int64, 
 	if err != nil {
 		return 0, err
 	}
-	return s.QueueTranslationsForRun(ctx, runID, []TranslationPlan{plan}, "manual", now)
+	return s.queueTranslationsForRun(ctx, runID, plans, "manual", force, now)
 }
 
 // QueueMissingTranslations scans only the newest canonical presentation for
 // each current incident. Automatic work respects each language's enablement
 // cutover; explicit backfills intentionally ignore it.
 func (s *Store) QueueMissingTranslations(ctx context.Context, sourceMode string, plans []TranslationPlan, backfill bool, now time.Time) (int, error) {
+	return s.QueueAllTranslations(ctx, sourceMode, plans, backfill, false, now)
+}
+
+// QueueAllTranslations scans the newest completed presentation for every
+// current incident. Force permits explicit operator requests to retranslate
+// completed languages; active jobs remain deduplicated.
+func (s *Store) QueueAllTranslations(ctx context.Context, sourceMode string, plans []TranslationPlan, backfill, force bool, now time.Time) (int, error) {
 	condition, err := sourceStatusCondition(sourceMode)
 	if err != nil {
 		return 0, err
@@ -99,7 +117,9 @@ func (s *Store) QueueMissingTranslations(ctx context.Context, sourceMode string,
 	}
 	defer tx.Rollback()
 	requestKind := "scheduled"
-	if backfill {
+	if force {
+		requestKind = "manual"
+	} else if backfill {
 		requestKind = "backfill"
 	}
 	total := 0
@@ -154,7 +174,7 @@ func (s *Store) QueueMissingTranslations(ctx context.Context, sourceMode string,
 			return 0, err
 		}
 		for _, item := range candidates {
-			queued, err := queueTranslationTx(ctx, tx, item.runID, item.title, item.summary, plan, requestKind, now)
+			queued, err := queueTranslationTx(ctx, tx, item.runID, item.title, item.summary, plan, requestKind, force, now)
 			if err != nil {
 				return 0, err
 			}
@@ -169,7 +189,7 @@ func (s *Store) QueueMissingTranslations(ctx context.Context, sourceMode string,
 	return total, nil
 }
 
-func queueTranslationTx(ctx context.Context, tx *sql.Tx, runID int64, title, summary string, plan TranslationPlan, requestKind string, now time.Time) (bool, error) {
+func queueTranslationTx(ctx context.Context, tx *sql.Tx, runID int64, title, summary string, plan TranslationPlan, requestKind string, force bool, now time.Time) (bool, error) {
 	plan.Language = strings.TrimSpace(plan.Language)
 	plan.PromptVersion = strings.TrimSpace(plan.PromptVersion)
 	plan.Model = strings.TrimSpace(plan.Model)
@@ -184,13 +204,15 @@ func queueTranslationTx(ctx context.Context, tx *sql.Tx, runID int64, title, sum
 		return false, err
 	}
 	inputHash := HashPipelineInput("title_de", title, "summary_de", summary, "language", plan.Language, plan.PromptVersion, plan.Model)
-	var count int
-	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM presentation_translations
-		WHERE presentation_run_id=? AND language_code=? AND status IN ('pending','running','succeeded')`,
-		runID, plan.Language).Scan(&count); err != nil {
+	var active, succeeded int
+	if err := tx.QueryRowContext(ctx, `SELECT
+		COALESCE(SUM(CASE WHEN status IN ('pending','running') THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN status='succeeded' THEN 1 ELSE 0 END),0)
+		FROM presentation_translations WHERE presentation_run_id=? AND language_code=?`,
+		runID, plan.Language).Scan(&active, &succeeded); err != nil {
 		return false, err
 	}
-	if count > 0 {
+	if active > 0 || (!force && succeeded > 0) {
 		return false, nil
 	}
 	_, err := tx.ExecContext(ctx, `INSERT INTO presentation_translations(
