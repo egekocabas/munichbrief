@@ -101,7 +101,7 @@ func TestRunAIProcessQueuesNeverStartedIncident(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer database.Close()
-	stats, err := database.PipelineSnapshot(ctx, "fixture", processing.StepKeys(), time.Now())
+	stats, err := database.PipelineSnapshot(ctx, "fixture", processing.StepKeys(), nil, time.Now())
 	if err != nil || len(stats.Steps) != 2 || stats.Steps[0].Queued != 1 {
 		t.Fatalf("stats = %#v, err=%v", stats, err)
 	}

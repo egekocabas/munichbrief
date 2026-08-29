@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func TestPresentationSelectionPrefersCompleteV2AndRetainsV1Fallback(t *testing.T) {
+func TestPresentationSelectionRequiresCompleteCurrentV2(t *testing.T) {
 	ctx := context.Background()
 	database, err := Open(ctx, filepath.Join(t.TempDir(), "presentation-order.db"))
 	if err != nil {
@@ -22,13 +22,13 @@ func TestPresentationSelectionPrefersCompleteV2AndRetainsV1Fallback(t *testing.T
 		t.Fatal(err)
 	}
 
-	v1 := insertCompletedPresentationRun(t, ctx, database, incidentID, sourceHash, PreviousPipelineVersion, now, map[string]string{
+	v1 := insertCompletedPresentationRun(t, ctx, database, incidentID, sourceHash, "incident-pipeline-v1", now, map[string]string{
 		"title_de": "V1 DE", "summary_de": "V1 summary.", "title_en": "V1 EN", "summary_en": "V1 English summary.",
 		"category": "other", "privacy_status": "safe", "privacy_flags": "[]",
 	})
 	record, err := database.GetPresentationIncident(ctx, incidentID, PresentationScope{PromptVersion: PipelineVersion, TranslationLanguage: "en"})
-	if err != nil || record.AIPipelineVersion != PreviousPipelineVersion || record.AITranslatedTitle != "V1 EN" {
-		t.Fatalf("v1 fallback = %#v, err=%v, run=%d", record, err, v1)
+	if err != nil || record.HasAI {
+		t.Fatalf("v1 audit run %d selected for readers: %#v, err=%v", v1, record, err)
 	}
 
 	for _, status := range []string{"processing", "failed"} {
@@ -37,8 +37,8 @@ func TestPresentationSelectionPrefersCompleteV2AndRetainsV1Fallback(t *testing.T
 		}
 	}
 	record, err = database.GetPresentationIncident(ctx, incidentID, PresentationScope{PromptVersion: PipelineVersion, TranslationLanguage: "en"})
-	if err != nil || record.AIPipelineVersion != PreviousPipelineVersion || record.AITranslatedTitle != "V1 EN" {
-		t.Fatalf("incomplete v2 displaced v1 = %#v, err=%v", record, err)
+	if err != nil || record.HasAI {
+		t.Fatalf("incomplete v2 became selectable: %#v, err=%v", record, err)
 	}
 
 	insertCompletedPresentationRun(t, ctx, database, incidentID, sourceHash, PipelineVersion, now.Add(3*time.Minute), map[string]string{
@@ -74,11 +74,16 @@ func insertCompletedPresentationRun(t *testing.T, ctx context.Context, database 
 		}
 	}
 	if title, ok := values["title_en"]; ok {
-		if _, err := database.db.ExecContext(ctx, `INSERT INTO presentation_translations(
-			presentation_run_id,language_code,request_kind,status,title,summary,model_identity,prompt_version,input_hash,
+		result, err := database.db.ExecContext(ctx, `INSERT INTO post_processing_jobs(
+			presentation_run_id,processor_key,scope_key,request_kind,status,model_identity,prompt_version,input_hash,
 			attempt_count,started_at,completed_at,created_at,updated_at
-		) VALUES(?,'en','imported','succeeded',?,?, 'translate:4b','incident-translation-en-v1','',0,?,?,?,?)`,
-			runID, title, values["summary_en"], formatTime(completed), formatTime(completed), formatTime(completed), formatTime(completed)); err != nil {
+		) VALUES(?,'translation','en','imported','succeeded','translate:4b','incident-translation-en-v1','',0,?,?,?,?)`,
+			runID, formatTime(completed), formatTime(completed), formatTime(completed), formatTime(completed))
+		if err != nil {
+			t.Fatal(err)
+		}
+		jobID, _ := result.LastInsertId()
+		if _, err := database.db.ExecContext(ctx, `INSERT INTO post_processing_values(job_id,kind,value) VALUES(?,'title',?),(?,'summary',?)`, jobID, title, jobID, values["summary_en"]); err != nil {
 			t.Fatal(err)
 		}
 	}

@@ -2,7 +2,7 @@ package processing
 
 import "testing"
 
-func TestPromptRegistryResolvesActiveAndRetiredVersions(t *testing.T) {
+func TestPromptRegistryResolvesActiveVersions(t *testing.T) {
 	seen := make(map[string]bool)
 	for _, prompt := range promptRegistry {
 		if prompt.Version == "" || prompt.SystemPrompt == "" || prompt.UserPromptTemplate == "" {
@@ -16,10 +16,6 @@ func TestPromptRegistryResolvesActiveAndRetiredVersions(t *testing.T) {
 		if !found || resolved != prompt {
 			t.Fatalf("PromptByVersion(%q) = %#v, %t", prompt.Version, resolved, found)
 		}
-	}
-	legacy, found := PromptByVersion(LegacyBilingualPromptVersion)
-	if !found || legacy.Status != PromptRetired || legacy.StepKey != "" {
-		t.Fatalf("legacy prompt = %#v, found=%t", legacy, found)
 	}
 	if _, found := PromptByVersion("unknown"); found {
 		t.Fatal("unknown prompt version resolved")

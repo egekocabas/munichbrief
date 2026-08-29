@@ -115,10 +115,10 @@ func TestLiveOllamaPrivacySafeMetadataFirstPresentation(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if translation.Translation == nil {
+			if translation.Values["title"] == "" || translation.Values["summary"] == "" {
 				t.Fatal("translation result is missing")
 			}
-			publicText := strings.ToLower(strings.Join([]string{analysis.TitleDE, analysis.SummaryDE, translation.Translation.Title, translation.Translation.Summary}, "\n"))
+			publicText := strings.ToLower(strings.Join([]string{analysis.TitleDE, analysis.SummaryDE, translation.Values["title"], translation.Values["summary"]}, "\n"))
 			for _, forbidden := range fixture.forbidden {
 				if strings.Contains(publicText, strings.ToLower(forbidden)) {
 					t.Errorf("publishable output leaked synthetic identifier %q", forbidden)

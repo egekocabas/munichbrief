@@ -267,16 +267,9 @@ func TestPublicModeDoesNotForceDisclosurePreview(t *testing.T) {
 
 func completeDisclosureTestPresentation(t *testing.T, ctx context.Context, database *store.Store) int64 {
 	t.Helper()
-	job, found, err := database.QueueAndClaimProcessingJob(ctx, legacyOperation("qwen3.5:4b"), time.Now())
-	if err != nil || !found {
-		t.Fatalf("claim presentation job = %t/%v", found, err)
-	}
-	presentation := store.AIPresentation{
+	job := seedV2Presentation(t, database, testPresentation{
 		TitleDE: "Synthetischer KI-Titel", SummaryDE: "Synthetische KI-Zusammenfassung.",
-		TitleEN: "Synthetic AI title", SummaryEN: "Synthetic AI summary.", PrivacyStatus: "safe",
-	}
-	if err := database.CompleteProcessingJob(ctx, job, presentation, "qwen3.5:4b", processing.LegacyBilingualPromptVersion, time.Now()); err != nil {
-		t.Fatal(err)
-	}
+		TitleEN: "Synthetic AI title", SummaryEN: "Synthetic AI summary.",
+	}, time.Now())
 	return job.IncidentID
 }
