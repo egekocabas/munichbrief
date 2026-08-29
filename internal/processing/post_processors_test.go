@@ -34,6 +34,33 @@ func TestDefaultPostProcessorRegistryOrdersAndExpandsScopes(t *testing.T) {
 	}
 }
 
+func TestPostProcessorRegistryOrdersQueueStatsWithDefinitions(t *testing.T) {
+	registry := DefaultPostProcessorRegistry()
+	stats := []store.PostProcessingQueueStats{
+		{ProcessorKey: TranslationModelStep, ScopeKey: EnglishLanguage},
+		{ProcessorKey: "retired", ScopeKey: "z"},
+		{ProcessorKey: CategoryVerificationStep, ScopeKey: DefaultPostProcessingScope},
+		{ProcessorKey: PublicAssistanceVerificationStep, ScopeKey: DefaultPostProcessingScope},
+		{ProcessorKey: "retired", ScopeKey: "a"},
+	}
+	ordered := registry.OrderedQueueStats(stats)
+	want := []string{
+		PublicAssistanceVerificationStep + "/" + DefaultPostProcessingScope,
+		CategoryVerificationStep + "/" + DefaultPostProcessingScope,
+		TranslationModelStep + "/" + EnglishLanguage,
+		"retired/a",
+		"retired/z",
+	}
+	for index, stat := range ordered {
+		if key := stat.ProcessorKey + "/" + stat.ScopeKey; key != want[index] {
+			t.Fatalf("ordered queue stat %d = %q, want %q", index, key, want[index])
+		}
+	}
+	if stats[0].ProcessorKey != TranslationModelStep {
+		t.Fatal("queue ordering mutated its input")
+	}
+}
+
 func TestPostProcessorRegistryRejectsCounterOutsideDeclaredOutputs(t *testing.T) {
 	_, err := NewPostProcessorRegistry(PostProcessorDefinition{
 		Key: "test", DisplayName: "Test", Description: "Test processor.", Priority: 1,

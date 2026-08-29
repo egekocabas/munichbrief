@@ -38,6 +38,9 @@ func TestAdminIsDisabledByDefault(t *testing.T) {
 func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	ctx := context.Background()
 	database := fixtureStore(t)
+	if err := database.EnsurePostProcessingScopes(ctx, processing.DefaultPostProcessorRegistry().StoreScopes(), time.Now()); err != nil {
+		t.Fatal(err)
+	}
 	records, _, err := database.ListIncidents(ctx, 1, 0)
 	if err != nil {
 		t.Fatal(err)
@@ -54,6 +57,19 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("admin page does not contain %q", expected)
 		}
+	}
+	queueOrder := []string{
+		`data-post-processing-stat="public_assistance_verification/default"`,
+		`data-post-processing-stat="category_verification/default"`,
+		`data-post-processing-stat="translation/en"`,
+	}
+	previous := -1
+	for _, marker := range queueOrder {
+		position := strings.Index(page.Body.String(), marker)
+		if position < 0 || position <= previous {
+			t.Fatalf("admin post-processing queue order does not follow registry priority: %q", page.Body.String())
+		}
+		previous = position
 	}
 	for _, removed := range []string{"Backfill English history", "Backfill category history", "/api/admin/ai/translation-backfill", "/api/admin/ai/category-verification-backfill"} {
 		if strings.Contains(page.Body.String(), removed) {
@@ -159,6 +175,14 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	handler.ServeHTTP(status, httptest.NewRequest(http.MethodGet, "/api/admin/ai/status", nil))
 	if status.Code != http.StatusOK || status.Header().Get("Cache-Control") != "private, no-store" || !strings.Contains(status.Body.String(), `"manual_cycles"`) || !strings.Contains(status.Body.String(), `"recent_events"`) || !strings.Contains(status.Body.String(), `"active_step_completed"`) || !strings.Contains(status.Body.String(), `"active_steps"`) || !strings.Contains(status.Body.String(), `"waiting"`) || !strings.Contains(status.Body.String(), `"ready_after_stage"`) {
 		t.Fatalf("pipeline status = %d/%q/%q", status.Code, status.Header().Get("Cache-Control"), status.Body.String())
+	}
+	previous = -1
+	for _, processor := range []string{`"processor_key":"public_assistance_verification"`, `"processor_key":"category_verification"`, `"processor_key":"translation"`} {
+		position := strings.Index(status.Body.String(), processor)
+		if position < 0 || position <= previous {
+			t.Fatalf("post-processing status order does not follow registry priority: %q", status.Body.String())
+		}
+		previous = position
 	}
 	for _, forbidden := range []string{"incident_body", "system_prompt", "title_de", "summary_de", "title_en", "summary_en"} {
 		if strings.Contains(status.Body.String(), forbidden) {

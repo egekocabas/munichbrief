@@ -234,6 +234,23 @@ func TestPipelineWorkerPrioritizesPublicAssistanceThenCategoryBeforeTranslation(
 			t.Fatalf("event %d = %q, want %s", index, events[index], step)
 		}
 	}
+	status, err := worker.Status(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	queueOrder := []string{
+		PublicAssistanceVerificationStep + "/" + DefaultPostProcessingScope,
+		CategoryVerificationStep + "/" + DefaultPostProcessingScope,
+		TranslationModelStep + "/" + EnglishLanguage,
+	}
+	if len(status.Queue.PostProcessing) != len(queueOrder) {
+		t.Fatalf("runtime queue stats = %#v, want %d scopes", status.Queue.PostProcessing, len(queueOrder))
+	}
+	for index, stat := range status.Queue.PostProcessing {
+		if key := stat.ProcessorKey + "/" + stat.ScopeKey; key != queueOrder[index] {
+			t.Fatalf("runtime queue stat %d = %q, want %q", index, key, queueOrder[index])
+		}
+	}
 }
 
 func TestInjectedPostProcessorUsesGenericSchedulingManualExecutionStatusAndHistory(t *testing.T) {

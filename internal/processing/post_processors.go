@@ -192,6 +192,42 @@ func (r *PostProcessorRegistry) StoreScopes() []store.PostProcessingScope {
 	return scopes
 }
 
+// OrderedQueueStats aligns persisted queue state with the same processor and
+// scope order used for execution, model configuration, and focused controls.
+// Unknown persisted scopes remain visible after registered scopes.
+func (r *PostProcessorRegistry) OrderedQueueStats(stats []store.PostProcessingQueueStats) []store.PostProcessingQueueStats {
+	type scopeKey struct {
+		processor string
+		scope     string
+	}
+	ranks := make(map[scopeKey]int)
+	rank := 0
+	for _, definition := range r.Definitions() {
+		for _, scope := range definition.Scopes {
+			ranks[scopeKey{processor: definition.Key, scope: scope.Key}] = rank
+			rank++
+		}
+	}
+	ordered := append([]store.PostProcessingQueueStats(nil), stats...)
+	sort.SliceStable(ordered, func(i, j int) bool {
+		left := ordered[i]
+		right := ordered[j]
+		leftRank, leftRegistered := ranks[scopeKey{processor: left.ProcessorKey, scope: left.ScopeKey}]
+		rightRank, rightRegistered := ranks[scopeKey{processor: right.ProcessorKey, scope: right.ScopeKey}]
+		if leftRegistered != rightRegistered {
+			return leftRegistered
+		}
+		if leftRegistered {
+			return leftRank < rightRank
+		}
+		if left.ProcessorKey == right.ProcessorKey {
+			return left.ScopeKey < right.ScopeKey
+		}
+		return left.ProcessorKey < right.ProcessorKey
+	})
+	return ordered
+}
+
 func (r *PostProcessorRegistry) Plans(processorKey string, scopeKeys []string, model string) ([]store.PostProcessingPlan, error) {
 	definition, found := r.Definition(processorKey)
 	if !found {
