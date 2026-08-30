@@ -431,8 +431,8 @@ func publicAssistanceVerificationInputGenerator(input StepInput) (StepInput, str
 	encoded, err := json.Marshal(struct {
 		OriginalTitle          string   `json:"original_title"`
 		IncidentBody           string   `json:"incident_body"`
-		PublicAssistanceStatus string   `json:"public_assistance_status"`
-		PublicAssistanceTypes  []string `json:"public_assistance_types"`
+		PublicAssistanceStatus string   `json:"existing_public_assistance_status"`
+		PublicAssistanceTypes  []string `json:"existing_public_assistance_types"`
 	}{requestInput.Value("original_title"), requestInput.Value("incident_body"), status, types})
 	if err != nil {
 		return StepInput{}, "", errorOf(ErrorOutput, "encode public assistance verification input: %v", err)
@@ -487,9 +487,9 @@ func categoryVerificationInputGenerator(input StepInput) (StepInput, string, err
 		"title_de": input.Value("title_de"), "summary_de": input.Value("summary_de"), "category": category[0],
 	}}
 	encoded, err := json.Marshal(struct {
-		TitleDE   string `json:"title_de"`
-		SummaryDE string `json:"summary_de"`
-		Category  string `json:"category"`
+		TitleDE          string `json:"title_de"`
+		SummaryDE        string `json:"summary_de"`
+		ExistingCategory string `json:"existing_category"`
 	}{requestInput.Value("title_de"), requestInput.Value("summary_de"), requestInput.Value("category")})
 	if err != nil {
 		return StepInput{}, "", errorOf(ErrorOutput, "encode category verification input: %v", err)
