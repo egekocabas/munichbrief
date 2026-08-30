@@ -48,10 +48,10 @@
           {{range .Entries}}
           <tr class="align-top">
             <td class="whitespace-nowrap px-4 py-4"><time datetime="{{.UpdatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime "en" .UpdatedAt}}</time></td>
-            <td class="whitespace-nowrap px-4 py-4"><strong>{{if .CycleID}}Cycle #{{.CycleID}}{{else}}Independent{{end}}</strong><span class="mt-1 block text-xs text-muted">{{if eq .Kind "post_processing"}}post-processing · {{.RequestKind}}{{else}}{{.CycleKind}} · {{.CycleStatus}}{{end}}</span></td>
+            <td class="whitespace-nowrap px-4 py-4"><strong>{{if .CycleID}}Cycle #{{.CycleID}}{{else}}Independent{{end}}</strong><span class="mt-1 block text-xs text-muted">{{if eq .Kind "post_processing"}}post-processing · {{.RequestKind}}{{else}}{{.CycleKind}} · {{pipelineStatusLabel .CycleStatus .FailureKind ""}}{{end}}</span></td>
             <td class="whitespace-nowrap px-4 py-4 font-bold">#{{.IncidentID}}</td>
             <td class="px-4 py-4 font-mono text-xs font-bold">{{.ExecutionKey}}</td>
-            <td class="whitespace-nowrap px-4 py-4"><strong>{{.Status}}</strong><span class="mt-1 block text-xs text-muted">Attempts {{.AttemptCount}}{{if .StatusReason}} · {{postProcessingStatusReason .StatusReason .StatusDetail}}{{end}}{{if .FailureKind}} · {{.FailureKind}}{{end}}</span></td>
+            <td class="whitespace-nowrap px-4 py-4"><strong>{{pipelineStatusLabel .Status .FailureKind .StatusReason}}</strong><span class="mt-1 block text-xs text-muted">Attempts {{.AttemptCount}}{{if .StatusReason}} · {{postProcessingStatusReason .StatusReason .StatusDetail}}{{end}}{{if and .FailureKind (ne .FailureKind "operator_canceled")}} · {{.FailureKind}}{{end}}</span></td>
             <td class="px-4 py-4">{{if and (eq .Kind "post_processing") (eq .Status "skipped") (eq .AttemptCount 0)}}<span class="block font-bold">Not invoked</span>{{else}}<span class="block font-mono text-xs font-bold">{{.ModelIdentity}}</span>{{end}}<span class="mt-1 block font-mono text-xs text-muted">{{.PromptVersion}}</span></td>
           </tr>
           {{end}}

@@ -86,11 +86,14 @@ func TestRunAIProcessQueuesNeverStartedIncident(t *testing.T) {
 	if err := database.SetPipelineStepModel(ctx, processing.TranslationModelStep, "qwen3.5:4b", now); err != nil {
 		t.Fatal(err)
 	}
+	if err := database.SetAutomaticProcessing(ctx, false, now); err != nil {
+		t.Fatal(err)
+	}
 	if err := database.Close(); err != nil {
 		t.Fatal(err)
 	}
 
-	cfg := config.Config{DatabasePath: databasePath, SourceMode: "fixture"}
+	cfg := config.Config{DatabasePath: databasePath, SourceMode: "fixture", AIEnabled: true}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	if err := runAIProcess(ctx, logger, cfg, []string{"--incident", formatInt(records[0].ID)}); err != nil {
 		t.Fatal(err)
@@ -104,6 +107,10 @@ func TestRunAIProcessQueuesNeverStartedIncident(t *testing.T) {
 	stats, err := database.PipelineSnapshot(ctx, "fixture", processing.StepKeys(), nil, time.Now())
 	if err != nil || len(stats.Steps) != 2 || stats.Steps[0].Queued != 1 {
 		t.Fatalf("stats = %#v, err=%v", stats, err)
+	}
+	control, err := database.AIControl(ctx)
+	if err != nil || control.AutomaticProcessingEnabled {
+		t.Fatalf("runtime control changed by manual CLI request = %#v/%v", control, err)
 	}
 }
 
@@ -128,9 +135,18 @@ func TestRunAIProcessRequiresEverySavedStepModel(t *testing.T) {
 	if err := database.Close(); err != nil {
 		t.Fatal(err)
 	}
-	err = runAIProcess(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), config.Config{DatabasePath: path, SourceMode: "fixture"}, []string{"--all"})
+	err = runAIProcess(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), config.Config{DatabasePath: path, SourceMode: "fixture", AIEnabled: true}, []string{"--all"})
 	if err == nil || !strings.Contains(err.Error(), "AI pipeline models are not configured") {
 		t.Fatalf("unconfigured ai-process error = %v", err)
+	}
+}
+
+func TestRunAIProcessHonorsDeploymentAIGate(t *testing.T) {
+	err := runAIProcess(context.Background(), slog.New(slog.NewTextHandler(io.Discard, nil)), config.Config{
+		DatabasePath: filepath.Join(t.TempDir(), "disabled.db"), SourceMode: "fixture",
+	}, []string{"--all"})
+	if err == nil || !strings.Contains(err.Error(), "MUNICHBRIEF_AI_ENABLED") {
+		t.Fatalf("disabled ai-process error = %v", err)
 	}
 }
 

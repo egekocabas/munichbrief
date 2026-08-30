@@ -661,7 +661,7 @@ func TestPublicHostUsesFailClosedPresentationAndRejectsAdmin(t *testing.T) {
 				t.Errorf("public disclosure acknowledgement = %d/%#v, want 200 and one cookie", acknowledgement.Code, acknowledgement.Result().Cookies())
 			}
 
-			for _, path := range []string{"/admin", "/admin/history", "/api/admin/ai/process-all-now", "/private"} {
+			for _, path := range []string{"/admin", "/admin/history", "/api/admin/ai/process-all-now", "/api/admin/ai/automatic-processing", "/api/admin/ai/cancel-all", "/private"} {
 				response := httptest.NewRecorder()
 				request := httptest.NewRequest(http.MethodGet, path, nil)
 				request.Host = publicHost

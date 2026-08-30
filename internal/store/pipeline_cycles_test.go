@@ -183,6 +183,63 @@ func TestManualRequestDoesNotInterruptHealthyRunningScheduledCycle(t *testing.T)
 	}
 }
 
+func TestBlockedContinuationReleasesLeaseToLaterManualCycle(t *testing.T) {
+	ctx := context.Background()
+	database, err := Open(ctx, filepath.Join(t.TempDir(), "continuation-manual-priority.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 25, 4, 10, 0, 0, time.UTC)
+	insertPipelineDocuments(t, ctx, database, now, "one")
+	plans := testPipelinePlans()
+	scheduled, found, err := database.ActivateNextPipelineCycle(ctx, "fixture", plans, true, now)
+	if err != nil || !found || scheduled.Kind != "scheduled" {
+		t.Fatalf("activate scheduled cycle = %#v/%t/%v", scheduled, found, err)
+	}
+	firstManual, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, nil, nil, true, now.Add(time.Second))
+	if err != nil || firstManual.Requested != 1 {
+		t.Fatalf("first manual cycle = %#v/%v", firstManual, err)
+	}
+	continuationID, err := database.InterruptBlockedAutomaticCycle(ctx, scheduled.ID, now.Add(2*time.Second))
+	if err != nil || continuationID == scheduled.ID {
+		t.Fatalf("scheduled interruption = %d/%v", continuationID, err)
+	}
+	active, found, err := database.ActivateNextPipelineCycle(ctx, "fixture", plans, false, now.Add(3*time.Second))
+	if err != nil || !found || active.ID != firstManual.CycleID {
+		t.Fatalf("first manual activation = %#v/%t/%v", active, found, err)
+	}
+	formatted := formatTime(now.Add(4 * time.Second))
+	if _, err := database.db.ExecContext(ctx, `UPDATE processing_step_jobs SET status='failed',completed_at=?,updated_at=? WHERE cycle_item_id IN (SELECT id FROM processing_cycle_items WHERE cycle_id=?)`, formatted, formatted, firstManual.CycleID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.db.ExecContext(ctx, `UPDATE processing_cycle_items SET status='failed',updated_at=? WHERE cycle_id=?`, formatted, firstManual.CycleID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.db.ExecContext(ctx, `UPDATE presentation_runs SET status='failed',completed_at=? WHERE id IN (SELECT presentation_run_id FROM processing_cycle_items WHERE cycle_id=?)`, formatted, firstManual.CycleID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.db.ExecContext(ctx, `UPDATE processing_cycles SET status='failed',completed_at=?,updated_at=? WHERE id=?`, formatted, formatted, firstManual.CycleID); err != nil {
+		t.Fatal(err)
+	}
+	active, found, err = database.ActivateNextPipelineCycle(ctx, "fixture", plans, false, now.Add(5*time.Second))
+	if err != nil || !found || active.ID != continuationID || active.Kind != "continuation" {
+		t.Fatalf("continuation activation = %#v/%t/%v", active, found, err)
+	}
+	secondManual, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, nil, nil, true, now.Add(6*time.Second))
+	if err != nil || secondManual.Requested != 1 {
+		t.Fatalf("second manual cycle = %#v/%v", secondManual, err)
+	}
+	yieldedID, err := database.InterruptBlockedAutomaticCycle(ctx, continuationID, now.Add(7*time.Second))
+	if err != nil || yieldedID != continuationID {
+		t.Fatalf("continuation interruption = %d/%v", yieldedID, err)
+	}
+	active, found, err = database.ActivateNextPipelineCycle(ctx, "fixture", plans, false, now.Add(8*time.Second))
+	if err != nil || !found || active.ID != secondManual.CycleID || active.Kind != "manual" {
+		t.Fatalf("second manual activation = %#v/%t/%v", active, found, err)
+	}
+}
+
 func TestPipelineRecoveryAndSourceRevisionSupersession(t *testing.T) {
 	ctx := context.Background()
 	database, err := Open(ctx, filepath.Join(t.TempDir(), "recover-supersede.db"))

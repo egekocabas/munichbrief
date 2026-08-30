@@ -245,6 +245,9 @@ func runAIProcess(ctx context.Context, logger *slog.Logger, cfg config.Config, a
 	if (*incidentID > 0) == *all {
 		return errors.New("ai-process requires exactly one of --incident ID or --all")
 	}
+	if !cfg.AIEnabled {
+		return errors.New("AI processing is disabled by MUNICHBRIEF_AI_ENABLED")
+	}
 	database, err := store.Open(ctx, cfg.DatabasePath)
 	if err != nil {
 		return err

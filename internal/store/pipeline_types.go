@@ -15,6 +15,10 @@ const PipelineVersion = "incident-pipeline-v2"
 // because one of its declared required inputs was unavailable.
 const PostProcessingStatusReasonMissingInput = "missing_input"
 
+// ProcessingStatusReasonOperatorCanceled identifies unfinished work explicitly
+// canceled by an administrator without exposing any job input or output.
+const ProcessingStatusReasonOperatorCanceled = "operator_canceled"
+
 var ErrPipelineUnconfigured = errors.New("AI pipeline models are not configured")
 
 // PipelineStepPlan freezes a registry step and selected model for one cycle.
@@ -143,6 +147,21 @@ type PipelineRequestResult struct {
 	CycleID   int64
 	Requested int
 	Current   int
+}
+
+// AIControlState is the durable operator-controlled automatic-processing gate.
+// Manual work remains eligible while AutomaticProcessingEnabled is false.
+type AIControlState struct {
+	AutomaticProcessingEnabled bool      `json:"automatic_processing_enabled"`
+	UpdatedAt                  time.Time `json:"updated_at"`
+}
+
+// PipelineCancellationResult reports unfinished work terminalized by one
+// operator request. Repeated requests return zero counts.
+type PipelineCancellationResult struct {
+	Cycles             int `json:"cycles"`
+	CanonicalJobs      int `json:"canonical_jobs"`
+	PostProcessingJobs int `json:"post_processing_jobs"`
 }
 
 // StepQueueStats summarizes bounded queue state for one registered step.

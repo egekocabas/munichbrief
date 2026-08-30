@@ -135,6 +135,40 @@ until the replacement succeeds.
 Scheduled work starts inside the configured Europe/Berlin window. A frozen
 cycle may finish after the window closes. Explicit admin or CLI requests persist
 manual priority but retain validation, circuit breaking, and retry delays.
+If a scheduled cycle publishes its final German result after the window closes,
+automatic post-processing discovery waits for the next open window; the German
+publication itself remains complete and available. A continuation retains its
+automatic provenance at this handoff and never gains a manual window or switch
+bypass merely because the original scheduled cycle yielded its lease.
+When an automatic scheduled or continuation cycle is waiting on a retry or open
+circuit, it releases the running-cycle lease to a queued manual cycle and later
+resumes with the same frozen progress.
+
+The protected admin runtime control is a durable gate above the schedule. When
+automatic processing is disabled, no new scheduled canonical or post-processing
+request starts even inside the window; explicit admin and CLI work remains
+eligible. The deployment-level `MUNICHBRIEF_AI_ENABLED` setting remains the
+absolute gate for both interfaces; the CLI bypasses only the durable runtime
+switch and schedule. An automatic request already in flight finishes, then its
+frozen cycle is suspended without losing accepted results or its window
+authorization.
+The same boundary suspension applies when that request ends in a retryable
+provider or configuration failure, so a disabled cycle never retains the
+running-cycle lease while it waits.
+Re-enabling wakes the worker and lets an authorized cycle resume even after the
+window closes.
+
+The cancel-all control atomically disables automatic work and supersedes every
+unfinished canonical and post-processing job with the safe `operator_canceled`
+reason. It then cancels the one in-flight Ollama request. Completion transactions
+accept output only for a still-running job, so a late response cannot publish
+after cancellation. Completed presentations and successful post-processing
+values are never removed. Canceled work remains auditable and can be discovered
+again under the normal cutover and window rules after automatic processing is
+re-enabled.
+Operator queue submissions, runtime-switch changes, and cancellation are
+serialized at their database mutation boundary, so a concurrent manual request
+is deterministically either included in the cancellation or accepted afterward.
 
 The v2 migration records an automatic-scheduling cutover. Each registered
 processor scope also has a persisted enablement time. The public-assistance

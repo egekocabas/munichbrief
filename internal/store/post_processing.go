@@ -41,7 +41,9 @@ func (s *Store) EnsurePostProcessingScopes(ctx context.Context, scopes []PostPro
 }
 
 // QueuePostProcessingForRun creates independent jobs for one completed current
-// canonical presentation.
+// canonical presentation. The store enforces the durable switch for scheduled
+// callers; the worker separately authorizes their time window at its clock
+// boundary because schedule configuration is not persisted here.
 func (s *Store) QueuePostProcessingForRun(ctx context.Context, runID int64, plans []PostProcessingPlan, requestKind string, force bool, now time.Time) (int, error) {
 	if requestKind != "scheduled" && requestKind != "manual" {
 		return 0, errors.New("invalid post-processing request kind")
@@ -51,6 +53,18 @@ func (s *Store) QueuePostProcessingForRun(ctx context.Context, runID int64, plan
 		return 0, err
 	}
 	defer tx.Rollback()
+	if requestKind == "scheduled" {
+		enabled, err := automaticProcessingEnabledTx(ctx, tx)
+		if err != nil {
+			return 0, err
+		}
+		if !enabled {
+			if err := tx.Commit(); err != nil {
+				return 0, err
+			}
+			return 0, nil
+		}
+	}
 	var incidentID int64
 	var sourceHash string
 	if err := tx.QueryRowContext(ctx, `SELECT r.incident_id,r.source_hash FROM presentation_runs r JOIN incidents i ON i.id=r.incident_id WHERE r.id=? AND r.status='complete' AND r.pipeline_version=? AND r.legacy=0 AND r.source_hash=i.content_hash`, runID, PipelineVersion).Scan(&incidentID, &sourceHash); err != nil {
@@ -106,6 +120,18 @@ func (s *Store) QueuePostProcessingForAll(ctx context.Context, sourceMode string
 		return 0, err
 	}
 	defer tx.Rollback()
+	if !force {
+		enabled, err := automaticProcessingEnabledTx(ctx, tx)
+		if err != nil {
+			return 0, err
+		}
+		if !enabled {
+			if err := tx.Commit(); err != nil {
+				return 0, err
+			}
+			return 0, nil
+		}
+	}
 	requestKind := "scheduled"
 	if force {
 		requestKind = "manual"
@@ -344,7 +370,7 @@ func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string,
 		FROM post_processing_jobs job JOIN presentation_runs r ON r.id=job.presentation_run_id
 		JOIN incidents i ON i.id=r.incident_id AND i.content_hash=r.source_hash
 		WHERE job.processor_key=? AND job.status='pending' AND (job.next_retry_at IS NULL OR job.next_retry_at<=?)
-		AND (job.request_kind='manual' OR ?)`+blockedCondition+`
+		AND (job.request_kind='manual' OR (? AND (SELECT automatic_processing_enabled FROM ai_runtime_control WHERE id=1)=1))`+blockedCondition+`
 		ORDER BY CASE job.request_kind WHEN 'manual' THEN 0 WHEN 'scheduled' THEN 1 ELSE 2 END,job.created_at,job.id LIMIT 1`, args...).Scan(
 		&job.ID, &job.PresentationRunID, &job.IncidentID, &job.ProcessorKey, &job.ScopeKey, &job.RequestKind,
 		&job.ModelIdentity, &job.PromptVersion, &job.InputHash, &job.AttemptCount,
@@ -433,7 +459,7 @@ func (s *Store) CompletePostProcessingJob(ctx context.Context, job PostProcessin
 		return err
 	}
 	if affected, _ := result.RowsAffected(); affected != 1 {
-		return errors.New("post-processing job is no longer running")
+		return ErrJobNotRunning
 	}
 	return tx.Commit()
 }
@@ -484,7 +510,7 @@ func (s *Store) FailPostProcessingJob(ctx context.Context, job PostProcessingJob
 		return err
 	}
 	if affected, _ := result.RowsAffected(); affected != 1 {
-		return errors.New("post-processing job is no longer running")
+		return ErrJobNotRunning
 	}
 	return nil
 }

@@ -17,18 +17,44 @@ import (
 )
 
 type pipelineTestProvider struct {
-	mu            sync.Mutex
-	events        []string
-	onGerman      func()
-	onTranslation func()
-	calls         map[string]int
-	fail          func(string, int) error
-	generate      func(StepDefinition, StepInput) (StepOutput, bool)
+	mu              sync.Mutex
+	events          []string
+	onGerman        func()
+	onTranslation   func()
+	calls           map[string]int
+	fail            func(string, int) error
+	generate        func(StepDefinition, StepInput) (StepOutput, bool)
+	generateContext func(context.Context, StepDefinition, StepInput) (StepOutput, bool, error)
 }
 
 type testModelCatalog struct{ snapshot ModelCatalogSnapshot }
 
 func (c testModelCatalog) Snapshot() ModelCatalogSnapshot { return c.snapshot }
+
+type blockingManualRepository struct {
+	*store.Store
+	manualEntered chan struct{}
+	manualRelease chan struct{}
+}
+
+// continuationJobRepository exercises the provenance boundary for a
+// continuation carrying frozen post-processing plans, even though fresh
+// scheduled cycles do not currently populate those plans.
+type continuationJobRepository struct{ *store.Store }
+
+func (r continuationJobRepository) ClaimPipelineJob(ctx context.Context, cycleID int64, stepOrder int, now time.Time) (store.PipelineJob, bool, error) {
+	job, found, err := r.Store.ClaimPipelineJob(ctx, cycleID, stepOrder, now)
+	if found {
+		job.CycleKind = "continuation"
+	}
+	return job, found, err
+}
+
+func (r *blockingManualRepository) CreateManualPipelineCycle(ctx context.Context, sourceMode string, plans []store.PipelineStepPlan, postPlans []store.PostProcessingPlan, incidentID *int64, reprocessAll bool, now time.Time) (store.PipelineRequestResult, error) {
+	close(r.manualEntered)
+	<-r.manualRelease
+	return r.Store.CreateManualPipelineCycle(ctx, sourceMode, plans, postPlans, incidentID, reprocessAll, now)
+}
 
 type pipelineTestObserver struct {
 	attempts  map[string]int
@@ -74,7 +100,7 @@ type pipelineTestGenerator struct {
 
 func (g pipelineTestGenerator) ModelIdentity() string { return g.model }
 
-func (g pipelineTestGenerator) GenerateStep(_ context.Context, step StepDefinition, input StepInput) (StepOutput, string, error) {
+func (g pipelineTestGenerator) GenerateStep(ctx context.Context, step StepDefinition, input StepInput) (StepOutput, string, error) {
 	g.provider.mu.Lock()
 	g.provider.events = append(g.provider.events, step.Key+":"+g.model+":"+input.Value("original_title"))
 	if g.provider.calls == nil {
@@ -87,6 +113,7 @@ func (g pipelineTestGenerator) GenerateStep(_ context.Context, step StepDefiniti
 		failure = g.provider.fail(step.Key, call)
 	}
 	generate := g.provider.generate
+	generateContext := g.provider.generateContext
 	callback := g.provider.onGerman
 	if step.Key == GermanPresentationStep {
 		g.provider.onGerman = nil
@@ -98,6 +125,11 @@ func (g pipelineTestGenerator) GenerateStep(_ context.Context, step StepDefiniti
 	g.provider.mu.Unlock()
 	if failure != nil {
 		return StepOutput{}, "", failure
+	}
+	if generateContext != nil {
+		if output, handled, err := generateContext(ctx, step, input); handled || err != nil {
+			return output, g.model, err
+		}
 	}
 	if generate != nil {
 		if output, handled := generate(step, input); handled {
@@ -134,6 +166,532 @@ func (g pipelineTestGenerator) GenerateStep(_ context.Context, step StepDefiniti
 		translationCallback()
 	}
 	return StepOutput{Values: map[string]string{"title": "Safe title", "summary": "Safe summary."}}, g.model, nil
+}
+
+func TestAutomaticProcessingDisableFinishesCurrentRequestAndSuspendsCycle(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-automatic-control.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 16, 0, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "one")
+	if err := database.EnsurePipelineSteps(ctx, ModelSettingKeys(), now); err != nil {
+		t.Fatal(err)
+	}
+	for step, model := range pipelineTestModels() {
+		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	started := make(chan struct{})
+	release := make(chan struct{})
+	var once sync.Once
+	provider := &pipelineTestProvider{generateContext: func(_ context.Context, step StepDefinition, _ StepInput) (StepOutput, bool, error) {
+		if step.Key != IncidentMetadataStep {
+			return StepOutput{}, false, nil
+		}
+		once.Do(func() { close(started) })
+		<-release
+		return StepOutput{Category: "other", ReportKind: "incident", PublicAssistanceStatus: "not_requested", PublicAssistanceTypes: []string{}}, true, nil
+	}}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan struct{})
+	go func() {
+		worker.processAvailable(ctx)
+		close(done)
+	}()
+	<-started
+	if err := worker.SetAutomaticProcessing(ctx, false); err != nil {
+		t.Fatal(err)
+	}
+	close(release)
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("worker did not stop at automatic job boundary")
+	}
+	if provider.callCount(IncidentMetadataStep) != 1 || provider.callCount(GermanPresentationStep) != 0 {
+		t.Fatalf("calls while disabled: metadata=%d german=%d", provider.callCount(IncidentMetadataStep), provider.callCount(GermanPresentationStep))
+	}
+	status, err := worker.Status(ctx)
+	if err != nil || status.AutomaticProcessingEnabled || status.Queue.ActiveCycle != nil {
+		t.Fatalf("disabled worker status = %#v/%v", status, err)
+	}
+	if err := worker.SetAutomaticProcessing(ctx, true); err != nil {
+		t.Fatal(err)
+	}
+	worker.processAvailable(ctx)
+	if provider.callCount(GermanPresentationStep) != 1 {
+		t.Fatalf("German calls after resume = %d, want 1", provider.callCount(GermanPresentationStep))
+	}
+}
+
+func TestAutomaticProcessingDisableSuspendsCycleAfterCurrentRequestFails(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-automatic-failure-control.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 16, 15, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "one")
+	if err := database.EnsurePipelineSteps(ctx, ModelSettingKeys(), now); err != nil {
+		t.Fatal(err)
+	}
+	for step, model := range pipelineTestModels() {
+		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	started := make(chan struct{})
+	release := make(chan struct{})
+	var once sync.Once
+	provider := &pipelineTestProvider{generateContext: func(_ context.Context, step StepDefinition, _ StepInput) (StepOutput, bool, error) {
+		if step.Key != IncidentMetadataStep {
+			return StepOutput{}, false, nil
+		}
+		once.Do(func() { close(started) })
+		<-release
+		return StepOutput{}, true, errorOf(ErrorTransient, "synthetic provider failure")
+	}}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan struct{})
+	go func() {
+		worker.processAvailable(ctx)
+		close(done)
+	}()
+	<-started
+	if err := worker.SetAutomaticProcessing(ctx, false); err != nil {
+		t.Fatal(err)
+	}
+	close(release)
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("worker did not return after failed automatic request")
+	}
+	status, err := worker.Status(ctx)
+	if err != nil || status.Queue.ActiveCycle != nil || status.Queue.Steps[0].Retrying != 1 {
+		t.Fatalf("failed request boundary status = active:%#v steps:%#v err:%v", status.Queue.ActiveCycle, status.Queue.Steps, err)
+	}
+}
+
+func TestCancelAllInterruptsCurrentRequestWithoutRetryFailure(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-cancel-all.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 16, 30, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "one")
+	if err := database.EnsurePipelineSteps(ctx, ModelSettingKeys(), now); err != nil {
+		t.Fatal(err)
+	}
+	for step, model := range pipelineTestModels() {
+		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	started := make(chan struct{})
+	var once sync.Once
+	provider := &pipelineTestProvider{generateContext: func(requestCtx context.Context, step StepDefinition, _ StepInput) (StepOutput, bool, error) {
+		if step.Key != IncidentMetadataStep {
+			return StepOutput{}, false, nil
+		}
+		once.Do(func() { close(started) })
+		<-requestCtx.Done()
+		return StepOutput{}, true, requestCtx.Err()
+	}}
+	observer := &pipelineTestObserver{}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), observer, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan struct{})
+	go func() {
+		worker.processAvailable(ctx)
+		close(done)
+	}()
+	<-started
+	canceled, err := worker.CancelAll(ctx)
+	if err != nil || canceled.Cycles != 1 || canceled.CanonicalJobs != 2 {
+		t.Fatalf("worker cancel all = %#v/%v", canceled, err)
+	}
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("canceled provider request did not exit")
+	}
+	if observer.failures[IncidentMetadataStep] != 0 {
+		t.Fatalf("operator cancellation recorded as failure: %#v", observer.failures)
+	}
+	status, err := worker.Status(ctx)
+	if err != nil || status.AutomaticProcessingEnabled || status.Queue.ActiveCycle != nil || status.Queue.Steps[0].Retrying != 0 {
+		t.Fatalf("canceled worker status = %#v/%v", status, err)
+	}
+}
+
+func TestCancelAllInterruptsCurrentPostProcessingRequestWithoutRetryFailure(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-cancel-all-post.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 16, 32, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "one")
+	started := make(chan struct{})
+	var once sync.Once
+	provider := &pipelineTestProvider{}
+	observer := &pipelineTestObserver{}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), observer, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := worker.SetAutomaticProcessing(ctx, false); err != nil {
+		t.Fatal(err)
+	}
+	if result, err := worker.RequestNow(ctx, "fixture", map[string]string{IncidentMetadataStep: "qwen:4b", GermanPresentationStep: "qwen:4b"}, nil, false); err != nil || result.Requested != 1 {
+		t.Fatalf("manual canonical request = %#v/%v", result, err)
+	}
+	worker.processAvailable(ctx)
+	if queued, err := worker.RequestPostProcessing(ctx, PostProcessingRequest{ProcessorKey: TranslationModelStep, Model: "translate:4b"}); err != nil || queued != 1 {
+		t.Fatalf("manual post-processing request = %d/%v", queued, err)
+	}
+	provider.generateContext = func(requestCtx context.Context, step StepDefinition, _ StepInput) (StepOutput, bool, error) {
+		if step.Key != EnglishTranslationStep {
+			return StepOutput{}, false, nil
+		}
+		once.Do(func() { close(started) })
+		<-requestCtx.Done()
+		return StepOutput{}, true, requestCtx.Err()
+	}
+	done := make(chan struct{})
+	go func() {
+		worker.processAvailable(ctx)
+		close(done)
+	}()
+	<-started
+	canceled, err := worker.CancelAll(ctx)
+	if err != nil || canceled.Cycles != 0 || canceled.CanonicalJobs != 0 || canceled.PostProcessingJobs != 1 {
+		t.Fatalf("post-processing cancel all = %#v/%v", canceled, err)
+	}
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("canceled post-processing provider request did not exit")
+	}
+	executionKey := TranslationModelStep + "/en"
+	if observer.failures[executionKey] != 0 || worker.circuitOpen(TranslationModelStep, "translate:4b", now.Add(time.Second)) {
+		t.Fatalf("post-processing operator cancellation recorded failure/circuit: failures=%#v", observer.failures)
+	}
+	status, err := worker.Status(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, queue := range status.Queue.PostProcessing {
+		if queue.Pending != 0 || queue.Running != 0 || queue.Retrying != 0 {
+			t.Fatalf("post-processing queue after cancellation = %#v", status.Queue.PostProcessing)
+		}
+	}
+}
+
+func TestManualSubmissionIsLinearizedBeforeConcurrentCancelAll(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-cancel-manual-race.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 16, 35, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "one")
+	repository := &blockingManualRepository{Store: database, manualEntered: make(chan struct{}), manualRelease: make(chan struct{})}
+	worker, err := NewPipelineWorker(repository, &pipelineTestProvider{}, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	requestDone := make(chan error, 1)
+	go func() {
+		_, requestErr := worker.RequestNow(ctx, "fixture", map[string]string{IncidentMetadataStep: "qwen:4b", GermanPresentationStep: "qwen:4b"}, nil, false)
+		requestDone <- requestErr
+	}()
+	<-repository.manualEntered
+	if worker.executionMu.TryLock() {
+		worker.executionMu.Unlock()
+		t.Fatal("manual queue mutation was not serialized with cancel-all")
+	}
+	cancelDone := make(chan store.PipelineCancellationResult, 1)
+	go func() {
+		result, cancelErr := worker.CancelAll(ctx)
+		if cancelErr != nil {
+			t.Errorf("cancel all: %v", cancelErr)
+		}
+		cancelDone <- result
+	}()
+	close(repository.manualRelease)
+	if err := <-requestDone; err != nil {
+		t.Fatal(err)
+	}
+	if canceled := <-cancelDone; canceled.Cycles != 1 || canceled.CanonicalJobs != 2 {
+		t.Fatalf("concurrent cancellation = %#v", canceled)
+	}
+	status, err := worker.Status(ctx)
+	if err != nil || status.AutomaticProcessingEnabled || status.Queue.ActiveCycle != nil {
+		t.Fatalf("status after linearized cancellation = %#v/%v", status, err)
+	}
+}
+
+func TestCancelWinningBeforeCanonicalFailureBookkeepingIsNotAProcessingFailure(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-cancel-validation-race.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 16, 40, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "one")
+	if err := database.EnsurePipelineSteps(ctx, ModelSettingKeys(), now); err != nil {
+		t.Fatal(err)
+	}
+	for step, model := range pipelineTestModels() {
+		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	provider := &pipelineTestProvider{}
+	observer := &pipelineTestObserver{}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), observer, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider.generateContext = func(_ context.Context, step StepDefinition, _ StepInput) (StepOutput, bool, error) {
+		if step.Key != IncidentMetadataStep {
+			return StepOutput{}, false, nil
+		}
+		if _, err := worker.CancelAll(ctx); err != nil {
+			return StepOutput{}, true, err
+		}
+		return StepOutput{}, true, nil
+	}
+	worker.processAvailable(ctx)
+	if observer.failures[IncidentMetadataStep] != 0 {
+		t.Fatalf("cancellation race recorded as canonical failure: %#v", observer.failures)
+	}
+	if worker.circuitOpen(IncidentMetadataStep, "qwen:4b", now.Add(time.Second)) {
+		t.Fatal("cancellation race opened the canonical circuit")
+	}
+	status, err := worker.Status(ctx)
+	if err != nil || status.Queue.Steps[0].Retrying != 0 {
+		t.Fatalf("canonical cancellation race status = %#v/%v", status.Queue.Steps, err)
+	}
+}
+
+func TestCancelWinningBeforePostProcessingFailureBookkeepingIsNotAProcessingFailure(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-cancel-post-validation-race.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 16, 42, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "one")
+	provider := &pipelineTestProvider{}
+	observer := &pipelineTestObserver{}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), observer, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := worker.SetAutomaticProcessing(ctx, false); err != nil {
+		t.Fatal(err)
+	}
+	if result, err := worker.RequestNow(ctx, "fixture", map[string]string{IncidentMetadataStep: "qwen:4b", GermanPresentationStep: "qwen:4b"}, nil, false); err != nil || result.Requested != 1 {
+		t.Fatalf("manual canonical request = %#v/%v", result, err)
+	}
+	worker.processAvailable(ctx)
+	if queued, err := worker.RequestPostProcessing(ctx, PostProcessingRequest{ProcessorKey: TranslationModelStep, Model: "translate:4b"}); err != nil || queued != 1 {
+		t.Fatalf("manual post-processing request = %d/%v", queued, err)
+	}
+	provider.generateContext = func(_ context.Context, step StepDefinition, _ StepInput) (StepOutput, bool, error) {
+		if step.Key != EnglishTranslationStep {
+			return StepOutput{}, false, nil
+		}
+		if _, err := worker.CancelAll(ctx); err != nil {
+			return StepOutput{}, true, err
+		}
+		return StepOutput{Values: map[string]string{"title": "incomplete"}}, true, nil
+	}
+	worker.processAvailable(ctx)
+	executionKey := TranslationModelStep + "/en"
+	if observer.failures[executionKey] != 0 {
+		t.Fatalf("cancellation race recorded as post-processing failure: %#v", observer.failures)
+	}
+	if worker.circuitOpen(TranslationModelStep, "translate:4b", now.Add(time.Second)) {
+		t.Fatal("cancellation race opened the post-processing circuit")
+	}
+	status, err := worker.Status(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, queue := range status.Queue.PostProcessing {
+		if queue.Pending != 0 || queue.Running != 0 || queue.Retrying != 0 {
+			t.Fatalf("post-processing cancellation race queue = %#v", status.Queue.PostProcessing)
+		}
+	}
+}
+
+func TestProviderCanceledWithoutWorkerCancellationRetriesCanonicalJob(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-provider-canceled-canonical.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 16, 43, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "one")
+	for step, model := range pipelineTestModels() {
+		if err := database.EnsurePipelineSteps(ctx, []string{step}, now); err != nil {
+			t.Fatal(err)
+		}
+		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	provider := &pipelineTestProvider{fail: func(step string, _ int) error {
+		if step == IncidentMetadataStep {
+			return context.Canceled
+		}
+		return nil
+	}}
+	observer := &pipelineTestObserver{}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), observer, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker.processAvailable(ctx)
+	status, err := worker.Status(ctx)
+	if err != nil || status.Queue.Steps[0].Retrying != 1 || observer.failures[IncidentMetadataStep] != 1 {
+		t.Fatalf("provider cancellation canonical retry = queue:%#v failures:%#v err:%v", status.Queue.Steps, observer.failures, err)
+	}
+	if !worker.circuitOpen(IncidentMetadataStep, "qwen:4b", now.Add(time.Second)) {
+		t.Fatal("provider cancellation did not open the canonical transient circuit")
+	}
+}
+
+func TestProviderCanceledWithoutWorkerCancellationRetriesPostProcessingJob(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-provider-canceled-post.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 16, 44, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "one")
+	provider := &pipelineTestProvider{}
+	observer := &pipelineTestObserver{}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), observer, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := worker.SetAutomaticProcessing(ctx, false); err != nil {
+		t.Fatal(err)
+	}
+	if result, err := worker.RequestNow(ctx, "fixture", map[string]string{IncidentMetadataStep: "qwen:4b", GermanPresentationStep: "qwen:4b"}, nil, false); err != nil || result.Requested != 1 {
+		t.Fatalf("manual canonical request = %#v/%v", result, err)
+	}
+	worker.processAvailable(ctx)
+	if queued, err := worker.RequestPostProcessing(ctx, PostProcessingRequest{ProcessorKey: TranslationModelStep, Model: "translate:4b"}); err != nil || queued != 1 {
+		t.Fatalf("manual post-processing request = %d/%v", queued, err)
+	}
+	provider.fail = func(step string, _ int) error {
+		if step == EnglishTranslationStep {
+			return context.Canceled
+		}
+		return nil
+	}
+	worker.processAvailable(ctx)
+	status, err := worker.Status(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	executionKey := TranslationModelStep + "/en"
+	translationRetrying := 0
+	for _, queue := range status.Queue.PostProcessing {
+		if queue.ProcessorKey == TranslationModelStep && queue.ScopeKey == EnglishLanguage {
+			translationRetrying = queue.Retrying
+		}
+	}
+	if translationRetrying != 1 || observer.failures[executionKey] != 1 {
+		t.Fatalf("provider cancellation post-processing retry = queue:%#v failures:%#v", status.Queue.PostProcessing, observer.failures)
+	}
+	if !worker.circuitOpen(TranslationModelStep, "translate:4b", now.Add(time.Second)) {
+		t.Fatal("provider cancellation did not open the post-processing transient circuit")
+	}
+}
+
+func TestAutomaticProcessingDisableFinishesCurrentPostProcessingOnly(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-post-control.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 16, 45, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "one")
+	insertWorkerDocument(t, ctx, database, now.Add(time.Second), "two")
+	if err := database.EnsurePipelineSteps(ctx, ModelSettingKeys(), now); err != nil {
+		t.Fatal(err)
+	}
+	for step, model := range pipelineTestModels() {
+		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	started := make(chan struct{})
+	release := make(chan struct{})
+	var once sync.Once
+	provider := &pipelineTestProvider{generateContext: func(_ context.Context, step StepDefinition, _ StepInput) (StepOutput, bool, error) {
+		if step.Key != EnglishTranslationStep {
+			return StepOutput{}, false, nil
+		}
+		once.Do(func() { close(started) })
+		<-release
+		return StepOutput{Values: map[string]string{"title": "Safe title", "summary": "Safe summary."}}, true, nil
+	}}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan struct{})
+	go func() {
+		worker.processAvailable(ctx)
+		close(done)
+	}()
+	<-started
+	if err := worker.SetAutomaticProcessing(ctx, false); err != nil {
+		t.Fatal(err)
+	}
+	close(release)
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("post-processing worker did not stop after current request")
+	}
+	if provider.callCount(EnglishTranslationStep) != 1 {
+		t.Fatalf("translation calls while disabled = %d, want 1", provider.callCount(EnglishTranslationStep))
+	}
+	status, err := worker.Status(ctx)
+	if err != nil || status.Queue.PostProcessing[len(status.Queue.PostProcessing)-1].Pending != 1 {
+		t.Fatalf("disabled post-processing status = %#v/%v", status.Queue.PostProcessing, err)
+	}
 }
 
 func (p *pipelineTestProvider) callCount(step string) int {
@@ -423,6 +981,11 @@ func TestPipelineWorkerFinishesAuthorizedCycleAfterWindowButDoesNotStartAnother(
 	if err != nil || snapshot.ActiveCycle != nil || snapshot.ScheduledCandidates != 1 {
 		t.Fatalf("closed-window snapshot = %#v, err=%v", snapshot, err)
 	}
+	for _, queue := range snapshot.PostProcessing {
+		if queue.Pending != 0 || queue.Running != 0 || queue.Retrying != 0 {
+			t.Fatalf("scheduled post-processing was discovered outside the window: %#v", snapshot.PostProcessing)
+		}
+	}
 
 	records, _, err := database.ListIncidents(ctx, 10, 0)
 	if err != nil {
@@ -441,6 +1004,73 @@ func TestPipelineWorkerFinishesAuthorizedCycleAfterWindowButDoesNotStartAnother(
 	worker.processAvailable(ctx)
 	if len(provider.events) != 5 {
 		t.Fatalf("outside-window manual cycle did not run: %v", provider.events)
+	}
+}
+
+func TestContinuationPostProcessingRetainsAutomaticWindowAndRequestKind(t *testing.T) {
+	for _, test := range []struct {
+		name        string
+		scopeTime   time.Time
+		executeTime time.Time
+	}{
+		{name: "inside window", scopeTime: time.Date(2030, 8, 29, 10, 59, 0, 0, time.UTC), executeTime: time.Date(2030, 8, 29, 11, 0, 0, 0, time.UTC)},
+		{name: "outside window", scopeTime: time.Date(2030, 8, 29, 12, 59, 0, 0, time.UTC), executeTime: time.Date(2030, 8, 29, 13, 0, 0, 0, time.UTC)},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			database, err := store.Open(ctx, filepath.Join(t.TempDir(), "continuation-post-window.db"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer database.Close()
+			current := test.scopeTime
+			insertWorkerDocument(t, ctx, database, current, strings.ReplaceAll(test.name, " ", "-"))
+			if err := database.EnsurePipelineSteps(ctx, ModelSettingKeys(), current); err != nil {
+				t.Fatal(err)
+			}
+			for step, model := range pipelineTestModels() {
+				if err := database.SetPipelineStepModel(ctx, step, model, current); err != nil {
+					t.Fatal(err)
+				}
+			}
+			provider := &pipelineTestProvider{}
+			worker, err := NewPipelineWorker(continuationJobRepository{Store: database}, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: current}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return current }, Schedule{Location: time.UTC, Start: 10 * time.Hour, End: 12 * time.Hour}, "fixture")
+			if err != nil {
+				t.Fatal(err)
+			}
+			current = test.executeTime
+			if result, err := worker.RequestNow(ctx, "fixture", pipelineTestModels(), nil, false); err != nil || result.Requested != 1 {
+				t.Fatalf("continuation fixture request = %#v/%v", result, err)
+			}
+			worker.processAvailable(ctx)
+			if test.name == "outside window" {
+				if provider.callCount(EnglishTranslationStep) != 0 {
+					t.Fatal("continuation post-processing bypassed the closed window")
+				}
+				current = time.Date(2030, 8, 30, 11, 0, 0, 0, time.UTC)
+				worker.processAvailable(ctx)
+			}
+			if provider.callCount(EnglishTranslationStep) != 1 {
+				status, _ := worker.Status(ctx)
+				t.Fatalf("continuation translation calls = %d, want 1; status=%#v", provider.callCount(EnglishTranslationStep), status)
+			}
+			history, err := database.ListPipelineHistory(ctx, "fixture", 20, nil, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			postFound := false
+			for _, entry := range history.Entries {
+				if entry.ProcessorKey == TranslationModelStep && entry.ScopeKey == EnglishLanguage {
+					postFound = true
+					if entry.RequestKind != "scheduled" {
+						t.Fatalf("continuation post-processing request kind = %q, want scheduled", entry.RequestKind)
+					}
+				}
+			}
+			if !postFound {
+				t.Fatal("continuation post-processing history is missing")
+			}
+		})
 	}
 }
 

@@ -178,7 +178,25 @@ func (p fakeProcessingRequester) Status(ctx context.Context) (processing.Pipelin
 	}
 	queue, err := p.database.PipelineSnapshot(ctx, "fixture", processing.StepKeys(), nil, time.Now())
 	queue.PostProcessing = processing.DefaultPostProcessorRegistry().OrderedQueueStats(queue.PostProcessing)
-	return processing.PipelineRuntimeStatus{GeneratedAt: time.Now(), WindowOpen: true, ScheduledReady: models.Ready, ProcessorAvailable: true, Models: models, Queue: queue}, err
+	control, controlErr := p.database.AIControl(ctx)
+	if err == nil {
+		err = controlErr
+	}
+	return processing.PipelineRuntimeStatus{GeneratedAt: time.Now(), WindowOpen: true, ScheduledReady: models.Ready && control.AutomaticProcessingEnabled, AutomaticProcessingEnabled: control.AutomaticProcessingEnabled, AutomaticProcessingUpdatedAt: control.UpdatedAt, ProcessorAvailable: true, Models: models, Queue: queue}, err
+}
+
+func (p fakeProcessingRequester) SetAutomaticProcessing(ctx context.Context, enabled bool) error {
+	if p.err != nil {
+		return p.err
+	}
+	return p.database.SetAutomaticProcessing(ctx, enabled, time.Now())
+}
+
+func (p fakeProcessingRequester) CancelAll(ctx context.Context) (store.PipelineCancellationResult, error) {
+	if p.err != nil {
+		return store.PipelineCancellationResult{}, p.err
+	}
+	return p.database.CancelAllAIWork(ctx, time.Now())
 }
 
 func defaultTestStepStatus(model string) []processing.StepModelStatus {

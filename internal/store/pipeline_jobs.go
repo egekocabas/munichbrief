@@ -56,6 +56,7 @@ func (s *Store) ClaimPipelineJob(ctx context.Context, cycleID int64, stepOrder i
 		JOIN incidents i ON i.id = ci.incident_id
 		JOIN source_documents d ON d.id = i.source_document_id
 		WHERE c.id = ? AND c.status = 'running' AND j.step_order = ? AND j.status = 'pending'
+			AND (c.kind='manual' OR (SELECT automatic_processing_enabled FROM ai_runtime_control WHERE id=1)=1)
 			AND (j.next_retry_at IS NULL OR j.next_retry_at <= ?) AND ci.source_hash = i.content_hash
 		ORDER BY d.published_at DESC, i.position ASC, j.id ASC LIMIT 1`, cycleID, stepOrder, formatted).Scan(
 		&job.ID, &job.CycleID, &job.CycleKind, &job.CycleItemID, &job.PresentationRunID, &job.IncidentID, &job.SourceHash,
@@ -135,7 +136,7 @@ func (s *Store) CompletePipelineJob(ctx context.Context, job PipelineJob, values
 		return err
 	}
 	if affected, _ := result.RowsAffected(); affected != 1 {
-		return errors.New("pipeline job is no longer running")
+		return ErrJobNotRunning
 	}
 	var laterStages int
 	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM processing_step_jobs
@@ -171,7 +172,7 @@ func (s *Store) FailPipelineJob(ctx context.Context, job PipelineJob, status, fa
 		return err
 	}
 	if affected, _ := result.RowsAffected(); affected != 1 {
-		return errors.New("pipeline job is no longer running")
+		return ErrJobNotRunning
 	}
 	return nil
 }

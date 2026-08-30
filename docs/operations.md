@@ -25,9 +25,11 @@ MUNICHBRIEF_SOURCE_MODE=live \
 MUNICHBRIEF_DATABASE_PATH=.data/munichbrief-live.db \
 go run ./cmd/munichbrief sync
 
+MUNICHBRIEF_AI_ENABLED=true \
 MUNICHBRIEF_DATABASE_PATH=.data/munichbrief-live.db \
 go run ./cmd/munichbrief ai-process --incident 123
 
+MUNICHBRIEF_AI_ENABLED=true \
 MUNICHBRIEF_DATABASE_PATH=.data/munichbrief-live.db \
 go run ./cmd/munichbrief ai-process --all
 ```
@@ -47,10 +49,36 @@ The five-second AI interval is an idle queue check, while the ten-minute AI
 timeout bounds a single Ollama request. Unless immediate mode is enabled, new
 Ollama requests start only during the configured Europe/Berlin processing
 window; a frozen canonical cycle is allowed to finish after the window closes.
+When its final German result completes outside the window, scheduled
+post-processing discovery waits for the next open window rather than creating
+new automatic jobs immediately. Continuation cycles retain scheduled
+post-processing provenance and do not gain the manual bypass.
 An explicit admin or `ai-process` request persists manual intent and bypasses
-only this window. Processing remains sequential and retains privacy validation,
-the circuit breaker, and normal retry delays. A command-line request is picked
-up by the running server on its next idle worker check.
+only this window. The CLI still requires the deployment-level
+`MUNICHBRIEF_AI_ENABLED=true` gate. Processing remains sequential and retains
+privacy validation, the circuit breaker, and normal retry delays. A command-line
+request is picked up by the running server on its next idle worker check.
+
+The protected admin dashboard also has a durable automatic-processing master
+switch. Disabling it overrides an open window for scheduled canonical work and
+all registered post-processors, but does not block explicit admin or
+`ai-process` requests. A running automatic Ollama request is allowed to finish;
+the cycle then waits with its frozen models, prompts, progress, and original
+window authorization, including when the request ends in a retryable provider
+or model-configuration failure. Re-enabling wakes the worker, and an
+already-authorized cycle may resume outside the window under the same
+finish-after-close rule.
+If a scheduled or continuation cycle is waiting on a retry or circuit breaker,
+a queued explicit canonical request takes its running lease and the automatic
+cycle resumes afterward with its accepted results intact.
+
+“Cancel all unfinished work” is the immediate-stop operation. It disables
+automatic processing, interrupts the current Ollama request, and terminalizes
+waiting, queued, retrying, and running canonical and post-processing jobs as
+operator-canceled. It preserves completed publications, successful correction
+and translation values, and audit history. The action is idempotent. Manual work
+can be requested immediately afterward; automatic eligibility is rediscovered
+only after the master switch is enabled again.
 
 The protected admin dashboard stores one preferred model for each canonical
 step and each registered post-processor. Translation scopes share their
@@ -109,6 +137,11 @@ same generic endpoint. There are no model-card history backfill controls. The
 application does not authenticate users itself: enable the dashboard only when
 the ingress protects `/admin*` and `/api/admin*`, and keep both prefixes absent
 from public ingress.
+
+Runtime status reports both the configured window and the durable automatic
+switch so an open window is not mistaken for runnable scheduled work. Switch
+changes and cancellation counts are logged without source text, prompts, or
+model output.
 
 Public-assistance verification is correction-only and has the highest
 post-processing priority after the canonical metadata and German-presentation

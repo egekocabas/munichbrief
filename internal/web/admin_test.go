@@ -54,7 +54,7 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	if page.Code != http.StatusOK || page.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("admin page = %d/%q", page.Code, page.Header().Get("Cache-Control"))
 	}
-	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", "Installed and ready", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/post-processing/process", "/api/admin/ai/status", "/admin/history", "Pipeline history", "Open reader", "View full history", "Confirm AI request", staticAssets["theme.js"].path, "data-theme-toggle", staticAssets["admin.js"].path, "Active stage", "Canonical pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover", "Independent post-processing queues", "Post-processing only", "All registered languages", "Translations only", "Category verification only"} {
+	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", "Installed and ready", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/post-processing/process", "/api/admin/ai/automatic-processing", "/api/admin/ai/cancel-all", "Cancel all unfinished work", "/api/admin/ai/status", "/admin/history", "Pipeline history", "Open reader", "View full history", "Confirm AI request", staticAssets["theme.js"].path, "data-theme-toggle", staticAssets["admin.js"].path, "Active stage", "Canonical pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover", "Independent post-processing queues", "Post-processing only", "All registered languages", "Translations only", "Category verification only"} {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("admin page does not contain %q", expected)
 		}
@@ -202,6 +202,59 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	}
 }
 
+func TestAdminControlsAutomaticProcessingAndCancelsAllWork(t *testing.T) {
+	ctx := context.Background()
+	database := fixtureStore(t)
+	handler := adminTestServer(t, database, nil).Handler()
+
+	invalid := httptest.NewRecorder()
+	handler.ServeHTTP(invalid, formRequest(http.MethodPost, "/api/admin/ai/automatic-processing", "enabled=maybe"))
+	if invalid.Code != http.StatusBadRequest {
+		t.Fatalf("invalid automatic state = %d", invalid.Code)
+	}
+	crossSite := formRequest(http.MethodPost, "/api/admin/ai/automatic-processing", "enabled=false")
+	crossSite.Header.Set("Sec-Fetch-Site", "cross-site")
+	crossSiteResponse := httptest.NewRecorder()
+	handler.ServeHTTP(crossSiteResponse, crossSite)
+	if crossSiteResponse.Code != http.StatusForbidden {
+		t.Fatalf("cross-site automatic state = %d", crossSiteResponse.Code)
+	}
+	disable := httptest.NewRecorder()
+	handler.ServeHTTP(disable, formRequest(http.MethodPost, "/api/admin/ai/automatic-processing", "enabled=false&unprocessed_page=1&all_page=1"))
+	if disable.Code != http.StatusSeeOther || !strings.Contains(disable.Header().Get("Location"), "automatic_processing=disabled") {
+		t.Fatalf("disable automatic processing = %d/%q", disable.Code, disable.Header().Get("Location"))
+	}
+	state, err := database.AIControl(ctx)
+	if err != nil || state.AutomaticProcessingEnabled {
+		t.Fatalf("disabled control = %#v/%v", state, err)
+	}
+	manual := httptest.NewRecorder()
+	handler.ServeHTTP(manual, formRequest(http.MethodPost, "/api/admin/ai/process-all-now", stagedModelForm("confirmed=true")))
+	if manual.Code != http.StatusSeeOther {
+		t.Fatalf("manual processing while automatic disabled = %d/%q", manual.Code, manual.Body.String())
+	}
+	unconfirmed := httptest.NewRecorder()
+	handler.ServeHTTP(unconfirmed, formRequest(http.MethodPost, "/api/admin/ai/cancel-all", "confirmed=false"))
+	if unconfirmed.Code != http.StatusBadRequest {
+		t.Fatalf("unconfirmed cancel all = %d", unconfirmed.Code)
+	}
+	cancel := httptest.NewRecorder()
+	handler.ServeHTTP(cancel, formRequest(http.MethodPost, "/api/admin/ai/cancel-all", "confirmed=true&unprocessed_page=1&all_page=1"))
+	if cancel.Code != http.StatusSeeOther || !strings.Contains(cancel.Header().Get("Location"), "canceled_canonical=") || !strings.Contains(cancel.Header().Get("Location"), "canceled_cycles=") {
+		t.Fatalf("cancel all = %d/%q", cancel.Code, cancel.Header().Get("Location"))
+	}
+	page := httptest.NewRecorder()
+	handler.ServeHTTP(page, httptest.NewRequest(http.MethodGet, cancel.Header().Get("Location"), nil))
+	if page.Code != http.StatusOK || !strings.Contains(page.Body.String(), "Automatic AI processing disabled") || !strings.Contains(page.Body.String(), "Automatic processing remains disabled") || !strings.Contains(page.Body.String(), "Processing window open · automatic processing disabled · manual requests remain available") {
+		t.Fatalf("cancel notice page = %d/%q", page.Code, page.Body.String())
+	}
+	manualAfterCancel := httptest.NewRecorder()
+	handler.ServeHTTP(manualAfterCancel, formRequest(http.MethodPost, "/api/admin/ai/process-all-now", stagedModelForm("confirmed=true")))
+	if manualAfterCancel.Code != http.StatusSeeOther {
+		t.Fatalf("manual processing after cancel all = %d/%q", manualAfterCancel.Code, manualAfterCancel.Body.String())
+	}
+}
+
 func TestAdminUsesInjectedPostProcessorMetadataWithoutHandlerBranches(t *testing.T) {
 	database := fixtureStore(t)
 	status := processing.PipelineModelStatus{
@@ -251,10 +304,30 @@ func TestAdminProcessingReturnsUnavailableWhenAIIsDisabled(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	response := httptest.NewRecorder()
-	server.Handler().ServeHTTP(response, formRequest(http.MethodPost, "/api/admin/ai/process-all-now", "confirmed=true"))
-	if response.Code != http.StatusServiceUnavailable {
-		t.Fatalf("AI-disabled processing status = %d, want 503", response.Code)
+	handler := server.Handler()
+	page := httptest.NewRecorder()
+	handler.ServeHTTP(page, httptest.NewRequest(http.MethodGet, "/admin", nil))
+	if page.Code != http.StatusOK || !strings.Contains(page.Body.String(), "Application-level AI processing is disabled; automatic and manual requests are unavailable") || !strings.Contains(page.Body.String(), "AI processing unavailable") || strings.Contains(page.Body.String(), "data-pipeline-status") {
+		t.Fatalf("AI-disabled admin page = %d/%q", page.Code, page.Body.String())
+	}
+	for _, test := range []struct {
+		method, path, body string
+	}{
+		{method: http.MethodPost, path: "/api/admin/ai/process-all-now", body: "confirmed=true"},
+		{method: http.MethodPost, path: "/api/admin/ai/automatic-processing", body: "enabled=false"},
+		{method: http.MethodPost, path: "/api/admin/ai/cancel-all", body: "confirmed=true"},
+		{method: http.MethodPost, path: "/api/admin/ai/post-processing/process", body: "confirmed=true&processor=translation&scope=en&target=all&model=qwen3.5%3A4b"},
+	} {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, formRequest(test.method, test.path, test.body))
+		if response.Code != http.StatusServiceUnavailable {
+			t.Errorf("AI-disabled %s status = %d, want 503", test.path, response.Code)
+		}
+	}
+	status := httptest.NewRecorder()
+	handler.ServeHTTP(status, httptest.NewRequest(http.MethodGet, "/api/admin/ai/status", nil))
+	if status.Code != http.StatusServiceUnavailable {
+		t.Fatalf("AI-disabled status endpoint = %d, want 503", status.Code)
 	}
 }
 

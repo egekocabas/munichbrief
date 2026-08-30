@@ -2,6 +2,7 @@
   const dialog = document.querySelector("#processing-confirmation");
   const description = document.querySelector("#processing-confirmation-description");
   const request = document.querySelector("#processing-confirmation-request");
+  const behavior = document.querySelector("#processing-confirmation-behavior");
   const confirmButton = document.querySelector("#processing-confirmation-submit");
   if (!(dialog instanceof HTMLDialogElement) || !description || !request || !confirmButton) return;
 
@@ -30,6 +31,7 @@
       });
     if (selections.length) message += ` Selections: ${selections.join(", ")}.`;
     description.textContent = message;
+    if (behavior) behavior.textContent = form.dataset.confirmBehavior || "Bypasses the configured time window, wakes the worker, and runs asynchronously. Jobs remain sequential and keep normal privacy validation, circuit breaking, and retry delays.";
     request.textContent = `${form.method.toUpperCase()} ${new URL(form.action).pathname}`;
     dialog.showModal();
   });
@@ -68,6 +70,9 @@
   const continuations = panel.querySelector("[data-continuations]");
   const candidates = panel.querySelector("[data-candidates]");
   const windowState = panel.querySelector("[data-window-state]");
+  const automaticState = panel.querySelector("[data-automatic-state]");
+  const automaticValue = panel.querySelector("[data-automatic-value]");
+  const automaticButton = panel.querySelector("[data-automatic-button]");
   const events = panel.querySelector("[data-recent-events]");
   let timer = 0;
   let requestInFlight = false;
@@ -114,9 +119,15 @@
     setText(manual, queue.manual_cycles || 0);
     setText(continuations, queue.continuation_cycles || 0);
     setText(candidates, queue.scheduled_candidates || 0);
-    setText(windowState, status.window_open
-      ? (status.scheduled_ready ? "Processing window open · scheduled starts ready" : "Processing window open · model configuration incomplete")
-      : "Processing window closed · active/manual cycles may continue");
+    const automaticEnabled = Boolean(status.automatic_processing_enabled);
+    setText(automaticState, automaticEnabled ? "Automatic AI processing enabled" : "Automatic AI processing disabled");
+    if (automaticValue instanceof HTMLInputElement) automaticValue.value = automaticEnabled ? "false" : "true";
+    setText(automaticButton, automaticEnabled ? "Disable automatic processing" : "Enable automatic processing");
+    setText(windowState, !automaticEnabled
+      ? `${status.window_open ? "Processing window open" : "Processing window closed"} · automatic processing disabled · manual requests remain available`
+      : status.window_open
+        ? (status.scheduled_ready ? "Processing window open · scheduled starts ready" : "Processing window open · model configuration incomplete")
+        : "Processing window closed · active/manual cycles may continue");
     for (const step of status.models?.steps || []) {
       const card = document.querySelector(`[data-step-card="${CSS.escape(step.key)}"]`);
       if (!card) continue;
@@ -172,7 +183,10 @@
         const detail = event.status_reason
           ? postProcessingStatusReason(event.status_reason, event.status_detail)
           : event.failure_kind;
-        item.textContent = `${context} · incident #${event.incident_id} · ${event.execution_key || event.step_key} · ${event.status}${detail ? ` (${detail})` : ""}`;
+        const canceled = event.failure_kind === "operator_canceled" || event.status_reason === "operator_canceled";
+        const eventStatus = canceled ? "Canceled" : event.status;
+        const eventDetail = canceled ? "operator canceled" : detail;
+        item.textContent = `${context} · incident #${event.incident_id} · ${event.execution_key || event.step_key} · ${eventStatus}${eventDetail ? ` (${eventDetail})` : ""}`;
         return item;
       }));
       if (!events.childElementCount) {
