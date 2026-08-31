@@ -130,6 +130,7 @@ func (s *Server) adminVerificationsPage(response http.ResponseWriter, request *h
 					OriginalDisplay:  s.adminVerificationValueDisplay(field.OriginalKind, item.OriginalValues[index]),
 					EffectiveDisplay: s.adminVerificationValueDisplay(field.OriginalKind, item.EffectiveValues[index]),
 					Changed:          item.OriginalValues[index] != item.EffectiveValues[index],
+					Monospace:        adminVerificationValueUsesFallback(field.OriginalKind),
 				})
 			}
 			selected.Incidents = append(selected.Incidents, view)
@@ -147,11 +148,7 @@ func (s *Server) adminVerificationsPage(response http.ResponseWriter, request *h
 }
 
 func verificationProcessorStatuses(models processing.PipelineModelStatus) []processing.PostProcessorModelStatus {
-	defaults := make(map[string]*processing.PostProcessorVerification)
 	defaultDefinitions := processing.DefaultPostProcessorRegistry().Definitions()
-	for _, definition := range defaultDefinitions {
-		defaults[definition.Key] = definition.Verification
-	}
 	statuses := append([]processing.PostProcessorModelStatus(nil), models.PostProcessors...)
 	if len(statuses) == 0 {
 		for _, definition := range defaultDefinitions {
@@ -167,9 +164,6 @@ func verificationProcessorStatuses(models processing.PipelineModelStatus) []proc
 	}
 	verification := make([]processing.PostProcessorModelStatus, 0, len(statuses))
 	for _, status := range statuses {
-		if status.Verification == nil {
-			status.Verification = defaults[status.Key]
-		}
 		if status.Verification != nil {
 			verification = append(verification, status)
 		}
@@ -260,6 +254,15 @@ func (s *Server) adminVerificationValueDisplay(kind, value string) string {
 	return value
 }
 
+func adminVerificationValueUsesFallback(kind string) bool {
+	switch kind {
+	case "category", "public_assistance_types", "public_assistance_status":
+		return false
+	default:
+		return true
+	}
+}
+
 type adminVerificationsPage struct {
 	Notice            string
 	NoticeIsWarning   bool
@@ -342,4 +345,5 @@ type adminVerificationFieldView struct {
 	OriginalDisplay  string
 	EffectiveDisplay string
 	Changed          bool
+	Monospace        bool
 }

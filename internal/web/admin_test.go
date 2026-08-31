@@ -272,7 +272,9 @@ func TestAdminUsesInjectedPostProcessorMetadataWithoutHandlerBranches(t *testing
 		}},
 	}
 	var received processing.PostProcessingRequest
+	requestCount := 0
 	requester := fakeProcessingRequester{database: database, status: &status, postRequest: func(_ context.Context, request processing.PostProcessingRequest) (int, error) {
+		requestCount++
 		received = request
 		return 2, nil
 	}}
@@ -293,8 +295,14 @@ func TestAdminUsesInjectedPostProcessorMetadataWithoutHandlerBranches(t *testing
 
 	response := httptest.NewRecorder()
 	server.Handler().ServeHTTP(response, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=quality_note&scope=all&target=all&model=qwen3.5%3A4b"))
-	if response.Code != http.StatusSeeOther || received.ProcessorKey != "quality_note" || received.Model != "qwen3.5:4b" || received.IncidentID != nil || len(received.ScopeKeys) != 0 {
+	if response.Code != http.StatusSeeOther || requestCount != 1 || received.ProcessorKey != "quality_note" || received.Model != "qwen3.5:4b" || received.IncidentID != nil || len(received.ScopeKeys) != 0 {
 		t.Fatalf("injected post-processor request = %d/%#v", response.Code, received)
+	}
+
+	invalidReturn := httptest.NewRecorder()
+	server.Handler().ServeHTTP(invalidReturn, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=quality_note&scope=all&target=all&model=qwen3.5%3A4b&return_to=verifications&return_status=attention&return_page=1"))
+	if invalidReturn.Code != http.StatusBadRequest || requestCount != 1 {
+		t.Fatalf("non-verification return context = %d with %d requests, want 400 with no additional request", invalidReturn.Code, requestCount)
 	}
 }
 
@@ -1093,19 +1101,45 @@ func TestAdminVerificationOperationsShowsRetainedResultAndProtectedFailureDetail
 }
 
 func TestAdminVerificationOperationsDiscoversFutureRegisteredVerifier(t *testing.T) {
+	ctx := context.Background()
 	database := fixtureStore(t)
+	now := time.Date(2026, time.September, 1, 9, 0, 0, 0, time.UTC)
+	presentation := seedV2Presentation(t, database, testPresentation{
+		TitleDE: "Zukünftige Prüfung", SummaryDE: "Future original value",
+		TitleEN: "Future verifier", SummaryEN: "Future verifier summary.",
+	}, now)
+	plan := store.PostProcessingPlan{
+		ProcessorKey: "quality_note", ScopeKey: processing.DefaultPostProcessingScope,
+		PromptVersion: "quality-note-v1", Model: "qwen3.5:4b", InputKinds: []string{"summary_de"},
+	}
+	if queued, err := database.QueuePostProcessingForRun(ctx, presentation.PresentationRunID, []store.PostProcessingPlan{plan}, "manual", false, now.Add(time.Minute)); err != nil || queued != 1 {
+		t.Fatalf("queue future verification = %d/%v", queued, err)
+	}
+	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract(plan.ScopeKey, plan.PromptVersion, []string{"is_correct", "corrected_quality_note"}, plan.InputKinds...), false, nil, now.Add(2*time.Minute))
+	if err != nil || !found {
+		t.Fatalf("claim future verification = %#v/%t/%v", job, found, err)
+	}
+	if err := database.CompletePostProcessingJob(ctx, job, []store.PipelineValue{{Kind: "is_correct", Value: "false"}, {Kind: "corrected_quality_note", Value: "Future corrected value"}}, job.ModelIdentity, job.InputHash, now.Add(3*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
 	verification := &processing.PostProcessorVerification{
 		VerdictKind: "is_correct",
-		Fields:      []processing.PostProcessorVerificationField{{DisplayName: "Quality note", OriginalKind: "category", CorrectedKind: "corrected_quality_note"}},
+		Fields:      []processing.PostProcessorVerificationField{{DisplayName: "Quality note", OriginalKind: "summary_de", CorrectedKind: "corrected_quality_note"}},
 	}
 	status := processing.PipelineModelStatus{
 		CatalogAvailable: true, Models: []string{"qwen3.5:4b"},
-		PostProcessors: []processing.PostProcessorModelStatus{{
-			Key: "quality_note", DisplayName: "Quality note verification", Description: "Review a future quality note.",
-			ModelSettingKey: "quality_note", Manual: true, Preferred: "qwen3.5:4b", PreferredAvailable: true,
-			Scopes:       []processing.PostProcessorScopeStatus{{Key: "default", DisplayName: "Default", StepKey: "quality_note/default", PromptVersion: "quality-note-v1"}},
-			Verification: verification,
-		}},
+		PostProcessors: []processing.PostProcessorModelStatus{
+			{
+				Key: "quality_note", DisplayName: "Quality note verification", Description: "Review a future quality note.",
+				ModelSettingKey: "quality_note", Manual: true, Preferred: "qwen3.5:4b", PreferredAvailable: true,
+				Scopes:       []processing.PostProcessorScopeStatus{{Key: "default", DisplayName: "Default", StepKey: "quality_note/default", PromptVersion: "quality-note-v1"}},
+				Verification: verification,
+			},
+			{
+				Key: processing.CategoryVerificationStep, DisplayName: "Unannotated category processor",
+				Scopes: []processing.PostProcessorScopeStatus{{Key: processing.DefaultPostProcessingScope, DisplayName: "Default"}},
+			},
+		},
 	}
 	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review", AdminEnabled: true,
@@ -1123,6 +1157,17 @@ func TestAdminVerificationOperationsDiscoversFutureRegisteredVerifier(t *testing
 	}
 	if strings.Contains(response.Body.String(), "Translations") && strings.Contains(response.Body.String(), "translation/en") {
 		t.Error("future verification page included a non-verification post-processor scope")
+	}
+	if strings.Contains(response.Body.String(), "Unannotated category processor") || strings.Contains(response.Body.String(), "category_verification/default") {
+		t.Error("future verification page inferred verification metadata from a processor key")
+	}
+
+	detail := httptest.NewRecorder()
+	server.Handler().ServeHTTP(detail, httptest.NewRequest(http.MethodGet, "/admin/verifications?processor=quality_note&scope=default&status=corrected&page=1", nil))
+	for _, expected := range []string{`<dd class="mt-1 break-words font-mono">Future original value`, `<dd class="mt-1 break-words font-mono font-semibold text-civic">Future corrected value`} {
+		if detail.Code != http.StatusOK || !strings.Contains(detail.Body.String(), expected) {
+			t.Errorf("future verification detail does not contain fallback %q (status %d)", expected, detail.Code)
+		}
 	}
 }
 

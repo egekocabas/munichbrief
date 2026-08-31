@@ -72,7 +72,7 @@
 
             <div class="mt-4 grid gap-3 lg:grid-cols-2">
               {{range .Fields}}
-              <section class="rounded-md border border-rule/70 bg-newsprint/40 p-4" aria-label="{{.DisplayName}} comparison"><h4 class="text-xs font-extrabold uppercase tracking-wider text-muted">{{.DisplayName}}</h4><dl class="mt-3 grid gap-3 text-sm sm:grid-cols-2"><div><dt class="font-bold">Original</dt><dd class="mt-1">{{.OriginalDisplay}}{{if ne .OriginalDisplay .Original}}<span class="mt-1 block break-words font-mono text-xs text-muted">{{.Original}}</span>{{end}}</dd></div><div><dt class="font-bold">Effective</dt><dd class="mt-1 {{if .Changed}}font-semibold text-civic{{end}}">{{.EffectiveDisplay}}{{if ne .EffectiveDisplay .Effective}}<span class="mt-1 block break-words font-mono text-xs text-muted">{{.Effective}}</span>{{end}}</dd></div></dl></section>
+              <section class="rounded-md border border-rule/70 bg-newsprint/40 p-4" aria-label="{{.DisplayName}} comparison"><h4 class="text-xs font-extrabold uppercase tracking-wider text-muted">{{.DisplayName}}</h4><dl class="mt-3 grid gap-3 text-sm sm:grid-cols-2"><div><dt class="font-bold">Original</dt><dd class="mt-1 {{if .Monospace}}break-words font-mono{{end}}">{{.OriginalDisplay}}{{if ne .OriginalDisplay .Original}}<span class="mt-1 block break-words font-mono text-xs text-muted">{{.Original}}</span>{{end}}</dd></div><div><dt class="font-bold">Effective</dt><dd class="mt-1 {{if .Monospace}}break-words font-mono{{end}} {{if .Changed}}font-semibold text-civic{{end}}">{{.EffectiveDisplay}}{{if ne .EffectiveDisplay .Effective}}<span class="mt-1 block break-words font-mono text-xs text-muted">{{.Effective}}</span>{{end}}</dd></div></dl></section>
               {{end}}
             </div>
 

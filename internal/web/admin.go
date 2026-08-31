@@ -468,7 +468,7 @@ func (s *Server) processPostProcessing(response http.ResponseWriter, request *ht
 	if !ok {
 		return
 	}
-	target, returnErr := postProcessingReturnURL(request.PostForm, processorKey, scopeKey)
+	target, returnErr := postProcessingReturnURL(request.PostForm, processorKey, scopeKey, selected.Verification != nil)
 	if returnErr != nil {
 		http.Error(response, returnErr.Error(), http.StatusBadRequest)
 		return
@@ -485,11 +485,14 @@ func (s *Server) processPostProcessing(response http.ResponseWriter, request *ht
 	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
 }
 
-func postProcessingReturnURL(form url.Values, processorKey, scopeKey string) (*url.URL, error) {
+func postProcessingReturnURL(form url.Values, processorKey, scopeKey string, verificationProcessor bool) (*url.URL, error) {
 	switch strings.TrimSpace(form.Get("return_to")) {
 	case "":
 		return url.Parse(adminPaginationURL(positiveFormInt(form.Get("unprocessed_page")), positiveFormInt(form.Get("all_page"))))
 	case "verifications":
+		if !verificationProcessor {
+			return nil, errors.New("verification return target requires a verification processor")
+		}
 		filter, ok := requestedAdminVerificationFilter(form.Get("return_status"))
 		if !ok {
 			return nil, errors.New("invalid verification return status")
