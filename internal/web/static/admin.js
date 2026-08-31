@@ -309,18 +309,18 @@
   schedule(interval);
 })();
 
-(() => {
-  const region = document.querySelector("[data-translation-operations]");
+const initializeOperationsRefresh = ({regionSelector, intervalAttribute, connectionSelector, contentLabel}) => {
+  const region = document.querySelector(regionSelector);
   if (!(region instanceof HTMLElement)) return;
 
-  const interval = Number(region.dataset.translationPollInterval) || 5000;
+  const interval = Number(region.dataset[intervalAttribute]) || 5000;
   const confirmation = document.querySelector("#processing-confirmation");
   let timer = 0;
   let requestInFlight = false;
   let failures = 0;
 
   const setConnection = (value) => {
-    const connection = region.querySelector("[data-translation-connection]");
+    const connection = region.querySelector(connectionSelector);
     if (connection) connection.textContent = value;
   };
 
@@ -347,8 +347,8 @@
       const response = await fetch(window.location.href, {headers: {Accept: "text/html"}, cache: "no-store"});
       if (!response.ok) throw new Error(`status ${response.status}`);
       const parsedDocument = new DOMParser().parseFromString(await response.text(), "text/html");
-      const nextRegion = parsedDocument.querySelector("[data-translation-operations]");
-      if (!(nextRegion instanceof HTMLElement)) throw new Error("translation operations content missing");
+      const nextRegion = parsedDocument.querySelector(regionSelector);
+      if (!(nextRegion instanceof HTMLElement)) throw new Error(`${contentLabel} content missing`);
       const scrollX = window.scrollX;
       const scrollY = window.scrollY;
       region.replaceChildren(...nextRegion.childNodes);
@@ -370,4 +370,18 @@
     if (!document.hidden) refresh();
   });
   schedule(interval);
-})();
+};
+
+initializeOperationsRefresh({
+  regionSelector: "[data-translation-operations]",
+  intervalAttribute: "translationPollInterval",
+  connectionSelector: "[data-translation-connection]",
+  contentLabel: "translation operations",
+});
+
+initializeOperationsRefresh({
+  regionSelector: "[data-verification-operations]",
+  intervalAttribute: "verificationPollInterval",
+  connectionSelector: "[data-verification-connection]",
+  contentLabel: "verification operations",
+});

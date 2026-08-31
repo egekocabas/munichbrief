@@ -714,6 +714,56 @@ func TestGenericAdminVerificationSelectionSupportsAnotherProcessor(t *testing.T)
 	if selected[0].OriginalValues[0] != "other" || selected[0].EffectiveValues[0] != "traffic" || selected[0].IsCorrect == nil || *selected[0].IsCorrect || selected[0].Model != "verify:4b" {
 		t.Fatalf("generic verifier state = %#v", selected[0])
 	}
+
+	if queued, err := database.QueueIncidentPostProcessing(ctx, incidentID, []PostProcessingPlan{plan}, now.Add(2*time.Minute)); err != nil || queued != 1 {
+		t.Fatalf("queue verifier replacement = %d/%v", queued, err)
+	}
+	replacement, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_value"}, plan.InputKinds...), false, nil, now.Add(3*time.Minute))
+	if err != nil || !found {
+		t.Fatalf("claim verifier replacement = %#v/%t/%v", replacement, found, err)
+	}
+	privateError := errors.New("<script>private malformed output</script>")
+	if err := database.FailPostProcessingJob(ctx, replacement, "needs_review", "output", nil, now.Add(4*time.Minute), privateError); err != nil {
+		t.Fatal(err)
+	}
+
+	insertPipelineDocuments(t, ctx, database, now.Add(5*time.Minute), "never-verified")
+	var neverIncidentID int64
+	var neverSourceHash string
+	if err := database.db.QueryRowContext(ctx, `SELECT i.id,i.content_hash FROM incidents i JOIN source_documents d ON d.id=i.source_document_id WHERE d.external_id='never-verified'`).Scan(&neverIncidentID, &neverSourceHash); err != nil {
+		t.Fatal(err)
+	}
+	insertCompletedPresentationRun(t, ctx, database, neverIncidentID, neverSourceHash, PipelineVersion, now.Add(5*time.Minute), map[string]string{
+		"title_de": "Nie geprüft", "summary_de": "Zusammenfassung.", "category": "other",
+	})
+
+	spec := AdminVerificationSpec{
+		ProcessorKey: plan.ProcessorKey, ScopeKey: plan.ScopeKey, VerdictKind: "is_correct",
+		Fields: []AdminVerificationFieldSpec{{OriginalKind: "category", CorrectedKind: "corrected_value"}},
+	}
+	coverage, err := database.AdminVerificationCoverageFor(ctx, "fixture", spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if coverage.Current != 2 || coverage.Verified != 1 || coverage.Unverified != 1 || coverage.NeverQueued != 1 || coverage.Attention != 1 || coverage.Corrected != 1 || coverage.ReplacementAttention != 1 {
+		t.Fatalf("verification coverage = %#v", coverage)
+	}
+	attention, total, err := database.ListAdminVerificationIncidents(ctx, 10, 0, "fixture", spec, AdminVerificationsAttention)
+	if err != nil || total != 1 || len(attention) != 1 {
+		t.Fatalf("attention verification list = %#v/%d/%v", attention, total, err)
+	}
+	item := attention[0]
+	if item.IncidentID != incidentID || item.OriginalValues[0] != "other" || item.EffectiveValues[0] != "traffic" || item.IsCorrect == nil || *item.IsCorrect || item.Status != "needs_review" || item.Attempts != 1 || item.FailureKind != "output" || item.ErrorMessage != privateError.Error() || item.SuccessModel != "verify:4b" || item.AttemptModel != "verify:4b" {
+		t.Fatalf("attention verification item = %#v", item)
+	}
+	corrected, correctedTotal, err := database.ListAdminVerificationIncidents(ctx, 1, 0, "fixture", spec, AdminVerificationsCorrected)
+	if err != nil || correctedTotal != 1 || len(corrected) != 1 || corrected[0].IncidentID != incidentID {
+		t.Fatalf("retained corrected verification list = %#v/%d/%v", corrected, correctedTotal, err)
+	}
+	neverQueued, neverTotal, err := database.ListAdminVerificationIncidents(ctx, 1, 0, "fixture", spec, AdminVerificationsNeverQueued)
+	if err != nil || neverTotal != 1 || len(neverQueued) != 1 || neverQueued[0].IncidentID != neverIncidentID {
+		t.Fatalf("never-queued verification list = %#v/%d/%v", neverQueued, neverTotal, err)
+	}
 }
 
 func TestEnsurePostProcessingScopesIsAtomic(t *testing.T) {

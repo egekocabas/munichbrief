@@ -1,0 +1,103 @@
+{{define "admin_verifications"}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>Verification operations · MunichBrief Admin</title>
+  <script src="{{assetURL "theme.js"}}"></script>
+  <link rel="icon" href="{{assetURL "favicon.svg"}}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{assetURL "app.css"}}">
+  <script defer src="{{assetURL "admin.js"}}"></script>
+</head>
+<body class="min-h-screen text-ink antialiased">
+  {{template "admin-header" "verifications"}}
+  <main class="page-shell py-8">
+    <div data-verification-operations data-verification-poll-interval="5000">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div class="max-w-3xl">
+          <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Operations</p>
+          <h1 class="mt-1 font-serif text-4xl font-bold tracking-tight">Verification operations</h1>
+          <p class="mt-3 text-muted">Review independent correction checks without rerunning the canonical presentation. A newer failed attempt can need attention while the last successful result remains effective.</p>
+        </div>
+        <p class="text-sm font-semibold text-muted" aria-live="polite"><span data-verification-connection>Connected</span> · updated <time datetime="{{.UpdatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime "en" .UpdatedAt}}</time></p>
+      </div>
+
+      {{if .Notice}}<div class="mt-6 rounded-md border px-4 py-3 font-semibold {{if .NoticeIsWarning}}border-alert/30 bg-alert-soft text-alert{{else}}border-civic/25 bg-paper text-civic{{end}}" role="status">{{.Notice}}</div>{{end}}
+
+      <section class="mt-8" aria-labelledby="verification-overview-heading">
+        <div class="flex flex-wrap items-end justify-between gap-3"><div><p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Current canonical presentations</p><h2 id="verification-overview-heading" class="mt-1 font-serif text-2xl font-bold">Registered verification scopes</h2></div><p class="text-sm text-muted">Verified and attention counts may overlap.</p></div>
+        <div class="mt-4 grid gap-4 lg:grid-cols-2">
+          {{range .Scopes}}
+          <article class="rounded-lg border border-rule bg-paper p-5">
+            <div class="flex flex-wrap items-start justify-between gap-3"><div><p class="text-xs font-extrabold uppercase tracking-wider text-civic">{{.Scope.DisplayName}} · <span class="font-mono">{{.Processor.Key}}/{{.Scope.Key}}</span></p><h3 class="mt-1 font-serif text-xl font-bold">{{.Processor.DisplayName}}</h3></div>{{if .Coverage.Attention}}<strong class="rounded-full bg-alert-soft px-3 py-1 text-xs text-alert">{{.Coverage.Attention}} attention</strong>{{end}}</div>
+            <p class="mt-3 text-sm leading-relaxed text-muted">{{.Processor.Description}}</p>
+            <dl class="mt-5 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+              <div><dt class="text-xs font-bold uppercase tracking-wider text-muted">Verified</dt><dd class="mt-1 font-serif text-2xl font-bold tabular-nums">{{.Coverage.Verified}} / {{.Coverage.Current}}</dd></div>
+              <div><dt class="text-xs font-bold uppercase tracking-wider text-muted">Unverified</dt><dd class="mt-1 font-serif text-2xl font-bold tabular-nums {{if .Coverage.Unverified}}text-alert{{end}}">{{.Coverage.Unverified}}</dd></div>
+              <div><dt class="text-xs font-bold uppercase tracking-wider text-muted">Active</dt><dd class="mt-1 font-serif text-2xl font-bold tabular-nums">{{.Coverage.Active}}</dd></div>
+              <div><dt class="text-xs font-bold uppercase tracking-wider text-muted">Confirmed</dt><dd class="mt-1 font-serif text-2xl font-bold tabular-nums">{{.Coverage.Confirmed}}</dd></div>
+              <div><dt class="text-xs font-bold uppercase tracking-wider text-muted">Corrected</dt><dd class="mt-1 font-serif text-2xl font-bold tabular-nums">{{.Coverage.Corrected}}</dd></div>
+              <div><dt class="text-xs font-bold uppercase tracking-wider text-muted">Never queued</dt><dd class="mt-1 font-serif text-2xl font-bold tabular-nums">{{.Coverage.NeverQueued}}</dd></div>
+            </dl>
+            {{if .Coverage.ReplacementAttention}}<p class="mt-4 rounded-md border border-alert/25 bg-alert-soft/30 px-3 py-2 text-xs font-semibold text-alert">{{.Coverage.ReplacementAttention}} retained successful result{{if ne .Coverage.ReplacementAttention 1}}s{{end}} also {{if eq .Coverage.ReplacementAttention 1}}needs{{else}}need{{end}} replacement attention.</p>{{end}}
+            <a class="mt-5 inline-block font-bold text-civic no-underline hover:text-civic-dark" href="{{.ManageURL}}">Review {{.Processor.DisplayName}} →</a>
+          </article>
+          {{else}}
+          <div class="rounded-lg border border-dashed border-rule bg-paper px-6 py-12 text-center lg:col-span-2"><h3 class="font-serif text-2xl font-bold">No verification processors registered</h3><p class="mt-2 text-sm text-muted">Correction-style processors appear here after declaring a verification review contract.</p></div>
+          {{end}}
+        </div>
+      </section>
+
+      {{with .Selected}}{{$selected := .}}
+      <section class="mt-10 border-t border-rule pt-8" aria-labelledby="verification-detail-heading">
+        <div class="flex flex-wrap items-start justify-between gap-4"><div><p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Scope · <span class="font-mono">{{.Processor.Key}}/{{.Scope.Key}}</span></p><h2 id="verification-detail-heading" class="mt-1 font-serif text-3xl font-bold">{{.Processor.DisplayName}}</h2><p class="mt-2 text-sm text-muted">{{.Total}} incident{{if ne .Total 1}}s{{end}} in {{.FilterLabel}}.</p></div><a class="font-bold text-civic no-underline hover:text-civic-dark" href="/admin/verifications">Close drill-down</a></div>
+        <nav class="mt-5 flex flex-wrap gap-2" aria-label="Verification status filters">{{range .Filters}}<a class="rounded-full border px-3 py-1.5 text-sm font-bold no-underline {{if .Selected}}border-civic bg-civic text-on-accent{{else}}border-rule bg-paper text-civic hover:bg-newsprint{{end}}" href="{{.URL}}"{{if .Selected}} aria-current="page"{{end}}>{{.Label}}</a>{{end}}</nav>
+
+        <div class="mt-6 rounded-lg border border-civic/25 bg-newsprint/40 p-4">
+          <form class="flex flex-wrap items-end gap-3" method="post" action="/api/admin/ai/post-processing/process" data-confirm-processing data-confirm-description="Run {{.Processor.DisplayName}} for every eligible current canonical presentation. Existing successful results remain effective until replacements succeed.">
+            <input name="confirmed" type="hidden" value="false"><input name="processor" type="hidden" value="{{.Processor.Key}}"><input name="scope" type="hidden" value="{{.Scope.Key}}"><input name="target" type="hidden" value="all"><input name="return_to" type="hidden" value="verifications"><input name="return_status" type="hidden" value="{{.Filter}}"><input name="return_page" type="hidden" value="{{.Page}}">
+            <label class="grid min-w-56 flex-1 gap-1 text-xs font-bold" for="verification-all-model"><span>Verification model</span><select class="rounded-md border border-rule bg-white px-3 py-2 text-sm" id="verification-all-model" name="model" required {{if not .ActionsAvailable}}disabled aria-disabled="true"{{end}}>{{if not .Processor.PreferredAvailable}}<option value="" selected disabled>Choose installed model</option>{{end}}{{range .Models}}<option value="{{.Value}}" {{if .Selected}}selected{{end}}>{{.Value}}</option>{{end}}</select></label>
+            <button class="rounded-md border border-alert bg-paper px-4 py-2 text-sm font-bold text-alert hover:bg-alert-soft" type="submit" {{if not .ActionsAvailable}}disabled aria-disabled="true"{{end}}>Recheck all incidents</button>
+          </form>
+          {{if not .ActionsAvailable}}<p class="mt-3 text-xs font-semibold text-alert">Verification requests require an enabled processor and an installed model.</p>{{end}}
+        </div>
+
+        <div class="mt-5 grid gap-4">
+          {{range .Incidents}}{{$item := .}}
+          <article class="rounded-lg border border-rule bg-paper p-5">
+            <div class="flex flex-wrap items-start justify-between gap-3"><div><p class="text-xs font-extrabold uppercase tracking-wider text-muted">Incident #{{.IncidentID}} · <time datetime="{{.PublishedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime "en" .PublishedAt}}</time></p><h3 class="mt-1 font-serif text-xl font-bold" lang="de">{{.CanonicalTitle}}</h3></div><div class="text-right"><strong class="block {{if or (eq .Status "needs_review") (eq .Status "failed") (eq .Status "skipped")}}text-alert{{else}}text-civic{{end}}">{{.Verdict}}</strong><span class="mt-1 block text-xs text-muted">{{.StatusLabel}}{{if .Status}} · attempts {{.Attempts}}{{end}}</span></div></div>
+            {{if .RetainedSuccess}}<p class="mt-4 rounded-md border border-alert/25 bg-alert-soft/30 px-3 py-2 text-sm font-semibold text-alert">The latest replacement needs attention; the successful result shown below remains effective.</p>{{end}}
+
+            <div class="mt-4 grid gap-3 lg:grid-cols-2">
+              {{range .Fields}}
+              <section class="rounded-md border border-rule/70 bg-newsprint/40 p-4" aria-label="{{.DisplayName}} comparison"><h4 class="text-xs font-extrabold uppercase tracking-wider text-muted">{{.DisplayName}}</h4><dl class="mt-3 grid gap-3 text-sm sm:grid-cols-2"><div><dt class="font-bold">Original</dt><dd class="mt-1 {{if .Monospace}}break-words font-mono{{end}}">{{.OriginalDisplay}}{{if ne .OriginalDisplay .Original}}<span class="mt-1 block break-words font-mono text-xs text-muted">{{.Original}}</span>{{end}}</dd></div><div><dt class="font-bold">Effective</dt><dd class="mt-1 {{if .Monospace}}break-words font-mono{{end}} {{if .Changed}}font-semibold text-civic{{end}}">{{.EffectiveDisplay}}{{if ne .EffectiveDisplay .Effective}}<span class="mt-1 block break-words font-mono text-xs text-muted">{{.Effective}}</span>{{end}}</dd></div></dl></section>
+              {{end}}
+            </div>
+
+            <dl class="mt-4 grid gap-3 border-t border-rule/70 pt-4 text-xs text-muted sm:grid-cols-2">
+              <div><dt class="font-bold text-ink">Latest attempt</dt><dd class="mt-0.5">{{.StatusLabel}}{{if .Status}} · attempts {{.Attempts}}{{end}}{{if .StatusReason}} · {{postProcessingStatusReason .StatusReason .StatusDetail}}{{end}}{{if .FailureKind}} · <span class="font-mono">{{.FailureKind}}</span>{{end}}{{if .NextRetryAt}} · next retry {{formatDateTime "en" .NextRetryAt}}{{end}}</dd></div>
+              {{if .AttemptModel}}<div><dt class="font-bold text-ink">Attempt provenance</dt><dd class="mt-0.5 font-mono">{{.AttemptModel}} · {{.AttemptPromptVersion}}{{if .AttemptUpdatedAt}} · <span class="font-sans">{{formatDateTime "en" .AttemptUpdatedAt}}</span>{{end}}</dd></div>{{end}}
+              {{if .SuccessModel}}<div><dt class="font-bold text-ink">Effective result provenance</dt><dd class="mt-0.5 font-mono">{{.SuccessModel}} · {{.SuccessPromptVersion}}{{if .SuccessCompletedAt}} · <span class="font-sans">{{formatDateTime "en" .SuccessCompletedAt}}</span>{{end}}</dd></div>{{end}}
+              {{if .RequestKind}}<div><dt class="font-bold text-ink">Request</dt><dd class="mt-0.5">{{.RequestKind}}</dd></div>{{end}}
+            </dl>
+
+            {{if .ErrorMessage}}<details class="mt-4 rounded-md border border-alert/25 bg-alert-soft/30 p-4"><summary class="cursor-pointer font-bold text-alert">Failure detail</summary><p class="mt-2 text-xs text-muted">Sensitive administrative diagnostic from the latest attempt. It is intentionally excluded from public and general history views.</p><pre class="mt-3 whitespace-pre-wrap break-words font-mono text-xs text-ink">{{.ErrorMessage}}</pre></details>{{end}}
+
+            <div class="mt-4 flex flex-wrap items-end justify-between gap-3 border-t border-rule/70 pt-4">
+              <a class="font-bold text-civic no-underline hover:text-civic-dark" href="/de/incidents/{{.IncidentID}}">Open reader incident →</a>
+              {{if .CanProcess}}<form class="flex flex-wrap items-end gap-3" method="post" action="/api/admin/ai/post-processing/process" data-confirm-processing data-confirm-description="Force a new {{$selected.Processor.DisplayName}} attempt for incident #{{.IncidentID}}. The effective result remains visible until replacement succeeds."><input name="confirmed" type="hidden" value="false"><input name="processor" type="hidden" value="{{$selected.Processor.Key}}"><input name="scope" type="hidden" value="{{$selected.Scope.Key}}"><input name="target" type="hidden" value="incident"><input name="incident_id" type="hidden" value="{{.IncidentID}}"><input name="return_to" type="hidden" value="verifications"><input name="return_status" type="hidden" value="{{$selected.Filter}}"><input name="return_page" type="hidden" value="{{$selected.Page}}"><label class="grid min-w-56 gap-1 text-xs font-bold" for="verification-model-{{.IncidentID}}"><span>Verification model</span><select class="rounded-md border border-rule bg-white px-3 py-2 text-sm" id="verification-model-{{.IncidentID}}" name="model" required>{{range $selected.Models}}<option value="{{.Value}}" {{if .Selected}}selected{{end}}>{{.Value}}</option>{{end}}</select></label><button class="rounded-md border border-civic bg-white px-4 py-2 text-sm font-bold text-civic hover:bg-newsprint" type="submit">Recheck now</button></form>{{end}}
+            </div>
+          </article>
+          {{else}}<div class="rounded-lg border border-dashed border-rule bg-paper px-6 py-12 text-center"><h3 class="font-serif text-2xl font-bold">No incidents in this view</h3><p class="mt-2 text-sm text-muted">Choose another status filter or return to the verification overview.</p></div>{{end}}
+        </div>
+        {{if or .HasPrevious .HasNext}}<nav class="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-4 border-t border-rule pt-5 text-sm text-muted" aria-label="Verification incident pages">{{if .HasPrevious}}<a class="font-bold text-civic no-underline hover:text-civic-dark" href="{{.PreviousURL}}">← Newer</a>{{else}}<span></span>{{end}}<span>Page {{.Page}} of {{.TotalPages}}</span>{{if .HasNext}}<a class="justify-self-end font-bold text-civic no-underline hover:text-civic-dark" href="{{.NextURL}}">Older →</a>{{end}}</nav>{{end}}
+      </section>
+      {{end}}
+    </div>
+  </main>
+  {{template "admin-confirmation-dialog"}}
+</body>
+</html>
+{{end}}
