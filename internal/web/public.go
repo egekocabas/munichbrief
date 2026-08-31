@@ -227,7 +227,7 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 		translatedScope.Language = definition.Code
 		translatedScope.PublicOnly = true
 		if _, translatedErr := s.store.GetPresentationIncident(request.Context(), id, translatedScope); errors.Is(translatedErr, store.ErrNotFound) {
-			base.removeLanguage(definition.Code)
+			base.removeLanguage(definition)
 		} else if translatedErr != nil {
 			s.internalError(response, request, "check incident translation", translatedErr)
 			return
@@ -258,6 +258,9 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 	}
 	if view.Record.AICategoryVerificationGeneratedAt != nil && view.Record.AICategoryVerificationGeneratedAt.After(modifiedAt) {
 		modifiedAt = *view.Record.AICategoryVerificationGeneratedAt
+	}
+	if view.Translated && view.Record.AITranslationGeneratedAt != nil && view.Record.AITranslationGeneratedAt.After(modifiedAt) {
+		modifiedAt = *view.Record.AITranslationGeneratedAt
 	}
 	base.ModifiedTime = modifiedAt.Format(time.RFC3339)
 	base.StructuredData = structuredArticleData(base, view)
@@ -569,9 +572,10 @@ type languageLink struct {
 	Label string
 }
 
-func (p *basePage) removeLanguage(code string) {
-	p.LanguageAlternates = languageLinksWithout(p.LanguageAlternates, code)
-	p.LanguageSwitches = languageLinksWithout(p.LanguageSwitches, code)
+func (p *basePage) removeLanguage(definition readerLanguage) {
+	p.LanguageAlternates = languageLinksWithout(p.LanguageAlternates, definition.Code)
+	p.LanguageSwitches = languageLinksWithout(p.LanguageSwitches, definition.Code)
+	p.OpenGraphLocaleAlternates = stringsWithout(p.OpenGraphLocaleAlternates, definition.OpenGraphLocale)
 }
 
 func languageLinksWithout(links []languageLink, code string) []languageLink {
@@ -579,6 +583,16 @@ func languageLinksWithout(links []languageLink, code string) []languageLink {
 	for _, link := range links {
 		if link.Code != code {
 			filtered = append(filtered, link)
+		}
+	}
+	return filtered
+}
+
+func stringsWithout(values []string, excluded string) []string {
+	filtered := values[:0]
+	for _, value := range values {
+		if value != excluded {
+			filtered = append(filtered, value)
 		}
 	}
 	return filtered

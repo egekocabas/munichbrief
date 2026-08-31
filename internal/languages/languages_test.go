@@ -3,6 +3,8 @@ package languages
 import (
 	"testing"
 	"time"
+
+	"golang.org/x/text/language"
 )
 
 func TestRegisteredLanguagesAreValidAndDefensive(t *testing.T) {
@@ -13,6 +15,9 @@ func TestRegisteredLanguagesAreValidAndDefensive(t *testing.T) {
 	definitions[0].Code = "changed"
 	if Registered()[0].Code != "de" {
 		t.Fatal("Registered returned shared mutable state")
+	}
+	if translated := Translated(nil); len(translated) != 0 {
+		t.Fatalf("Translated(nil) = %#v", translated)
 	}
 }
 
@@ -52,5 +57,25 @@ func TestValidateRejectsUnsafeAndDuplicateRegistrations(t *testing.T) {
 	duplicate := append(definitions, definitions[1])
 	if err := Validate(duplicate); err == nil {
 		t.Fatal("duplicate language was accepted")
+	}
+	mismatchedTag := append([]Definition(nil), definitions...)
+	mismatchedTag[1].Tag = language.MustParse("fr-FR")
+	if err := Validate(mismatchedTag); err == nil {
+		t.Fatal("route code and BCP-47 tag mismatch was accepted")
+	}
+	invalidOpenGraphLocale := append([]Definition(nil), definitions...)
+	invalidOpenGraphLocale[1].OpenGraphLocale = "en-gb"
+	if err := Validate(invalidOpenGraphLocale); err == nil {
+		t.Fatal("invalid Open Graph locale was accepted")
+	}
+	withoutCanonical := append([]Definition(nil), definitions...)
+	withoutCanonical[0].Canonical = false
+	if err := Validate(withoutCanonical); err == nil {
+		t.Fatal("registry without a canonical language was accepted")
+	}
+	multipleCanonical := append([]Definition(nil), definitions...)
+	multipleCanonical[1].Canonical = true
+	if err := Validate(multipleCanonical); err == nil {
+		t.Fatal("registry with multiple canonical languages was accepted")
 	}
 }

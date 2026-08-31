@@ -116,7 +116,7 @@ func TestSitemapContainsOnlyCanonicalPublicDocuments(t *testing.T) {
 }
 
 func TestSyntheticReaderLanguageDrivesRoutesNegotiationAndSEO(t *testing.T) {
-	server, _ := publicDiscoveryServer(t, fixtureStore(t), testPresentation{
+	server, job := publicDiscoveryServer(t, fixtureStore(t), testPresentation{
 		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
 		TitleEN: "Safe title", SummaryEN: "Safe summary.",
 	})
@@ -161,10 +161,24 @@ func TestSyntheticReaderLanguageDrivesRoutesNegotiationAndSEO(t *testing.T) {
 	if !strings.Contains(sitemap.Body.String(), "https://munichbrief.de/fr</loc>") || !strings.Contains(sitemap.Body.String(), "https://munichbrief.de/fr/about</loc>") {
 		t.Fatalf("synthetic language sitemap = %s", sitemap.Body.String())
 	}
+
+	detail := httptest.NewRecorder()
+	detailRequest := httptest.NewRequest(http.MethodGet, "/de/incidents/"+formatID(job.IncidentID), nil)
+	detailRequest.Host = "munichbrief.de"
+	handler.ServeHTTP(detail, detailRequest)
+	for _, unavailable := range []string{
+		`hreflang="fr-FR"`,
+		`<meta property="og:locale:alternate" content="fr_FR">`,
+	} {
+		if strings.Contains(detail.Body.String(), unavailable) {
+			t.Errorf("detail advertised unavailable synthetic translation %q", unavailable)
+		}
+	}
 }
 
 func TestPublicDocumentsExposeCanonicalAndAlternateLinks(t *testing.T) {
-	server, job := publicDiscoveryServer(t, fixtureStore(t), testPresentation{
+	database := fixtureStore(t)
+	server, job := publicDiscoveryServer(t, database, testPresentation{
 		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
 		TitleEN: "Safe title", SummaryEN: "Safe summary.",
 	})
@@ -220,6 +234,10 @@ func TestPublicDocumentsExposeCanonicalAndAlternateLinks(t *testing.T) {
 
 	detail := httptest.NewRecorder()
 	server.Handler().ServeHTTP(detail, publicDiscoveryRequest(http.MethodGet, "/en/incidents/"+formatID(job.IncidentID)+"?page=2&tracking=x"))
+	translated, err := database.GetPresentationIncident(context.Background(), job.IncidentID, store.PresentationScope{Language: "en", TranslationLanguage: "en", PublicOnly: true})
+	if err != nil || translated.AITranslationGeneratedAt == nil {
+		t.Fatalf("load translated detail metadata = %#v/%v", translated.AITranslationGeneratedAt, err)
+	}
 	canonical := "https://munichbrief.de/en/incidents/" + formatID(job.IncidentID)
 	if !strings.Contains(detail.Header().Get("Link"), "<"+canonical+">; rel=\"canonical\"") || strings.Contains(detail.Header().Get("Link"), "page=2") {
 		t.Errorf("detail Link header did not remove navigation query: %q", detail.Header().Get("Link"))
@@ -235,7 +253,7 @@ func TestPublicDocumentsExposeCanonicalAndAlternateLinks(t *testing.T) {
 		`<meta property="og:image" content="https://munichbrief.de/social/en/incidents/` + formatID(job.IncidentID) + `">`,
 		`<meta name="twitter:title" content="Safe title · MunichBrief">`,
 		`<meta property="article:published_time" content="`,
-		`<meta property="article:modified_time" content="`,
+		`<meta property="article:modified_time" content="` + translated.AITranslationGeneratedAt.Format(time.RFC3339) + `">`,
 	} {
 		if !strings.Contains(detail.Body.String(), expected) {
 			t.Errorf("detail does not contain %q", expected)

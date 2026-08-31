@@ -15,7 +15,8 @@ publishing.
 Choose these values before writing code:
 
 - a normalized lowercase route code such as `fr` or `pt-br`; this is permanent
-  in URLs, the preference cookie, and persisted translation scope keys;
+  in URLs, the preference cookie, and persisted translation scope keys, and
+  must not be the reserved `api` prefix;
 - the exact BCP-47 content tag, such as `fr-FR` or `pt-BR`, for negotiation,
   HTML, HTTP, Markdown, hreflang, and structured data;
 - the Open Graph locale, such as `fr_FR`;

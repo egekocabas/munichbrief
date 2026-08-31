@@ -65,6 +65,13 @@ func TestTranslationDefinitionFactorySupportsBCP47Target(t *testing.T) {
 	if _, err := translation.Step.OutputDecoder(`{"title_pt_br":"Título","summary_pt_br":"Resumo.","extra":"no"}`); err == nil {
 		t.Fatal("synthetic translation accepted an undeclared field")
 	}
+	unsafe, err := translation.Step.OutputDecoder(`{"title_pt_br":"Título","summary_pt_br":"Kontakt: person@example.com"}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateStepOutput(translation.Step, StepInput{}, &unsafe); KindOf(err) != ErrorPrivacy {
+		t.Fatalf("synthetic translation privacy error = %v, kind %q", err, KindOf(err))
+	}
 }
 
 func TestCategoryVerificationUsesOnlySummaryAndEnforcesVerdictInvariant(t *testing.T) {

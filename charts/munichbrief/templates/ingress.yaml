@@ -13,6 +13,13 @@
 {{- if and .Values.ingress.public.enabled (eq (len .Values.ingress.public.languageCodes) 0) }}
 {{- fail "ingress.public.languageCodes must contain at least one registered language when public ingress is enabled" }}
 {{- end }}
+{{- if .Values.ingress.public.enabled }}
+{{- range $code := .Values.ingress.public.languageCodes }}
+{{- if or (not (regexMatch "^[a-z]{2,3}(-[a-z0-9]{2,8})*$" $code)) (eq $code "api") }}
+{{- fail (printf "ingress.public.languageCodes contains unsafe route code %q" $code) }}
+{{- end }}
+{{- end }}
+{{- end }}
 {{- if and .Values.ingress.public.enabled (eq .Values.application.canonicalOrigin "") }}
 {{- fail "application.canonicalOrigin is required when public ingress is enabled" }}
 {{- end }}

@@ -11,7 +11,10 @@ import (
 	"golang.org/x/text/language"
 )
 
-var routeCodePattern = regexp.MustCompile(`^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$`)
+var (
+	routeCodePattern       = regexp.MustCompile(`^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$`)
+	openGraphLocalePattern = regexp.MustCompile(`^[a-z]{2,3}_[A-Z]{2}$`)
+)
 
 // Definition describes one reader language and its stable processing identity.
 // Code is used in URLs, cookies, and translation scope keys; Tag is the exact
@@ -89,6 +92,12 @@ func Validate(definitions []Definition) error {
 		if definition.Tag == language.Und {
 			return fmt.Errorf("reader language %s requires an exact BCP-47 tag", definition.Code)
 		}
+		if err := validateRouteTagCompatibility(definition.Code, definition.Tag); err != nil {
+			return err
+		}
+		if !openGraphLocalePattern.MatchString(definition.OpenGraphLocale) {
+			return fmt.Errorf("reader language %s has invalid Open Graph locale %q", definition.Code, definition.OpenGraphLocale)
+		}
 		if definition.FormatDate == nil || definition.FormatDay == nil || definition.FormatDateTime == nil {
 			return fmt.Errorf("reader language %s requires date formatters", definition.Code)
 		}
@@ -115,6 +124,18 @@ func Validate(definitions []Definition) error {
 	return nil
 }
 
+func validateRouteTagCompatibility(code string, tag language.Tag) error {
+	routeBase, routeScript, routeRegion := language.Make(code).Raw()
+	tagBase, tagScript, tagRegion := tag.Raw()
+	baseMismatch := routeBase != tagBase
+	scriptMismatch := routeScript.String() != "Zzzz" && routeScript != tagScript
+	regionMismatch := routeRegion.String() != "ZZ" && routeRegion != tagRegion
+	if baseMismatch || scriptMismatch || regionMismatch {
+		return fmt.Errorf("reader language code %s does not match BCP-47 tag %s", code, tag)
+	}
+	return nil
+}
+
 // ByCode resolves one stable route and processing code.
 func ByCode(definitions []Definition, code string) (Definition, bool) {
 	for _, definition := range definitions {
@@ -137,7 +158,7 @@ func Canonical(definitions []Definition) Definition {
 
 // Translated returns all independently processed target languages.
 func Translated(definitions []Definition) []Definition {
-	result := make([]Definition, 0, len(definitions)-1)
+	result := make([]Definition, 0, len(definitions))
 	for _, definition := range definitions {
 		if !definition.Canonical {
 			result = append(result, definition)

@@ -109,6 +109,10 @@ jobs:
             echo "public ingress rendered with an invalid language prefix" >&2
             exit 1
           fi
+          if helm template munichbrief charts/munichbrief --namespace munichbrief --values deploy/example-values.yaml --set 'ingress.public.languageCodes={api}' >/dev/null 2>&1; then
+            echo "public ingress rendered with the reserved API prefix" >&2
+            exit 1
+          fi
           helm template munichbrief charts/munichbrief --namespace munichbrief > /tmp/munichbrief-default.yaml
           bash ./scripts/check-default-chart.sh /tmp/munichbrief-default.yaml
           helm template munichbrief charts/munichbrief --namespace munichbrief --values deploy/example-values.yaml > /tmp/munichbrief-rendered.yaml

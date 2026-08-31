@@ -273,7 +273,7 @@ func (s *Server) socialHome(response http.ResponseWriter, request *http.Request)
 		http.NotFound(response, request)
 		return
 	}
-	s.writeSocialCard(response, request, socialCardSpec{Title: s.localization.Text(language, "BrandTagline")})
+	s.writeSocialCard(response, request, language, socialCardSpec{Title: s.localization.Text(language, "BrandTagline")})
 }
 
 func (s *Server) socialAbout(response http.ResponseWriter, request *http.Request) {
@@ -282,7 +282,7 @@ func (s *Server) socialAbout(response http.ResponseWriter, request *http.Request
 		http.NotFound(response, request)
 		return
 	}
-	s.writeSocialCard(response, request, socialCardSpec{Title: s.localization.Text(language, "About") + " MunichBrief"})
+	s.writeSocialCard(response, request, language, socialCardSpec{Title: s.localization.Text(language, "About") + " MunichBrief"})
 }
 
 func (s *Server) socialIncident(response http.ResponseWriter, request *http.Request) {
@@ -324,7 +324,7 @@ func (s *Server) socialIncident(response http.ResponseWriter, request *http.Requ
 	if latestVerification != nil {
 		cacheIdentity = latestVerification.UTC().Format(time.RFC3339Nano)
 	}
-	s.writeSocialCard(response, request, socialCardSpec{Eyebrow: s.localization.Text(language, "SocialIncidentLabel"), Title: view.Title, AIGenerated: view.Record.HasAI, AIModel: view.Record.AIModel, CacheIdentity: cacheIdentity})
+	s.writeSocialCard(response, request, language, socialCardSpec{Eyebrow: s.localization.Text(language, "SocialIncidentLabel"), Title: view.Title, AIGenerated: view.Record.HasAI, AIModel: view.Record.AIModel, CacheIdentity: cacheIdentity})
 }
 
 func (s *Server) socialCardLanguage(request *http.Request) (string, bool) {
@@ -333,9 +333,11 @@ func (s *Server) socialCardLanguage(request *http.Request) (string, bool) {
 	return language, registered
 }
 
-func (s *Server) writeSocialCard(response http.ResponseWriter, request *http.Request, spec socialCardSpec) {
+func (s *Server) writeSocialCard(response http.ResponseWriter, request *http.Request, language string, spec socialCardSpec) {
 	etag := s.socialCards.etag(spec)
 	response.Header().Set("Content-Type", "image/png")
+	definition, _ := s.languageByCode(language)
+	response.Header().Set("Content-Language", definition.Tag.String())
 	response.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400")
 	response.Header().Set("ETag", etag)
 	response.Header().Set("X-Content-Type-Options", "nosniff")
