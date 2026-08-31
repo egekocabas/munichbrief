@@ -726,6 +726,36 @@ func TestAdminTranslationAutoRefreshContract(t *testing.T) {
 	}
 }
 
+func TestAdminProcessingControlsRespectStrictStylePolicy(t *testing.T) {
+	script := string(adminScript)
+	for _, expected := range []string{
+		`new URL(form.getAttribute("action") || window.location.href, window.location.href)`,
+		`activeProgress.value =`, `progress.value =`,
+	} {
+		if !strings.Contains(script, expected) {
+			t.Errorf("admin script missing CSP-safe control %q", expected)
+		}
+	}
+	if strings.Contains(script, `.style.width`) {
+		t.Error("admin script writes inline progress styles")
+	}
+
+	server := adminTestServer(t, fixtureStore(t), nil)
+	for _, target := range []string{"/admin", "/admin/translations"} {
+		response := httptest.NewRecorder()
+		server.Handler().ServeHTTP(response, httptest.NewRequest(http.MethodGet, target, nil))
+		if response.Code != http.StatusOK {
+			t.Fatalf("GET %s status = %d, want 200", target, response.Code)
+		}
+		if strings.Contains(response.Body.String(), `style=`) {
+			t.Errorf("GET %s renders an inline style", target)
+		}
+		if !strings.Contains(response.Body.String(), `<progress class="admin-progress`) {
+			t.Errorf("GET %s does not render a CSP-safe progress element", target)
+		}
+	}
+}
+
 func TestAdminTranslationActionsRequireManualProcessorAndExplicitFallbackModel(t *testing.T) {
 	processor := &processing.PostProcessorModelStatus{Key: processing.TranslationModelStep, Manual: true}
 	data := adminTranslationsPage{
