@@ -121,6 +121,33 @@
     transform: scaleX(0.72);
   }
 
+  .admin-progress {
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    appearance: none;
+    border: 0;
+    border-radius: 9999px;
+    background: var(--theme-color-rule);
+  }
+
+  .admin-progress::-webkit-progress-bar {
+    border-radius: 9999px;
+    background: var(--theme-color-rule);
+  }
+
+  .admin-progress::-webkit-progress-value {
+    border-radius: 9999px;
+    background: var(--theme-color-civic);
+    transition: inline-size 180ms ease;
+  }
+
+  .admin-progress::-moz-progress-bar {
+    border-radius: 9999px;
+    background: var(--theme-color-civic);
+    transition: inline-size 180ms ease;
+  }
+
   dialog[open] {
     position: fixed;
     inset: 0;

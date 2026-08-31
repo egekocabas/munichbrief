@@ -32,7 +32,8 @@
     if (selections.length) message += ` Selections: ${selections.join(", ")}.`;
     description.textContent = message;
     if (behavior) behavior.textContent = form.dataset.confirmBehavior || "Bypasses the configured time window, wakes the worker, and runs asynchronously. Jobs remain sequential and keep normal privacy validation, circuit breaking, and retry delays.";
-    request.textContent = `${form.method.toUpperCase()} ${new URL(form.action).pathname}`;
+    const action = new URL(form.getAttribute("action") || window.location.href, window.location.href);
+    request.textContent = `${form.method.toUpperCase()} ${action.pathname}`;
     dialog.showModal();
   });
 
@@ -131,9 +132,9 @@
     const activeCompleted = Number(queue.active_step_completed || 0);
     const activeTotal = Number(queue.active_step_total || 0);
     setText(activeProgressText, `${activeCompleted} / ${activeTotal} incidents`);
-    if (activeProgress instanceof HTMLElement) activeProgress.style.width = `${activeTotal ? Math.min(100, (activeCompleted / activeTotal) * 100) : 0}%`;
+    if (activeProgress instanceof HTMLProgressElement) activeProgress.value = activeTotal ? activeCompleted / activeTotal : 0;
     setText(progressText, `${completed} / ${total} stage jobs`);
-    if (progress instanceof HTMLElement) progress.style.width = `${total ? Math.min(100, (completed / total) * 100) : 0}%`;
+    if (progress instanceof HTMLProgressElement) progress.value = total ? completed / total : 0;
     setText(manual, queue.manual_cycles || 0);
     setText(continuations, queue.continuation_cycles || 0);
     setText(candidates, queue.scheduled_candidates || 0);
