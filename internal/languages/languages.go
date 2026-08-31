@@ -23,6 +23,7 @@ type Definition struct {
 	Code            string
 	Tag             language.Tag
 	DisplayName     string
+	TranslationName string
 	Catalog         string
 	OpenGraphLocale string
 	Canonical       bool
@@ -35,7 +36,7 @@ type Definition struct {
 
 var registered = []Definition{
 	{
-		Code: "de", Tag: language.MustParse("de-DE"), DisplayName: "Deutsch", Catalog: "locales/active.de.toml", OpenGraphLocale: "de_DE",
+		Code: "de", Tag: language.MustParse("de-DE"), DisplayName: "Deutsch", TranslationName: "German", Catalog: "locales/active.de.toml", OpenGraphLocale: "de_DE",
 		Canonical: true, SwitchMessageID: "SwitchToGerman", StepMessageID: "GermanPresentationStep",
 		FormatDate: func(value time.Time) string {
 			return value.Format("02.") + " " + germanMonths[value.Month()] + " " + value.Format("2006")
@@ -48,7 +49,7 @@ var registered = []Definition{
 		},
 	},
 	{
-		Code: "en", Tag: language.MustParse("en-GB"), DisplayName: "English", Catalog: "locales/active.en.toml", OpenGraphLocale: "en_GB",
+		Code: "en", Tag: language.MustParse("en-GB"), DisplayName: "English", TranslationName: "English", Catalog: "locales/active.en.toml", OpenGraphLocale: "en_GB",
 		SwitchMessageID: "SwitchToEnglish", StepMessageID: "EnglishTranslationStep",
 		FormatDate:     func(value time.Time) string { return value.Format("02 January 2006") },
 		FormatDay:      func(value time.Time) string { return value.Format("Monday, 02 January 2006") },
@@ -84,8 +85,8 @@ func Validate(definitions []Definition) error {
 		if !routeCodePattern.MatchString(definition.Code) || definition.Code == "api" {
 			return fmt.Errorf("reader language code %q is not a safe normalized BCP-47 route code", definition.Code)
 		}
-		if strings.TrimSpace(definition.DisplayName) == "" || strings.TrimSpace(definition.Catalog) == "" || strings.TrimSpace(definition.OpenGraphLocale) == "" || strings.TrimSpace(definition.SwitchMessageID) == "" || strings.TrimSpace(definition.StepMessageID) == "" {
-			return fmt.Errorf("reader language %s has incomplete display or catalog metadata", definition.Code)
+		if strings.TrimSpace(definition.DisplayName) == "" || strings.TrimSpace(definition.TranslationName) == "" || strings.TrimSpace(definition.Catalog) == "" || strings.TrimSpace(definition.OpenGraphLocale) == "" || strings.TrimSpace(definition.SwitchMessageID) == "" || strings.TrimSpace(definition.StepMessageID) == "" {
+			return fmt.Errorf("reader language %s has incomplete display, translation, or catalog metadata", definition.Code)
 		}
 		if !strings.HasSuffix(definition.Catalog, "."+definition.Code+".toml") {
 			return fmt.Errorf("reader language %s catalog must end in .%s.toml", definition.Code, definition.Code)

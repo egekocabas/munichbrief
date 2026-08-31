@@ -32,6 +32,7 @@ type StepDefinition struct {
 	DisplayName   string
 	Order         int
 	PromptVersion string
+	UserOnly      bool
 	InputKinds    []string
 	OutputKinds   []string
 	SystemPrompt  string
@@ -224,11 +225,10 @@ func newTranslationDefinition(target langregistry.Definition, prompt PromptDefin
 	if target.Canonical || prompt.TranslationLanguage != target.Code || prompt.StepKey != TranslationStepKey(target.Code) {
 		return TranslationDefinition{}, fmt.Errorf("translation language %s has inconsistent prompt metadata", target.Code)
 	}
-	if prompt.Status != PromptActive || strings.TrimSpace(prompt.Version) == "" || strings.TrimSpace(prompt.SystemPrompt) == "" || !validTranslationPromptTemplate(prompt.UserPromptTemplate) {
+	if prompt.Status != PromptActive || strings.TrimSpace(prompt.Version) == "" || !prompt.UserOnly || strings.TrimSpace(prompt.SystemPrompt) != "" || !validTranslationPromptTemplate(prompt.UserPromptTemplate) {
 		return TranslationDefinition{}, fmt.Errorf("translation language %s has incomplete active prompt content", target.Code)
 	}
-	fieldCode := strings.ReplaceAll(target.Code, "-", "_")
-	titleField, summaryField := "title_"+fieldCode, "summary_"+fieldCode
+	titleField, summaryField := translationFieldNames(target.Code)
 	schema, err := json.Marshal(map[string]any{
 		"type": "object",
 		"properties": map[string]any{
@@ -243,6 +243,7 @@ func newTranslationDefinition(target langregistry.Definition, prompt PromptDefin
 	return TranslationDefinition{
 		Language: target.Code, DisplayName: target.DisplayName, PromptVersion: prompt.Version,
 		Step: StepDefinition{Key: prompt.StepKey, DisplayName: target.DisplayName + " translation", PromptVersion: prompt.Version,
+			UserOnly:   prompt.UserOnly,
 			InputKinds: []string{"title_de", "summary_de"}, OutputKinds: []string{"title", "summary"},
 			SystemPrompt: prompt.SystemPrompt, Schema: schema,
 			Generator: translationInputGenerator(prompt.Version), OutputDecoder: translationOutputDecoder(titleField, summaryField),
