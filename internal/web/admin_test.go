@@ -749,17 +749,32 @@ func TestAdminProcessingControlsRespectStrictStylePolicy(t *testing.T) {
 	}
 
 	server := adminTestServer(t, fixtureStore(t), nil)
-	for _, target := range []string{"/admin", "/admin/translations"} {
+	for _, test := range []struct {
+		target           string
+		wantProgress     bool
+		wantConfirmation bool
+	}{
+		{target: "/admin", wantProgress: true},
+		{target: "/admin/translations", wantProgress: true},
+		{target: "/admin/verifications?processor=category_verification&scope=default&status=attention&page=1", wantConfirmation: true},
+	} {
 		response := httptest.NewRecorder()
-		server.Handler().ServeHTTP(response, httptest.NewRequest(http.MethodGet, target, nil))
+		server.Handler().ServeHTTP(response, httptest.NewRequest(http.MethodGet, test.target, nil))
 		if response.Code != http.StatusOK {
-			t.Fatalf("GET %s status = %d, want 200", target, response.Code)
+			t.Fatalf("GET %s status = %d, want 200", test.target, response.Code)
 		}
 		if strings.Contains(response.Body.String(), `style=`) {
-			t.Errorf("GET %s renders an inline style", target)
+			t.Errorf("GET %s renders an inline style", test.target)
 		}
-		if !strings.Contains(response.Body.String(), `<progress class="admin-progress`) {
-			t.Errorf("GET %s does not render a CSP-safe progress element", target)
+		if test.wantProgress && !strings.Contains(response.Body.String(), `<progress class="admin-progress`) {
+			t.Errorf("GET %s does not render a CSP-safe progress element", test.target)
+		}
+		if test.wantConfirmation {
+			for _, expected := range []string{`data-confirm-processing`, `action="/api/admin/ai/post-processing/process"`} {
+				if !strings.Contains(response.Body.String(), expected) {
+					t.Errorf("GET %s does not contain relative confirmation action %q", test.target, expected)
+				}
+			}
 		}
 	}
 }
