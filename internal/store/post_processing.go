@@ -111,6 +111,21 @@ func (s *Store) QueueIncidentPostProcessing(ctx context.Context, incidentID int6
 // QueuePostProcessingForAll scans the newest current v2 presentation for each
 // incident. Automatic work respects scope cutovers; forced manual work does not.
 func (s *Store) QueuePostProcessingForAll(ctx context.Context, sourceMode string, plans []PostProcessingPlan, force bool, now time.Time) (int, error) {
+	requestKind := "scheduled"
+	if force {
+		requestKind = "manual"
+	}
+	return s.queuePostProcessingForAll(ctx, sourceMode, plans, requestKind, force, !force, now)
+}
+
+// QueueUnpublishedPostProcessingForAll creates manual work only where no
+// successful result exists. It bypasses automatic cutovers and the scheduling
+// master switch without replacing published results.
+func (s *Store) QueueUnpublishedPostProcessingForAll(ctx context.Context, sourceMode string, plans []PostProcessingPlan, now time.Time) (int, error) {
+	return s.queuePostProcessingForAll(ctx, sourceMode, plans, "manual", false, false, now)
+}
+
+func (s *Store) queuePostProcessingForAll(ctx context.Context, sourceMode string, plans []PostProcessingPlan, requestKind string, force, respectCutover bool, now time.Time) (int, error) {
 	condition, err := sourceStatusCondition(sourceMode)
 	if err != nil {
 		return 0, err
@@ -120,7 +135,7 @@ func (s *Store) QueuePostProcessingForAll(ctx context.Context, sourceMode string
 		return 0, err
 	}
 	defer tx.Rollback()
-	if !force {
+	if requestKind == "scheduled" {
 		enabled, err := automaticProcessingEnabledTx(ctx, tx)
 		if err != nil {
 			return 0, err
@@ -132,10 +147,6 @@ func (s *Store) QueuePostProcessingForAll(ctx context.Context, sourceMode string
 			return 0, nil
 		}
 	}
-	requestKind := "scheduled"
-	if force {
-		requestKind = "manual"
-	}
 	total := 0
 	for _, plan := range plans {
 		if err := validatePostProcessingPlan(plan); err != nil {
@@ -143,7 +154,7 @@ func (s *Store) QueuePostProcessingForAll(ctx context.Context, sourceMode string
 		}
 		cutover := ""
 		args := []any{PipelineVersion}
-		if !force {
+		if respectCutover {
 			cutover = ` AND julianday(r.completed_at)>julianday((SELECT automatic_after FROM post_processing_scopes WHERE processor_key=? AND scope_key=?))`
 			args = append(args, plan.ProcessorKey, plan.ScopeKey)
 		}

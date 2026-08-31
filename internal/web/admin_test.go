@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -11,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"io"
 	"testing"
 
 	"github.com/egekocabas/munichbrief/internal/processing"
@@ -25,8 +26,10 @@ func TestAdminIsDisabledByDefault(t *testing.T) {
 		method, path string
 	}{
 		{method: http.MethodGet, path: "/admin"},
+		{method: http.MethodGet, path: "/admin/translations"},
 		{method: http.MethodGet, path: "/admin/history"},
 		{method: http.MethodPost, path: "/api/admin/ai/process-all-now"},
+		{method: http.MethodPost, path: "/api/admin/ai/translations/process"},
 	} {
 		response := httptest.NewRecorder()
 		handler.ServeHTTP(response, httptest.NewRequest(test.method, test.path, nil))
@@ -317,6 +320,7 @@ func TestAdminProcessingReturnsUnavailableWhenAIIsDisabled(t *testing.T) {
 		{method: http.MethodPost, path: "/api/admin/ai/automatic-processing", body: "enabled=false"},
 		{method: http.MethodPost, path: "/api/admin/ai/cancel-all", body: "confirmed=true"},
 		{method: http.MethodPost, path: "/api/admin/ai/post-processing/process", body: "confirmed=true&processor=translation&scope=en&target=all&model=qwen3.5%3A4b"},
+		{method: http.MethodPost, path: "/api/admin/ai/translations/process", body: "confirmed=true&language=en&action=all&model=qwen3.5%3A4b"},
 	} {
 		response := httptest.NewRecorder()
 		handler.ServeHTTP(response, formRequest(test.method, test.path, test.body))
@@ -380,7 +384,7 @@ func TestAdminRetriesPostProcessingAndRejectsRemovedBackfillRoutes(t *testing.T)
 	handler := adminTestServer(t, database, nil).Handler()
 	page := httptest.NewRecorder()
 	handler.ServeHTTP(page, httptest.NewRequest(http.MethodGet, "/admin", nil))
-	for _, expected := range []string{"Kanonischer Titel", "English state", "Missing", "/api/admin/ai/post-processing/process", "Category verification", "Not checked"} {
+	for _, expected := range []string{"Kanonischer Titel", "0 / 1 published", "Manage translations", "/admin/translations?incident=", "Category verification", "Not checked"} {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("admin missing-translation page does not contain %q", expected)
 		}
@@ -475,7 +479,7 @@ func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
 	}
 	for _, expected := range []string{
 		"Unprocessed incidents", "2 shown / 28 total", "All incidents", "2 shown / 28 total",
-		presentation.TitleDE, presentation.SummaryDE, presentation.TitleEN, presentation.SummaryEN,
+		presentation.TitleDE, presentation.SummaryDE, "1 / 1 published", "Manage translations",
 		job.TitleDE, job.BodyDE, "Original German text", "German presentation ready",
 		"all_page=1&amp;unprocessed_page=2", "all_page=2&amp;unprocessed_page=1",
 	} {
@@ -519,6 +523,205 @@ func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
 		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, test.target, nil))
 		if response.Code != test.status {
 			t.Errorf("GET %s status = %d, want %d", test.target, response.Code, test.status)
+		}
+	}
+}
+
+func TestAdminTranslationOperationsOverviewDrilldownsAndActions(t *testing.T) {
+	database := fixtureStore(t)
+	now := time.Date(2026, time.August, 31, 10, 0, 0, 0, time.UTC)
+	presentation := testPresentation{
+		TitleDE: "Übersetzungsübersicht", SummaryDE: "Deutsche Zusammenfassung.",
+		TitleEN: "Translation overview", SummaryEN: "English summary.",
+	}
+	job := seedV2Presentation(t, database, presentation, now)
+	translationPlan := store.PostProcessingPlan{ProcessorKey: processing.TranslationModelStep, ScopeKey: "en", PromptVersion: processing.EnglishTranslationPromptVersion, Model: "qwen3.5:4b", InputKinds: []string{"title_de", "summary_de"}}
+	if queued, err := database.QueueIncidentPostProcessing(context.Background(), job.IncidentID, []store.PostProcessingPlan{translationPlan}, now.Add(time.Minute)); err != nil || queued != 1 {
+		t.Fatalf("queue replacement translation = %d/%v", queued, err)
+	}
+	replacement, found, err := database.ClaimPostProcessingJob(context.Background(), processing.TranslationModelStep, testPostProcessingContract("en", translationPlan.PromptVersion, []string{"title", "summary"}, translationPlan.InputKinds...), false, nil, now.Add(2*time.Minute))
+	if err != nil || !found {
+		t.Fatalf("claim replacement translation = %#v/%t/%v", replacement, found, err)
+	}
+	if err := database.FailPostProcessingJob(context.Background(), replacement, "failed", "provider", nil, now.Add(3*time.Minute), errors.New("private test failure")); err != nil {
+		t.Fatal(err)
+	}
+
+	var received []processing.PostProcessingRequest
+	requester := fakeProcessingRequester{database: database, postRequest: func(_ context.Context, request processing.PostProcessingRequest) (int, error) {
+		received = append(received, request)
+		return 3, nil
+	}}
+	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
+		PageSize: 1, SourceMode: "fixture", PresentationMode: "review", AdminEnabled: true, Processor: requester,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := server.Handler()
+
+	overview := httptest.NewRecorder()
+	handler.ServeHTTP(overview, httptest.NewRequest(http.MethodGet, "/admin/translations", nil))
+	for _, expected := range []string{
+		"Translation operations", "Current source incidents", "Published German", "German canonical backlog",
+		"English", "1 / 1", "100%", "Manage", "Attention can overlap published", "1 retained replacement warning", "data-translation-operations",
+		"data-translation-poll-interval=\"5000\"", "/admin/history", "aria-current=\"page\"",
+	} {
+		if overview.Code != http.StatusOK || !strings.Contains(overview.Body.String(), expected) {
+			t.Errorf("translation overview = %d, missing %q", overview.Code, expected)
+		}
+	}
+	if overview.Header().Get("Cache-Control") != "private, no-store" || overview.Header().Get("X-Robots-Tag") != "noindex, nofollow, noarchive" {
+		t.Fatalf("translation overview headers = %q/%q", overview.Header().Get("Cache-Control"), overview.Header().Get("X-Robots-Tag"))
+	}
+	dashboard := httptest.NewRecorder()
+	handler.ServeHTTP(dashboard, httptest.NewRequest(http.MethodGet, "/admin", nil))
+	for _, expected := range []string{"1 / 1 published", "1 attention", "1 retained replacement warning", "Manage translations"} {
+		if dashboard.Code != http.StatusOK || !strings.Contains(dashboard.Body.String(), expected) {
+			t.Errorf("compact translation rollup = %d, missing %q", dashboard.Code, expected)
+		}
+	}
+	if strings.Contains(dashboard.Body.String(), presentation.TitleEN) || strings.Contains(dashboard.Body.String(), presentation.SummaryEN) {
+		t.Error("compact dashboard still renders full translated output")
+	}
+
+	language := httptest.NewRecorder()
+	handler.ServeHTTP(language, httptest.NewRequest(http.MethodGet, "/admin/translations?language=en&status=all", nil))
+	for _, expected := range []string{presentation.TitleDE, presentation.TitleEN, presentation.SummaryEN, "Published", "Latest attempt", "Failed", "Published provenance", "Attempt provenance", "Queue unpublished", "Rerun all", "All languages"} {
+		if language.Code != http.StatusOK || !strings.Contains(language.Body.String(), expected) {
+			t.Errorf("translation language view = %d, missing %q", language.Code, expected)
+		}
+	}
+
+	incident := httptest.NewRecorder()
+	handler.ServeHTTP(incident, httptest.NewRequest(http.MethodGet, "/admin/translations?incident="+formatID(job.IncidentID), nil))
+	for _, expected := range []string{presentation.TitleDE, presentation.SummaryDE, presentation.TitleEN, presentation.SummaryEN, "German provenance", "Published provenance", processing.EnglishTranslationPromptVersion, "Translate now"} {
+		if incident.Code != http.StatusOK || !strings.Contains(incident.Body.String(), expected) {
+			t.Errorf("translation incident view = %d, missing %q", incident.Code, expected)
+		}
+	}
+
+	for _, test := range []struct {
+		path string
+		want int
+	}{
+		{path: "/admin/translations?language=de", want: http.StatusBadRequest},
+		{path: "/admin/translations?language=unknown", want: http.StatusBadRequest},
+		{path: "/admin/translations?language=en&status=unknown", want: http.StatusBadRequest},
+		{path: "/admin/translations?language=en&page=0", want: http.StatusBadRequest},
+		{path: "/admin/translations?status=attention", want: http.StatusBadRequest},
+		{path: "/admin/translations?incident=zero", want: http.StatusBadRequest},
+		{path: "/admin/translations?incident=999999", want: http.StatusNotFound},
+		{path: "/admin/translations?incident=" + formatID(job.IncidentID) + "&language=en", want: http.StatusBadRequest},
+	} {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, test.path, nil))
+		if response.Code != test.want {
+			t.Errorf("GET %s = %d, want %d", test.path, response.Code, test.want)
+		}
+	}
+
+	actions := []struct {
+		body      string
+		selection processing.PostProcessingSelection
+		incident  bool
+	}{
+		{body: "confirmed=true&language=en&model=qwen3.5%3A4b&action=unpublished&return_status=unpublished", selection: processing.PostProcessingSelectionUnpublished},
+		{body: "confirmed=true&language=en&model=qwen3.5%3A4b&action=all&return_status=all", selection: processing.PostProcessingSelectionAll},
+		{body: "confirmed=true&language=en&model=qwen3.5%3A4b&action=incident&incident_id=" + formatID(job.IncidentID) + "&return_incident=" + formatID(job.IncidentID), selection: processing.PostProcessingSelectionAll, incident: true},
+	}
+	for index, test := range actions {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, formRequest(http.MethodPost, "/api/admin/ai/translations/process", test.body))
+		if response.Code != http.StatusSeeOther || !strings.Contains(response.Header().Get("Location"), "queued=3") {
+			t.Fatalf("translation action %d = %d/%q", index, response.Code, response.Header().Get("Location"))
+		}
+		request := received[index]
+		if request.ProcessorKey != processing.TranslationModelStep || len(request.ScopeKeys) != 1 || request.ScopeKeys[0] != "en" || request.Selection != test.selection || (request.IncidentID != nil) != test.incident {
+			t.Errorf("translation action %d request = %#v", index, request)
+		}
+	}
+
+	notice := httptest.NewRecorder()
+	handler.ServeHTTP(notice, httptest.NewRequest(http.MethodGet, "/admin/translations?language=en&status=all&queued=3&queued_action=all&queued_language=en", nil))
+	if notice.Code != http.StatusOK || !strings.Contains(notice.Body.String(), "Queued 3 translation rerun job(s) for en") {
+		t.Fatalf("translation notice = %d/%q", notice.Code, notice.Body.String())
+	}
+
+	for _, test := range []struct {
+		name string
+		body string
+		want int
+	}{
+		{name: "confirmation", body: "language=en&model=qwen3.5%3A4b&action=all", want: http.StatusBadRequest},
+		{name: "canonical language", body: "confirmed=true&language=de&model=qwen3.5%3A4b&action=all", want: http.StatusBadRequest},
+		{name: "unknown action", body: "confirmed=true&language=en&model=qwen3.5%3A4b&action=unknown", want: http.StatusBadRequest},
+		{name: "missing incident", body: "confirmed=true&language=en&model=qwen3.5%3A4b&action=incident&incident_id=zero", want: http.StatusBadRequest},
+		{name: "incident on all", body: "confirmed=true&language=en&model=qwen3.5%3A4b&action=all&incident_id=1", want: http.StatusBadRequest},
+		{name: "model", body: "confirmed=true&language=en&model=missing%3A4b&action=all", want: http.StatusServiceUnavailable},
+	} {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, formRequest(http.MethodPost, "/api/admin/ai/translations/process", test.body))
+		if response.Code != test.want {
+			t.Errorf("%s translation mutation = %d, want %d", test.name, response.Code, test.want)
+		}
+	}
+	crossSiteRequest := formRequest(http.MethodPost, "/api/admin/ai/translations/process", "confirmed=true&language=en&model=qwen3.5%3A4b&action=all")
+	crossSiteRequest.Header.Set("Sec-Fetch-Site", "cross-site")
+	crossSite := httptest.NewRecorder()
+	handler.ServeHTTP(crossSite, crossSiteRequest)
+	if crossSite.Code != http.StatusForbidden {
+		t.Errorf("cross-site translation mutation = %d, want 403", crossSite.Code)
+	}
+	nonFormRequest := httptest.NewRequest(http.MethodPost, "/api/admin/ai/translations/process", strings.NewReader("confirmed=true"))
+	nonFormRequest.Header.Set("Content-Type", "text/plain")
+	nonForm := httptest.NewRecorder()
+	handler.ServeHTTP(nonForm, nonFormRequest)
+	if nonForm.Code != http.StatusUnsupportedMediaType {
+		t.Errorf("non-form translation mutation = %d, want 415", nonForm.Code)
+	}
+	oversized := httptest.NewRecorder()
+	handler.ServeHTTP(oversized, formRequest(http.MethodPost, "/api/admin/ai/translations/process", "confirmed=true&"+strings.Repeat("padding=x&", 600)))
+	if oversized.Code != http.StatusBadRequest {
+		t.Errorf("oversized translation mutation = %d, want 400", oversized.Code)
+	}
+}
+
+func TestAdminTranslationOperationsTemplateScalesToTenLanguages(t *testing.T) {
+	server := adminTestServer(t, fixtureStore(t), nil)
+	data := adminTranslationsPage{UpdatedAt: time.Date(2026, time.August, 31, 12, 0, 0, 0, time.UTC)}
+	for index := 1; index <= 10; index++ {
+		code := fmt.Sprintf("x-%d", index)
+		data.Languages = append(data.Languages, adminLanguageCoverageView{
+			AdminLanguageCoverage: store.AdminLanguageCoverage{Language: code, Eligible: 100, Published: index * 9, Unpublished: 100 - index*9},
+			DisplayName:           fmt.Sprintf("Language %d", index),
+			CoveragePercent:       index * 9,
+			ManageURL:             adminTranslationsLanguageURL(code, store.AdminTranslationsUnpublished, 1),
+		})
+	}
+	var output bytes.Buffer
+	if err := server.adminTranslationsTemplate.ExecuteTemplate(&output, "admin_translations", data); err != nil {
+		t.Fatal(err)
+	}
+	for index := 1; index <= 10; index++ {
+		if !strings.Contains(output.String(), fmt.Sprintf("Language %d", index)) {
+			t.Errorf("ten-language template missing language %d", index)
+		}
+	}
+	if count := strings.Count(output.String(), ">Manage →</a>"); count != 10 {
+		t.Errorf("ten-language template manage links = %d, want 10", count)
+	}
+}
+
+func TestAdminTranslationAutoRefreshContract(t *testing.T) {
+	script := string(adminScript)
+	for _, expected := range []string{
+		`[data-translation-operations]`, `window.location.href`, `document.hidden`,
+		`confirmation.open`, `region.contains(focused)`, `requestInFlight`,
+		`Math.min(30000`, `setConnection("Stale")`, `visibilitychange`,
+	} {
+		if !strings.Contains(script, expected) {
+			t.Errorf("translation auto-refresh script missing %q", expected)
 		}
 	}
 }

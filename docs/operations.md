@@ -125,21 +125,51 @@ negotiate a privacy-safe Markdown representation through
 `Accept: text/markdown`; review-mode pages remain HTML.
 
 The optional `/admin` dashboard shows live cycle and per-step queue state,
-independently paginated incident lists, retained German originals, and both
-generated languages. It also shows raw and formatted metadata, canonical and
-registry-driven post-processing provenance and queue states, and scheduling
-cutovers. Its confirmed actions can
+independently paginated incident lists, retained German originals, compact
+translation rollups, raw and formatted metadata, canonical and registry-driven
+post-processing provenance and queue states, and scheduling cutovers. Its
+confirmed actions can
 create a canonical cycle for one incident, every canonically unprocessed
 incident, or every current incident. Registry-generated post-processing cards
 can process one incident or every eligible current v2 presentation with a
 selected installed model. Multi-scope processors such as translation can select
 one scope or all registered scopes; a single default scope stays hidden. These
 manual-priority actions rerun successful work and leave the prior successful
-value effective until replacement succeeds. Per-incident retry forms use the
-same generic endpoint. There are no model-card history backfill controls. The
-application does not authenticate users itself: enable the dashboard only when
-the ingress protects `/admin*` and `/api/admin*`, and keep both prefixes absent
-from public ingress.
+value effective until replacement succeeds. There are no model-card history
+backfill controls.
+
+The dedicated `/admin/translations` page is the operational view for every
+registered noncanonical language. Its coverage denominator is the current,
+complete German v2 presentation set. A translation is **published** only when a
+successful job for that exact current German run has both normalized `title`
+and `summary` values; every other eligible presentation is **unpublished**.
+**Never queued** means no translation attempt exists for that language and run.
+**Active** includes pending and running jobs. **Attention** includes
+review-required, failed, and skipped latest attempts. These counters overlap on
+purpose: when a replacement fails, the retained earlier success remains
+published while the newest attempt also appears under attention and the
+replacement-warning count.
+
+Language drill-down filters are `all`, `published`, `unpublished`,
+`never_queued`, `active`, and `attention`. Incident drill-down shows the German
+canonical presentation plus each registered language's effective output,
+published provenance, latest attempt, and retry action. **Queue unpublished**
+transactionally queues current German presentations that have no publishable
+translation, excluding active and already-published work. **Rerun all** creates
+manual replacements for every eligible presentation except active work. Both
+bulk actions and an incident retry require an installed model and an explicit
+confirmation; they bypass the automatic-processing switch and cutover without
+changing either. Historical work is therefore always an operator decision.
+
+The translation operations region refreshes from its current URL every five
+seconds, preserving its filter, page, incident view, and scroll position. It
+pauses while the page is hidden, a form has focus, the confirmation dialog is
+open, or a refresh is already running. Failed refreshes mark the view stale and
+back off to at most 30 seconds.
+
+The application does not authenticate users itself: enable administration only
+when the ingress protects `/admin*` and `/api/admin*`, and keep both prefixes
+absent from public ingress.
 
 Runtime status reports both the configured window and the durable automatic
 switch so an open window is not mistaken for runnable scheduled work. Switch

@@ -262,3 +262,63 @@
   });
   schedule(interval);
 })();
+
+(() => {
+  const region = document.querySelector("[data-translation-operations]");
+  if (!(region instanceof HTMLElement)) return;
+
+  const interval = Number(region.dataset.translationPollInterval) || 5000;
+  const confirmation = document.querySelector("#processing-confirmation");
+  let timer = 0;
+  let requestInFlight = false;
+  let failures = 0;
+
+  const setConnection = (value) => {
+    const connection = region.querySelector("[data-translation-connection]");
+    if (connection) connection.textContent = value;
+  };
+
+  const schedule = (delay) => {
+    window.clearTimeout(timer);
+    if (!document.hidden) timer = window.setTimeout(refresh, delay);
+  };
+
+  const shouldPause = () => {
+    const focused = document.activeElement;
+    return document.hidden
+      || requestInFlight
+      || (confirmation instanceof HTMLDialogElement && confirmation.open)
+      || (focused instanceof Element && region.contains(focused) && focused.closest("form"));
+  };
+
+  async function refresh() {
+    if (shouldPause()) {
+      schedule(interval);
+      return;
+    }
+    requestInFlight = true;
+    try {
+      const response = await fetch(window.location.href, {headers: {Accept: "text/html"}, cache: "no-store"});
+      if (!response.ok) throw new Error(`status ${response.status}`);
+      const parsedDocument = new DOMParser().parseFromString(await response.text(), "text/html");
+      const nextRegion = parsedDocument.querySelector("[data-translation-operations]");
+      if (!(nextRegion instanceof HTMLElement)) throw new Error("translation operations content missing");
+      region.replaceChildren(...nextRegion.childNodes);
+      failures = 0;
+      setConnection("Connected");
+      schedule(interval);
+    } catch (_error) {
+      failures += 1;
+      setConnection("Stale");
+      schedule(Math.min(30000, interval * (2 ** Math.min(failures, 3))));
+    } finally {
+      requestInFlight = false;
+    }
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    window.clearTimeout(timer);
+    if (!document.hidden) refresh();
+  });
+  schedule(interval);
+})();

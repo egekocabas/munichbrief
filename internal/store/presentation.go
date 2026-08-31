@@ -31,19 +31,22 @@ type PublicIncidentLink struct {
 // AdminTranslation is the selected translated presentation plus the latest
 // attempt state for one incident and registered translation language.
 type AdminTranslation struct {
-	IncidentID    int64
-	Language      string
-	Title         string
-	Summary       string
-	Model         string
-	PromptVersion string
-	GeneratedAt   *time.Time
-	Status        string
-	StatusReason  string
-	StatusDetail  string
-	Attempts      int
-	NextRetryAt   *time.Time
-	FailureKind   string
+	IncidentID           int64
+	Language             string
+	Title                string
+	Summary              string
+	Model                string
+	PromptVersion        string
+	GeneratedAt          *time.Time
+	Status               string
+	StatusReason         string
+	StatusDetail         string
+	Attempts             int
+	NextRetryAt          *time.Time
+	FailureKind          string
+	AttemptModel         string
+	AttemptPromptVersion string
+	AttemptUpdatedAt     *time.Time
 }
 
 // AdminCategoryVerification combines the latest durable attempt with the latest
@@ -473,7 +476,8 @@ func (s *Store) ListAdminTranslations(ctx context.Context, incidentIDs []int64, 
 			COALESCE((SELECT value FROM post_processing_values WHERE job_id=selected.id AND kind='summary'),''),
 			COALESCE(selected.model_identity, ''), COALESCE(selected.prompt_version, ''), COALESCE(selected.completed_at, ''),
 			COALESCE(attempt.status, ''), COALESCE(attempt.status_reason, ''), COALESCE(attempt.status_detail, ''),
-			COALESCE(attempt.attempt_count, 0), COALESCE(attempt.next_retry_at, ''), COALESCE(attempt.failure_kind, '')
+			COALESCE(attempt.attempt_count, 0), COALESCE(attempt.next_retry_at, ''), COALESCE(attempt.failure_kind, ''),
+			COALESCE(attempt.model_identity, ''), COALESCE(attempt.prompt_version, ''), COALESCE(attempt.updated_at, '')
 		FROM requested_incidents requested
 		CROSS JOIN requested_languages language
 		LEFT JOIN canonical_runs canonical ON canonical.incident_id = requested.incident_id
@@ -488,12 +492,13 @@ func (s *Store) ListAdminTranslations(ctx context.Context, incidentIDs []int64, 
 	translations := make([]AdminTranslation, 0, len(incidentIDs)*len(languages))
 	for rows.Next() {
 		var translation AdminTranslation
-		var generatedAt, nextRetryAt string
+		var generatedAt, nextRetryAt, attemptUpdatedAt string
 		if err := rows.Scan(
 			&translation.IncidentID, &translation.Language, &translation.Title, &translation.Summary,
 			&translation.Model, &translation.PromptVersion, &generatedAt,
 			&translation.Status, &translation.StatusReason, &translation.StatusDetail,
 			&translation.Attempts, &nextRetryAt, &translation.FailureKind,
+			&translation.AttemptModel, &translation.AttemptPromptVersion, &attemptUpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan admin translation: %w", err)
 		}
@@ -510,6 +515,13 @@ func (s *Store) ListAdminTranslations(ctx context.Context, incidentIDs []int64, 
 				return nil, fmt.Errorf("parse admin translation retry time: %w", err)
 			}
 			translation.NextRetryAt = &parsed
+		}
+		if attemptUpdatedAt != "" {
+			parsed, err := time.Parse(time.RFC3339Nano, attemptUpdatedAt)
+			if err != nil {
+				return nil, fmt.Errorf("parse admin translation attempt update time: %w", err)
+			}
+			translation.AttemptUpdatedAt = &parsed
 		}
 		translations = append(translations, translation)
 	}

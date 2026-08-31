@@ -35,6 +35,7 @@ type PipelineRepository interface {
 	QueuePostProcessingForRun(context.Context, int64, []store.PostProcessingPlan, string, bool, time.Time) (int, error)
 	QueueIncidentPostProcessing(context.Context, int64, []store.PostProcessingPlan, time.Time) (int, error)
 	QueuePostProcessingForAll(context.Context, string, []store.PostProcessingPlan, bool, time.Time) (int, error)
+	QueueUnpublishedPostProcessingForAll(context.Context, string, []store.PostProcessingPlan, time.Time) (int, error)
 	ClaimPostProcessingJob(context.Context, string, store.PostProcessingContract, bool, []string, time.Time) (store.PostProcessingJob, bool, error)
 	CompletePostProcessingJob(context.Context, store.PostProcessingJob, []store.PipelineValue, string, string, time.Time) error
 	FailPostProcessingJob(context.Context, store.PostProcessingJob, string, string, *time.Time, time.Time, error) error
@@ -52,11 +53,31 @@ type PostProcessingRequest struct {
 	ScopeKeys    []string
 	IncidentID   *int64
 	Model        string
+	Selection    PostProcessingSelection
 }
 
-// RequestPostProcessing queues a forced manual rerun for one incident or every
-// current eligible v2 presentation.
+// PostProcessingSelection controls whether a bulk manual request replaces
+// successful work or fills only currently unpublished scopes.
+type PostProcessingSelection string
+
+const (
+	PostProcessingSelectionAll         PostProcessingSelection = "all"
+	PostProcessingSelectionUnpublished PostProcessingSelection = "unpublished"
+)
+
+// RequestPostProcessing queues a manual incident rerun or applies the selected
+// bulk policy to every current eligible v2 presentation.
 func (w *PipelineWorker) RequestPostProcessing(ctx context.Context, request PostProcessingRequest) (int, error) {
+	selection := request.Selection
+	if selection == "" {
+		selection = PostProcessingSelectionAll
+	}
+	if selection != PostProcessingSelectionAll && selection != PostProcessingSelectionUnpublished {
+		return 0, store.ErrNotFound
+	}
+	if request.IncidentID != nil && selection != PostProcessingSelectionAll {
+		return 0, store.ErrNotFound
+	}
 	definition, found := w.postProcessors.Definition(request.ProcessorKey)
 	if !found || !definition.Manual {
 		return 0, store.ErrNotFound
@@ -73,7 +94,11 @@ func (w *PipelineWorker) RequestPostProcessing(ctx context.Context, request Post
 	defer w.executionMu.Unlock()
 	var queued int
 	if request.IncidentID == nil {
-		queued, err = w.repository.QueuePostProcessingForAll(ctx, w.sourceMode, plans, true, w.clock())
+		if selection == PostProcessingSelectionUnpublished {
+			queued, err = w.repository.QueueUnpublishedPostProcessingForAll(ctx, w.sourceMode, plans, w.clock())
+		} else {
+			queued, err = w.repository.QueuePostProcessingForAll(ctx, w.sourceMode, plans, true, w.clock())
+		}
 	} else {
 		queued, err = w.repository.QueueIncidentPostProcessing(ctx, *request.IncidentID, plans, w.clock())
 	}
@@ -86,7 +111,7 @@ func (w *PipelineWorker) RequestPostProcessing(ctx context.Context, request Post
 		for _, plan := range plans {
 			scopes = append(scopes, plan.ScopeKey)
 		}
-		w.logger.Info("AI post-processing jobs queued", "processor", request.ProcessorKey, "scopes", scopes, "target", target, "incident_id", request.IncidentID, "model", model, "jobs", queued, "request_kind", "manual")
+		w.logger.Info("AI post-processing jobs queued", "processor", request.ProcessorKey, "scopes", scopes, "target", target, "selection", selection, "incident_id", request.IncidentID, "model", model, "jobs", queued, "request_kind", "manual")
 		w.signal()
 	}
 	return queued, err

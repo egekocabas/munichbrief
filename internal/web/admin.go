@@ -28,9 +28,6 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 	scope := store.PresentationScope{Language: s.canonicalLanguage().Code}
-	if translations := s.translatedLanguages(); len(translations) > 0 {
-		scope.TranslationLanguage = translations[0].Code
-	}
 	models := processing.PipelineModelStatus{}
 	runtime := processing.PipelineRuntimeStatus{}
 	if s.options.Processor != nil {
@@ -136,14 +133,16 @@ func (s *Server) adminList(records []store.IncidentRecord, total, page, totalPag
 			presentationLabel = "Pipeline v2 presentation"
 		}
 		primaryProvenanceLabel := "German provenance"
-		publicView := s.incidentForLanguage(record, "en")
+		publicView := s.incidentForLanguage(record, adminLocaleCode)
+		translationItems := translations[record.ID]
 		incidents = append(incidents, adminIncidentView{
 			Record: record, ProcessingState: strings.ReplaceAll(state, "_", "-"),
 			ProcessingLabel: adminProcessingLabel(state), PresentationLabel: presentationLabel,
-			CategoryLabel: s.metadataCodeLabel("en", "Category", record.AICategory), CanProcess: state != "running",
+			CategoryLabel: s.metadataCodeLabel(adminLocaleCode, "Category", record.AICategory), CanProcess: state != "running",
 			EventText: publicView.EventText, EventLabel: publicView.EventLabel, ReportKindLabel: publicView.ReportKindLabel,
 			PublicAssistanceTypes: publicView.PublicAssistanceTypes, PrimaryProvenanceLabel: primaryProvenanceLabel,
-			Translations:                 translations[record.ID],
+			Translations:                 translationItems,
+			TranslationRollup:            adminTranslationRollupFor(translationItems),
 			CategoryVerification:         categories[record.ID],
 			PublicAssistanceVerification: assistance[record.ID],
 		})
@@ -166,7 +165,7 @@ func (s *Server) adminCategoryVerifications(request *http.Request, records []sto
 	for _, result := range results {
 		views[result.IncidentID] = adminCategoryVerificationView{
 			OriginalCategory: result.OriginalCategory, EffectiveCategory: result.EffectiveCategory,
-			OriginalLabel: s.metadataCodeLabel("en", "Category", result.OriginalCategory), EffectiveLabel: s.metadataCodeLabel("en", "Category", result.EffectiveCategory),
+			OriginalLabel: s.metadataCodeLabel(adminLocaleCode, "Category", result.OriginalCategory), EffectiveLabel: s.metadataCodeLabel(adminLocaleCode, "Category", result.EffectiveCategory),
 			Verdict: adminVerificationVerdict(result.IsCorrect), Status: adminPostProcessingStatus(result.Status, result.StatusReason, result.Attempts),
 			StatusReason: result.StatusReason, StatusDetail: result.StatusDetail, Attempts: result.Attempts, FailureKind: result.FailureKind,
 			Model: visiblePostProcessingModel(result.Model, result.Status, result.Attempts, result.GeneratedAt), PromptVersion: result.PromptVersion, GeneratedAt: result.GeneratedAt,
@@ -276,7 +275,7 @@ func (s *Server) adminAssistanceTypeLabels(encoded string) []string {
 	}
 	labels := make([]string, 0, len(types))
 	for _, assistanceType := range types {
-		if label := s.metadataCodeLabel("en", "AssistanceType", assistanceType); label != "" {
+		if label := s.metadataCodeLabel(adminLocaleCode, "AssistanceType", assistanceType); label != "" {
 			labels = append(labels, label)
 		}
 	}
@@ -307,10 +306,31 @@ func (s *Server) adminTranslations(request *http.Request, records []store.Incide
 			Model: translation.Model, PromptVersion: translation.PromptVersion,
 			StatusLabel: adminTranslationLabel(translation), StatusReason: translation.StatusReason, StatusDetail: translation.StatusDetail,
 			FailureKind: translation.FailureKind,
+			Status:      translation.Status,
 			CanRetry:    canonicalReady[translation.IncidentID] && canRetryPostProcessing(translation.Status, translation.StatusReason),
 		})
 	}
 	return views, nil
+}
+
+func adminTranslationRollupFor(translations []adminTranslationView) adminTranslationRollup {
+	rollup := adminTranslationRollup{Total: len(translations)}
+	for _, translation := range translations {
+		published := translation.Title != "" && translation.Summary != ""
+		if published {
+			rollup.Published++
+		}
+		switch translation.Status {
+		case "pending", "running":
+			rollup.Active++
+		case "needs_review", "failed", "skipped":
+			rollup.Attention++
+			if published {
+				rollup.ReplacementAttention++
+			}
+		}
+	}
+	return rollup
 }
 
 func (s *Server) processIncidentNow(response http.ResponseWriter, request *http.Request) {
@@ -689,6 +709,7 @@ type adminIncidentView struct {
 	PrimaryProvenanceLabel       string
 	CanProcess                   bool
 	Translations                 []adminTranslationView
+	TranslationRollup            adminTranslationRollup
 	CategoryVerification         adminCategoryVerificationView
 	PublicAssistanceVerification adminPublicAssistanceVerificationView
 }
@@ -741,7 +762,16 @@ type adminTranslationView struct {
 	StatusReason  string
 	StatusDetail  string
 	FailureKind   string
+	Status        string
 	CanRetry      bool
+}
+
+type adminTranslationRollup struct {
+	Total                int
+	Published            int
+	Active               int
+	Attention            int
+	ReplacementAttention int
 }
 
 func adminProcessingLabel(state string) string {
