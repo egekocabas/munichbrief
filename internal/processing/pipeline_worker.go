@@ -168,6 +168,7 @@ type PostProcessorModelStatus struct {
 	Preferred          string                     `json:"preferred"`
 	PreferredAvailable bool                       `json:"preferred_available"`
 	Scopes             []PostProcessorScopeStatus `json:"scopes"`
+	Verification       *PostProcessorVerification `json:"verification,omitempty"`
 }
 
 // PipelineRuntimeStatus combines model, schedule, worker, and queue readiness.
@@ -359,7 +360,7 @@ func (w *PipelineWorker) ModelStatus(ctx context.Context) (PipelineModelStatus, 
 	}
 	for _, definition := range w.postProcessors.Definitions() {
 		model := byKey[definition.ModelSettingKey]
-		item := PostProcessorModelStatus{Key: definition.Key, DisplayName: definition.DisplayName, Description: definition.Description, ModelSettingKey: definition.ModelSettingKey, Manual: definition.Manual, Preferred: model, PreferredAvailable: model != "" && catalog.Available() && catalog.Has(model)}
+		item := PostProcessorModelStatus{Key: definition.Key, DisplayName: definition.DisplayName, Description: definition.Description, ModelSettingKey: definition.ModelSettingKey, Manual: definition.Manual, Preferred: model, PreferredAvailable: model != "" && catalog.Available() && catalog.Has(model), Verification: clonePostProcessorVerification(definition.Verification)}
 		for _, scope := range definition.Scopes {
 			item.Scopes = append(item.Scopes, PostProcessorScopeStatus{Key: scope.Key, DisplayName: scope.DisplayName, StepKey: scope.Step.Key, PromptVersion: scope.Step.PromptVersion})
 		}

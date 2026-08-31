@@ -1147,6 +1147,9 @@ func TestMissingTranslationModelDoesNotBlockCanonicalGerman(t *testing.T) {
 	if err != nil || !status.Ready || len(status.PostProcessors) != 3 || status.PostProcessors[2].PreferredAvailable {
 		t.Fatalf("split model readiness = %#v/%v", status, err)
 	}
+	if status.PostProcessors[0].Verification == nil || status.PostProcessors[1].Verification == nil || status.PostProcessors[2].Verification != nil {
+		t.Fatalf("verification model metadata = %#v", status.PostProcessors)
+	}
 }
 
 func TestCanonicalWorkPreemptsTranslationsAtJobBoundaries(t *testing.T) {

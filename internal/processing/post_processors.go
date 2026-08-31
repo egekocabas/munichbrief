@@ -22,6 +22,22 @@ type PostProcessorCounter struct {
 	EqualsValue string
 }
 
+// PostProcessorVerificationField maps one canonical presentation value to the
+// corrected value emitted by a correction-style verifier.
+type PostProcessorVerificationField struct {
+	DisplayName   string `json:"display_name"`
+	OriginalKind  string `json:"original_kind"`
+	CorrectedKind string `json:"corrected_kind"`
+}
+
+// PostProcessorVerification describes the review contract for a
+// correction-style post-processor. Processors without this metadata are not
+// presented as verifiers by focused administration views.
+type PostProcessorVerification struct {
+	VerdictKind string                           `json:"verdict_kind"`
+	Fields      []PostProcessorVerificationField `json:"fields"`
+}
+
 // PostProcessorDefinition is the complete registration contract for one
 // independent post-canonical LLM feature.
 type PostProcessorDefinition struct {
@@ -34,6 +50,7 @@ type PostProcessorDefinition struct {
 	Manual          bool
 	Scopes          []PostProcessorScope
 	Counters        []PostProcessorCounter
+	Verification    *PostProcessorVerification
 }
 
 // PostProcessorRegistry provides validated deterministic lookup and ordering.
@@ -99,6 +116,44 @@ func NewPostProcessorRegistry(definitions ...PostProcessorDefinition) (*PostProc
 			seenCounters[counter.Key] = struct{}{}
 			definition.Counters[counterIndex] = counter
 		}
+		if definition.Verification != nil {
+			verification := clonePostProcessorVerification(definition.Verification)
+			verification.VerdictKind = strings.TrimSpace(verification.VerdictKind)
+			if verification.VerdictKind == "" || len(verification.Fields) == 0 {
+				return nil, errors.New("verification verdict and fields are required")
+			}
+			if outputKindScopes[verification.VerdictKind] != len(definition.Scopes) {
+				return nil, errors.New("verification verdict must be emitted by every scope")
+			}
+			seenOriginals := make(map[string]struct{}, len(verification.Fields))
+			seenCorrected := make(map[string]struct{}, len(verification.Fields))
+			for fieldIndex, field := range verification.Fields {
+				field.DisplayName = strings.TrimSpace(field.DisplayName)
+				field.OriginalKind = strings.TrimSpace(field.OriginalKind)
+				field.CorrectedKind = strings.TrimSpace(field.CorrectedKind)
+				if field.DisplayName == "" || field.OriginalKind == "" || field.CorrectedKind == "" {
+					return nil, errors.New("verification field display name, original kind, and corrected kind are required")
+				}
+				if _, duplicate := seenOriginals[field.OriginalKind]; duplicate {
+					return nil, errors.New("verification original kinds must be unique")
+				}
+				if _, duplicate := seenCorrected[field.CorrectedKind]; duplicate {
+					return nil, errors.New("verification corrected kinds must be unique")
+				}
+				for _, scope := range definition.Scopes {
+					if !containsValueKind(scope.Step.InputKinds, field.OriginalKind) {
+						return nil, errors.New("verification original kind must be required by every scope")
+					}
+				}
+				if outputKindScopes[field.CorrectedKind] != len(definition.Scopes) {
+					return nil, errors.New("verification corrected kind must be emitted by every scope")
+				}
+				seenOriginals[field.OriginalKind] = struct{}{}
+				seenCorrected[field.CorrectedKind] = struct{}{}
+				verification.Fields[fieldIndex] = field
+			}
+			definition.Verification = verification
+		}
 		registry.definitions[index] = clonePostProcessorDefinition(definition)
 	}
 	sort.SliceStable(registry.definitions, func(i, j int) bool {
@@ -120,11 +175,18 @@ func DefaultPostProcessorRegistry() *PostProcessorRegistry {
 			Key: PublicAssistanceVerificationStep, DisplayName: "Public assistance verification", Description: "Recheck public-assistance status and types while keeping the last successful result effective until a replacement succeeds.", Priority: 10, ModelSettingKey: PublicAssistanceVerificationStep, Automatic: true, Manual: true,
 			Scopes:   []PostProcessorScope{{Key: DefaultPostProcessingScope, DisplayName: "Default", Step: PublicAssistanceVerificationDefinition()}},
 			Counters: []PostProcessorCounter{{Key: "corrected", OutputKind: "is_correct", EqualsValue: "false"}},
+			Verification: &PostProcessorVerification{VerdictKind: "is_correct", Fields: []PostProcessorVerificationField{
+				{DisplayName: "Public assistance status", OriginalKind: "public_assistance_status", CorrectedKind: "corrected_public_assistance_status"},
+				{DisplayName: "Public assistance types", OriginalKind: "public_assistance_types", CorrectedKind: "corrected_public_assistance_types"},
+			}},
 		},
 		PostProcessorDefinition{
 			Key: CategoryVerificationStep, DisplayName: "Category verification", Description: "Recheck categories while keeping the last successful result effective until a replacement succeeds.", Priority: 20, ModelSettingKey: CategoryVerificationStep, Automatic: true, Manual: true,
 			Scopes:   []PostProcessorScope{{Key: DefaultPostProcessingScope, DisplayName: "Default", Step: CategoryVerificationDefinition()}},
 			Counters: []PostProcessorCounter{{Key: "corrected", OutputKind: "is_correct", EqualsValue: "false"}},
+			Verification: &PostProcessorVerification{VerdictKind: "is_correct", Fields: []PostProcessorVerificationField{
+				{DisplayName: "Category", OriginalKind: "category", CorrectedKind: "corrected_category"},
+			}},
 		},
 		PostProcessorDefinition{
 			Key: TranslationModelStep, DisplayName: "Translations", Description: "Translate current presentations into one registered language or every registered language.", Priority: 30, ModelSettingKey: TranslationModelStep, Automatic: true, Manual: true,
@@ -276,11 +338,30 @@ func validateValueKinds(kinds []string, label string) error {
 	return nil
 }
 
+func containsValueKind(kinds []string, wanted string) bool {
+	for _, kind := range kinds {
+		if kind == wanted {
+			return true
+		}
+	}
+	return false
+}
+
 func clonePostProcessorDefinition(definition PostProcessorDefinition) PostProcessorDefinition {
 	definition.Scopes = append([]PostProcessorScope(nil), definition.Scopes...)
 	for index := range definition.Scopes {
 		definition.Scopes[index].Step = cloneStepDefinition(definition.Scopes[index].Step)
 	}
 	definition.Counters = append([]PostProcessorCounter(nil), definition.Counters...)
+	definition.Verification = clonePostProcessorVerification(definition.Verification)
 	return definition
+}
+
+func clonePostProcessorVerification(verification *PostProcessorVerification) *PostProcessorVerification {
+	if verification == nil {
+		return nil
+	}
+	cloned := *verification
+	cloned.Fields = append([]PostProcessorVerificationField(nil), verification.Fields...)
+	return &cloned
 }
