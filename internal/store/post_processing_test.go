@@ -107,6 +107,77 @@ func TestPostProcessingGenericLifecycleKeepsSuccessfulValueDuringForcedReplaceme
 	}
 }
 
+func TestPostProcessingQueueStatsExplainAutomaticRetryWaits(t *testing.T) {
+	ctx := context.Background()
+	database, err := Open(ctx, filepath.Join(t.TempDir(), "post-processing-retry-stats.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 31, 5, 45, 0, 0, time.UTC)
+	insertPipelineDocuments(t, ctx, database, now, "retry-stats")
+	var incidentID int64
+	var sourceHash string
+	if err := database.db.QueryRowContext(ctx, `SELECT id,content_hash FROM incidents LIMIT 1`).Scan(&incidentID, &sourceHash); err != nil {
+		t.Fatal(err)
+	}
+	runID := insertCompletedPresentationRun(t, ctx, database, incidentID, sourceHash, PipelineVersion, now, map[string]string{
+		"title_de": "Titel", "summary_de": "Zusammenfassung.", "category": "other",
+	})
+	plan := PostProcessingPlan{ProcessorKey: "translation", ScopeKey: "en", PromptVersion: "translation-v1", Model: "translate:4b", InputKinds: []string{"title_de", "summary_de"}}
+	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{plan}, "scheduled", false, now); err != nil || queued != 1 {
+		t.Fatalf("queue scheduled retry fixture = %d/%v", queued, err)
+	}
+	job, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", plan.PromptVersion, []string{"title", "summary"}, plan.InputKinds...), true, nil, now.Add(time.Minute))
+	if err != nil || !found {
+		t.Fatalf("claim scheduled retry fixture = %#v/%t/%v", job, found, err)
+	}
+	retryAt := now.Add(10 * time.Minute)
+	if err := database.FailPostProcessingJob(ctx, job, "pending", "output", &retryAt, now.Add(2*time.Minute), errors.New("invalid generated output")); err != nil {
+		t.Fatal(err)
+	}
+
+	assertStats := func(at time.Time, wantReady int) {
+		t.Helper()
+		snapshot, err := database.PipelineSnapshot(ctx, "fixture", nil, nil, at)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, stat := range snapshot.PostProcessing {
+			if stat.ProcessorKey != "translation" || stat.ScopeKey != "en" {
+				continue
+			}
+			if stat.Retrying != 1 || stat.AutomaticRetrying != 1 || stat.AutomaticRetryReady != wantReady || stat.NextRetryAt == nil || !stat.NextRetryAt.Equal(retryAt) || stat.RetryFailureKinds["output"] != 1 {
+				t.Fatalf("retry stats at %s = %#v", at, stat)
+			}
+			return
+		}
+		t.Fatal("translation/en queue stats missing")
+	}
+	assertStats(now.Add(5*time.Minute), 0)
+	assertStats(now.Add(11*time.Minute), 1)
+	job, found, err = database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", plan.PromptVersion, []string{"title", "summary"}, plan.InputKinds...), true, nil, now.Add(11*time.Minute))
+	if err != nil || !found {
+		t.Fatalf("claim eligible retry fixture = %#v/%t/%v", job, found, err)
+	}
+	if err := database.FailPostProcessingJob(ctx, job, "needs_review", "output", nil, now.Add(12*time.Minute), errors.New("invalid generated output")); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := database.PipelineSnapshot(ctx, "fixture", nil, nil, now.Add(13*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, stat := range snapshot.PostProcessing {
+		if stat.ProcessorKey == "translation" && stat.ScopeKey == "en" {
+			if stat.Retrying != 0 || stat.NeedsReview != 1 || stat.AttentionFailureKinds["output"] != 1 {
+				t.Fatalf("attention stats = %#v", stat)
+			}
+			return
+		}
+	}
+	t.Fatal("translation/en attention stats missing")
+}
+
 func TestPostProcessingReadersRequireCompleteSuccessesAcrossProcessors(t *testing.T) {
 	ctx := context.Background()
 	database, err := Open(ctx, filepath.Join(t.TempDir(), "post-processing-complete-readers.db"))

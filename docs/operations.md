@@ -138,6 +138,16 @@ manual-priority actions rerun successful work and leave the prior successful
 value effective until replacement succeeds. There are no model-card history
 backfill controls.
 
+Each independent post-processing queue separates active execution from waiting
+time. **Current job elapsed** is shown only while a worker owns a job. **Oldest
+unfinished job queued** is queue age, not continuous execution time. Retrying
+jobs show their failure-class counts and whether automatic work is still in
+backoff, ready but paused outside the processing window, or paused by the
+automatic-processing switch. Raw model errors and incident content are not
+included in runtime status. **Review** is terminal for the attempt: output or
+privacy validation remained unsuccessful after three tries, so an operator
+should investigate the failure class before explicitly reprocessing it.
+
 The dedicated `/admin/translations` page is the operational view for every
 registered noncanonical language. Its coverage denominator is the current,
 complete German v2 presentation set. A translation is **published** only when a
