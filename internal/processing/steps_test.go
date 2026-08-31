@@ -410,6 +410,11 @@ func TestEnglishTranslationReceivesOnlyDeclaredGermanPresentation(t *testing.T) 
 		if len(payload.Messages) != 1 || payload.Messages[0].Role != "user" {
 			t.Fatalf("translation request messages = %#v", payload.Messages)
 		}
+		for _, expected := range []string{`"title_en"`, `"summary_en"`, `"additionalProperties":false`} {
+			if !bytes.Contains(payload.Format, []byte(expected)) {
+				t.Fatalf("translation response schema omitted %s: %s", expected, payload.Format)
+			}
+		}
 		user := payload.Messages[0].Content
 		for _, forbidden := range []string{"private original body", "original_title", "incident_body"} {
 			if strings.Contains(user, forbidden) {

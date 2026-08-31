@@ -31,10 +31,11 @@ only the accepted German presentation and never blocks canonical completion.
 TranslateGemma prompts derive the English model-facing language names and exact
 BCP-47 codes from the shared language registry. They use the model's recommended
 single-user-message shape, with the complete instruction followed by the JSON
-payload after a blank line; Ollama's structured-output schema still constrains
-the response to the registered title and summary fields. Each target keeps one
-active immutable prompt, and retired prompt versions remain registered for
-audit. The generic factory derives its schema, decoder, step, and scope; follow
+payload after the required two blank lines; Ollama's structured-output schema
+still constrains the response to the registered title and summary fields. Each
+target keeps one active immutable prompt, and retired prompt versions remain
+registered for audit. The generic factory derives its schema, decoder, step,
+and scope; follow
 [Adding a reader language](../../docs/adding-a-language.md) instead of adding
 worker or store branches.
 

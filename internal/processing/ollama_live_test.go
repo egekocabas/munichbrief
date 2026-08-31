@@ -192,8 +192,8 @@ func TestLiveOllamaTranslateGemmaPromptContract(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			title := strings.ToLower(output.Values["title"])
-			summary := strings.ToLower(output.Values["summary"])
+			title := strings.TrimSpace(strings.ToLower(output.Values["title"]))
+			summary := strings.TrimSpace(strings.ToLower(output.Values["summary"]))
 			combined := title + "\n" + summary
 			if title == "" || summary == "" {
 				t.Fatal("translation result is missing")
@@ -217,7 +217,9 @@ func TestLiveOllamaTranslateGemmaPromptContract(t *testing.T) {
 					t.Errorf("translation added forbidden wording %q", forbidden)
 				}
 			}
-			if fixture.forbidOnly != "" && (title == fixture.forbidOnly || summary == fixture.forbidOnly) {
+			titleOnly := strings.Trim(title, " .,!?:;\"'`")
+			summaryOnly := strings.Trim(summary, " .,!?:;\"'`")
+			if fixture.forbidOnly != "" && (titleOnly == fixture.forbidOnly || summaryOnly == fixture.forbidOnly) {
 				t.Error("translation followed instruction-like input instead of translating it")
 			}
 			if strings.TrimSpace(returnedModel) == "" {

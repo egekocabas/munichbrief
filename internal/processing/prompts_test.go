@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestPromptRegistryResolvesActiveVersions(t *testing.T) {
+func TestPromptRegistryResolvesRegisteredVersions(t *testing.T) {
 	seen := make(map[string]bool)
 	for _, prompt := range promptRegistry {
 		if prompt.Version == "" || prompt.UserPromptTemplate == "" || (prompt.UserOnly && prompt.SystemPrompt != "") || (!prompt.UserOnly && prompt.SystemPrompt == "") {
@@ -47,7 +47,7 @@ func TestEnglishTranslateGemmaV2PromptUsesRegisteredLanguageIdentity(t *testing.
 			t.Errorf("TranslateGemma prompt omitted %q: %s", expected, rendered)
 		}
 	}
-	if strings.Count(rendered, payload) != 1 || !strings.HasSuffix(rendered, "English:\n\n"+payload) {
+	if strings.Count(rendered, payload) != 1 || !strings.HasSuffix(rendered, "English:\n\n\n"+payload) {
 		t.Fatalf("TranslateGemma payload separator or occurrence count is invalid: %q", rendered)
 	}
 }
