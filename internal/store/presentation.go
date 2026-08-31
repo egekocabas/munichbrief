@@ -459,8 +459,8 @@ func (s *Store) ListAdminTranslations(ctx context.Context, incidentIDs []int64, 
 			FROM canonical_runs canonical
 			JOIN post_processing_jobs translation ON translation.presentation_run_id=canonical.id AND translation.processor_key='translation' AND translation.status='succeeded'
 			JOIN requested_languages language ON language.language_code=translation.scope_key
-			WHERE EXISTS (SELECT 1 FROM post_processing_values output WHERE output.job_id=translation.id AND output.kind='title')
-				AND EXISTS (SELECT 1 FROM post_processing_values output WHERE output.job_id=translation.id AND output.kind='summary')
+			WHERE EXISTS (SELECT 1 FROM post_processing_values output WHERE output.job_id=translation.id AND output.kind='title' AND trim(output.value)<>'')
+				AND EXISTS (SELECT 1 FROM post_processing_values output WHERE output.job_id=translation.id AND output.kind='summary' AND trim(output.value)<>'')
 		),
 		selected_translations AS (SELECT * FROM ranked_translations WHERE translation_rank = 1),
 		ranked_attempts AS (

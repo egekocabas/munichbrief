@@ -303,7 +303,10 @@
       const parsedDocument = new DOMParser().parseFromString(await response.text(), "text/html");
       const nextRegion = parsedDocument.querySelector("[data-translation-operations]");
       if (!(nextRegion instanceof HTMLElement)) throw new Error("translation operations content missing");
+      const scrollX = window.scrollX;
+      const scrollY = window.scrollY;
       region.replaceChildren(...nextRegion.childNodes);
+      window.scrollTo(scrollX, scrollY);
       failures = 0;
       setConnection("Connected");
       schedule(interval);

@@ -944,6 +944,9 @@ func TestPipelineWorkerRequestsFocusedPostProcessing(t *testing.T) {
 	if _, err := worker.RequestPostProcessing(ctx, PostProcessingRequest{ProcessorKey: TranslationModelStep, ScopeKeys: []string{"en"}, IncidentID: &records[0].ID, Model: "translate:4b", Selection: PostProcessingSelectionUnpublished}); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("incident unpublished selection error = %v", err)
 	}
+	if _, err := worker.RequestPostProcessing(ctx, PostProcessingRequest{ProcessorKey: CategoryVerificationStep, Model: "verify:4b", Selection: PostProcessingSelectionUnpublished}); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("non-translation unpublished selection error = %v", err)
+	}
 	if _, err := worker.RequestPostProcessing(ctx, PostProcessingRequest{ProcessorKey: TranslationModelStep, ScopeKeys: []string{"en"}, Model: "missing:4b"}); !errors.Is(err, ErrModelUnavailable) {
 		t.Fatalf("unavailable focused model error = %v", err)
 	}

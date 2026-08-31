@@ -231,8 +231,8 @@ func adminTranslationMatrixSQL(statusCondition, languageValues string) string {
 			FROM post_processing_jobs job JOIN canonical_runs canonical ON canonical.run_id=job.presentation_run_id
 			JOIN requested_languages language ON language.language_code=job.scope_key
 			WHERE job.processor_key='translation' AND job.status='succeeded'
-			AND EXISTS (SELECT 1 FROM post_processing_values value WHERE value.job_id=job.id AND value.kind='title')
-			AND EXISTS (SELECT 1 FROM post_processing_values value WHERE value.job_id=job.id AND value.kind='summary')
+			AND EXISTS (SELECT 1 FROM post_processing_values value WHERE value.job_id=job.id AND value.kind='title' AND trim(value.value)<>'')
+			AND EXISTS (SELECT 1 FROM post_processing_values value WHERE value.job_id=job.id AND value.kind='summary' AND trim(value.value)<>'')
 		),
 		selected_successes AS (SELECT * FROM ranked_successes WHERE rank=1),
 		ranked_attempts AS (

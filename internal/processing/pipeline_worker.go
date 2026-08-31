@@ -78,6 +78,9 @@ func (w *PipelineWorker) RequestPostProcessing(ctx context.Context, request Post
 	if request.IncidentID != nil && selection != PostProcessingSelectionAll {
 		return 0, store.ErrNotFound
 	}
+	if selection == PostProcessingSelectionUnpublished && request.ProcessorKey != TranslationModelStep {
+		return 0, store.ErrNotFound
+	}
 	definition, found := w.postProcessors.Definition(request.ProcessorKey)
 	if !found || !definition.Manual {
 		return 0, store.ErrNotFound

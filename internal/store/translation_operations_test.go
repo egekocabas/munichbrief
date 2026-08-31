@@ -15,7 +15,7 @@ func TestAdminTranslationOperationsSeparatePublicationFromLatestAttempt(t *testi
 	}
 	t.Cleanup(func() { database.Close() })
 	now := time.Date(2026, time.August, 31, 8, 0, 0, 0, time.UTC)
-	insertPipelineDocuments(t, ctx, database, now, "never", "active", "retained", "failed", "review", "skipped", "stale")
+	insertPipelineDocuments(t, ctx, database, now, "never", "active", "retained", "failed", "review", "skipped", "partial", "stale")
 
 	type target struct {
 		id    int64
@@ -78,15 +78,16 @@ func TestAdminTranslationOperationsSeparatePublicationFromLatestAttempt(t *testi
 	insertAttempt("failed", "failed", now.Add(2*time.Minute), false)
 	insertAttempt("review", "needs_review", now.Add(2*time.Minute), false)
 	insertAttempt("skipped", "skipped", now.Add(2*time.Minute), false)
+	insertAttempt("partial", "succeeded", now.Add(2*time.Minute), false)
 
 	canonical, coverage, err := database.AdminTranslationCoverage(ctx, "fixture", []string{"en", "fr"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if canonical.Total != 7 || canonical.Published != 6 {
-		t.Fatalf("canonical coverage = %#v, want 7 total and 6 published", canonical)
+	if canonical.Total != 8 || canonical.Published != 7 {
+		t.Fatalf("canonical coverage = %#v, want 8 total and 7 published", canonical)
 	}
-	if len(coverage) != 2 || coverage[0] != (AdminLanguageCoverage{Language: "en", Eligible: 6, Published: 1, Unpublished: 5, NeverQueued: 1, Active: 1, Attention: 4, ReplacementAttention: 1}) || coverage[1] != (AdminLanguageCoverage{Language: "fr", Eligible: 6, Unpublished: 6, NeverQueued: 6}) {
+	if len(coverage) != 2 || coverage[0] != (AdminLanguageCoverage{Language: "en", Eligible: 7, Published: 1, Unpublished: 6, NeverQueued: 1, Active: 1, Attention: 4, ReplacementAttention: 1}) || coverage[1] != (AdminLanguageCoverage{Language: "fr", Eligible: 7, Unpublished: 7, NeverQueued: 7}) {
 		t.Fatalf("language coverage = %#v", coverage)
 	}
 
@@ -94,9 +95,9 @@ func TestAdminTranslationOperationsSeparatePublicationFromLatestAttempt(t *testi
 		filter AdminTranslationFilter
 		want   int
 	}{
-		{filter: AdminTranslationsAll, want: 6},
+		{filter: AdminTranslationsAll, want: 7},
 		{filter: AdminTranslationsPublished, want: 1},
-		{filter: AdminTranslationsUnpublished, want: 5},
+		{filter: AdminTranslationsUnpublished, want: 6},
 		{filter: AdminTranslationsNeverQueued, want: 1},
 		{filter: AdminTranslationsActive, want: 1},
 		{filter: AdminTranslationsAttention, want: 4},
@@ -111,7 +112,7 @@ func TestAdminTranslationOperationsSeparatePublicationFromLatestAttempt(t *testi
 		t.Fatalf("retained successful replacement state = %#v/%d/%v", items, total, err)
 	}
 	secondPage, total, err := database.ListAdminTranslationIncidents(ctx, 2, 2, "fixture", "en", AdminTranslationsAll)
-	if err != nil || total != 6 || len(secondPage) != 2 {
+	if err != nil || total != 7 || len(secondPage) != 2 {
 		t.Fatalf("paginated translation incidents = %#v/%d/%v", secondPage, total, err)
 	}
 	if _, _, err := database.ListAdminTranslationIncidents(ctx, 1, 0, "fixture", "en", "invalid"); err == nil {
@@ -123,11 +124,11 @@ func TestAdminTranslationOperationsSeparatePublicationFromLatestAttempt(t *testi
 		t.Fatal(err)
 	}
 	queued, err := database.QueueUnpublishedPostProcessingForAll(ctx, "fixture", []PostProcessingPlan{plan}, now.Add(4*time.Minute))
-	if err != nil || queued != 4 {
-		t.Fatalf("queue unpublished = %d/%v, want four", queued, err)
+	if err != nil || queued != 5 {
+		t.Fatalf("queue unpublished = %d/%v, want five", queued, err)
 	}
 	_, after, err := database.AdminTranslationCoverage(ctx, "fixture", []string{"en"})
-	if err != nil || len(after) != 1 || after[0].Published != 1 || after[0].Active != 5 || after[0].NeverQueued != 0 {
+	if err != nil || len(after) != 1 || after[0].Published != 1 || after[0].Active != 6 || after[0].NeverQueued != 0 {
 		t.Fatalf("coverage after unpublished queue = %#v/%v", after, err)
 	}
 }

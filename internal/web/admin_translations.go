@@ -72,6 +72,7 @@ func (s *Server) adminTranslationsPage(response http.ResponseWriter, request *ht
 	for _, model := range models.Models {
 		data.TranslationModels = append(data.TranslationModels, adminTranslationModelOption{Value: model, Selected: model == data.PreferredTranslationModel})
 	}
+	data.TranslationActionsAvailable = data.translationActionsAvailable()
 	displayNames := make(map[string]string, len(languages))
 	for _, language := range languages {
 		displayNames[language.Code] = language.DisplayName
@@ -339,6 +340,9 @@ func adminTranslationFilterLabel(filter store.AdminTranslationFilter) string {
 }
 
 func adminTranslationAttemptLabel(status, reason string, attempts int) string {
+	if status == "" {
+		return "Never queued"
+	}
 	label := adminPostProcessingStatus(status, reason, attempts)
 	if label == "" {
 		return ""
@@ -362,7 +366,7 @@ func (data *adminTranslationsPage) setNotice(query url.Values) {
 }
 
 func (data adminTranslationsPage) translationActionsAvailable() bool {
-	return data.ProcessingEnabled && data.Models.CatalogAvailable && len(data.TranslationModels) > 0
+	return data.ProcessingEnabled && data.TranslationModel != nil && data.TranslationModel.Manual && data.Models.CatalogAvailable && len(data.TranslationModels) > 0
 }
 
 func nonNegativeQueryIntValues(query url.Values, key string) (int, bool) {
@@ -372,20 +376,21 @@ func nonNegativeQueryIntValues(query url.Values, key string) (int, bool) {
 }
 
 type adminTranslationsPage struct {
-	Canonical                 store.AdminCanonicalCoverage
-	CanonicalBacklog          int
-	Languages                 []adminLanguageCoverageView
-	SelectedLanguage          *adminTranslationLanguagePage
-	SelectedIncident          *adminTranslationIncidentPage
-	Filters                   []adminTranslationFilterView
-	ProcessingEnabled         bool
-	Models                    processing.PipelineModelStatus
-	TranslationModel          *processing.PostProcessorModelStatus
-	PreferredTranslationModel string
-	TranslationModels         []adminTranslationModelOption
-	Notice                    string
-	NoticeIsWarning           bool
-	UpdatedAt                 time.Time
+	Canonical                   store.AdminCanonicalCoverage
+	CanonicalBacklog            int
+	Languages                   []adminLanguageCoverageView
+	SelectedLanguage            *adminTranslationLanguagePage
+	SelectedIncident            *adminTranslationIncidentPage
+	Filters                     []adminTranslationFilterView
+	ProcessingEnabled           bool
+	Models                      processing.PipelineModelStatus
+	TranslationModel            *processing.PostProcessorModelStatus
+	TranslationActionsAvailable bool
+	PreferredTranslationModel   string
+	TranslationModels           []adminTranslationModelOption
+	Notice                      string
+	NoticeIsWarning             bool
+	UpdatedAt                   time.Time
 }
 
 type adminTranslationModelOption struct {

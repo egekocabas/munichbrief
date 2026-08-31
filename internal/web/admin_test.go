@@ -718,11 +718,46 @@ func TestAdminTranslationAutoRefreshContract(t *testing.T) {
 	for _, expected := range []string{
 		`[data-translation-operations]`, `window.location.href`, `document.hidden`,
 		`confirmation.open`, `region.contains(focused)`, `requestInFlight`,
-		`Math.min(30000`, `setConnection("Stale")`, `visibilitychange`,
+		`Math.min(30000`, `setConnection("Stale")`, `visibilitychange`, `window.scrollTo(scrollX, scrollY)`,
 	} {
 		if !strings.Contains(script, expected) {
 			t.Errorf("translation auto-refresh script missing %q", expected)
 		}
+	}
+}
+
+func TestAdminTranslationActionsRequireManualProcessorAndExplicitFallbackModel(t *testing.T) {
+	processor := &processing.PostProcessorModelStatus{Key: processing.TranslationModelStep, Manual: true}
+	data := adminTranslationsPage{
+		ProcessingEnabled: true,
+		Models: processing.PipelineModelStatus{
+			CatalogAvailable: true,
+			Models:           []string{"fallback:4b"},
+		},
+		TranslationModel:  processor,
+		TranslationModels: []adminTranslationModelOption{{Value: "fallback:4b"}},
+	}
+	data.TranslationActionsAvailable = data.translationActionsAvailable()
+	if !data.TranslationActionsAvailable {
+		t.Fatal("manual translation processor with an installed model should enable actions")
+	}
+	processor.Manual = false
+	if data.translationActionsAvailable() {
+		t.Fatal("non-manual translation processor enabled actions")
+	}
+	if label := adminTranslationAttemptLabel("", "", 0); label != "Never queued" {
+		t.Fatalf("missing attempt label = %q", label)
+	}
+
+	processor.Manual = true
+	data.SelectedLanguage = &adminTranslationLanguagePage{Language: readerLanguage{Code: "en", DisplayName: "English"}, Filter: store.AdminTranslationsUnpublished, Page: 1, TotalPages: 1}
+	server := adminTestServer(t, fixtureStore(t), nil)
+	var output bytes.Buffer
+	if err := server.adminTranslationsTemplate.ExecuteTemplate(&output, "admin_translations", data); err != nil {
+		t.Fatal(err)
+	}
+	if count := strings.Count(output.String(), "Choose installed model"); count != 2 {
+		t.Fatalf("fallback model prompts = %d, want two bulk-action prompts", count)
 	}
 }
 
