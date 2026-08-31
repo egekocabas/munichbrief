@@ -8,20 +8,19 @@ import (
 	"html/template"
 	"net/http"
 	"net/url"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
 
-	"github.com/egekocabas/munichbrief/internal/processing"
+	langregistry "github.com/egekocabas/munichbrief/internal/languages"
 	"github.com/egekocabas/munichbrief/internal/store"
 )
 
 func (s *Server) scope(request *http.Request) store.PresentationScope {
-	language, _ := routeLanguage(request)
+	language, _ := s.routeLanguage(request)
 	if language == "" {
-		language = preferredLanguage(request)
+		language = s.preferredLanguage(request)
 	}
 	return store.PresentationScope{
 		Language: language, TranslationLanguage: language,
@@ -34,7 +33,7 @@ func (s *Server) redirectRoot(response http.ResponseWriter, request *http.Reques
 		http.NotFound(response, request)
 		return
 	}
-	language := preferredLanguage(request)
+	language := s.preferredLanguage(request)
 	target := &url.URL{Path: "/" + language, RawQuery: request.URL.RawQuery}
 	canonicalTarget := "/" + language
 	if page, err := requestedPage(request); err == nil {
@@ -45,7 +44,7 @@ func (s *Server) redirectRoot(response http.ResponseWriter, request *http.Reques
 }
 
 func (s *Server) redirectLegacyAbout(response http.ResponseWriter, request *http.Request) {
-	language := preferredLanguage(request)
+	language := s.preferredLanguage(request)
 	target := &url.URL{Path: "/" + language + "/about", RawQuery: request.URL.RawQuery}
 	s.prepareRedirectDiscovery(response, request, "/"+language+"/about")
 	http.Redirect(response, request, target.RequestURI(), http.StatusFound)
@@ -57,7 +56,7 @@ func (s *Server) redirectLegacyIncident(response http.ResponseWriter, request *h
 		http.NotFound(response, request)
 		return
 	}
-	language := preferredLanguage(request)
+	language := s.preferredLanguage(request)
 	canonicalTarget := fmt.Sprintf("/%s/incidents/%d", language, id)
 	target := &url.URL{Path: canonicalTarget, RawQuery: request.URL.RawQuery}
 	s.prepareRedirectDiscovery(response, request, canonicalTarget)
@@ -66,9 +65,9 @@ func (s *Server) redirectLegacyIncident(response http.ResponseWriter, request *h
 
 func (s *Server) base(request *http.Request, language, canonicalRelativeURL string) basePage {
 	canonicalOrigin := s.canonicalOrigin(request)
-	languageDefinition, _ := readerLanguageByCode(language)
+	languageDefinition, _ := s.languageByCode(language)
 	page := basePage{
-		Lang: language, HomeURL: "/" + language, AboutURL: "/" + language + "/about",
+		Lang: language, LanguageTag: languageDefinition.Tag.String(), CanonicalLanguageCode: s.canonicalLanguage().Code, HomeURL: "/" + language, AboutURL: "/" + language + "/about",
 		CurrentURL:      request.URL.RequestURI(),
 		Description:     s.localization.Text(language, "SiteDescription"),
 		CanonicalOrigin: canonicalOrigin, CanonicalURL: canonicalOrigin + canonicalRelativeURL,
@@ -100,29 +99,31 @@ func (s *Server) base(request *http.Request, language, canonicalRelativeURL stri
 	if strings.HasPrefix(page.SocialImageURL, "https://") {
 		page.SocialImageSecureURL = page.SocialImageURL
 	}
-	for _, definition := range readerLanguages {
+	page.RegisteredLanguageTags = make([]string, 0, len(s.languages))
+	for _, definition := range s.languages {
+		page.RegisteredLanguageTags = append(page.RegisteredLanguageTags, definition.Tag.String())
 		relativeURL := localizedRelativeURL(canonicalRelativeURL, language, definition.Code)
-		page.LanguageAlternates = append(page.LanguageAlternates, languageLink{Code: definition.Code, URL: canonicalOrigin + relativeURL})
+		page.LanguageAlternates = append(page.LanguageAlternates, languageLink{Code: definition.Code, Tag: definition.Tag.String(), URL: canonicalOrigin + relativeURL})
 		if definition.Code != language {
 			page.OpenGraphLocaleAlternates = append(page.OpenGraphLocaleAlternates, definition.OpenGraphLocale)
 		}
 		if definition.Code != language {
 			page.LanguageSwitches = append(page.LanguageSwitches, languageLink{
-				Code: definition.Code, URL: alternateLanguageURL(request.URL, language, definition.Code),
+				Code: definition.Code, Tag: definition.Tag.String(), URL: alternateLanguageURL(request.URL, language, definition.Code),
 				Label: s.localization.Text(language, definition.SwitchMessageID),
 			})
 		}
 	}
-	fallback := canonicalReaderLanguage()
+	fallback := s.canonicalLanguage()
 	fallbackURL := localizedRelativeURL(canonicalRelativeURL, language, fallback.Code)
-	page.LanguageAlternates = append(page.LanguageAlternates, languageLink{Code: "x-default", URL: canonicalOrigin + fallbackURL})
+	page.LanguageAlternates = append(page.LanguageAlternates, languageLink{Code: "x-default", Tag: "x-default", URL: canonicalOrigin + fallbackURL})
 	page.StructuredData = structuredPageData(page, "CollectionPage")
 	return page
 }
 
 func (s *Server) prepareHTML(response http.ResponseWriter, request *http.Request, page basePage) {
 	response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	response.Header().Set("Content-Language", page.Lang)
+	response.Header().Set("Content-Language", page.LanguageTag)
 	addVary(response.Header(), "Cookie", "Accept-Language")
 	response.Header().Set("Cache-Control", "private, no-store")
 	response.Header().Set("X-Content-Type-Options", "nosniff")
@@ -138,7 +139,7 @@ func (s *Server) prepareHTML(response http.ResponseWriter, request *http.Request
 }
 
 func (s *Server) timeline(response http.ResponseWriter, request *http.Request) {
-	language, ok := routeLanguage(request)
+	language, ok := s.routeLanguage(request)
 	if !ok {
 		http.NotFound(response, request)
 		return
@@ -186,7 +187,7 @@ func (s *Server) timeline(response http.ResponseWriter, request *http.Request) {
 }
 
 func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
-	language, ok := routeLanguage(request)
+	language, ok := s.routeLanguage(request)
 	if !ok {
 		http.NotFound(response, request)
 		return
@@ -218,7 +219,7 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 	}
 	canonicalRelativeURL := fmt.Sprintf("/%s/incidents/%d", language, id)
 	base := s.base(request, language, canonicalRelativeURL)
-	for _, definition := range translatedReaderLanguages() {
+	for _, definition := range s.translatedLanguages() {
 		if definition.Code == language {
 			continue
 		}
@@ -226,7 +227,7 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 		translatedScope.Language = definition.Code
 		translatedScope.PublicOnly = true
 		if _, translatedErr := s.store.GetPresentationIncident(request.Context(), id, translatedScope); errors.Is(translatedErr, store.ErrNotFound) {
-			base.removeLanguage(definition.Code)
+			base.removeLanguage(definition)
 		} else if translatedErr != nil {
 			s.internalError(response, request, "check incident translation", translatedErr)
 			return
@@ -258,6 +259,9 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 	if view.Record.AICategoryVerificationGeneratedAt != nil && view.Record.AICategoryVerificationGeneratedAt.After(modifiedAt) {
 		modifiedAt = *view.Record.AICategoryVerificationGeneratedAt
 	}
+	if view.Translated && view.Record.AITranslationGeneratedAt != nil && view.Record.AITranslationGeneratedAt.After(modifiedAt) {
+		modifiedAt = *view.Record.AITranslationGeneratedAt
+	}
 	base.ModifiedTime = modifiedAt.Format(time.RFC3339)
 	base.StructuredData = structuredArticleData(base, view)
 	data := detailPage{basePage: base, Incident: view, BackURL: timelineURL(base.Lang, page), ShowOriginalSection: base.Review && view.Record.HasAI}
@@ -273,7 +277,7 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 }
 
 func (s *Server) about(response http.ResponseWriter, request *http.Request) {
-	language, ok := routeLanguage(request)
+	language, ok := s.routeLanguage(request)
 	if !ok {
 		http.NotFound(response, request)
 		return
@@ -309,17 +313,17 @@ func (s *Server) setLanguagePreference(response http.ResponseWriter, language st
 }
 
 func (s *Server) incidentForLanguage(record store.IncidentRecord, language string) incidentView {
-	languageDefinition, registered := readerLanguageByCode(language)
+	languageDefinition, registered := s.languageByCode(language)
 	if !registered {
-		languageDefinition = canonicalReaderLanguage()
+		languageDefinition = s.canonicalLanguage()
 	}
 	state := record.ProcessingState()
 	view := incidentView{
-		Record: record, ContentLanguage: "de",
+		Record: record, ContentLanguage: s.canonicalLanguage().Tag.String(),
 		ProcessingState: strings.ReplaceAll(state, "_", "-"), ProcessingLabel: s.processingLabel(state, language),
 	}
 	if record.HasAI {
-		view.CategoryLabel = processing.CategoryLabel(record.AICategory, language)
+		view.CategoryLabel = s.metadataCodeLabel(language, "Category", record.AICategory)
 		view.AreaName = record.AIAreaName
 		view.ReportKindLabel = s.metadataCodeLabel(language, "ReportKind", record.AIReportKind)
 		view.EventLabel = s.localization.Text(language, "TimeStatedInReport")
@@ -343,8 +347,9 @@ func (s *Server) incidentForLanguage(record store.IncidentRecord, language strin
 			view.ShowOriginalMessage = record.HasIncident
 			return view
 		}
-		view.ContentLanguage = language
+		view.ContentLanguage = languageDefinition.Tag.String()
 		if !languageDefinition.Canonical {
+			view.Translated = true
 			view.Title, view.Summary = record.AITranslatedTitle, record.AITranslatedSummary
 		} else {
 			view.Title, view.Summary = record.AITitleDE, record.AISummaryDE
@@ -384,6 +389,7 @@ func (s *Server) metadataCodeLabel(language, group, code string) string {
 		return ""
 	}
 	keys := map[string]map[string]string{
+		"Category":       {"traffic": "CategoryTraffic", "theft_burglary": "CategoryTheftBurglary", "robbery_extortion": "CategoryRobberyExtortion", "violence": "CategoryViolence", "sexual_offense": "CategorySexualOffense", "fraud_cyber": "CategoryFraudCyber", "drugs": "CategoryDrugs", "fire_hazard": "CategoryFireHazard", "property_damage": "CategoryPropertyDamage", "missing_wanted": "CategoryMissingWanted", "police_operation": "CategoryPoliceOperation", "other": "CategoryOther"},
 		"ReportKind":     {"incident": "ReportKindIncident", "follow_up": "ReportKindFollowUp", "missing_person": "ReportKindMissingPerson", "wanted_person": "ReportKindWantedPerson", "public_warning": "ReportKindPublicWarning", "other": "ReportKindOther"},
 		"AssistanceType": {"witness_observations": "AssistanceWitnessObservations", "identify_person": "AssistanceIdentifyPerson", "locate_person": "AssistanceLocatePerson", "photo_video_material": "AssistancePhotoVideo", "vehicle_information": "AssistanceVehicleInformation", "property_information": "AssistancePropertyInformation", "other_information": "AssistanceOtherInformation"},
 		"DayPart":        {"morning": "DayPartMorning", "midday": "DayPartMidday", "afternoon": "DayPartAfternoon", "evening": "DayPartEvening", "night": "DayPartNight"},
@@ -403,7 +409,7 @@ func (s *Server) formatIncidentTime(record store.IncidentRecord, language string
 	if err != nil {
 		return ""
 	}
-	dateText := formatIncidentDate(language, startDate)
+	dateText := s.formatIncidentDate(language, startDate)
 	start := dateText
 	if part := s.metadataCodeLabel(language, "DayPart", record.AIEventDayPart); part != "" {
 		start += ", " + part
@@ -413,11 +419,11 @@ func (s *Server) formatIncidentTime(record store.IncidentRecord, language string
 	return start
 }
 
-func formatIncidentDate(language string, value time.Time) string {
-	if definition, ok := readerLanguageByCode(language); ok {
+func (s *Server) formatIncidentDate(language string, value time.Time) string {
+	if definition, ok := s.languageByCode(language); ok {
 		return definition.FormatDate(value)
 	}
-	return canonicalReaderLanguage().FormatDate(value)
+	return s.canonicalLanguage().FormatDate(value)
 }
 
 func (s *Server) processingLabel(state, language string) string {
@@ -446,7 +452,7 @@ func (s *Server) groupByDay(incidents []store.IncidentRecord, language string) [
 		localTime := incident.PublishedAt.In(s.location)
 		date := localTime.Format("2006-01-02")
 		if date != currentDate {
-			groups = append(groups, dayGroup{ID: date, Label: formatDay(language, localTime)})
+			groups = append(groups, dayGroup{ID: date, Label: formatDayFor(s.languages, language, localTime)})
 			currentDate = date
 		}
 		groups[len(groups)-1].Incidents = append(groups[len(groups)-1].Incidents, s.incidentForLanguage(incident, language))
@@ -456,6 +462,9 @@ func (s *Server) groupByDay(incidents []store.IncidentRecord, language string) [
 
 type basePage struct {
 	Lang                                string
+	LanguageTag                         string
+	CanonicalLanguageCode               string
+	RegisteredLanguageTags              []string
 	HomeURL                             string
 	AboutURL                            string
 	CurrentURL                          string
@@ -498,7 +507,7 @@ func structuredPageData(page basePage, pageType string) template.JS {
 	websiteID := page.CanonicalOrigin + "/#website"
 	webPage := map[string]any{
 		"@type": pageType, "@id": page.CanonicalURL + "#webpage", "url": page.CanonicalURL,
-		"name": page.SocialTitle, "description": page.Description, "inLanguage": page.Lang,
+		"name": page.SocialTitle, "description": page.Description, "inLanguage": page.LanguageTag,
 		"isPartOf": map[string]any{"@id": websiteID},
 	}
 	if page.AIGeneratedState != "false" {
@@ -509,7 +518,7 @@ func structuredPageData(page basePage, pageType string) template.JS {
 		"@graph": []any{
 			map[string]any{
 				"@type": "WebSite", "@id": websiteID, "url": page.CanonicalOrigin,
-				"name": "MunichBrief", "inLanguage": []string{"de", "en"},
+				"name": "MunichBrief", "inLanguage": page.RegisteredLanguageTags,
 			},
 			webPage,
 		},
@@ -522,7 +531,7 @@ func structuredArticleData(page basePage, incident incidentView) template.JS {
 	article := map[string]any{
 		"@type": "Article", "@id": page.CanonicalURL + "#article", "url": page.CanonicalURL,
 		"headline": incident.Title, "description": page.Description, "image": page.SocialImageURL,
-		"datePublished": page.PublishedTime, "dateModified": page.ModifiedTime, "inLanguage": page.Lang,
+		"datePublished": page.PublishedTime, "dateModified": page.ModifiedTime, "inLanguage": page.LanguageTag,
 		"mainEntityOfPage": page.CanonicalURL, "isBasedOn": incident.Record.SourceURL,
 		"author": map[string]any{"@id": organizationID}, "publisher": map[string]any{"@id": organizationID},
 		"isPartOf": map[string]any{"@id": websiteID},
@@ -535,7 +544,7 @@ func structuredArticleData(page basePage, incident incidentView) template.JS {
 		"@graph": []any{
 			map[string]any{
 				"@type": "WebSite", "@id": websiteID, "url": page.CanonicalOrigin,
-				"name": "MunichBrief", "inLanguage": []string{"de", "en"},
+				"name": "MunichBrief", "inLanguage": page.RegisteredLanguageTags,
 			},
 			map[string]any{
 				"@type": "Organization", "@id": organizationID, "name": "MunichBrief",
@@ -558,13 +567,15 @@ func structuredJSON(value any) template.JS {
 
 type languageLink struct {
 	Code  string
+	Tag   string
 	URL   string
 	Label string
 }
 
-func (p *basePage) removeLanguage(code string) {
-	p.LanguageAlternates = languageLinksWithout(p.LanguageAlternates, code)
-	p.LanguageSwitches = languageLinksWithout(p.LanguageSwitches, code)
+func (p *basePage) removeLanguage(definition readerLanguage) {
+	p.LanguageAlternates = languageLinksWithout(p.LanguageAlternates, definition.Code)
+	p.LanguageSwitches = languageLinksWithout(p.LanguageSwitches, definition.Code)
+	p.OpenGraphLocaleAlternates = stringsWithout(p.OpenGraphLocaleAlternates, definition.OpenGraphLocale)
 }
 
 func languageLinksWithout(links []languageLink, code string) []languageLink {
@@ -577,11 +588,22 @@ func languageLinksWithout(links []languageLink, code string) []languageLink {
 	return filtered
 }
 
+func stringsWithout(values []string, excluded string) []string {
+	filtered := values[:0]
+	for _, value := range values {
+		if value != excluded {
+			filtered = append(filtered, value)
+		}
+	}
+	return filtered
+}
+
 type incidentView struct {
 	Record                    store.IncidentRecord
 	Title                     string
 	Summary                   string
 	ContentLanguage           string
+	Translated                bool
 	ProcessingState           string
 	ProcessingLabel           string
 	CategoryLabel             string
@@ -635,48 +657,18 @@ type detailPage struct {
 
 type aboutPage struct{ basePage }
 
-func preferredLanguage(request *http.Request) string {
+func (s *Server) preferredLanguage(request *http.Request) string {
 	if cookie, err := request.Cookie("munichbrief_language"); err == nil {
-		if _, registered := readerLanguageByCode(cookie.Value); registered {
+		if _, registered := s.languageByCode(cookie.Value); registered {
 			return cookie.Value
 		}
 	}
-	type preference struct {
-		language string
-		quality  float64
-		order    int
-	}
-	preferences := make([]preference, 0)
-	for order, part := range strings.Split(request.Header.Get("Accept-Language"), ",") {
-		pieces := strings.Split(strings.TrimSpace(part), ";")
-		language := strings.ToLower(strings.TrimSpace(pieces[0]))
-		if index := strings.IndexByte(language, '-'); index >= 0 {
-			language = language[:index]
-		}
-		if _, registered := readerLanguageByCode(language); !registered {
-			continue
-		}
-		quality := 1.0
-		for _, parameter := range pieces[1:] {
-			parameter = strings.TrimSpace(parameter)
-			if strings.HasPrefix(parameter, "q=") {
-				if parsed, err := strconv.ParseFloat(strings.TrimPrefix(parameter, "q="), 64); err == nil {
-					quality = parsed
-				}
-			}
-		}
-		preferences = append(preferences, preference{language: language, quality: quality, order: order})
-	}
-	sort.SliceStable(preferences, func(i, j int) bool { return preferences[i].quality > preferences[j].quality })
-	if len(preferences) > 0 && preferences[0].quality > 0 {
-		return preferences[0].language
-	}
-	return canonicalReaderLanguage().Code
+	return langregistry.PreferredCode(s.languages, request.Header.Get("Accept-Language"))
 }
 
-func routeLanguage(request *http.Request) (string, bool) {
+func (s *Server) routeLanguage(request *http.Request) (string, bool) {
 	language := strings.SplitN(strings.TrimPrefix(request.URL.Path, "/"), "/", 2)[0]
-	_, registered := readerLanguageByCode(language)
+	_, registered := s.languageByCode(language)
 	return language, registered
 }
 
@@ -694,23 +686,23 @@ func alternateLanguageURL(value *url.URL, current, alternate string) string {
 	return (&url.URL{Path: path, RawQuery: value.RawQuery}).RequestURI()
 }
 
-func formatDay(language string, value time.Time) string {
-	if definition, ok := readerLanguageByCode(language); ok {
+func formatDayFor(definitions []readerLanguage, language string, value time.Time) string {
+	if definition, ok := langregistry.ByCode(definitions, language); ok {
 		return definition.FormatDay(value)
 	}
-	return canonicalReaderLanguage().FormatDay(value)
+	return langregistry.Canonical(definitions).FormatDay(value)
 }
 
-func formatDateTime(language string, value time.Time) string {
-	if definition, ok := readerLanguageByCode(language); ok {
+func formatDateTimeFor(definitions []readerLanguage, language string, value time.Time) string {
+	if definition, ok := langregistry.ByCode(definitions, language); ok {
 		return definition.FormatDateTime(value)
 	}
-	return canonicalReaderLanguage().FormatDateTime(value)
+	return langregistry.Canonical(definitions).FormatDateTime(value)
 }
 
-var germanMonths = map[time.Month]string{time.January: "Januar", time.February: "Februar", time.March: "März", time.April: "April", time.May: "Mai", time.June: "Juni", time.July: "Juli", time.August: "August", time.September: "September", time.October: "Oktober", time.November: "November", time.December: "Dezember"}
-
-var germanWeekdays = map[time.Weekday]string{time.Sunday: "Sonntag", time.Monday: "Montag", time.Tuesday: "Dienstag", time.Wednesday: "Mittwoch", time.Thursday: "Donnerstag", time.Friday: "Freitag", time.Saturday: "Samstag"}
+func (s *Server) formatDateTime(language string, value time.Time) string {
+	return formatDateTimeFor(s.languages, language, value)
+}
 
 func requestedPage(request *http.Request) (int, error) {
 	return requestedPageParameter(request, "page")

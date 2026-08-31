@@ -62,6 +62,8 @@ git diff --exit-code -- internal/web/static
 
 See [the development guide](docs/development.md) for live-source, Ollama, and
 complete validation commands.
+See [Adding a reader language](docs/adding-a-language.md) for the registry,
+translation, discovery, and deployment workflow.
 
 ## How it works
 

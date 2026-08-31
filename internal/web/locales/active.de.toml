@@ -191,6 +191,42 @@ other = "Prompt-Version"
 [Category]
 other = "Kategorie"
 
+[CategoryTraffic]
+other = "Verkehr"
+
+[CategoryTheftBurglary]
+other = "Diebstahl und Einbruch"
+
+[CategoryRobberyExtortion]
+other = "Raub und Erpressung"
+
+[CategoryViolence]
+other = "Gewalt"
+
+[CategorySexualOffense]
+other = "Sexualdelikte"
+
+[CategoryFraudCyber]
+other = "Betrug und Cyberkriminalität"
+
+[CategoryDrugs]
+other = "Rauschgift"
+
+[CategoryFireHazard]
+other = "Brand und Gefahrenlage"
+
+[CategoryPropertyDamage]
+other = "Sachbeschädigung"
+
+[CategoryMissingWanted]
+other = "Vermisstensuche und Fahndung"
+
+[CategoryPoliceOperation]
+other = "Polizeieinsatz"
+
+[CategoryOther]
+other = "Sonstiges"
+
 [Area]
 other = "Gebiet"
 

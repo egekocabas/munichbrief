@@ -19,6 +19,10 @@ The default fixture mode is offline and is the expected mode for routine
 development. Live source and Ollama checks are explicitly opt-in; see
 [the development guide](docs/development.md).
 
+Reader-language contributions must follow the coordinated application,
+translation-quality, SEO, and ingress process in
+[Adding a reader language](docs/adding-a-language.md).
+
 ## Proposing a change
 
 1. Open an issue for changes that alter behavior, persistence, source access,

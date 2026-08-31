@@ -4,6 +4,10 @@ The chart installs one security-hardened MunichBrief replica with persistent
 SQLite storage. Its defaults are intentionally offline and private: fixture
 source, review presentation, AI disabled, and no ingress.
 
+Public ingress renders one explicit Prefix path for every entry in
+`ingress.public.languageCodes`. Keep that list synchronized with the compiled
+application registry; see [Adding a reader language](../../docs/adding-a-language.md).
+
 ```bash
 helm install munichbrief ./charts/munichbrief \
   --namespace munichbrief \
@@ -38,6 +42,7 @@ Public ingress requires:
 - `application.presentationMode=public`;
 - every public ingress hostname in `application.publicHosts`;
 - an HTTPS `application.canonicalOrigin` using one of those hosts; and
+- `ingress.public.languageCodes` matching the compiled reader registry; and
 - TLS and external ingress configuration appropriate to the cluster.
 
 Public mode fails closed. With AI disabled or no current privacy-safe

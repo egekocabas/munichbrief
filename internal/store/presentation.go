@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	langregistry "github.com/egekocabas/munichbrief/internal/languages"
 )
 
 // PresentationScope pins queries to the expected prompt/model provenance and
@@ -188,13 +190,13 @@ var scopedAIColumns = `
 var publicReadyCondition = `EXISTS (
 		SELECT 1 FROM presentation_runs r
 		WHERE r.id = ` + latestCanonicalPresentationRun + `
-			AND (@language = 'de' OR ` + latestCompletePublicTranslationJob + ` IS NOT NULL)
+			AND (@language = @canonical_language OR ` + latestCompletePublicTranslationJob + ` IS NOT NULL)
 )`
 
 func presentationArgs(scope PresentationScope) []any {
 	language := scope.Language
 	if language == "" {
-		language = "de"
+		language = langregistry.Canonical(langregistry.Registered()).Code
 	}
 	translationLanguage := language
 	if scope.TranslationLanguage != "" {
@@ -203,6 +205,7 @@ func presentationArgs(scope PresentationScope) []any {
 	return []any{
 		sql.Named("language", language),
 		sql.Named("translation_language", translationLanguage),
+		sql.Named("canonical_language", langregistry.Canonical(langregistry.Registered()).Code),
 	}
 }
 
@@ -313,7 +316,7 @@ func (s *Store) ListPublicIncidentLinks(ctx context.Context, sourceMode string, 
 	scope.PublicOnly = true
 	query := `
 		SELECT i.id,
-			CASE WHEN @language = 'de' THEN
+			CASE WHEN @language = @canonical_language THEN
 				COALESCE(NULLIF(MAX(
 					COALESCE((SELECT r.completed_at FROM presentation_runs r WHERE r.id = ` + latestPresentationRun + `),''),
 					COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompletePublicAssistanceVerificationJob + `),''),

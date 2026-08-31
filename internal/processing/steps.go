@@ -12,6 +12,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	langregistry "github.com/egekocabas/munichbrief/internal/languages"
 	"github.com/egekocabas/munichbrief/internal/store"
 )
 
@@ -111,13 +112,13 @@ type StepGeneratorProvider interface {
 	StepGenerator(model string) (StepGenerator, error)
 }
 
-var categoryLabels = map[string][2]string{
-	"traffic": {"Verkehr", "Traffic"}, "theft_burglary": {"Diebstahl und Einbruch", "Theft and burglary"},
-	"robbery_extortion": {"Raub und Erpressung", "Robbery and extortion"}, "violence": {"Gewalt", "Violence"},
-	"sexual_offense": {"Sexualdelikte", "Sexual offences"}, "fraud_cyber": {"Betrug und Cyberkriminalität", "Fraud and cybercrime"},
-	"drugs": {"Rauschgift", "Drugs"}, "fire_hazard": {"Brand und Gefahrenlage", "Fire and hazards"},
-	"property_damage": {"Sachbeschädigung", "Property damage"}, "missing_wanted": {"Vermisstensuche und Fahndung", "Missing and wanted persons"},
-	"police_operation": {"Polizeieinsatz", "Police operation"}, "other": {"Sonstiges", "Other"},
+var canonicalCategoryLabels = map[string]string{
+	"traffic": "Verkehr", "theft_burglary": "Diebstahl und Einbruch",
+	"robbery_extortion": "Raub und Erpressung", "violence": "Gewalt",
+	"sexual_offense": "Sexualdelikte", "fraud_cyber": "Betrug und Cyberkriminalität",
+	"drugs": "Rauschgift", "fire_hazard": "Brand und Gefahrenlage",
+	"property_damage": "Sachbeschädigung", "missing_wanted": "Vermisstensuche und Fahndung",
+	"police_operation": "Polizeieinsatz", "other": "Sonstiges",
 }
 
 var areaTypes = map[string]bool{"neighbourhood": true, "district": true, "municipality": true, "broad_area": true}
@@ -152,11 +153,6 @@ var germanPresentationSchema = json.RawMessage(`{
   },"required":["title_de","summary_de","privacy_status","privacy_flags"],"additionalProperties":false
 }`)
 
-var englishTranslationSchema = json.RawMessage(`{
-  "type":"object","properties":{"title_en":{"type":"string","minLength":1,"maxLength":90},"summary_en":{"type":"string","minLength":1,"maxLength":600}},
-  "required":["title_en","summary_en"],"additionalProperties":false
-}`)
-
 var categoryVerificationSchema = json.RawMessage(`{
   "type":"object","properties":{
     "is_correct":{"type":"boolean"},
@@ -188,14 +184,82 @@ var registeredSteps = []StepDefinition{
 		Generator: generateGermanPresentationInput, Validator: validateGermanPresentation, OutputValues: germanPresentationValues},
 }
 
-var registeredTranslations = []TranslationDefinition{{
-	Language: EnglishLanguage, DisplayName: "English", PromptVersion: EnglishTranslationPromptVersion,
-	Step: StepDefinition{Key: EnglishTranslationStep, DisplayName: "English translation", PromptVersion: EnglishTranslationPromptVersion,
-		InputKinds: []string{"title_de", "summary_de"}, OutputKinds: []string{"title", "summary"},
-		SystemPrompt: mustPromptByVersion(EnglishTranslationPromptVersion).SystemPrompt, Schema: englishTranslationSchema,
-		Generator: translationInputGenerator(EnglishTranslationPromptVersion), OutputDecoder: translationOutputDecoder("title_en", "summary_en"),
-		Validator: func(_ StepInput, output *StepOutput) error { return validateTranslation(output) }, OutputValues: postProcessingOutputValues},
-}}
+var registeredTranslations = mustRegisteredTranslations()
+
+func mustRegisteredTranslations() []TranslationDefinition {
+	definitions := langregistry.Registered()
+	if err := langregistry.Validate(definitions); err != nil {
+		panic(err)
+	}
+	translations := make([]TranslationDefinition, 0, len(definitions)-1)
+	for _, target := range langregistry.Translated(definitions) {
+		var active []PromptDefinition
+		for _, prompt := range promptRegistry {
+			if prompt.TranslationLanguage == target.Code && prompt.Status == PromptActive {
+				active = append(active, prompt)
+			}
+		}
+		if len(active) != 1 {
+			panic(fmt.Sprintf("translation language %s requires exactly one active prompt, got %d", target.Code, len(active)))
+		}
+		translation, err := newTranslationDefinition(target, active[0])
+		if err != nil {
+			panic(err)
+		}
+		translations = append(translations, translation)
+	}
+	for _, prompt := range promptRegistry {
+		if prompt.TranslationLanguage == "" {
+			continue
+		}
+		target, found := langregistry.ByCode(definitions, prompt.TranslationLanguage)
+		if !found || target.Canonical {
+			panic("translation prompt has no translated language registration: " + prompt.TranslationLanguage)
+		}
+	}
+	return translations
+}
+
+func newTranslationDefinition(target langregistry.Definition, prompt PromptDefinition) (TranslationDefinition, error) {
+	if target.Canonical || prompt.TranslationLanguage != target.Code || prompt.StepKey != TranslationStepKey(target.Code) {
+		return TranslationDefinition{}, fmt.Errorf("translation language %s has inconsistent prompt metadata", target.Code)
+	}
+	if prompt.Status != PromptActive || strings.TrimSpace(prompt.Version) == "" || strings.TrimSpace(prompt.SystemPrompt) == "" || !validTranslationPromptTemplate(prompt.UserPromptTemplate) {
+		return TranslationDefinition{}, fmt.Errorf("translation language %s has incomplete active prompt content", target.Code)
+	}
+	fieldCode := strings.ReplaceAll(target.Code, "-", "_")
+	titleField, summaryField := "title_"+fieldCode, "summary_"+fieldCode
+	schema, err := json.Marshal(map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			titleField:   map[string]any{"type": "string", "minLength": 1, "maxLength": 90},
+			summaryField: map[string]any{"type": "string", "minLength": 1, "maxLength": 600},
+		},
+		"required": []string{titleField, summaryField}, "additionalProperties": false,
+	})
+	if err != nil {
+		return TranslationDefinition{}, fmt.Errorf("build %s translation schema: %w", target.Code, err)
+	}
+	return TranslationDefinition{
+		Language: target.Code, DisplayName: target.DisplayName, PromptVersion: prompt.Version,
+		Step: StepDefinition{Key: prompt.StepKey, DisplayName: target.DisplayName + " translation", PromptVersion: prompt.Version,
+			InputKinds: []string{"title_de", "summary_de"}, OutputKinds: []string{"title", "summary"},
+			SystemPrompt: prompt.SystemPrompt, Schema: schema,
+			Generator: translationInputGenerator(prompt.Version), OutputDecoder: translationOutputDecoder(titleField, summaryField),
+			Validator: func(_ StepInput, output *StepOutput) error { return validateTranslation(output) }, OutputValues: postProcessingOutputValues},
+	}, nil
+}
+
+func validTranslationPromptTemplate(value string) bool {
+	if strings.Count(value, "%s") != 1 {
+		return false
+	}
+	const payload = "__MUNICHBRIEF_TRANSLATION_PAYLOAD__"
+	rendered := fmt.Sprintf(value, payload)
+	return strings.Count(rendered, payload) == 1 && !strings.Contains(rendered, "%!")
+}
+
+func TranslationStepKey(languageCode string) string { return TranslationModelStep + "/" + languageCode }
 
 var categoryVerificationDefinition = StepDefinition{
 	Key: CategoryVerificationStep, DisplayName: "Category verification", PromptVersion: CategoryVerificationPromptVersion,
@@ -479,12 +543,12 @@ func publicAssistanceVerificationOutputDecoder(content string) (StepOutput, erro
 }
 
 func categoryVerificationInputGenerator(input StepInput) (StepInput, string, error) {
-	category, found := categoryLabels[input.Value("category")]
+	category, found := canonicalCategoryLabels[input.Value("category")]
 	if !found {
 		return StepInput{}, "", errorOf(ErrorOutput, "invalid category verification input category")
 	}
 	requestInput := StepInput{Values: map[string]string{
-		"title_de": input.Value("title_de"), "summary_de": input.Value("summary_de"), "category": category[0],
+		"title_de": input.Value("title_de"), "summary_de": input.Value("summary_de"), "category": category,
 	}}
 	encoded, err := json.Marshal(struct {
 		TitleDE          string `json:"title_de"`
@@ -569,8 +633,8 @@ func requireOutputKinds(values []store.PipelineValue, expected []string) error {
 
 func categoryCodeForGermanLabel(label string) (string, bool) {
 	label = strings.TrimSpace(label)
-	for code, labels := range categoryLabels {
-		if labels[0] == label {
+	for code, canonicalLabel := range canonicalCategoryLabels {
+		if canonicalLabel == label {
 			return code, true
 		}
 	}
@@ -591,7 +655,7 @@ func decodeStrictJSON(content string, destination any) error {
 }
 
 func validateIncidentMetadata(input StepInput, output *StepOutput) error {
-	if _, ok := categoryLabels[output.Category]; !ok {
+	if _, ok := canonicalCategoryLabels[output.Category]; !ok {
 		return errorOf(ErrorOutput, "invalid incident category")
 	}
 	if (output.AreaName == nil) != (output.AreaType == nil) {
@@ -758,7 +822,7 @@ func validateCategoryVerification(input StepInput, output *StepOutput) error {
 	if !ok {
 		return errorOf(ErrorOutput, "invalid input category")
 	}
-	if _, ok := categoryLabels[corrected]; !ok {
+	if _, ok := canonicalCategoryLabels[corrected]; !ok {
 		return errorOf(ErrorOutput, "invalid corrected category")
 	}
 	if isCorrect != (corrected == original) {
@@ -847,17 +911,6 @@ func germanPresentationValues(output StepOutput) ([]store.PipelineValue, error) 
 		return nil, fmt.Errorf("encode privacy flags: %w", err)
 	}
 	return []store.PipelineValue{{Kind: "title_de", Value: output.TitleDE}, {Kind: "summary_de", Value: output.SummaryDE}, {Kind: "privacy_status", Value: output.PrivacyStatus}, {Kind: "privacy_flags", Value: string(flags)}}, nil
-}
-
-func CategoryLabel(code, language string) string {
-	labels, ok := categoryLabels[code]
-	if !ok {
-		return code
-	}
-	if language == "de" {
-		return labels[0]
-	}
-	return labels[1]
 }
 
 func germanWeekday(day time.Weekday) string {

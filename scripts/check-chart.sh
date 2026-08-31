@@ -21,6 +21,8 @@ required_patterns=(
   'path: /robots.txt'
   'path: /sitemap.xml'
   'path: /social'
+  'path: /de'
+  'path: /en'
   'kind: NetworkPolicy'
   'MUNICHBRIEF_PRESENTATION_MODE: "public"'
   'MUNICHBRIEF_PUBLIC_HOSTS: "brief.example.com"'

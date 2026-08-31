@@ -36,16 +36,16 @@ func (s *Server) acknowledgeAIDisclosure(response http.ResponseWriter, request *
 		response.WriteHeader(http.StatusOK)
 		return
 	}
-	http.Redirect(response, request, safeDisclosureReturn(request.FormValue("return_to"), preferredLanguage(request)), http.StatusSeeOther)
+	http.Redirect(response, request, s.safeDisclosureReturn(request.FormValue("return_to"), s.preferredLanguage(request)), http.StatusSeeOther)
 }
 
-func safeDisclosureReturn(raw, fallbackLanguage string) string {
+func (s *Server) safeDisclosureReturn(raw, fallbackLanguage string) string {
 	fallback := "/" + fallbackLanguage
 	parsed, err := url.ParseRequestURI(raw)
 	if err != nil || parsed.IsAbs() || parsed.Host != "" || path.Clean(parsed.Path) != parsed.Path {
 		return fallback
 	}
-	for _, language := range readerLanguages {
+	for _, language := range s.languages {
 		root := "/" + language.Code
 		if parsed.Path == root || parsed.Path == root+"/about" || strings.HasPrefix(parsed.Path, root+"/incidents/") {
 			return parsed.RequestURI()

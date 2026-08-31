@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/egekocabas/munichbrief/internal/domain"
+	langregistry "github.com/egekocabas/munichbrief/internal/languages"
 	"github.com/egekocabas/munichbrief/internal/processing"
 	"github.com/egekocabas/munichbrief/internal/store"
 )
@@ -703,10 +704,10 @@ func TestLocalizedRoutesAndLanguagePreference(t *testing.T) {
 
 	english := httptest.NewRecorder()
 	handler.ServeHTTP(english, httptest.NewRequest(http.MethodGet, "/en/about?page=2", nil))
-	if english.Code != http.StatusOK || english.Header().Get("Content-Language") != "en" || !strings.Contains(english.Body.String(), "How MunichBrief works") {
+	if english.Code != http.StatusOK || english.Header().Get("Content-Language") != "en-GB" || !strings.Contains(english.Body.String(), "How MunichBrief works") {
 		t.Fatalf("English page = %d/%q", english.Code, english.Header().Get("Content-Language"))
 	}
-	if !strings.Contains(english.Body.String(), `href="/de/about?page=2"`) || !strings.Contains(english.Body.String(), `hreflang="de"`) {
+	if !strings.Contains(english.Body.String(), `href="/de/about?page=2"`) || !strings.Contains(english.Body.String(), `hreflang="de-DE"`) {
 		t.Fatal("English page does not preserve path and query in its language switch")
 	}
 	cookies := english.Result().Cookies()
@@ -718,7 +719,7 @@ func TestLocalizedRoutesAndLanguagePreference(t *testing.T) {
 	germanRequest := httptest.NewRequest(http.MethodGet, "/de", nil)
 	germanRequest.Header.Set("Accept-Language", "en")
 	handler.ServeHTTP(german, germanRequest)
-	if german.Header().Get("Content-Language") != "de" || !strings.Contains(german.Body.String(), "Aktuelle Vorfälle laut Münchner Polizei") {
+	if german.Header().Get("Content-Language") != "de-DE" || !strings.Contains(german.Body.String(), "Aktuelle Vorfälle laut Münchner Polizei") {
 		t.Fatal("localized path did not override the browser language")
 	}
 
@@ -791,7 +792,7 @@ func TestLocalizedProcessingStateLabels(t *testing.T) {
 }
 
 func TestTranslationCatalogsAreCompleteAndPluralized(t *testing.T) {
-	translations, err := newLocalization(readerLanguages)
+	translations, err := newLocalization(langregistry.Registered())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -823,14 +824,22 @@ func TestTranslationCatalogsAreCompleteAndPluralized(t *testing.T) {
 	if err := validateCatalogParity(broken, "de.toml", "en.toml"); err == nil {
 		t.Fatal("mismatched translation catalogs were accepted")
 	}
+	missingPluralCount := fstest.MapFS{
+		"de.toml": {Data: []byte("[Reports]\nother = 'Meldungen'\n")},
+		"en.toml": {Data: []byte("[Reports]\nother = 'reports'\n")},
+	}
+	if err := validateCatalogParity(missingPluralCount, "de.toml", "en.toml"); err == nil {
+		t.Fatal("translation catalog plural forms without count rendering were accepted")
+	}
 }
 
 func TestReaderLanguageRegistryMatchesTranslationDefinitions(t *testing.T) {
-	if err := validateReaderLanguages(); err != nil {
+	definitions := langregistry.Registered()
+	if err := validateReaderLanguageDefinitions(definitions); err != nil {
 		t.Fatal(err)
 	}
-	if len(translatedReaderLanguages()) != len(processing.RegisteredTranslations()) {
-		t.Fatalf("translated reader registrations = %d, translation definitions = %d", len(translatedReaderLanguages()), len(processing.RegisteredTranslations()))
+	if len(langregistry.Translated(definitions)) != len(processing.RegisteredTranslations()) {
+		t.Fatalf("translated reader registrations = %d, translation definitions = %d", len(langregistry.Translated(definitions)), len(processing.RegisteredTranslations()))
 	}
 }
 

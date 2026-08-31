@@ -199,6 +199,10 @@ Reader-facing language behavior is declared in one compile-time registry. The
 server derives routes, locale catalogs, date formatting, navigation, alternate
 links, and sitemap entries from it, and startup verifies that every translated
 reader registration matches a processing translation definition.
+The same registry supplies exact BCP-47 document tags and stable route/scope
+codes; target-specific prompts feed a generic translation-step factory. See
+[Adding a reader language](adding-a-language.md) for the cross-repository
+extension and rollout contract.
 
 Reader queries choose content and metadata from one presentation run. The
 effective category is the newest successful verification for that run, or its

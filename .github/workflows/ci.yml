@@ -101,7 +101,25 @@ jobs:
             echo "public ingress rendered with a canonical origin outside publicHosts" >&2
             exit 1
           fi
+          if helm template munichbrief charts/munichbrief --namespace munichbrief --values deploy/example-values.yaml --set 'ingress.public.languageCodes={}' >/dev/null 2>&1; then
+            echo "public ingress rendered without a language prefix" >&2
+            exit 1
+          fi
+          if helm template munichbrief charts/munichbrief --namespace munichbrief --values deploy/example-values.yaml --set 'ingress.public.languageCodes={EN}' >/dev/null 2>&1; then
+            echo "public ingress rendered with an invalid language prefix" >&2
+            exit 1
+          fi
+          if helm template munichbrief charts/munichbrief --namespace munichbrief --values deploy/example-values.yaml --set 'ingress.public.languageCodes={api}' >/dev/null 2>&1; then
+            echo "public ingress rendered with the reserved API prefix" >&2
+            exit 1
+          fi
+          if helm template munichbrief charts/munichbrief --namespace munichbrief --values deploy/example-values.yaml --skip-schema-validation --set 'ingress.public.languageCodes={api}' >/dev/null 2>&1; then
+            echo "public ingress template accepted the reserved API prefix without schema validation" >&2
+            exit 1
+          fi
           helm template munichbrief charts/munichbrief --namespace munichbrief > /tmp/munichbrief-default.yaml
           bash ./scripts/check-default-chart.sh /tmp/munichbrief-default.yaml
           helm template munichbrief charts/munichbrief --namespace munichbrief --values deploy/example-values.yaml > /tmp/munichbrief-rendered.yaml
           ./scripts/check-chart.sh /tmp/munichbrief-rendered.yaml
+          helm template munichbrief charts/munichbrief --namespace munichbrief --values deploy/example-values.yaml --set 'ingress.public.languageCodes={de,en,pt-br}' > /tmp/munichbrief-multilingual.yaml
+          grep -F -- 'path: /pt-br' /tmp/munichbrief-multilingual.yaml

@@ -22,8 +22,8 @@ func TestSocialCardsRenderURLSpecificPNGResponses(t *testing.T) {
 
 	home := httptest.NewRecorder()
 	handler.ServeHTTP(home, publicDiscoveryRequest(http.MethodGet, "/social/en/home"))
-	if home.Code != http.StatusOK || home.Header().Get("Content-Type") != "image/png" || !strings.Contains(home.Header().Get("Cache-Control"), "public") || home.Header().Get("ETag") == "" {
-		t.Fatalf("home social card = %d/%q/%q/%q", home.Code, home.Header().Get("Content-Type"), home.Header().Get("Cache-Control"), home.Header().Get("ETag"))
+	if home.Code != http.StatusOK || home.Header().Get("Content-Type") != "image/png" || home.Header().Get("Content-Language") != "en-GB" || !strings.Contains(home.Header().Get("Cache-Control"), "public") || home.Header().Get("ETag") == "" {
+		t.Fatalf("home social card = %d/%q/%q/%q/%q", home.Code, home.Header().Get("Content-Type"), home.Header().Get("Content-Language"), home.Header().Get("Cache-Control"), home.Header().Get("ETag"))
 	}
 	if home.Header().Get("X-AI-Generated") != "false" || home.Header().Get("X-AI-Generated-Background") != "true" || home.Header().Get("X-IPTC-Digital-Source-Type") != iptcCompositeWithTrainedAlgorithmicMedia || !bytes.Contains(home.Body.Bytes(), []byte(iptcCompositeWithTrainedAlgorithmicMedia)) {
 		t.Fatal("home social card does not distinguish its AI-generated background from its non-AI text")

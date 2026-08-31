@@ -12,7 +12,9 @@ import (
 	"testing"
 	"time"
 
+	langregistry "github.com/egekocabas/munichbrief/internal/languages"
 	"github.com/egekocabas/munichbrief/internal/store"
+	"golang.org/x/text/language"
 )
 
 func publicDiscoveryServer(t *testing.T, database *store.Store, presentation testPresentation) (*Server, testPresentationJob) {
@@ -113,8 +115,70 @@ func TestSitemapContainsOnlyCanonicalPublicDocuments(t *testing.T) {
 	}
 }
 
-func TestPublicDocumentsExposeCanonicalAndAlternateLinks(t *testing.T) {
+func TestSyntheticReaderLanguageDrivesRoutesNegotiationAndSEO(t *testing.T) {
 	server, job := publicDiscoveryServer(t, fixtureStore(t), testPresentation{
+		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
+		TitleEN: "Safe title", SummaryEN: "Safe summary.",
+	})
+	formatter := func(value time.Time) string { return value.Format("2006-01-02") }
+	server.languages = append(server.languages, langregistry.Definition{
+		Code: "fr", Tag: language.MustParse("fr-FR"), DisplayName: "Français", Catalog: "locales/active.fr.toml", OpenGraphLocale: "fr_FR",
+		SwitchMessageID: "SwitchToFrench", StepMessageID: "FrenchTranslationStep",
+		FormatDate: formatter, FormatDay: formatter, FormatDateTime: formatter,
+	})
+	handler := server.Handler()
+
+	page := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/fr", nil)
+	request.Host = "munichbrief.de"
+	handler.ServeHTTP(page, request)
+	if page.Code != http.StatusOK || page.Header().Get("Content-Language") != "fr-FR" {
+		t.Fatalf("synthetic language page = %d/%q", page.Code, page.Header().Get("Content-Language"))
+	}
+	for _, expected := range []string{
+		`<html lang="fr-FR"`,
+		`<link rel="alternate" hreflang="fr-FR" href="https://munichbrief.de/fr">`,
+		`"inLanguage":["de-DE","en-GB","fr-FR"]`,
+	} {
+		if !strings.Contains(page.Body.String(), expected) {
+			t.Errorf("synthetic language page does not contain %q", expected)
+		}
+	}
+
+	redirect := httptest.NewRecorder()
+	root := httptest.NewRequest(http.MethodGet, "/", nil)
+	root.Host = "munichbrief.de"
+	root.Header.Set("Accept-Language", "fr-CA,fr;q=0.9,en;q=0.5")
+	handler.ServeHTTP(redirect, root)
+	if redirect.Code != http.StatusFound || redirect.Header().Get("Location") != "/fr" {
+		t.Fatalf("synthetic language negotiation = %d/%q", redirect.Code, redirect.Header().Get("Location"))
+	}
+
+	sitemap := httptest.NewRecorder()
+	sitemapRequest := httptest.NewRequest(http.MethodGet, "/sitemap.xml", nil)
+	sitemapRequest.Host = "munichbrief.de"
+	handler.ServeHTTP(sitemap, sitemapRequest)
+	if !strings.Contains(sitemap.Body.String(), "https://munichbrief.de/fr</loc>") || !strings.Contains(sitemap.Body.String(), "https://munichbrief.de/fr/about</loc>") {
+		t.Fatalf("synthetic language sitemap = %s", sitemap.Body.String())
+	}
+
+	detail := httptest.NewRecorder()
+	detailRequest := httptest.NewRequest(http.MethodGet, "/de/incidents/"+formatID(job.IncidentID), nil)
+	detailRequest.Host = "munichbrief.de"
+	handler.ServeHTTP(detail, detailRequest)
+	for _, unavailable := range []string{
+		`hreflang="fr-FR"`,
+		`<meta property="og:locale:alternate" content="fr_FR">`,
+	} {
+		if strings.Contains(detail.Body.String(), unavailable) {
+			t.Errorf("detail advertised unavailable synthetic translation %q", unavailable)
+		}
+	}
+}
+
+func TestPublicDocumentsExposeCanonicalAndAlternateLinks(t *testing.T) {
+	database := fixtureStore(t)
+	server, job := publicDiscoveryServer(t, database, testPresentation{
 		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
 		TitleEN: "Safe title", SummaryEN: "Safe summary.",
 	})
@@ -122,15 +186,15 @@ func TestPublicDocumentsExposeCanonicalAndAlternateLinks(t *testing.T) {
 	timeline := httptest.NewRecorder()
 	server.Handler().ServeHTTP(timeline, publicDiscoveryRequest(http.MethodGet, "/en?page=1"))
 	for _, expected := range []string{
-		`<html lang="en" prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" data-ai-generated="true">`,
+		`<html lang="en-GB" prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" data-ai-generated="true">`,
 		`<meta name="robots" content="index,follow,max-image-preview:large">`,
 		`<meta name="ai-generated" content="true">`,
 		`<meta name="digital-source-type" content="` + iptcTrainedAlgorithmicMedia + `">`,
 		`"ai_generated":true,"ai_generated_state":"true"`,
 		`data-ai-generated="true" data-ai-model="qwen3.5:4b"`,
 		`<link rel="canonical" href="https://munichbrief.de/en">`,
-		`<link rel="alternate" hreflang="de" href="https://munichbrief.de/de">`,
-		`<link rel="alternate" hreflang="en" href="https://munichbrief.de/en">`,
+		`<link rel="alternate" hreflang="de-DE" href="https://munichbrief.de/de">`,
+		`<link rel="alternate" hreflang="en-GB" href="https://munichbrief.de/en">`,
 		`<link rel="alternate" hreflang="x-default" href="https://munichbrief.de/de">`,
 		`<meta property="og:type" content="website">`,
 		`<meta property="og:title" content="MunichBrief">`,
@@ -150,7 +214,7 @@ func TestPublicDocumentsExposeCanonicalAndAlternateLinks(t *testing.T) {
 	}
 	for _, expected := range []string{
 		`<https://munichbrief.de/en>; rel="canonical"`,
-		`<https://munichbrief.de/de>; rel="alternate"; hreflang="de"`,
+		`<https://munichbrief.de/de>; rel="alternate"; hreflang="de-DE"`,
 		`<https://munichbrief.de/de>; rel="alternate"; hreflang="x-default"`,
 	} {
 		if !strings.Contains(timeline.Header().Get("Link"), expected) {
@@ -170,6 +234,10 @@ func TestPublicDocumentsExposeCanonicalAndAlternateLinks(t *testing.T) {
 
 	detail := httptest.NewRecorder()
 	server.Handler().ServeHTTP(detail, publicDiscoveryRequest(http.MethodGet, "/en/incidents/"+formatID(job.IncidentID)+"?page=2&tracking=x"))
+	translated, err := database.GetPresentationIncident(context.Background(), job.IncidentID, store.PresentationScope{Language: "en", TranslationLanguage: "en", PublicOnly: true})
+	if err != nil || translated.AITranslationGeneratedAt == nil {
+		t.Fatalf("load translated detail metadata = %#v/%v", translated.AITranslationGeneratedAt, err)
+	}
 	canonical := "https://munichbrief.de/en/incidents/" + formatID(job.IncidentID)
 	if !strings.Contains(detail.Header().Get("Link"), "<"+canonical+">; rel=\"canonical\"") || strings.Contains(detail.Header().Get("Link"), "page=2") {
 		t.Errorf("detail Link header did not remove navigation query: %q", detail.Header().Get("Link"))
@@ -185,7 +253,7 @@ func TestPublicDocumentsExposeCanonicalAndAlternateLinks(t *testing.T) {
 		`<meta property="og:image" content="https://munichbrief.de/social/en/incidents/` + formatID(job.IncidentID) + `">`,
 		`<meta name="twitter:title" content="Safe title · MunichBrief">`,
 		`<meta property="article:published_time" content="`,
-		`<meta property="article:modified_time" content="`,
+		`<meta property="article:modified_time" content="` + translated.AITranslationGeneratedAt.Format(time.RFC3339) + `">`,
 	} {
 		if !strings.Contains(detail.Body.String(), expected) {
 			t.Errorf("detail does not contain %q", expected)

@@ -23,7 +23,7 @@ func (s *Server) accessBoundary(next http.Handler) http.Handler {
 			http.NotFound(response, request)
 			return
 		}
-		if s.isPublicRequest(request) && !isPublicPath(request.URL.Path) {
+		if s.isPublicRequest(request) && !s.isPublicPath(request.URL.Path) {
 			http.NotFound(response, request)
 			return
 		}
@@ -111,11 +111,15 @@ func requestHostname(request *http.Request) string {
 	return strings.ToLower(host)
 }
 
-func isPublicPath(path string) bool {
+func (s *Server) isPublicPath(path string) bool {
 	if path == "/" || path == "/about" || path == "/ai-disclosure/acknowledge" || path == "/healthz" || path == "/readyz" || path == "/robots.txt" || path == "/sitemap.xml" {
 		return true
 	}
-	for _, prefix := range []string{"/de", "/en", "/incidents", "/social", "/static"} {
+	prefixes := []string{"/incidents", "/social", "/static"}
+	for _, definition := range s.languages {
+		prefixes = append(prefixes, "/"+definition.Code)
+	}
+	for _, prefix := range prefixes {
 		if path == prefix || strings.HasPrefix(path, prefix+"/") {
 			return true
 		}

@@ -23,6 +23,9 @@ ingress:
     enabled: true
     hosts:
       - brief.example.com
+    languageCodes:
+      - de
+      - en
 
 admin:
   enabled: false

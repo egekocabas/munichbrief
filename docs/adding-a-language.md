@@ -1,0 +1,115 @@
+# Adding a reader language
+
+MunichBrief has one canonical German presentation and any number of independent
+translated reader languages. Adding a language is a code and operations change:
+the application registry, immutable model prompt, UI catalog, public ingress,
+and deployment verification must agree before the language is advertised.
+
+This guide intentionally does not turn languages into runtime configuration.
+The compiled registry remains the authority, so invalid or incomplete language
+support fails during tests or application startup instead of partially
+publishing.
+
+## Choose stable identities
+
+Choose these values before writing code:
+
+- a normalized lowercase route code such as `fr` or `pt-br`; this is permanent
+  in URLs, the preference cookie, and persisted translation scope keys, and
+  must not be the reserved `api` prefix;
+- the exact BCP-47 content tag, such as `fr-FR` or `pt-BR`, for negotiation,
+  HTML, HTTP, Markdown, hreflang, and structured data;
+- the Open Graph locale, such as `fr_FR`;
+- the language's own display name and localized language-switch/provenance
+  labels; and
+- a new immutable prompt version such as `incident-translation-fr-v1`.
+
+Do not reuse a route code for another locale after jobs have been persisted. A
+regional or script variant that requires different output should receive its
+own stable code.
+
+## Register application support
+
+1. Add one noncanonical definition to the registry in
+   `internal/languages/languages.go`. Supply its exact tag, catalog filename,
+   Open Graph locale, message IDs, and date formatters. Keep German as the only
+   canonical entry.
+2. Add a target-specific immutable translation prompt to
+   `internal/processing/prompts.go`. Set its translation language to the new
+   registry code and its step key to `translation/<code>`. The generic factory
+   creates the schema, decoder, validator, queue scope, admin control, history,
+   and metrics contract.
+3. Add `internal/web/locales/active.<code>.toml`. It must contain every message
+   ID in the existing catalogs, including plural forms, category/report/time
+   metadata, disclosure text, language switching, and processing provenance.
+   Add the new language's switch and step labels to every existing catalog too.
+4. Add native-language tests for representative singular/plural values, dates,
+   metadata labels, navigation, disclosure text, and long mobile labels. Do not
+   rely on machine translation as the only review of legal, privacy, or source
+   attribution copy.
+
+No database migration is normally required. Translation jobs and values are
+already keyed by processor and language scope, and startup records a durable
+automatic-enablement cutover for every newly registered scope.
+
+## Validate AI output and privacy
+
+The new prompt receives only the accepted privacy-safe German title and
+summary. It must preserve subjects, claims, uncertainty, Munich place names,
+and the presumption of innocence without adding explanations or source details.
+Keep the existing title and summary limits and strict two-field JSON output.
+
+Add tests for valid output, missing/extra fields, length limits, unsafe public
+text, and prompt-injection-like input. Then run the opt-in Ollama smoke check
+with handcrafted anonymized cases and have a fluent reviewer compare the
+translation with the accepted German presentation. Never commit model output,
+real police article copies, or a production database.
+
+Review `docs/eu-ai-transparency.md` whenever a language changes disclosure,
+label placement, generated content, social previews, or machine-readable
+provenance.
+
+## Verify reader and discovery behavior
+
+Exercise the timeline, about page, one translated incident, Markdown responses,
+and social cards. Confirm:
+
+- the root redirect honors the new BCP-47 language and the preference cookie;
+- HTML `lang`, `Content-Language`, Markdown front matter, canonical URLs,
+  hreflang, Open Graph locales, and JSON-LD use the registered identities;
+- the sitemap contains the language's static pages and includes incident URLs
+  only after their translations succeed;
+- an incident without a successful translation remains absent from that public
+  language, while German and other successful languages remain available; and
+- public-host path filtering still rejects admin and unknown routes.
+
+Run the complete validation suite in `docs/development.md` before opening the
+application pull request.
+
+## Coordinate deployment
+
+The bundled chart keeps a defense-in-depth language allowlist. Add the route
+code to `ingress.public.languageCodes` and verify the rendered Prefix path.
+Deployments that do not use the chart must make the equivalent explicit ingress
+change. In `homelab-infra`, add the prefix under the shared MunichBrief public
+paths inside the marked `reader-language-prefixes` block; static verification
+derives its expectations from that block.
+
+Use this rollout order:
+
+1. Merge and reconcile the ingress prefix first. The old application safely
+   returns 404 for the not-yet-registered language.
+2. Deploy the application image containing the registry, prompt, and catalog.
+3. Confirm the shared translation model is configured and available, review new
+   automatic translations, and check queue/failure metrics and logs.
+4. From the protected admin interface, explicitly queue the translation scope
+   for all current presentations only after quality review. Registration never
+   launches an automatic historical backfill.
+5. Recheck the canonical host's sitemap, hreflang set, social cards, Markdown,
+   and representative public pages.
+
+To roll back, stop new work by removing or reverting the application
+registration and image. Completed language-scoped jobs remain auditable and do
+not affect German or another translation. Remove the public ingress prefix only
+after the application rollback is serving 404 for it; do not delete stored jobs
+or values.

@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"time"
 
+	langregistry "github.com/egekocabas/munichbrief/internal/languages"
 	"github.com/egekocabas/munichbrief/internal/processing"
 	"github.com/egekocabas/munichbrief/internal/store"
 )
@@ -110,6 +111,7 @@ type Server struct {
 	logger               *slog.Logger
 	options              Options
 	location             *time.Location
+	languages            []readerLanguage
 	localization         *localization
 	timelineTemplate     *template.Template
 	detailTemplate       *template.Template
@@ -123,6 +125,10 @@ type Server struct {
 // a server. Invalid host or presentation settings fail startup rather than
 // weakening the request boundary at runtime.
 func NewWithOptions(database incidentStore, logger *slog.Logger, options Options) (*Server, error) {
+	return newWithLanguages(database, logger, options, langregistry.Registered())
+}
+
+func newWithLanguages(database incidentStore, logger *slog.Logger, options Options, definitions []readerLanguage) (*Server, error) {
 	if database == nil {
 		return nil, errors.New("incident store is required")
 	}
@@ -144,7 +150,7 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 	if options.Build.Commit != "" && options.Build.Commit != "dev" && !gitCommitPattern.MatchString(options.Build.Commit) {
 		return nil, errors.New("build commit must be dev or a full lowercase Git SHA")
 	}
-	if err := validateReaderLanguages(); err != nil {
+	if err := validateReaderLanguageDefinitions(definitions); err != nil {
 		return nil, fmt.Errorf("validate reader languages: %w", err)
 	}
 	publicHosts, err := normalizePublicHosts(options.PublicHosts)
@@ -161,16 +167,19 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 	if err != nil {
 		return nil, fmt.Errorf("load Europe/Berlin timezone: %w", err)
 	}
-	translations, err := newLocalization(readerLanguages)
+	definitions = append([]readerLanguage(nil), definitions...)
+	translations, err := newLocalization(definitions)
 	if err != nil {
 		return nil, fmt.Errorf("initialize localization: %w", err)
 	}
 	functions := template.FuncMap{
-		"assetURL":                   assetURL,
-		"aiLabelAssetURL":            selectedAIGeneratedAssetURL,
-		"aiLabelLightAssetURL":       selectedAILightThemeAssetURL,
-		"excerpt":                    func(value string) string { return excerpt(value, 190) },
-		"formatDateTime":             func(language string, value time.Time) string { return formatDateTime(language, value.In(location)) },
+		"assetURL":             assetURL,
+		"aiLabelAssetURL":      selectedAIGeneratedAssetURL,
+		"aiLabelLightAssetURL": selectedAILightThemeAssetURL,
+		"excerpt":              func(value string) string { return excerpt(value, 190) },
+		"formatDateTime": func(language string, value time.Time) string {
+			return formatDateTimeFor(definitions, language, value.In(location))
+		},
 		"incidentURL":                incidentURL,
 		"postProcessingStatusReason": postProcessingStatusReasonLabel,
 		"pipelineStatusLabel":        pipelineStatusLabel,
@@ -202,7 +211,7 @@ func NewWithOptions(database incidentStore, logger *slog.Logger, options Options
 	if err != nil {
 		return nil, fmt.Errorf("initialize social card renderer: %w", err)
 	}
-	return &Server{store: database, logger: logger, options: options, location: location, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, adminTemplate: admin, adminHistoryTemplate: adminHistory, socialCards: socialCards}, nil
+	return &Server{store: database, logger: logger, options: options, location: location, languages: definitions, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, adminTemplate: admin, adminHistoryTemplate: adminHistory, socialCards: socialCards}, nil
 }
 
 // Handler returns the complete public and optional review route tree.
@@ -214,7 +223,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /robots.txt", s.robots)
 	mux.HandleFunc("GET /sitemap.xml", s.sitemap)
 	mux.HandleFunc("POST /ai-disclosure/acknowledge", s.acknowledgeAIDisclosure)
-	for _, language := range readerLanguages {
+	for _, language := range s.languages {
 		mux.HandleFunc("GET /"+language.Code, s.timeline)
 		mux.HandleFunc("GET /"+language.Code+"/incidents/{id}", s.detail)
 		mux.HandleFunc("GET /"+language.Code+"/about", s.about)

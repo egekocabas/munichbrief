@@ -137,6 +137,11 @@ bash ./scripts/check-default-chart.sh /tmp/munichbrief-default.yaml
 helm template munichbrief charts/munichbrief --namespace munichbrief \
   --values deploy/example-values.yaml > /tmp/munichbrief-rendered.yaml
 ./scripts/check-chart.sh /tmp/munichbrief-rendered.yaml
+helm template munichbrief charts/munichbrief --namespace munichbrief \
+  --values deploy/example-values.yaml \
+  --set 'ingress.public.languageCodes={de,en,pt-br}' \
+  > /tmp/munichbrief-multilingual.yaml
+grep -F -- 'path: /pt-br' /tmp/munichbrief-multilingual.yaml
 docker build --build-arg VERSION=local -t munichbrief:local .
 ```
 
