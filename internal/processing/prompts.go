@@ -19,11 +19,12 @@ const (
 // PromptDefinition is the immutable, version-addressable system prompt sent to
 // a model.
 type PromptDefinition struct {
-	Version            string
-	StepKey            string
-	Status             PromptStatus
-	SystemPrompt       string
-	UserPromptTemplate string
+	Version             string
+	StepKey             string
+	TranslationLanguage string
+	Status              PromptStatus
+	SystemPrompt        string
+	UserPromptTemplate  string
 }
 
 var promptRegistry = []PromptDefinition{{
@@ -41,11 +42,12 @@ var promptRegistry = []PromptDefinition{{
 		UserPromptTemplate: "Erstelle die deutsche Darstellung aus diesem Vorfall-JSON und den validierten Metadaten:\n%s",
 	},
 	{
-		Version:            EnglishTranslationPromptVersion,
-		StepKey:            EnglishTranslationStep,
-		Status:             PromptActive,
-		SystemPrompt:       englishTranslationV1SystemPrompt,
-		UserPromptTemplate: "Translate this German incident presentation from de-DE to en-GB:\n%s",
+		Version:             EnglishTranslationPromptVersion,
+		StepKey:             EnglishTranslationStep,
+		TranslationLanguage: EnglishLanguage,
+		Status:              PromptActive,
+		SystemPrompt:        englishTranslationV1SystemPrompt,
+		UserPromptTemplate:  "Translate this German incident presentation from de-DE to en-GB:\n%s",
 	},
 	{
 		Version:            PublicAssistanceVerificationPromptVersion,

@@ -112,6 +112,9 @@ before deploying a migration. German and English pages use explicit `/de` and
 `/en` paths; visiting either path refreshes one one-year, HTTP-only preference
 cookie used by the root and legacy-route redirects. Enable secure cookies
 behind TLS.
+Additional languages use the same registry-driven contract and require an
+explicit public ingress prefix. Follow [Adding a reader language](adding-a-language.md)
+for the safe ingress-first rollout and manual historical backfill.
 
 `MUNICHBRIEF_PUBLIC_HOSTS` forces each listed hostname into public presentation
 and restricts it to reader-safe paths. A public deployment also requires

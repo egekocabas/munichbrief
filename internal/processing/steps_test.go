@@ -11,7 +11,9 @@ import (
 	"testing"
 	"time"
 
+	langregistry "github.com/egekocabas/munichbrief/internal/languages"
 	"github.com/egekocabas/munichbrief/internal/store"
+	"golang.org/x/text/language"
 )
 
 func TestRegisteredPipelineStepsAreStableAndOrdered(t *testing.T) {
@@ -37,6 +39,31 @@ func TestRegisteredPipelineStepsAreStableAndOrdered(t *testing.T) {
 		if strings.Contains(steps[1].SystemPrompt, forbidden) {
 			t.Errorf("German presentation prompt contains English instruction %q", forbidden)
 		}
+	}
+}
+
+func TestTranslationDefinitionFactorySupportsBCP47Target(t *testing.T) {
+	target := langregistry.Definition{Code: "pt-br", Tag: language.MustParse("pt-BR"), DisplayName: "Português (Brasil)"}
+	prompt := PromptDefinition{
+		Version: "incident-translation-pt-br-v1", StepKey: TranslationStepKey(target.Code), TranslationLanguage: target.Code,
+		Status: PromptActive, SystemPrompt: "Translate safely.", UserPromptTemplate: "%s",
+	}
+	translation, err := newTranslationDefinition(target, prompt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if translation.Language != "pt-br" || translation.Step.Key != "translation/pt-br" || !bytes.Contains(translation.Step.Schema, []byte(`"title_pt_br"`)) || !bytes.Contains(translation.Step.Schema, []byte(`"summary_pt_br"`)) {
+		t.Fatalf("synthetic translation definition = %#v / %s", translation, translation.Step.Schema)
+	}
+	output, err := translation.Step.OutputDecoder(`{"title_pt_br":"Título","summary_pt_br":"Resumo seguro."}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateStepOutput(translation.Step, StepInput{}, &output); err != nil || output.Values["title"] != "Título" || output.Values["summary"] != "Resumo seguro." {
+		t.Fatalf("synthetic translation output = %#v/%v", output, err)
+	}
+	if _, err := translation.Step.OutputDecoder(`{"title_pt_br":"Título","summary_pt_br":"Resumo.","extra":"no"}`); err == nil {
+		t.Fatal("synthetic translation accepted an undeclared field")
 	}
 }
 
@@ -327,7 +354,7 @@ func TestGermanPresentationValidatesPrivacyOnly(t *testing.T) {
 	if err := ValidateStepOutput(step, StepInput{}, &output); err != nil {
 		t.Fatalf("valid German presentation rejected: %v", err)
 	}
-	if len(output.PrivacyFlags) != 1 || CategoryLabel("traffic", "de") != "Verkehr" {
+	if len(output.PrivacyFlags) != 1 || canonicalCategoryLabels["traffic"] != "Verkehr" {
 		t.Fatalf("normalized German output = %#v", output)
 	}
 	output.PrivacyFlags = []string{"uncertain"}

@@ -28,6 +28,10 @@ original category when no correction succeeded, effective.
 The translation registration generates one processor scope per target
 language. English uses `incident-translation-en-v1`; every translation receives
 only the accepted German presentation and never blocks canonical completion.
+Language metadata comes from the shared registry, while each target keeps one
+active immutable prompt. The generic factory derives its schema, decoder, step,
+and scope; follow [Adding a reader language](../../docs/adding-a-language.md)
+instead of adding worker or store branches.
 
 `steps.go` is the registry and validation boundary. A model response is not
 publishable merely because it matches JSON: field limits, allowed values,

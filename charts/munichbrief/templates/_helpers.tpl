@@ -38,20 +38,15 @@
       name: {{ include "munichbrief.fullname" . }}
       port:
         name: http
-- path: /de
+{{- range .Values.ingress.public.languageCodes }}
+- path: /{{ . }}
   pathType: Prefix
   backend:
     service:
-      name: {{ include "munichbrief.fullname" . }}
+      name: {{ include "munichbrief.fullname" $ }}
       port:
         name: http
-- path: /en
-  pathType: Prefix
-  backend:
-    service:
-      name: {{ include "munichbrief.fullname" . }}
-      port:
-        name: http
+{{- end }}
 - path: /incidents
   pathType: Prefix
   backend:

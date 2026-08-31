@@ -268,7 +268,7 @@ func truncateSocialText(value string, face xfont.Face, maxWidth int) string {
 }
 
 func (s *Server) socialHome(response http.ResponseWriter, request *http.Request) {
-	language, ok := socialCardLanguage(request)
+	language, ok := s.socialCardLanguage(request)
 	if !ok {
 		http.NotFound(response, request)
 		return
@@ -277,7 +277,7 @@ func (s *Server) socialHome(response http.ResponseWriter, request *http.Request)
 }
 
 func (s *Server) socialAbout(response http.ResponseWriter, request *http.Request) {
-	language, ok := socialCardLanguage(request)
+	language, ok := s.socialCardLanguage(request)
 	if !ok {
 		http.NotFound(response, request)
 		return
@@ -286,7 +286,7 @@ func (s *Server) socialAbout(response http.ResponseWriter, request *http.Request
 }
 
 func (s *Server) socialIncident(response http.ResponseWriter, request *http.Request) {
-	language, ok := socialCardLanguage(request)
+	language, ok := s.socialCardLanguage(request)
 	if !ok {
 		http.NotFound(response, request)
 		return
@@ -327,9 +327,9 @@ func (s *Server) socialIncident(response http.ResponseWriter, request *http.Requ
 	s.writeSocialCard(response, request, socialCardSpec{Eyebrow: s.localization.Text(language, "SocialIncidentLabel"), Title: view.Title, AIGenerated: view.Record.HasAI, AIModel: view.Record.AIModel, CacheIdentity: cacheIdentity})
 }
 
-func socialCardLanguage(request *http.Request) (string, bool) {
+func (s *Server) socialCardLanguage(request *http.Request) (string, bool) {
 	language := request.PathValue("language")
-	_, registered := readerLanguageByCode(language)
+	_, registered := s.languageByCode(language)
 	return language, registered
 }
 

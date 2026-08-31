@@ -27,8 +27,8 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 		http.Error(response, "invalid all_page", http.StatusBadRequest)
 		return
 	}
-	scope := store.PresentationScope{Language: canonicalReaderLanguage().Code}
-	if translations := translatedReaderLanguages(); len(translations) > 0 {
+	scope := store.PresentationScope{Language: s.canonicalLanguage().Code}
+	if translations := s.translatedLanguages(); len(translations) > 0 {
 		scope.TranslationLanguage = translations[0].Code
 	}
 	models := processing.PipelineModelStatus{}
@@ -140,7 +140,7 @@ func (s *Server) adminList(records []store.IncidentRecord, total, page, totalPag
 		incidents = append(incidents, adminIncidentView{
 			Record: record, ProcessingState: strings.ReplaceAll(state, "_", "-"),
 			ProcessingLabel: adminProcessingLabel(state), PresentationLabel: presentationLabel,
-			CategoryLabel: processing.CategoryLabel(record.AICategory, "en"), CanProcess: state != "running",
+			CategoryLabel: s.metadataCodeLabel("en", "Category", record.AICategory), CanProcess: state != "running",
 			EventText: publicView.EventText, EventLabel: publicView.EventLabel, ReportKindLabel: publicView.ReportKindLabel,
 			PublicAssistanceTypes: publicView.PublicAssistanceTypes, PrimaryProvenanceLabel: primaryProvenanceLabel,
 			Translations:                 translations[record.ID],
@@ -166,7 +166,7 @@ func (s *Server) adminCategoryVerifications(request *http.Request, records []sto
 	for _, result := range results {
 		views[result.IncidentID] = adminCategoryVerificationView{
 			OriginalCategory: result.OriginalCategory, EffectiveCategory: result.EffectiveCategory,
-			OriginalLabel: processing.CategoryLabel(result.OriginalCategory, "en"), EffectiveLabel: processing.CategoryLabel(result.EffectiveCategory, "en"),
+			OriginalLabel: s.metadataCodeLabel("en", "Category", result.OriginalCategory), EffectiveLabel: s.metadataCodeLabel("en", "Category", result.EffectiveCategory),
 			Verdict: adminVerificationVerdict(result.IsCorrect), Status: adminPostProcessingStatus(result.Status, result.StatusReason, result.Attempts),
 			StatusReason: result.StatusReason, StatusDetail: result.StatusDetail, Attempts: result.Attempts, FailureKind: result.FailureKind,
 			Model: visiblePostProcessingModel(result.Model, result.Status, result.Attempts, result.GeneratedAt), PromptVersion: result.PromptVersion, GeneratedAt: result.GeneratedAt,

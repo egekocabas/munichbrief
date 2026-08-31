@@ -191,6 +191,42 @@ other = "Prompt version"
 [Category]
 other = "Category"
 
+[CategoryTraffic]
+other = "Traffic"
+
+[CategoryTheftBurglary]
+other = "Theft and burglary"
+
+[CategoryRobberyExtortion]
+other = "Robbery and extortion"
+
+[CategoryViolence]
+other = "Violence"
+
+[CategorySexualOffense]
+other = "Sexual offences"
+
+[CategoryFraudCyber]
+other = "Fraud and cybercrime"
+
+[CategoryDrugs]
+other = "Drugs"
+
+[CategoryFireHazard]
+other = "Fire and hazards"
+
+[CategoryPropertyDamage]
+other = "Property damage"
+
+[CategoryMissingWanted]
+other = "Missing and wanted persons"
+
+[CategoryPoliceOperation]
+other = "Police operation"
+
+[CategoryOther]
+other = "Other"
+
 [Area]
 other = "Area"
 

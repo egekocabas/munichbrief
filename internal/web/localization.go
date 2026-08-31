@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"io/fs"
 	"sort"
+	"strings"
 
 	"github.com/BurntSushi/toml"
+	langregistry "github.com/egekocabas/munichbrief/internal/languages"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"golang.org/x/text/language"
 )
 
 //go:embed locales/*.toml
@@ -28,7 +31,20 @@ func newLocalization(languages []readerLanguage) (*localization, error) {
 	if err := validateCatalogParity(localeFiles, catalogs...); err != nil {
 		return nil, err
 	}
-	bundle := i18n.NewBundle(canonicalReaderLanguage().Tag)
+	for _, catalog := range catalogs {
+		ids, err := catalogMessageIDs(localeFiles, catalog)
+		if err != nil {
+			return nil, err
+		}
+		for _, definition := range languages {
+			for _, required := range []string{definition.SwitchMessageID, definition.StepMessageID} {
+				if _, found := ids[required]; !found {
+					return nil, fmt.Errorf("translation catalog %s is missing registered language message %s", catalog, required)
+				}
+			}
+		}
+	}
+	bundle := i18n.NewBundle(language.Make(langregistry.Canonical(languages).Code))
 	bundle.RegisterUnmarshalFunc("toml", toml.Unmarshal)
 	for _, definition := range languages {
 		if _, err := bundle.LoadMessageFileFS(localeFiles, definition.Catalog); err != nil {
@@ -108,7 +124,8 @@ func catalogMessageIDs(files fs.FS, name string) (map[string]struct{}, error) {
 	}
 	ids := make(map[string]struct{}, len(messages))
 	for id, message := range messages {
-		if len(message) == 0 {
+		other, hasOther := message["other"]
+		if len(message) == 0 || !hasOther || strings.TrimSpace(fmt.Sprint(other)) == "" {
 			return nil, fmt.Errorf("translation catalog %s has empty message %s", name, id)
 		}
 		ids[id] = struct{}{}

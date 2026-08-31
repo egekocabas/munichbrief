@@ -18,6 +18,10 @@ File ownership is intentionally narrow:
 - `localization.go`: embedded message lookup and pluralization
 - `templates/`, `assets/`, and `static/`: embedded UI sources and generated files
 
+Reader routes and discovery metadata consume the shared compile-time language
+registry. Follow [Adding a reader language](../../docs/adding-a-language.md) so
+catalog, processing, SEO, and ingress contracts remain synchronized.
+
 Keep routes and template data explicit. Never pass database or model structs
 directly to templates without applying the presentation rules. Template output
 must remain escaped; client-side code must not insert incident content as raw

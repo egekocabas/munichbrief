@@ -40,7 +40,7 @@ func (page *basePage) setAIMetadata(state string, record *store.IncidentRecord) 
 		page.AIMetadataModel = record.AIMetadataModel
 		page.AIPublicAssistanceVerificationModel = record.AIPublicAssistanceVerificationModel
 		page.AICategoryVerificationModel = record.AICategoryVerificationModel
-		if page.Lang != canonicalReaderLanguage().Code {
+		if page.Lang != page.CanonicalLanguageCode {
 			page.AITranslationModel = record.AITranslationModel
 		}
 		metadata.AIModel = page.AIModel

@@ -1,6 +1,6 @@
 {{define "layout"}}
 <!doctype html>
-<html lang="{{.Lang}}" prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" data-ai-generated="{{.AIGeneratedState}}">
+<html lang="{{.LanguageTag}}" prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" data-ai-generated="{{.AIGeneratedState}}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -38,7 +38,7 @@
   {{if .PublishedTime}}<meta property="article:published_time" content="{{.PublishedTime}}">{{end}}
   {{if .ModifiedTime}}<meta property="article:modified_time" content="{{.ModifiedTime}}">{{end}}
   {{if .CanonicalURL}}<link rel="canonical" href="{{.CanonicalURL}}">{{end}}
-  {{range .LanguageAlternates}}<link rel="alternate" hreflang="{{.Code}}" href="{{.URL}}">{{end}}
+  {{range .LanguageAlternates}}<link rel="alternate" hreflang="{{.Tag}}" href="{{.URL}}">{{end}}
   {{if .PreviousCanonicalURL}}<link rel="prev" href="{{.PreviousCanonicalURL}}">{{end}}
   {{if .NextCanonicalURL}}<link rel="next" href="{{.NextCanonicalURL}}">{{end}}
   {{if .StructuredData}}<script type="application/ld+json">{{.StructuredData}}</script>{{end}}
@@ -67,7 +67,7 @@
           <svg class="theme-icon-moon size-5" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.4 15.5A8.8 8.8 0 0 1 8.5 3.6 9 9 0 1 0 20.4 15.5Z"/></svg>
           <svg class="theme-icon-sun size-5" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0-5a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1Zm0 17a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1ZM3 11h1a1 1 0 1 1 0 2H3a1 1 0 1 1 0-2Zm17 0h1a1 1 0 1 1 0 2h-1a1 1 0 1 1 0-2ZM5.6 4.2l.7.7a1 1 0 0 1-1.4 1.4l-.7-.7a1 1 0 0 1 1.4-1.4Zm13.5 13.5.7.7a1 1 0 0 1-1.4 1.4l-.7-.7a1 1 0 0 1 1.4-1.4ZM18.4 4.2a1 1 0 0 1 1.4 1.4l-.7.7a1 1 0 0 1-1.4-1.4l.7-.7ZM6.3 17.7a1 1 0 0 1 0 1.4l-.7.7a1 1 0 0 1-1.4-1.4l.7-.7a1 1 0 0 1 1.4 0Z"/></svg>
         </button>
-        {{range .LanguageSwitches}}<a class="inline-flex min-h-9 items-center rounded-md border border-rule bg-white px-2.5 text-xs font-extrabold uppercase tracking-[0.08em] text-civic no-underline hover:border-civic/40 hover:bg-newsprint" href="{{.URL}}" lang="{{.Code}}" hreflang="{{.Code}}" aria-label="{{.Label}}">{{.Code}}</a>{{end}}
+        {{range .LanguageSwitches}}<a class="inline-flex min-h-9 items-center rounded-md border border-rule bg-white px-2.5 text-xs font-extrabold uppercase tracking-[0.08em] text-civic no-underline hover:border-civic/40 hover:bg-newsprint" href="{{.URL}}" lang="{{.Tag}}" hreflang="{{.Tag}}" aria-label="{{.Label}}">{{.Code}}</a>{{end}}
       </div>
     </div>
   </header>

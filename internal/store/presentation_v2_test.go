@@ -65,6 +65,50 @@ func TestPresentationSelectionRequiresCompleteCurrentV2(t *testing.T) {
 	}
 }
 
+func TestPresentationSelectionSupportsArbitraryTranslationScope(t *testing.T) {
+	ctx := context.Background()
+	database, err := Open(ctx, filepath.Join(t.TempDir(), "presentation-language-scope.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 31, 10, 0, 0, 0, time.UTC)
+	insertPipelineDocuments(t, ctx, database, now, "scope")
+	var incidentID int64
+	var sourceHash string
+	if err := database.db.QueryRowContext(ctx, `SELECT id,content_hash FROM incidents LIMIT 1`).Scan(&incidentID, &sourceHash); err != nil {
+		t.Fatal(err)
+	}
+	runID := insertCompletedPresentationRun(t, ctx, database, incidentID, sourceHash, PipelineVersion, now, map[string]string{
+		"title_de": "Titel", "summary_de": "Zusammenfassung.", "category": "other",
+		"report_kind": "incident", "public_assistance_status": "not_requested", "public_assistance_types": "[]", "privacy_status": "safe", "privacy_flags": "[]",
+	})
+	scope := PresentationScope{Language: "fr", TranslationLanguage: "fr", PublicOnly: true}
+	if _, err := database.GetPresentationIncident(ctx, incidentID, scope); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("untranslated arbitrary scope became public: %v", err)
+	}
+	result, err := database.db.ExecContext(ctx, `INSERT INTO post_processing_jobs(
+		presentation_run_id,processor_key,scope_key,request_kind,status,model_identity,prompt_version,input_hash,
+		attempt_count,started_at,completed_at,created_at,updated_at
+	) VALUES(?,'translation','fr','manual','succeeded','translate:4b','incident-translation-fr-v1','hash',1,?,?,?,?)`,
+		runID, formatTime(now.Add(time.Minute)), formatTime(now.Add(2*time.Minute)), formatTime(now.Add(time.Minute)), formatTime(now.Add(2*time.Minute)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	jobID, _ := result.LastInsertId()
+	if _, err := database.db.ExecContext(ctx, `INSERT INTO post_processing_values(job_id,kind,value) VALUES(?,'title','Titre'),(?,'summary','Résumé.')`, jobID, jobID); err != nil {
+		t.Fatal(err)
+	}
+	record, err := database.GetPresentationIncident(ctx, incidentID, scope)
+	if err != nil || record.AITranslatedTitle != "Titre" || record.AITranslatedSummary != "Résumé." || record.AITranslationPromptVersion != "incident-translation-fr-v1" {
+		t.Fatalf("arbitrary translated selection = %#v/%v", record, err)
+	}
+	links, err := database.ListPublicIncidentLinks(ctx, "fixture", scope)
+	if err != nil || len(links) != 1 || !links[0].ModifiedAt.Equal(now.Add(2*time.Minute)) {
+		t.Fatalf("arbitrary translated public links = %#v/%v", links, err)
+	}
+}
+
 func insertCompletedPresentationRun(t *testing.T, ctx context.Context, database *Store, incidentID int64, sourceHash, pipelineVersion string, completed time.Time, values map[string]string) int64 {
 	t.Helper()
 	result, err := database.db.ExecContext(ctx, `INSERT INTO presentation_runs(incident_id,source_hash,pipeline_version,status,legacy,created_at,completed_at) VALUES(?,?,?,'complete',0,?,?)`, incidentID, sourceHash, pipelineVersion, formatTime(completed.Add(-time.Minute)), formatTime(completed))

@@ -11,6 +11,7 @@ units:
 | `source` | Fixture and network source clients |
 | `parser` | Conversion of source HTML into domain values |
 | `ingest` | Synchronization orchestration and refresh policy |
+| `languages` | Immutable reader language identities, validation, negotiation, and date formatting |
 | `processing` | Staged AI processing, validation, scheduling, and model access |
 | `store` | SQLite schema, transactions, queries, and pipeline persistence |
 | `web` | Public/review HTTP presentation and access boundaries |

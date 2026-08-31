@@ -102,7 +102,7 @@ func (s *Server) setDocumentLinks(header http.Header, page basePage) {
 		fmt.Sprintf("<%s>; rel=\"canonical\"", page.CanonicalURL),
 	}
 	for _, alternate := range page.LanguageAlternates {
-		links = append(links, fmt.Sprintf("<%s>; rel=\"alternate\"; hreflang=\"%s\"", alternate.URL, alternate.Code))
+		links = append(links, fmt.Sprintf("<%s>; rel=\"alternate\"; hreflang=\"%s\"", alternate.URL, alternate.Tag))
 	}
 	if page.PreviousCanonicalURL != "" {
 		links = append(links, fmt.Sprintf("<%s>; rel=\"prev\"", page.PreviousCanonicalURL))
@@ -119,7 +119,7 @@ func (s *Server) prepareRedirectDiscovery(response http.ResponseWriter, request 
 		return
 	}
 	language := strings.SplitN(strings.TrimPrefix(parsed.Path, "/"), "/", 2)[0]
-	if _, registered := readerLanguageByCode(language); !registered {
+	if _, registered := s.languageByCode(language); !registered {
 		return
 	}
 	page := s.base(request, language, parsed.RequestURI())
@@ -182,7 +182,7 @@ func wantsMarkdown(accept string) bool {
 
 func (s *Server) prepareMarkdown(response http.ResponseWriter, page basePage) {
 	response.Header().Set("Content-Type", "text/markdown; charset=utf-8")
-	response.Header().Set("Content-Language", page.Lang)
+	response.Header().Set("Content-Language", page.LanguageTag)
 	response.Header().Set("Cache-Control", "private, no-store")
 	response.Header().Set("X-Content-Type-Options", "nosniff")
 	setAIResponseHeaders(response.Header(), page)
@@ -240,7 +240,7 @@ type sitemapURL struct {
 func (s *Server) sitemap(response http.ResponseWriter, request *http.Request) {
 	origin := s.canonicalOrigin(request)
 	urls := make([]sitemapURL, 0)
-	for _, definition := range readerLanguages {
+	for _, definition := range s.languages {
 		links, err := s.store.ListPublicIncidentLinks(request.Context(), s.options.SourceMode, store.PresentationScope{
 			Language:   definition.Code,
 			PublicOnly: true,
@@ -292,7 +292,7 @@ func markdownURL(value string) string {
 
 func writeMarkdownFrontMatter(builder *strings.Builder, title string, page basePage) {
 	fmt.Fprintf(builder, "---\ntitle: %s\ndescription: %s\nlanguage: %s\ncanonical: %s\nai_generated: %t\nai_generated_state: %s\n",
-		yamlQuoted(title+" · MunichBrief"), yamlQuoted(pageDescription(page)), yamlQuoted(page.Lang), yamlQuoted(page.CanonicalURL),
+		yamlQuoted(title+" · MunichBrief"), yamlQuoted(pageDescription(page)), yamlQuoted(page.LanguageTag), yamlQuoted(page.CanonicalURL),
 		page.AIGeneratedState != "false", yamlQuoted(page.AIGeneratedState))
 	if page.AIGeneratedState != "false" {
 		fmt.Fprintf(builder, "digital_source_type: %s\n", yamlQuoted(iptcTrainedAlgorithmicMedia))
@@ -344,7 +344,7 @@ func (s *Server) renderTimelineMarkdown(response http.ResponseWriter, data timel
 			fmt.Fprintf(&builder, "\n### [%s](<%s>)\n\n", markdownText(incident.Title), markdownURL(link))
 			fmt.Fprintf(&builder, "%s\n\n", markdownText(incident.Summary))
 			fmt.Fprintf(&builder, "- %s: %s\n", markdownText(s.localization.Text(data.Lang, "PublishedWithin")), markdownText(incident.Record.SourceTitle))
-			fmt.Fprintf(&builder, "- %s: %s\n", markdownText(s.localization.Text(data.Lang, "LastProcessed")), markdownText(formatDateTime(data.Lang, incident.Record.UpdatedAt.In(s.location))))
+			fmt.Fprintf(&builder, "- %s: %s\n", markdownText(s.localization.Text(data.Lang, "LastProcessed")), markdownText(s.formatDateTime(data.Lang, incident.Record.UpdatedAt.In(s.location))))
 			if incident.CategoryLabel != "" {
 				fmt.Fprintf(&builder, "- %s: %s\n", markdownText(s.localization.Text(data.Lang, "Category")), markdownText(incident.CategoryLabel))
 			}
@@ -379,7 +379,7 @@ func (s *Server) renderDetailMarkdown(response http.ResponseWriter, data detailP
 	fmt.Fprintf(&builder, "# %s\n\n", markdownText(data.Incident.Title))
 	fmt.Fprintf(&builder, "%s\n\n", markdownText(data.Incident.Summary))
 	fmt.Fprintf(&builder, "- %s: %s\n", markdownText(s.localization.Text(data.Lang, "PublishedWithin")), markdownText(data.Incident.Record.SourceTitle))
-	fmt.Fprintf(&builder, "- %s: %s\n", markdownText(s.localization.Text(data.Lang, "LastProcessed")), markdownText(formatDateTime(data.Lang, data.Incident.Record.UpdatedAt.In(s.location))))
+	fmt.Fprintf(&builder, "- %s: %s\n", markdownText(s.localization.Text(data.Lang, "LastProcessed")), markdownText(s.formatDateTime(data.Lang, data.Incident.Record.UpdatedAt.In(s.location))))
 	if data.Incident.CategoryLabel != "" {
 		fmt.Fprintf(&builder, "- %s: %s\n", markdownText(s.localization.Text(data.Lang, "Category")), markdownText(data.Incident.CategoryLabel))
 	}
