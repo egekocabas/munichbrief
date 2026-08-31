@@ -38,7 +38,8 @@ own stable code.
    `internal/processing/prompts.go`. Set its translation language to the new
    registry code and its step key to `translation/<code>`. The generic factory
    creates the schema, decoder, validator, queue scope, admin control, history,
-   and metrics contract.
+   metrics contract, and a row in the translation operations dashboard. No
+   dashboard template branch is needed for the new language.
 3. Add `internal/web/locales/active.<code>.toml`. It must contain every message
    ID in the existing catalogs, including plural forms, category/report/time
    metadata, disclosure text, language switching, and processing provenance.
@@ -102,9 +103,10 @@ Use this rollout order:
 2. Deploy the application image containing the registry, prompt, and catalog.
 3. Confirm the shared translation model is configured and available, review new
    automatic translations, and check queue/failure metrics and logs.
-4. From the protected admin interface, explicitly queue the translation scope
-   for all current presentations only after quality review. Registration never
-   launches an automatic historical backfill.
+4. From `/admin/translations`, review the new language's coverage and explicitly
+   use **Queue unpublished** for current presentations only after quality
+   review. Use **Rerun all** only when every existing success should be
+   replaced. Registration never launches an automatic historical backfill.
 5. Recheck the canonical host's sitemap, hreflang set, social cards, Markdown,
    and representative public pages.
 

@@ -111,6 +111,22 @@ func (s *Store) QueueIncidentPostProcessing(ctx context.Context, incidentID int6
 // QueuePostProcessingForAll scans the newest current v2 presentation for each
 // incident. Automatic work respects scope cutovers; forced manual work does not.
 func (s *Store) QueuePostProcessingForAll(ctx context.Context, sourceMode string, plans []PostProcessingPlan, force bool, now time.Time) (int, error) {
+	requestKind := "scheduled"
+	if force {
+		requestKind = "manual"
+	}
+	return s.queuePostProcessingForAll(ctx, sourceMode, plans, requestKind, force, !force, false, now)
+}
+
+// QueueUnpublishedPostProcessingForAll creates manual translation work only
+// where no successful job with a complete title and summary exists. It bypasses
+// automatic cutovers and the scheduling master switch without replacing
+// publishable results.
+func (s *Store) QueueUnpublishedPostProcessingForAll(ctx context.Context, sourceMode string, plans []PostProcessingPlan, now time.Time) (int, error) {
+	return s.queuePostProcessingForAll(ctx, sourceMode, plans, "manual", true, false, true, now)
+}
+
+func (s *Store) queuePostProcessingForAll(ctx context.Context, sourceMode string, plans []PostProcessingPlan, requestKind string, force, respectCutover, unpublishedTranslationsOnly bool, now time.Time) (int, error) {
 	condition, err := sourceStatusCondition(sourceMode)
 	if err != nil {
 		return 0, err
@@ -120,7 +136,7 @@ func (s *Store) QueuePostProcessingForAll(ctx context.Context, sourceMode string
 		return 0, err
 	}
 	defer tx.Rollback()
-	if !force {
+	if requestKind == "scheduled" {
 		enabled, err := automaticProcessingEnabledTx(ctx, tx)
 		if err != nil {
 			return 0, err
@@ -132,18 +148,17 @@ func (s *Store) QueuePostProcessingForAll(ctx context.Context, sourceMode string
 			return 0, nil
 		}
 	}
-	requestKind := "scheduled"
-	if force {
-		requestKind = "manual"
-	}
 	total := 0
 	for _, plan := range plans {
 		if err := validatePostProcessingPlan(plan); err != nil {
 			return 0, err
 		}
+		if unpublishedTranslationsOnly && plan.ProcessorKey != "translation" {
+			return 0, errors.New("unpublished selection requires the translation processor")
+		}
 		cutover := ""
 		args := []any{PipelineVersion}
-		if !force {
+		if respectCutover {
 			cutover = ` AND julianday(r.completed_at)>julianday((SELECT automatic_after FROM post_processing_scopes WHERE processor_key=? AND scope_key=?))`
 			args = append(args, plan.ProcessorKey, plan.ScopeKey)
 		}
@@ -179,6 +194,15 @@ func (s *Store) QueuePostProcessingForAll(ctx context.Context, sourceMode string
 			return 0, err
 		}
 		for _, item := range candidates {
+			if unpublishedTranslationsOnly {
+				published, err := publishableTranslationExistsTx(ctx, tx, item.runID, plan.ScopeKey)
+				if err != nil {
+					return 0, err
+				}
+				if published {
+					continue
+				}
+			}
 			queued, err := queuePostProcessingTx(ctx, tx, item.runID, item.incidentID, item.sourceHash, plan, requestKind, force, now)
 			if err != nil {
 				return 0, err
@@ -192,6 +216,20 @@ func (s *Store) QueuePostProcessingForAll(ctx context.Context, sourceMode string
 		return 0, err
 	}
 	return total, nil
+}
+
+func publishableTranslationExistsTx(ctx context.Context, tx *sql.Tx, runID int64, scopeKey string) (bool, error) {
+	var published bool
+	err := tx.QueryRowContext(ctx, `SELECT EXISTS(
+		SELECT 1 FROM post_processing_jobs job
+		WHERE job.presentation_run_id=? AND job.processor_key='translation' AND job.scope_key=? AND job.status='succeeded'
+		AND EXISTS (SELECT 1 FROM post_processing_values value WHERE value.job_id=job.id AND value.kind='title' AND trim(value.value)<>'')
+		AND EXISTS (SELECT 1 FROM post_processing_values value WHERE value.job_id=job.id AND value.kind='summary' AND trim(value.value)<>'')
+	)`, runID, scopeKey).Scan(&published)
+	if err != nil {
+		return false, fmt.Errorf("check publishable translation: %w", err)
+	}
+	return published, nil
 }
 
 func queuePostProcessingTx(ctx context.Context, tx *sql.Tx, runID, incidentID int64, sourceHash string, plan PostProcessingPlan, requestKind string, force bool, now time.Time) (bool, error) {

@@ -12,22 +12,7 @@
   <script defer src="{{assetURL "admin.js"}}"></script>
 </head>
 <body class="min-h-screen text-ink antialiased">
-  <header class="border-b border-rule/90 bg-paper/95">
-    <div class="page-shell flex min-h-16 items-center justify-between gap-4 py-3">
-      <a class="inline-flex items-center gap-3 text-ink no-underline" href="/admin" aria-label="MunichBrief administration">
-        <span class="grid size-10 place-items-center rounded-[0.6rem_0.6rem_0.6rem_0.18rem] bg-civic font-serif text-xl font-bold text-on-accent" aria-hidden="true">M</span>
-        <span><strong class="block font-serif text-lg tracking-tight">MunichBrief</strong><small class="block text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted">Administration</small></span>
-      </a>
-      <nav class="flex flex-wrap items-center justify-end gap-2" aria-label="Administration">
-        <a class="rounded-md border border-rule bg-white px-3 py-2 text-sm font-bold text-civic no-underline hover:bg-newsprint" href="/admin/history">Pipeline history</a>
-        <a class="rounded-md border border-rule bg-white px-3 py-2 text-sm font-bold text-civic no-underline hover:bg-newsprint" href="/en">Open reader</a>
-        <button class="inline-flex size-9 items-center justify-center rounded-md border border-rule bg-white text-civic hover:border-civic/40 hover:bg-newsprint" type="button" data-theme-toggle aria-label="Dark mode" aria-pressed="false" title="Dark mode">
-          <svg class="theme-icon-moon size-5" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.4 15.5A8.8 8.8 0 0 1 8.5 3.6 9 9 0 1 0 20.4 15.5Z"/></svg>
-          <svg class="theme-icon-sun size-5" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0-5a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1Zm0 17a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1ZM3 11h1a1 1 0 1 1 0 2H3a1 1 0 1 1 0-2Zm17 0h1a1 1 0 1 1 0 2h-1a1 1 0 1 1 0-2ZM5.6 4.2l.7.7a1 1 0 0 1-1.4 1.4l-.7-.7a1 1 0 0 1 1.4-1.4Zm13.5 13.5.7.7a1 1 0 0 1-1.4 1.4l-.7-.7a1 1 0 0 1 1.4-1.4ZM18.4 4.2a1 1 0 0 1 1.4 1.4l-.7.7a1 1 0 0 1-1.4-1.4l.7-.7ZM6.3 17.7a1 1 0 0 1 0 1.4l-.7.7a1 1 0 0 1-1.4-1.4l.7-.7a1 1 0 0 1 1.4 0Z"/></svg>
-        </button>
-      </nav>
-    </div>
-  </header>
+  {{template "admin-header" "dashboard"}}
   <main class="page-shell py-8">
     <div class="max-w-3xl">
       <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Operations</p>
@@ -133,9 +118,9 @@
       </div>
       <div class="mt-5 border-t border-rule pt-4" data-post-processing-stats>
         <h3 class="text-xs font-extrabold uppercase tracking-wider text-civic">Independent post-processing queues</h3>
-      <div class="mt-3 grid gap-3 lg:grid-cols-2">{{range .Runtime.Queue.PostProcessing}}<div class="rounded-md border border-rule bg-white p-3" data-post-processing-stat="{{.ProcessorKey}}/{{.ScopeKey}}"><p class="font-mono text-sm font-bold">{{.ProcessorKey}}/{{.ScopeKey}}</p><p class="mt-1 text-sm text-muted" data-post-processing-details>Pending {{.Pending}} · Running {{.Running}} · Retrying {{.Retrying}} · Review {{.NeedsReview}} · Failed {{.Failed}} · Skipped {{.Skipped}} · Completed {{.Succeeded}}{{range $key, $value := .Counters}} · {{$key}} {{$value}}{{end}}</p><p class="mt-1 text-xs text-muted" data-post-processing-elapsed>{{if .RunningStartedAt}}Current job elapsed time updates live{{else}}No running job{{end}}</p><p class="mt-1 text-xs text-muted" data-post-processing-total-elapsed>{{if .QueueStartedAt}}Total elapsed time updates live{{else}}No active queue{{end}}</p></div>{{else}}<p class="text-sm text-muted">No post-processing scopes registered.</p>{{end}}</div>
+      <div class="mt-3 grid gap-3 lg:grid-cols-2">{{range .Runtime.Queue.PostProcessing}}<div class="rounded-md border border-rule bg-white p-3" data-post-processing-stat="{{.ProcessorKey}}/{{.ScopeKey}}"><p class="font-mono text-sm font-bold">{{.ProcessorKey}}/{{.ScopeKey}}</p><p class="mt-1 text-sm text-muted" data-post-processing-details>Pending {{.Pending}} · Running {{.Running}} · Retrying {{.Retrying}} · Review {{.NeedsReview}} · Failed {{.Failed}} · Skipped {{.Skipped}} · Completed {{.Succeeded}}{{range $key, $value := .Counters}} · {{$key}} {{$value}}{{end}}</p><p class="mt-1 text-xs text-muted" data-post-processing-elapsed>{{if .RunningStartedAt}}Current job elapsed time updates live{{else}}No running job{{end}}</p><p class="mt-1 text-xs text-muted" data-post-processing-retry-state>{{if .Retrying}}Retry details update live{{else}}No retry backlog{{end}}</p><p class="mt-1 text-xs text-muted" data-post-processing-queue-age>{{if .QueueStartedAt}}Oldest unfinished job age updates live{{else}}No unfinished jobs{{end}}</p></div>{{else}}<p class="text-sm text-muted">No post-processing scopes registered.</p>{{end}}</div>
       </div>
-      <p class="mt-4 rounded-md border border-civic/20 bg-civic-soft px-3 py-2 text-sm text-civic"><strong>Waiting jobs are durable.</strong> “Ready after stage” means the previous step succeeded; those jobs unlock together when the current model batch finishes.</p>
+      <p class="mt-4 rounded-md border border-civic/20 bg-civic-soft px-3 py-2 text-sm text-civic"><strong>Waiting jobs are durable.</strong> “Ready after stage” means the previous step succeeded; those jobs unlock together when the current model batch finishes. Retrying jobs will be attempted again. Review means output or privacy validation was still unsuccessful after three attempts and needs operator investigation before reprocessing.</p>
       <div class="mt-5 border-t border-rule pt-4">
         <div class="flex flex-wrap items-center justify-between gap-3"><h3 class="text-xs font-extrabold uppercase tracking-wider text-muted">Recent safe events</h3><a class="text-sm font-bold text-civic no-underline hover:text-civic-dark" href="/admin/history">View full history →</a></div>
         <ol class="mt-2 grid gap-1 text-sm text-muted" data-recent-events>{{range .Runtime.Queue.RecentEvents}}<li>{{if .CycleID}}Cycle #{{.CycleID}}{{else}}Independent{{end}} · incident #{{.IncidentID}} · {{.ExecutionKey}} · {{pipelineStatusLabel .Status .FailureKind .StatusReason}}{{if .StatusReason}} ({{postProcessingStatusReason .StatusReason .StatusDetail}}){{else if .FailureKind}} ({{postProcessingStatusReason .FailureKind ""}}){{end}}</li>{{else}}<li>No pipeline events yet.</li>{{end}}</ol>
@@ -147,7 +132,7 @@
     <section class="mt-10 grid gap-6 lg:grid-cols-3" aria-labelledby="process-heading">
       <div class="rounded-lg border border-rule bg-paper p-5">
         <h2 id="process-heading" class="font-serif text-xl font-bold">Process one incident now</h2>
-        <p class="mt-2 text-sm text-muted">Queue the two canonical stages for one incident. Its English job is created independently after German succeeds.</p>
+        <p class="mt-2 text-sm text-muted">Queue the two canonical stages for one incident. Registered translation jobs are created independently after German succeeds.</p>
         <form class="mt-4 flex flex-col gap-3" method="post" action="/api/admin/ai/process-now" data-confirm-processing data-confirm-description="Create or reset the current AI job for the entered incident." data-incident-input="incident-id">
           <input name="confirmed" type="hidden" value="false">
           <input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}">
@@ -243,22 +228,7 @@
       </div>
     </section>
   </main>
-  {{/* Shared confirmation dialog for immediate and bulk processing requests. */}}
-  <dialog id="processing-confirmation" class="w-full max-w-xl rounded-lg border border-rule bg-paper p-0 text-ink" aria-labelledby="processing-confirmation-title" aria-describedby="processing-confirmation-description">
-    <form method="dialog" class="p-5 sm:p-6">
-      <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-alert">Confirm AI request</p>
-      <h2 id="processing-confirmation-title" class="mt-1 font-serif text-2xl font-bold">Process now?</h2>
-      <p id="processing-confirmation-description" class="mt-3 leading-relaxed text-muted"></p>
-      <dl class="mt-5 grid gap-3 rounded-md border border-rule bg-newsprint/60 p-4 text-sm">
-        <div><dt class="font-bold">Request</dt><dd id="processing-confirmation-request" class="mt-0.5 font-mono text-xs"></dd></div>
-        <div><dt class="font-bold">Behavior</dt><dd id="processing-confirmation-behavior" class="mt-0.5 text-muted">Bypasses the configured time window, wakes the worker, and runs asynchronously. Jobs remain sequential and keep normal privacy validation, circuit breaking, and retry delays.</dd></div>
-      </dl>
-      <div class="mt-6 flex justify-end gap-3">
-        <button class="rounded-md border border-rule bg-white px-4 py-2 font-bold text-ink hover:bg-newsprint" value="cancel">Cancel</button>
-        <button id="processing-confirmation-submit" class="rounded-md bg-civic px-4 py-2 font-bold text-on-accent hover:bg-civic-dark" type="button">Confirm processing</button>
-      </div>
-    </form>
-  </dialog>
+  {{template "admin-confirmation-dialog"}}
 </body>
 </html>
 {{end}}
@@ -284,19 +254,18 @@
 
       <div class="border-t border-rule px-4 py-5 sm:px-5">
         {{if .Record.HasAI}}
-        <div class="grid gap-5 lg:grid-cols-2">
+        <div class="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(16rem,1fr)]">
           <section lang="de" aria-label="German AI presentation">
             <p class="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-civic">German summary</p>
             <h3 class="mt-2 font-serif text-xl font-bold leading-tight">{{.Record.AITitleDE}}</h3>
             <p class="mt-2 leading-relaxed text-muted">{{.Record.AISummaryDE}}</p>
           </section>
-          {{range .Translations}}
-          <section lang="{{.Language}}" aria-label="{{.DisplayName}} AI presentation">
-            <p class="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-civic">{{.DisplayName}} translation</p>
-            {{if .Title}}<h3 class="mt-2 font-serif text-xl font-bold leading-tight">{{.Title}}</h3><p class="mt-2 leading-relaxed text-muted">{{.Summary}}</p>{{else}}<p class="mt-2 font-semibold text-muted">{{.StatusLabel}}</p>{{end}}
-            {{if .Model}}<p class="mt-3 text-xs text-muted"><strong class="text-ink">Provenance:</strong> {{.Model}} · <span class="font-mono">{{.PromptVersion}}</span></p>{{end}}
-          </section>
-          {{end}}
+          <aside class="rounded-md border border-rule bg-newsprint/50 p-4" aria-label="Translation rollup">
+            <p class="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-civic">Translations</p>
+            <p class="mt-2 font-serif text-2xl font-bold tabular-nums">{{.TranslationRollup.Published}} / {{.TranslationRollup.Total}} published</p>
+            <p class="mt-2 text-sm text-muted">{{.TranslationRollup.Active}} active · <span class="{{if .TranslationRollup.Attention}}font-bold text-alert{{end}}">{{.TranslationRollup.Attention}} attention</span>{{if .TranslationRollup.ReplacementAttention}} · {{.TranslationRollup.ReplacementAttention}} retained replacement warning{{if ne .TranslationRollup.ReplacementAttention 1}}s{{end}}{{end}}</p>
+            <a class="mt-4 inline-block font-bold text-civic no-underline hover:text-civic-dark" href="/admin/translations?incident={{.Record.ID}}">Manage translations →</a>
+          </aside>
         </div>
         <dl class="mt-5 grid gap-3 border-t border-rule/70 pt-4 text-xs text-muted sm:grid-cols-3">
           {{if .Record.AICategory}}<div><dt class="font-bold text-ink">Effective category</dt><dd class="mt-0.5">{{.CategoryLabel}} · <span class="font-mono">{{.Record.AICategory}}</span></dd></div>{{end}}
@@ -310,7 +279,6 @@
           {{with .PublicAssistanceVerification}}{{if .Model}}<div><dt class="font-bold text-ink">Public assistance verifier provenance</dt><dd class="mt-0.5">{{.Model}} · <span class="font-mono">{{.PromptVersion}}</span>{{if .GeneratedAt}} · {{formatDateTime "en" .GeneratedAt}}{{end}}</dd></div>{{end}}{{end}}
           {{with .CategoryVerification}}{{if .Model}}<div><dt class="font-bold text-ink">Category verifier provenance</dt><dd class="mt-0.5">{{.Model}} · <span class="font-mono">{{.PromptVersion}}</span>{{if .GeneratedAt}} · {{formatDateTime "en" .GeneratedAt}}{{end}}</dd></div>{{end}}{{end}}
           {{if .Record.AIModel}}<div><dt class="font-bold text-ink">{{.PrimaryProvenanceLabel}}</dt><dd class="mt-0.5">{{.Record.AIModel}} · <span class="font-mono">{{.Record.AIPromptVersion}}</span></dd></div>{{end}}
-          {{range .Translations}}<div><dt class="font-bold text-ink">{{.DisplayName}} state</dt><dd class="mt-0.5">{{.StatusLabel}}{{if .StatusReason}} · {{postProcessingStatusReason .StatusReason .StatusDetail}}{{end}}{{if .FailureKind}} · <span class="font-mono">{{.FailureKind}}</span>{{end}}</dd></div>{{end}}
           {{if .Record.AIGeneratedAt}}<div><dt class="font-bold text-ink">Generated</dt><dd class="mt-0.5"><time datetime="{{.Record.AIGeneratedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime "en" .Record.AIGeneratedAt}}</time></dd></div>{{end}}
         </dl>
         {{end}}
@@ -337,15 +305,6 @@
           {{end}}
         </div>
         {{end}}
-
-        {{/* Missing and failed translations are retried independently by registered language. */}}
-        {{range .Translations}}{{if .CanRetry}}{{$language := .}}
-        <form class="mt-4 flex flex-wrap items-end gap-2 border-t border-rule/70 pt-4" method="post" action="/api/admin/ai/post-processing/process" data-confirm-processing data-confirm-description="Retry the missing or failed {{$language.DisplayName}} translation for incident #{{$incident.Record.ID}} immediately.">
-          <input name="confirmed" type="hidden" value="false"><input name="processor" type="hidden" value="translation"><input name="scope" type="hidden" value="{{$language.Language}}"><input name="target" type="hidden" value="incident"><input name="incident_id" type="hidden" value="{{$incident.Record.ID}}"><input name="unprocessed_page" type="hidden" value="{{$.Page}}"><input name="all_page" type="hidden" value="{{$.OtherPage}}">
-          {{range $.Models.PostProcessors}}{{if eq .Key "translation"}}{{$processor := .}}<label class="grid gap-1 text-xs font-bold" for="retry-{{$.IDPrefix}}-{{$language.Language}}-{{$incident.Record.ID}}"><span>{{$language.DisplayName}} translation model</span><select class="rounded-md border border-rule bg-white px-2 py-2 text-sm" id="retry-{{$.IDPrefix}}-{{$language.Language}}-{{$incident.Record.ID}}" name="model" required>{{range $.Models.Models}}<option value="{{.}}" {{if eq . $processor.Preferred}}selected{{end}}>{{.}}</option>{{end}}</select></label>{{end}}{{end}}
-          <button class="rounded-md border border-civic bg-white px-4 py-2 text-sm font-bold text-civic hover:bg-newsprint" type="submit" {{if or (not $.Models.CatalogAvailable) (not $.Models.Models)}}disabled aria-disabled="true"{{end}}>Retry {{$language.DisplayName}} now</button>
-        </form>
-        {{end}}{{end}}
 
         {{with .PublicAssistanceVerification}}{{if .CanRetry}}
         <form class="mt-4 flex flex-wrap items-end gap-2 border-t border-rule/70 pt-4" method="post" action="/api/admin/ai/post-processing/process" data-confirm-processing data-confirm-description="Run a new public assistance verification for incident #{{$incident.Record.ID}}. The previous successful result remains effective until this attempt succeeds.">

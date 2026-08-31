@@ -219,6 +219,10 @@ the selected canonical run. Timeline grouping and pagination remain based on
 publication time; incident timing is display metadata.
 
 The optional admin routes contain retained originals and processing controls.
+`/admin/translations` derives canonical coverage, registry-ordered language
+coverage, and bounded incident drill-downs from current v2 runs. Effective
+publication is selected independently from the newest attempt so a failed
+replacement cannot hide a retained successful reader value.
 The application does not authenticate them; the ingress must protect both
 `/admin*` and `/api/admin*`, and public ingress rules must omit them.
 

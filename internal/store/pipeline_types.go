@@ -113,18 +113,23 @@ type PostProcessingJob struct {
 
 // PostProcessingQueueStats summarizes one registered processor scope.
 type PostProcessingQueueStats struct {
-	ProcessorKey     string         `json:"processor_key"`
-	ScopeKey         string         `json:"scope_key"`
-	Pending          int            `json:"pending"`
-	Running          int            `json:"running"`
-	Retrying         int            `json:"retrying"`
-	NeedsReview      int            `json:"needs_review"`
-	Failed           int            `json:"failed"`
-	Skipped          int            `json:"skipped"`
-	Succeeded        int            `json:"succeeded"`
-	QueueStartedAt   *time.Time     `json:"queue_started_at,omitempty"`
-	RunningStartedAt *time.Time     `json:"running_started_at,omitempty"`
-	Counters         map[string]int `json:"counters,omitempty"`
+	ProcessorKey          string         `json:"processor_key"`
+	ScopeKey              string         `json:"scope_key"`
+	Pending               int            `json:"pending"`
+	Running               int            `json:"running"`
+	Retrying              int            `json:"retrying"`
+	NeedsReview           int            `json:"needs_review"`
+	Failed                int            `json:"failed"`
+	Skipped               int            `json:"skipped"`
+	Succeeded             int            `json:"succeeded"`
+	AutomaticRetrying     int            `json:"automatic_retrying"`
+	AutomaticRetryReady   int            `json:"automatic_retry_ready"`
+	QueueStartedAt        *time.Time     `json:"queue_started_at,omitempty"`
+	RunningStartedAt      *time.Time     `json:"running_started_at,omitempty"`
+	NextRetryAt           *time.Time     `json:"next_retry_at,omitempty"`
+	RetryFailureKinds     map[string]int `json:"retry_failure_kinds,omitempty"`
+	AttentionFailureKinds map[string]int `json:"attention_failure_kinds,omitempty"`
+	Counters              map[string]int `json:"counters,omitempty"`
 }
 
 type PostProcessingCounterSpec struct {

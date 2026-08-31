@@ -89,6 +89,24 @@
     return `Required input ${String(detail).replaceAll("_", " ")} unavailable`;
   };
 
+  const formatDuration = (seconds) => {
+    const value = Math.max(0, Math.floor(seconds));
+    const days = Math.floor(value / 86400);
+    const hours = Math.floor((value % 86400) / 3600);
+    const minutes = Math.floor((value % 3600) / 60);
+    const remainder = value % 60;
+    if (days) return `${days}d ${hours}h ${minutes}m`;
+    if (hours) return `${hours}h ${minutes}m`;
+    return `${minutes}m ${remainder}s`;
+  };
+
+  const failureKindLabel = (kind) => ({
+    transient: "temporary provider",
+    configuration: "configuration",
+    output: "invalid output",
+    privacy: "privacy review",
+  })[kind] || String(kind).replaceAll("_", " ");
+
   const schedule = (delay) => {
     window.clearTimeout(timer);
     if (!document.hidden) timer = window.setTimeout(refresh, delay);
@@ -162,18 +180,45 @@
       const runningStartedAt = processor.running_started_at && new Date(processor.running_started_at);
       if (runningStartedAt && !Number.isNaN(runningStartedAt.getTime())) {
         const seconds = Math.max(0, Math.floor((new Date(status.generated_at) - runningStartedAt) / 1000));
-        const minutes = Math.floor(seconds / 60);
-        setText(card.querySelector("[data-post-processing-elapsed]"), `Current job elapsed ${minutes}m ${seconds % 60}s`);
+        setText(card.querySelector("[data-post-processing-elapsed]"), `Current job elapsed ${formatDuration(seconds)}`);
       } else {
         setText(card.querySelector("[data-post-processing-elapsed]"), "No running job");
       }
+      const retrying = Number(processor.retrying || 0);
+      const automaticRetrying = Number(processor.automatic_retrying || 0);
+      const automaticRetryReady = Number(processor.automatic_retry_ready || 0);
+      const retryReasons = Object.entries(processor.retry_failure_kinds || {})
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([name, value]) => `${failureKindLabel(name)} ${value}`)
+        .join(" · ");
+      const reasonSuffix = retryReasons ? ` · reasons: ${retryReasons}` : "";
+      const attentionReasons = Object.entries(processor.attention_failure_kinds || {})
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([name, value]) => `${failureKindLabel(name)} ${value}`)
+        .join(" · ");
+      const nextRetryAt = processor.next_retry_at && new Date(processor.next_retry_at);
+      let retryState = "No retry backlog";
+      if (retrying) {
+        if (automaticRetrying && !automaticEnabled) {
+          retryState = `${automaticRetrying} automatic ${automaticRetrying === 1 ? "retry is" : "retries are"} paused because automatic processing is disabled${reasonSuffix}`;
+        } else if (automaticRetrying && !status.window_open) {
+          retryState = automaticRetryReady
+            ? `${automaticRetryReady} of ${automaticRetrying} automatic ${automaticRetrying === 1 ? "retry is" : "retries are"} ready but paused until the next processing window${reasonSuffix}`
+            : `${automaticRetrying} automatic ${automaticRetrying === 1 ? "retry is" : "retries are"} waiting for backoff or the next processing window${reasonSuffix}`;
+        } else if (nextRetryAt && !Number.isNaN(nextRetryAt.getTime()) && nextRetryAt > new Date(status.generated_at)) {
+          retryState = `Next retry after ${nextRetryAt.toLocaleString("en-GB")}${reasonSuffix}`;
+        } else {
+          retryState = `${retrying} ${retrying === 1 ? "retry is" : "retries are"} eligible for processing${reasonSuffix}`;
+        }
+      }
+      if (attentionReasons) retryState += ` · review/failed reasons: ${attentionReasons}`;
+      setText(card.querySelector("[data-post-processing-retry-state]"), retryState);
       const queueStartedAt = processor.queue_started_at && new Date(processor.queue_started_at);
       if (queueStartedAt && !Number.isNaN(queueStartedAt.getTime())) {
         const seconds = Math.max(0, Math.floor((new Date(status.generated_at) - queueStartedAt) / 1000));
-        const minutes = Math.floor(seconds / 60);
-        setText(card.querySelector("[data-post-processing-total-elapsed]"), `Total elapsed ${minutes}m ${seconds % 60}s`);
+        setText(card.querySelector("[data-post-processing-queue-age]"), `Oldest unfinished job queued ${formatDuration(seconds)} ago`);
       } else {
-        setText(card.querySelector("[data-post-processing-total-elapsed]"), "No active queue");
+        setText(card.querySelector("[data-post-processing-queue-age]"), "No unfinished jobs");
       }
     }
     if (events) {
@@ -251,6 +296,69 @@
     } catch (_error) {
       failures += 1;
       schedule(Math.min(30000, interval * (2 ** Math.min(failures, 4))));
+    } finally {
+      requestInFlight = false;
+    }
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    window.clearTimeout(timer);
+    if (!document.hidden) refresh();
+  });
+  schedule(interval);
+})();
+
+(() => {
+  const region = document.querySelector("[data-translation-operations]");
+  if (!(region instanceof HTMLElement)) return;
+
+  const interval = Number(region.dataset.translationPollInterval) || 5000;
+  const confirmation = document.querySelector("#processing-confirmation");
+  let timer = 0;
+  let requestInFlight = false;
+  let failures = 0;
+
+  const setConnection = (value) => {
+    const connection = region.querySelector("[data-translation-connection]");
+    if (connection) connection.textContent = value;
+  };
+
+  const schedule = (delay) => {
+    window.clearTimeout(timer);
+    if (!document.hidden) timer = window.setTimeout(refresh, delay);
+  };
+
+  const shouldPause = () => {
+    const focused = document.activeElement;
+    return document.hidden
+      || requestInFlight
+      || (confirmation instanceof HTMLDialogElement && confirmation.open)
+      || (focused instanceof Element && region.contains(focused) && focused.closest("form"));
+  };
+
+  async function refresh() {
+    if (shouldPause()) {
+      schedule(interval);
+      return;
+    }
+    requestInFlight = true;
+    try {
+      const response = await fetch(window.location.href, {headers: {Accept: "text/html"}, cache: "no-store"});
+      if (!response.ok) throw new Error(`status ${response.status}`);
+      const parsedDocument = new DOMParser().parseFromString(await response.text(), "text/html");
+      const nextRegion = parsedDocument.querySelector("[data-translation-operations]");
+      if (!(nextRegion instanceof HTMLElement)) throw new Error("translation operations content missing");
+      const scrollX = window.scrollX;
+      const scrollY = window.scrollY;
+      region.replaceChildren(...nextRegion.childNodes);
+      window.scrollTo(scrollX, scrollY);
+      failures = 0;
+      setConnection("Connected");
+      schedule(interval);
+    } catch (_error) {
+      failures += 1;
+      setConnection("Stale");
+      schedule(Math.min(30000, interval * (2 ** Math.min(failures, 3))));
     } finally {
       requestInFlight = false;
     }

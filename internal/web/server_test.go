@@ -168,6 +168,9 @@ func (p fakeProcessingRequester) RequestPostProcessing(ctx context.Context, requ
 	if request.IncidentID != nil {
 		return p.database.QueueIncidentPostProcessing(ctx, *request.IncidentID, plans, time.Now())
 	}
+	if request.Selection == processing.PostProcessingSelectionUnpublished {
+		return p.database.QueueUnpublishedPostProcessingForAll(ctx, "fixture", plans, time.Now())
+	}
 	return p.database.QueuePostProcessingForAll(ctx, "fixture", plans, true, time.Now())
 }
 

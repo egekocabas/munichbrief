@@ -132,11 +132,14 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 		COALESCE(SUM(CASE WHEN jobs.status='failed' THEN 1 ELSE 0 END),0),
 		COALESCE(SUM(CASE WHEN jobs.status='skipped' THEN 1 ELSE 0 END),0),
 		COALESCE(SUM(CASE WHEN jobs.status='succeeded' THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN jobs.status='pending' AND jobs.attempt_count>0 AND jobs.request_kind<>'manual' THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN jobs.status='pending' AND jobs.attempt_count>0 AND jobs.request_kind<>'manual' AND (jobs.next_retry_at IS NULL OR jobs.next_retry_at<=?) THEN 1 ELSE 0 END),0),
 		COALESCE(MIN(CASE WHEN jobs.status IN ('pending','running') THEN jobs.created_at END),''),
-		COALESCE(MIN(CASE WHEN jobs.status='running' THEN jobs.started_at END),'')
+		COALESCE(MIN(CASE WHEN jobs.status='running' THEN jobs.started_at END),''),
+		COALESCE(MIN(CASE WHEN jobs.status='pending' AND jobs.attempt_count>0 THEN jobs.next_retry_at END),'')
 		FROM post_processing_scopes scopes LEFT JOIN post_processing_jobs jobs
 		ON jobs.processor_key=scopes.processor_key AND jobs.scope_key=scopes.scope_key
-		GROUP BY scopes.processor_key,scopes.scope_key ORDER BY scopes.processor_key,scopes.scope_key`)
+		GROUP BY scopes.processor_key,scopes.scope_key ORDER BY scopes.processor_key,scopes.scope_key`, formatTime(now.UTC()))
 	if err != nil {
 		return snapshot, fmt.Errorf("read post-processing queue stats: %w", err)
 	}
@@ -144,7 +147,8 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 		var stat PostProcessingQueueStats
 		var queueStartedAt string
 		var runningStartedAt string
-		if err := postRows.Scan(&stat.ProcessorKey, &stat.ScopeKey, &stat.Pending, &stat.Running, &stat.Retrying, &stat.NeedsReview, &stat.Failed, &stat.Skipped, &stat.Succeeded, &queueStartedAt, &runningStartedAt); err != nil {
+		var nextRetryAt string
+		if err := postRows.Scan(&stat.ProcessorKey, &stat.ScopeKey, &stat.Pending, &stat.Running, &stat.Retrying, &stat.NeedsReview, &stat.Failed, &stat.Skipped, &stat.Succeeded, &stat.AutomaticRetrying, &stat.AutomaticRetryReady, &queueStartedAt, &runningStartedAt, &nextRetryAt); err != nil {
 			postRows.Close()
 			return snapshot, err
 		}
@@ -164,6 +168,16 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 			}
 			stat.RunningStartedAt = &value
 		}
+		if nextRetryAt != "" {
+			value, err := time.Parse(time.RFC3339Nano, nextRetryAt)
+			if err != nil {
+				postRows.Close()
+				return snapshot, fmt.Errorf("parse %s/%s next retry: %w", stat.ProcessorKey, stat.ScopeKey, err)
+			}
+			stat.NextRetryAt = &value
+		}
+		stat.RetryFailureKinds = make(map[string]int)
+		stat.AttentionFailureKinds = make(map[string]int)
 		stat.Counters = make(map[string]int)
 		snapshot.PostProcessing = append(snapshot.PostProcessing, stat)
 	}
@@ -172,6 +186,41 @@ func (s *Store) PipelineSnapshot(ctx context.Context, sourceMode string, stepKey
 		return snapshot, fmt.Errorf("iterate post-processing queue stats: %w", err)
 	}
 	if err := postRows.Close(); err != nil {
+		return snapshot, err
+	}
+	retryRows, err := s.db.QueryContext(ctx, `SELECT processor_key,scope_key,
+		CASE WHEN status='pending' THEN 'retry' ELSE 'attention' END,
+		COALESCE(NULLIF(failure_kind,''),'unknown'),COUNT(*) FROM post_processing_jobs
+		WHERE (status='pending' AND attempt_count>0) OR status IN ('needs_review','failed')
+		GROUP BY processor_key,scope_key,CASE WHEN status='pending' THEN 'retry' ELSE 'attention' END,
+		COALESCE(NULLIF(failure_kind,''),'unknown')`)
+	if err != nil {
+		return snapshot, fmt.Errorf("read post-processing retry reasons: %w", err)
+	}
+	for retryRows.Next() {
+		var processorKey, scopeKey, group, failureKind string
+		var count int
+		if err := retryRows.Scan(&processorKey, &scopeKey, &group, &failureKind, &count); err != nil {
+			retryRows.Close()
+			return snapshot, err
+		}
+		for index := range snapshot.PostProcessing {
+			stat := &snapshot.PostProcessing[index]
+			if stat.ProcessorKey == processorKey && stat.ScopeKey == scopeKey {
+				if group == "retry" {
+					stat.RetryFailureKinds[failureKind] = count
+				} else {
+					stat.AttentionFailureKinds[failureKind] = count
+				}
+				break
+			}
+		}
+	}
+	if err := retryRows.Err(); err != nil {
+		retryRows.Close()
+		return snapshot, fmt.Errorf("iterate post-processing retry reasons: %w", err)
+	}
+	if err := retryRows.Close(); err != nil {
 		return snapshot, err
 	}
 	for _, spec := range counterSpecs {

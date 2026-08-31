@@ -662,13 +662,17 @@ func TestPublicHostUsesFailClosedPresentationAndRejectsAdmin(t *testing.T) {
 				t.Errorf("public disclosure acknowledgement = %d/%#v, want 200 and one cookie", acknowledgement.Code, acknowledgement.Result().Cookies())
 			}
 
-			for _, path := range []string{"/admin", "/admin/history", "/api/admin/ai/process-all-now", "/api/admin/ai/automatic-processing", "/api/admin/ai/cancel-all", "/private"} {
+			for _, route := range []struct{ method, path string }{
+				{http.MethodGet, "/admin"}, {http.MethodGet, "/admin/translations"}, {http.MethodGet, "/admin/history"},
+				{http.MethodPost, "/api/admin/ai/process-all-now"}, {http.MethodPost, "/api/admin/ai/translations/process"},
+				{http.MethodPost, "/api/admin/ai/automatic-processing"}, {http.MethodPost, "/api/admin/ai/cancel-all"}, {http.MethodGet, "/private"},
+			} {
 				response := httptest.NewRecorder()
-				request := httptest.NewRequest(http.MethodGet, path, nil)
+				request := httptest.NewRequest(route.method, route.path, nil)
 				request.Host = publicHost
 				handler.ServeHTTP(response, request)
 				if response.Code != http.StatusNotFound {
-					t.Errorf("public %s status = %d, want 404", path, response.Code)
+					t.Errorf("public %s %s status = %d, want 404", route.method, route.path, response.Code)
 				}
 			}
 		})
