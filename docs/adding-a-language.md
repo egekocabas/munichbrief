@@ -92,7 +92,8 @@ The bundled chart keeps a defense-in-depth language allowlist. Add the route
 code to `ingress.public.languageCodes` and verify the rendered Prefix path.
 Deployments that do not use the chart must make the equivalent explicit ingress
 change. In `homelab-infra`, add the prefix under the shared MunichBrief public
-paths and update its static verification expectations.
+paths inside the marked `reader-language-prefixes` block; static verification
+derives its expectations from that block.
 
 Use this rollout order:
 

@@ -68,6 +68,16 @@ func TestValidateRejectsUnsafeAndDuplicateRegistrations(t *testing.T) {
 	if err := Validate(invalidOpenGraphLocale); err == nil {
 		t.Fatal("invalid Open Graph locale was accepted")
 	}
+	mismatchedOpenGraphLocale := append([]Definition(nil), definitions...)
+	mismatchedOpenGraphLocale[1].OpenGraphLocale = "fr_FR"
+	if err := Validate(mismatchedOpenGraphLocale); err == nil {
+		t.Fatal("Open Graph locale for another language was accepted")
+	}
+	duplicateMessageID := append([]Definition(nil), definitions...)
+	duplicateMessageID[1].StepMessageID = duplicateMessageID[0].SwitchMessageID
+	if err := Validate(duplicateMessageID); err == nil {
+		t.Fatal("duplicate language message ID was accepted")
+	}
 	withoutCanonical := append([]Definition(nil), definitions...)
 	withoutCanonical[0].Canonical = false
 	if err := Validate(withoutCanonical); err == nil {

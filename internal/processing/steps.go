@@ -224,6 +224,9 @@ func newTranslationDefinition(target langregistry.Definition, prompt PromptDefin
 	if target.Canonical || prompt.TranslationLanguage != target.Code || prompt.StepKey != TranslationStepKey(target.Code) {
 		return TranslationDefinition{}, fmt.Errorf("translation language %s has inconsistent prompt metadata", target.Code)
 	}
+	if prompt.Status != PromptActive || strings.TrimSpace(prompt.Version) == "" || strings.TrimSpace(prompt.SystemPrompt) == "" || !validTranslationPromptTemplate(prompt.UserPromptTemplate) {
+		return TranslationDefinition{}, fmt.Errorf("translation language %s has incomplete active prompt content", target.Code)
+	}
 	fieldCode := strings.ReplaceAll(target.Code, "-", "_")
 	titleField, summaryField := "title_"+fieldCode, "summary_"+fieldCode
 	schema, err := json.Marshal(map[string]any{
@@ -245,6 +248,15 @@ func newTranslationDefinition(target langregistry.Definition, prompt PromptDefin
 			Generator: translationInputGenerator(prompt.Version), OutputDecoder: translationOutputDecoder(titleField, summaryField),
 			Validator: func(_ StepInput, output *StepOutput) error { return validateTranslation(output) }, OutputValues: postProcessingOutputValues},
 	}, nil
+}
+
+func validTranslationPromptTemplate(value string) bool {
+	if strings.Count(value, "%s") != 1 {
+		return false
+	}
+	const payload = "__MUNICHBRIEF_TRANSLATION_PAYLOAD__"
+	rendered := fmt.Sprintf(value, payload)
+	return strings.Count(rendered, payload) == 1 && !strings.Contains(rendered, "%!")
 }
 
 func TranslationStepKey(languageCode string) string { return TranslationModelStep + "/" + languageCode }

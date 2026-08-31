@@ -128,6 +128,20 @@ func catalogMessageIDs(files fs.FS, name string) (map[string]struct{}, error) {
 		if len(message) == 0 || !hasOther || strings.TrimSpace(fmt.Sprint(other)) == "" {
 			return nil, fmt.Errorf("translation catalog %s has empty message %s", name, id)
 		}
+		if id == "Reports" {
+			for _, pluralForm := range []string{"zero", "one", "two", "few", "many", "other"} {
+				rendering, present := message[pluralForm]
+				if !present {
+					continue
+				}
+				if !strings.Contains(fmt.Sprint(rendering), "{{.Count}}") {
+					return nil, fmt.Errorf("translation catalog %s plural form %s for %s does not render Count", name, pluralForm, id)
+				}
+			}
+		}
+		if id == "ShownTotal" && (!strings.Contains(fmt.Sprint(other), "{{.Shown}}") || !strings.Contains(fmt.Sprint(other), "{{.Total}}")) {
+			return nil, fmt.Errorf("translation catalog %s message %s does not render Shown and Total", name, id)
+		}
 		ids[id] = struct{}{}
 	}
 	return ids, nil

@@ -78,6 +78,7 @@ func Validate(definitions []Definition) error {
 	seenCodes := make(map[string]struct{}, len(definitions))
 	seenTags := make(map[string]struct{}, len(definitions))
 	seenCatalogs := make(map[string]struct{}, len(definitions))
+	seenMessageIDs := make(map[string]string, len(definitions)*2)
 	canonical := 0
 	for _, definition := range definitions {
 		if !routeCodePattern.MatchString(definition.Code) || definition.Code == "api" {
@@ -98,6 +99,9 @@ func Validate(definitions []Definition) error {
 		if !openGraphLocalePattern.MatchString(definition.OpenGraphLocale) {
 			return fmt.Errorf("reader language %s has invalid Open Graph locale %q", definition.Code, definition.OpenGraphLocale)
 		}
+		if err := validateOpenGraphLocaleCompatibility(definition); err != nil {
+			return err
+		}
 		if definition.FormatDate == nil || definition.FormatDay == nil || definition.FormatDateTime == nil {
 			return fmt.Errorf("reader language %s requires date formatters", definition.Code)
 		}
@@ -111,6 +115,15 @@ func Validate(definitions []Definition) error {
 		if _, duplicate := seenCatalogs[definition.Catalog]; duplicate {
 			return fmt.Errorf("reader language catalog %s is registered more than once", definition.Catalog)
 		}
+		for _, message := range []struct{ kind, id string }{
+			{kind: "switch", id: definition.SwitchMessageID},
+			{kind: "processing step", id: definition.StepMessageID},
+		} {
+			if owner, duplicate := seenMessageIDs[message.id]; duplicate {
+				return fmt.Errorf("reader language %s message ID %s is already used by %s", message.kind, message.id, owner)
+			}
+			seenMessageIDs[message.id] = definition.Code + " " + message.kind
+		}
 		seenCodes[definition.Code] = struct{}{}
 		seenTags[tag] = struct{}{}
 		seenCatalogs[definition.Catalog] = struct{}{}
@@ -120,6 +133,15 @@ func Validate(definitions []Definition) error {
 	}
 	if canonical != 1 {
 		return fmt.Errorf("reader languages require exactly one canonical registration, got %d", canonical)
+	}
+	return nil
+}
+
+func validateOpenGraphLocaleCompatibility(definition Definition) error {
+	parts := strings.Split(definition.OpenGraphLocale, "_")
+	tagBase, _, tagRegion := definition.Tag.Raw()
+	if parts[0] != tagBase.String() || (tagRegion.String() != "ZZ" && parts[1] != tagRegion.String()) {
+		return fmt.Errorf("reader language %s Open Graph locale %s does not match BCP-47 tag %s", definition.Code, definition.OpenGraphLocale, definition.Tag)
 	}
 	return nil
 }

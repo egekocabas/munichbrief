@@ -74,6 +74,31 @@ func TestTranslationDefinitionFactorySupportsBCP47Target(t *testing.T) {
 	}
 }
 
+func TestTranslationDefinitionFactoryRejectsIncompletePrompt(t *testing.T) {
+	target := langregistry.Definition{Code: "pt-br", Tag: language.MustParse("pt-BR"), DisplayName: "Português (Brasil)"}
+	valid := PromptDefinition{
+		Version: "incident-translation-pt-br-v1", StepKey: TranslationStepKey(target.Code), TranslationLanguage: target.Code,
+		Status: PromptActive, SystemPrompt: "Translate safely.", UserPromptTemplate: "%s",
+	}
+	for name, mutate := range map[string]func(*PromptDefinition){
+		"inactive":         func(prompt *PromptDefinition) { prompt.Status = "retired" },
+		"missing version":  func(prompt *PromptDefinition) { prompt.Version = "" },
+		"missing system":   func(prompt *PromptDefinition) { prompt.SystemPrompt = "" },
+		"missing payload":  func(prompt *PromptDefinition) { prompt.UserPromptTemplate = "Translate this." },
+		"repeated payload": func(prompt *PromptDefinition) { prompt.UserPromptTemplate = "%s %s" },
+		"escaped payload":  func(prompt *PromptDefinition) { prompt.UserPromptTemplate = "%%s" },
+		"invalid format":   func(prompt *PromptDefinition) { prompt.UserPromptTemplate = "100% safe: %s" },
+	} {
+		t.Run(name, func(t *testing.T) {
+			prompt := valid
+			mutate(&prompt)
+			if _, err := newTranslationDefinition(target, prompt); err == nil {
+				t.Fatal("incomplete translation prompt was accepted")
+			}
+		})
+	}
+}
+
 func TestCategoryVerificationUsesOnlySummaryAndEnforcesVerdictInvariant(t *testing.T) {
 	step := CategoryVerificationDefinition()
 	if step.PromptVersion != "incident-category-verification-v2" {

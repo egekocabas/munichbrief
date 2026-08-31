@@ -824,6 +824,13 @@ func TestTranslationCatalogsAreCompleteAndPluralized(t *testing.T) {
 	if err := validateCatalogParity(broken, "de.toml", "en.toml"); err == nil {
 		t.Fatal("mismatched translation catalogs were accepted")
 	}
+	missingPluralCount := fstest.MapFS{
+		"de.toml": {Data: []byte("[Reports]\nother = 'Meldungen'\n")},
+		"en.toml": {Data: []byte("[Reports]\nother = 'reports'\n")},
+	}
+	if err := validateCatalogParity(missingPluralCount, "de.toml", "en.toml"); err == nil {
+		t.Fatal("translation catalog plural forms without count rendering were accepted")
+	}
 }
 
 func TestReaderLanguageRegistryMatchesTranslationDefinitions(t *testing.T) {
