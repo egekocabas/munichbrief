@@ -468,17 +468,41 @@ func (s *Server) processPostProcessing(response http.ResponseWriter, request *ht
 	if !ok {
 		return
 	}
+	target, returnErr := postProcessingReturnURL(request.PostForm, processorKey, scopeKey)
+	if returnErr != nil {
+		http.Error(response, returnErr.Error(), http.StatusBadRequest)
+		return
+	}
 	queued, err := s.options.Processor.RequestPostProcessing(request.Context(), processing.PostProcessingRequest{ProcessorKey: processorKey, ScopeKeys: scopeKeys, IncidentID: incidentID, Model: model})
 	if s.handlePostProcessingError(response, request, "queue post-processing work", err) {
 		return
 	}
-	target, _ := url.Parse(adminPaginationURL(positiveFormInt(request.PostForm.Get("unprocessed_page")), positiveFormInt(request.PostForm.Get("all_page"))))
 	query := target.Query()
 	query.Set("post_processing_queued", strconv.Itoa(queued))
 	query.Set("processor", processorKey)
 	query.Set("scope", scopeKey)
 	target.RawQuery = query.Encode()
 	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
+}
+
+func postProcessingReturnURL(form url.Values, processorKey, scopeKey string) (*url.URL, error) {
+	switch strings.TrimSpace(form.Get("return_to")) {
+	case "":
+		return url.Parse(adminPaginationURL(positiveFormInt(form.Get("unprocessed_page")), positiveFormInt(form.Get("all_page"))))
+	case "verifications":
+		filter, ok := requestedAdminVerificationFilter(form.Get("return_status"))
+		if !ok {
+			return nil, errors.New("invalid verification return status")
+		}
+		pageRaw := strings.TrimSpace(form.Get("return_page"))
+		page, err := strconv.Atoi(pageRaw)
+		if err != nil || page < 1 {
+			return nil, errors.New("invalid verification return page")
+		}
+		return url.Parse(adminVerificationsURL(processorKey, scopeKey, filter, page))
+	default:
+		return nil, errors.New("invalid post-processing return target")
+	}
 }
 
 func (s *Server) preparePostProcessingMutation(response http.ResponseWriter, request *http.Request, label string) bool {

@@ -40,6 +40,9 @@ var adminHistoryTemplate string
 //go:embed templates/admin_translations.html
 var adminTranslationsTemplate string
 
+//go:embed templates/admin_verifications.html
+var adminVerificationsTemplate string
+
 //go:embed static/app.css
 var stylesheet []byte
 
@@ -72,6 +75,8 @@ type incidentStore interface {
 	ListAdminTranslations(context.Context, []int64, []string) ([]store.AdminTranslation, error)
 	AdminTranslationCoverage(context.Context, string, []string) (store.AdminCanonicalCoverage, []store.AdminLanguageCoverage, error)
 	ListAdminTranslationIncidents(context.Context, int, int, string, string, store.AdminTranslationFilter) ([]store.AdminTranslationIncident, int, error)
+	AdminVerificationCoverageFor(context.Context, string, store.AdminVerificationSpec) (store.AdminVerificationCoverage, error)
+	ListAdminVerificationIncidents(context.Context, int, int, string, store.AdminVerificationSpec, store.AdminVerificationFilter) ([]store.AdminVerificationIncident, int, error)
 	ListAdminCategoryVerifications(context.Context, []int64) ([]store.AdminCategoryVerification, error)
 	ListAdminPublicAssistanceVerifications(context.Context, []int64) ([]store.AdminPublicAssistanceVerification, error)
 	ListPipelineHistory(context.Context, string, int, *store.PipelineHistoryCursor, *store.PipelineHistoryCursor) (store.PipelineHistoryPage, error)
@@ -115,19 +120,20 @@ var gitCommitPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
 
 // Server owns MunichBrief's HTTP route tree and parsed embedded templates.
 type Server struct {
-	store                     incidentStore
-	logger                    *slog.Logger
-	options                   Options
-	location                  *time.Location
-	languages                 []readerLanguage
-	localization              *localization
-	timelineTemplate          *template.Template
-	detailTemplate            *template.Template
-	aboutTemplate             *template.Template
-	adminTemplate             *template.Template
-	adminHistoryTemplate      *template.Template
-	adminTranslationsTemplate *template.Template
-	socialCards               *socialCardRenderer
+	store                      incidentStore
+	logger                     *slog.Logger
+	options                    Options
+	location                   *time.Location
+	languages                  []readerLanguage
+	localization               *localization
+	timelineTemplate           *template.Template
+	detailTemplate             *template.Template
+	aboutTemplate              *template.Template
+	adminTemplate              *template.Template
+	adminHistoryTemplate       *template.Template
+	adminTranslationsTemplate  *template.Template
+	adminVerificationsTemplate *template.Template
+	socialCards                *socialCardRenderer
 }
 
 // NewWithOptions validates all route-affecting configuration before constructing
@@ -220,11 +226,15 @@ func newWithLanguages(database incidentStore, logger *slog.Logger, options Optio
 	if err != nil {
 		return nil, fmt.Errorf("parse admin translations template: %w", err)
 	}
+	adminVerifications, err := template.New("admin_verifications").Funcs(functions).Parse(adminSharedTemplate + adminVerificationsTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("parse admin verifications template: %w", err)
+	}
 	socialCards, err := newSocialCardRenderer()
 	if err != nil {
 		return nil, fmt.Errorf("initialize social card renderer: %w", err)
 	}
-	return &Server{store: database, logger: logger, options: options, location: location, languages: definitions, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, adminTemplate: admin, adminHistoryTemplate: adminHistory, adminTranslationsTemplate: adminTranslations, socialCards: socialCards}, nil
+	return &Server{store: database, logger: logger, options: options, location: location, languages: definitions, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, adminTemplate: admin, adminHistoryTemplate: adminHistory, adminTranslationsTemplate: adminTranslations, adminVerificationsTemplate: adminVerifications, socialCards: socialCards}, nil
 }
 
 // Handler returns the complete public and optional review route tree.
@@ -250,6 +260,7 @@ func (s *Server) Handler() http.Handler {
 	if s.options.AdminEnabled {
 		mux.HandleFunc("GET /admin", s.admin)
 		mux.HandleFunc("GET /admin/translations", s.adminTranslationsPage)
+		mux.HandleFunc("GET /admin/verifications", s.adminVerificationsPage)
 		mux.HandleFunc("GET /admin/history", s.adminHistory)
 		mux.HandleFunc("GET /api/admin/ai/status", s.pipelineStatus)
 		mux.HandleFunc("POST /api/admin/ai/process-now", s.processIncidentNow)

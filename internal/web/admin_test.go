@@ -976,6 +976,156 @@ func TestAdminShowsPublicAssistanceVerificationControlsAndSafeHistory(t *testing
 	}
 }
 
+func TestAdminVerificationOperationsShowsRetainedResultAndProtectedFailureDetail(t *testing.T) {
+	ctx := context.Background()
+	database := fixtureStore(t)
+	now := time.Date(2026, time.August, 31, 18, 0, 0, 0, time.UTC)
+	presentation := seedV2Presentation(t, database, testPresentation{
+		TitleDE: "Verifizierter Titel", SummaryDE: "Verifizierte Zusammenfassung.",
+		TitleEN: "Verified title", SummaryEN: "Verified summary.",
+	}, now)
+	plan := store.PostProcessingPlan{
+		ProcessorKey: processing.CategoryVerificationStep, ScopeKey: processing.DefaultPostProcessingScope,
+		PromptVersion: processing.CategoryVerificationPromptVersion, Model: "qwen3.5:4b",
+		InputKinds: []string{"title_de", "summary_de", "category"},
+	}
+	if queued, err := database.QueuePostProcessingForRun(ctx, presentation.PresentationRunID, []store.PostProcessingPlan{plan}, "manual", false, now.Add(time.Minute)); err != nil || queued != 1 {
+		t.Fatalf("queue category verification = %d/%v", queued, err)
+	}
+	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract(plan.ScopeKey, plan.PromptVersion, []string{"is_correct", "corrected_category"}, plan.InputKinds...), false, nil, now.Add(2*time.Minute))
+	if err != nil || !found {
+		t.Fatalf("claim category verification = %#v/%t/%v", job, found, err)
+	}
+	if err := database.CompletePostProcessingJob(ctx, job, []store.PipelineValue{{Kind: "is_correct", Value: "false"}, {Kind: "corrected_category", Value: "traffic"}}, job.ModelIdentity, job.InputHash, now.Add(3*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if queued, err := database.QueueIncidentPostProcessing(ctx, presentation.IncidentID, []store.PostProcessingPlan{plan}, now.Add(4*time.Minute)); err != nil || queued != 1 {
+		t.Fatalf("queue category replacement = %d/%v", queued, err)
+	}
+	replacement, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract(plan.ScopeKey, plan.PromptVersion, []string{"is_correct", "corrected_category"}, plan.InputKinds...), false, nil, now.Add(5*time.Minute))
+	if err != nil || !found {
+		t.Fatalf("claim category replacement = %#v/%t/%v", replacement, found, err)
+	}
+	privateFailure := errors.New(`<script>alert("private model output")</script>`)
+	if err := database.FailPostProcessingJob(ctx, replacement, "needs_review", "output", nil, now.Add(6*time.Minute), privateFailure); err != nil {
+		t.Fatal(err)
+	}
+
+	server := adminTestServer(t, database, nil)
+	handler := server.Handler()
+	overview := httptest.NewRecorder()
+	handler.ServeHTTP(overview, httptest.NewRequest(http.MethodGet, "/admin/verifications", nil))
+	for _, expected := range []string{"Verification operations", "Registered verification scopes", "Category verification", "Public assistance verification", "category_verification/default", "1 attention", `data-verification-operations`, `data-verification-poll-interval="5000"`, `aria-current="page"`} {
+		if overview.Code != http.StatusOK || !strings.Contains(overview.Body.String(), expected) {
+			t.Errorf("verification overview does not contain %q (status %d)", expected, overview.Code)
+		}
+	}
+	if overview.Header().Get("Cache-Control") != "private, no-store" || overview.Header().Get("X-Robots-Tag") != "noindex, nofollow, noarchive" {
+		t.Fatalf("verification overview privacy headers = %#v", overview.Header())
+	}
+
+	detailPath := "/admin/verifications?processor=category_verification&scope=default&status=attention&page=1"
+	detail := httptest.NewRecorder()
+	handler.ServeHTTP(detail, httptest.NewRequest(http.MethodGet, detailPath, nil))
+	body := detail.Body.String()
+	for _, expected := range []string{
+		"Verifizierter Titel", "Corrected", "needs review · attempts 1", "The latest replacement needs attention",
+		"Other", "Traffic", "Failure detail", "private model output", "Sensitive administrative diagnostic",
+		`name="return_to" type="hidden" value="verifications"`, `name="return_status" type="hidden" value="attention"`,
+		"Effective result provenance", "Attempt provenance", "Recheck now", "Recheck all incidents",
+	} {
+		if detail.Code != http.StatusOK || !strings.Contains(body, expected) {
+			t.Errorf("verification detail does not contain %q (status %d)", expected, detail.Code)
+		}
+	}
+	if strings.Contains(body, privateFailure.Error()) || !strings.Contains(body, `&lt;script&gt;alert`) {
+		t.Error("verification detail did not HTML-escape the protected error")
+	}
+
+	for _, target := range []string{
+		"/admin/verifications?processor=category_verification",
+		"/admin/verifications?scope=default",
+		"/admin/verifications?status=all",
+		"/admin/verifications?processor=translation&scope=en",
+		"/admin/verifications?processor=category_verification&scope=default&status=unknown",
+		"/admin/verifications?processor=category_verification&scope=default&page=0",
+	} {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, target, nil))
+		if response.Code != http.StatusBadRequest {
+			t.Errorf("GET %s status = %d, want 400", target, response.Code)
+		}
+	}
+
+	history := httptest.NewRecorder()
+	handler.ServeHTTP(history, httptest.NewRequest(http.MethodGet, "/admin/history", nil))
+	status := httptest.NewRecorder()
+	handler.ServeHTTP(status, httptest.NewRequest(http.MethodGet, "/api/admin/ai/status", nil))
+	reader := httptest.NewRecorder()
+	handler.ServeHTTP(reader, httptest.NewRequest(http.MethodGet, "/de/incidents/"+formatID(presentation.IncidentID), nil))
+	for name, response := range map[string]*httptest.ResponseRecorder{"history": history, "status": status, "reader": reader} {
+		if strings.Contains(response.Body.String(), "private model output") {
+			t.Errorf("%s exposed focused verification failure detail", name)
+		}
+	}
+
+	retry := httptest.NewRecorder()
+	retryBody := "confirmed=true&processor=category_verification&scope=default&target=incident&incident_id=" + formatID(presentation.IncidentID) + "&model=qwen3.5%3A4b&return_to=verifications&return_status=attention&return_page=1"
+	handler.ServeHTTP(retry, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", retryBody))
+	location := retry.Header().Get("Location")
+	if retry.Code != http.StatusSeeOther || !strings.HasPrefix(location, "/admin/verifications?") || !strings.Contains(location, "post_processing_queued=1") || !strings.Contains(location, "status=attention") {
+		t.Fatalf("verification retry redirect = %d/%q", retry.Code, location)
+	}
+
+	invalidReturn := httptest.NewRecorder()
+	handler.ServeHTTP(invalidReturn, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=category_verification&scope=default&target=all&model=qwen3.5%3A4b&return_to=https%3A%2F%2Fevil.invalid"))
+	if invalidReturn.Code != http.StatusBadRequest {
+		t.Fatalf("invalid verification return target = %d, want 400", invalidReturn.Code)
+	}
+
+	adminScript := httptest.NewRecorder()
+	handler.ServeHTTP(adminScript, httptest.NewRequest(http.MethodGet, staticAssets["admin.js"].path, nil))
+	for _, expected := range []string{"data-verification-operations", "verificationPollInterval", "data-verification-connection"} {
+		if adminScript.Code != http.StatusOK || !strings.Contains(adminScript.Body.String(), expected) {
+			t.Errorf("admin script does not contain %q", expected)
+		}
+	}
+}
+
+func TestAdminVerificationOperationsDiscoversFutureRegisteredVerifier(t *testing.T) {
+	database := fixtureStore(t)
+	verification := &processing.PostProcessorVerification{
+		VerdictKind: "is_correct",
+		Fields:      []processing.PostProcessorVerificationField{{DisplayName: "Quality note", OriginalKind: "category", CorrectedKind: "corrected_quality_note"}},
+	}
+	status := processing.PipelineModelStatus{
+		CatalogAvailable: true, Models: []string{"qwen3.5:4b"},
+		PostProcessors: []processing.PostProcessorModelStatus{{
+			Key: "quality_note", DisplayName: "Quality note verification", Description: "Review a future quality note.",
+			ModelSettingKey: "quality_note", Manual: true, Preferred: "qwen3.5:4b", PreferredAvailable: true,
+			Scopes:       []processing.PostProcessorScopeStatus{{Key: "default", DisplayName: "Default", StepKey: "quality_note/default", PromptVersion: "quality-note-v1"}},
+			Verification: verification,
+		}},
+	}
+	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "review", AdminEnabled: true,
+		Processor: fakeProcessingRequester{database: database, status: &status},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := httptest.NewRecorder()
+	server.Handler().ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/admin/verifications", nil))
+	for _, expected := range []string{"Quality note verification", "quality_note/default", "Review a future quality note"} {
+		if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), expected) {
+			t.Errorf("future verification overview does not contain %q (status %d)", expected, response.Code)
+		}
+	}
+	if strings.Contains(response.Body.String(), "Translations") && strings.Contains(response.Body.String(), "translation/en") {
+		t.Error("future verification page included a non-verification post-processor scope")
+	}
+}
+
 func TestAdminShowsUnavailableSourceVerificationAsSkipped(t *testing.T) {
 	ctx := context.Background()
 	database := fixtureStore(t)
