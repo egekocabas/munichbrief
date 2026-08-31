@@ -18,7 +18,10 @@ Choose these values before writing code:
   in URLs, the preference cookie, and persisted translation scope keys, and
   must not be the reserved `api` prefix;
 - the exact BCP-47 content tag, such as `fr-FR` or `pt-BR`, for negotiation,
-  HTML, HTTP, Markdown, hreflang, and structured data;
+  HTML, HTTP, Markdown, hreflang, structured data, and the TranslateGemma
+  source/target code;
+- the English model-facing language name used in the TranslateGemma prompt,
+  such as `French` or `Portuguese`;
 - the Open Graph locale, such as `fr_FR`;
 - the language's own display name and localized language-switch/provenance
   labels; and
@@ -32,14 +35,21 @@ own stable code.
 
 1. Add one noncanonical definition to the registry in
    `internal/languages/languages.go`. Supply its exact tag, catalog filename,
-   Open Graph locale, message IDs, and date formatters. Keep German as the only
-   canonical entry.
+   English model-facing translation name, Open Graph locale, message IDs, and
+   date formatters. Keep German as the only canonical entry. Confirm the exact
+   BCP-47 tag is listed by the
+   [Ollama TranslateGemma prompt guide](https://ollama.com/library/translategemma:4b)
+   before registration.
 2. Add a target-specific immutable translation prompt to
    `internal/processing/prompts.go`. Set its translation language to the new
-   registry code and its step key to `translation/<code>`. The generic factory
-   creates the schema, decoder, validator, queue scope, admin control, history,
-   metrics contract, and a row in the translation operations dashboard. No
-   dashboard template branch is needed for the new language.
+   registry code and its step key to `translation/<code>`. Build its user-only
+   template with the versioned TranslateGemma helper so source/target names,
+   exact BCP-47 codes, output field names, and payload spacing cannot drift.
+   Target-specific terminology guidance may be supplied without changing the
+   shared request shape. The generic factory creates the schema, decoder,
+   validator, queue scope, admin control, history, metrics contract, and a row
+   in the translation operations dashboard. No dashboard template branch is
+   needed for the new language.
 3. Add `internal/web/locales/active.<code>.toml`. It must contain every message
    ID in the existing catalogs, including plural forms, category/report/time
    metadata, disclosure text, language switching, and processing provenance.
@@ -59,6 +69,11 @@ The new prompt receives only the accepted privacy-safe German title and
 summary. It must preserve subjects, claims, uncertainty, Munich place names,
 and the presumption of innocence without adding explanations or source details.
 Keep the existing title and summary limits and strict two-field JSON output.
+TranslateGemma supports only user and assistant roles in its native template;
+MunichBrief therefore sends the complete translation instruction and payload as
+one user message while retaining Ollama's JSON schema constraint. The model
+card documents accepted language-code forms and the native template contract:
+[Google TranslateGemma model card](https://huggingface.co/google/translategemma-4b-it).
 
 Add tests for valid output, missing/extra fields, length limits, unsafe public
 text, and prompt-injection-like input. Then run the opt-in Ollama smoke check

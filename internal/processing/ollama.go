@@ -137,7 +137,7 @@ func (c *OllamaClient) GenerateStep(ctx context.Context, step StepDefinition, in
 	if err != nil {
 		return StepOutput{}, "", err
 	}
-	content, modelIdentity, err := c.chat(ctx, step.SystemPrompt, userContent, step.Schema)
+	content, modelIdentity, err := c.chat(ctx, step.UserOnly, step.SystemPrompt, userContent, step.Schema)
 	if err != nil {
 		return StepOutput{}, "", err
 	}
@@ -156,10 +156,20 @@ func (c *OllamaClient) GenerateStep(ctx context.Context, step StepDefinition, in
 	return output, modelIdentity, nil
 }
 
-func (c *OllamaClient) chat(ctx context.Context, system, user string, schema json.RawMessage) (string, string, error) {
+func (c *OllamaClient) chat(ctx context.Context, userOnly bool, system, user string, schema json.RawMessage) (string, string, error) {
+	if userOnly && strings.TrimSpace(system) != "" {
+		return "", "", errorOf(ErrorConfiguration, "user-only Ollama prompt cannot include a system message")
+	}
+	if !userOnly && strings.TrimSpace(system) == "" {
+		return "", "", errorOf(ErrorConfiguration, "Ollama system message is required")
+	}
+	messages := []chatMessage{{Role: "user", Content: user}}
+	if !userOnly {
+		messages = append([]chatMessage{{Role: "system", Content: system}}, messages...)
+	}
 	payload, err := json.Marshal(chatRequest{
 		Model:    c.model,
-		Messages: []chatMessage{{Role: "system", Content: system}, {Role: "user", Content: user}},
+		Messages: messages,
 		Stream:   false, Think: false, Format: schema,
 		Options: chatOptions{Temperature: 0, NumCtx: c.contextSize}, KeepAlive: "10m",
 	})

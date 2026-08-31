@@ -86,6 +86,19 @@ validates metadata and German summaries for two current, privacy-minimised
 incidents. Never commit downloaded source text, model output, or test databases,
 and never write to a production database during verification.
 
+For a focused translation prompt check without running the German metadata and
+presentation stages, use the same explicit opt-in against TranslateGemma:
+
+```bash
+MUNICHBRIEF_OLLAMA_LIVE_TEST=1 \
+MUNICHBRIEF_OLLAMA_TRANSLATION_MODEL=translategemma:4b \
+go test -run TestLiveOllamaTranslateGemmaPromptContract -v ./internal/processing
+```
+
+The focused check covers registered language identities, Munich place names,
+required terminology, attribution and uncertainty, strict JSON, and
+instruction-like translated data without logging generated text.
+
 The real-RSS Qwen check requires its separate explicit opt-in:
 
 ```bash

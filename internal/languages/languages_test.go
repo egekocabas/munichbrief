@@ -47,6 +47,17 @@ func TestRegisteredDateFormatting(t *testing.T) {
 	}
 }
 
+func TestTranslationCodesPreserveNormalizedBCP47Tags(t *testing.T) {
+	for routeCode, tag := range map[string]language.Tag{
+		"pt-br":   language.MustParse("pt-BR"),
+		"zh-hans": language.MustParse("zh-Hans"),
+	} {
+		if err := validateRouteTagCompatibility(routeCode, tag); err != nil {
+			t.Errorf("translation code %s rejected normalized tag %s: %v", routeCode, tag, err)
+		}
+	}
+}
+
 func TestValidateRejectsUnsafeAndDuplicateRegistrations(t *testing.T) {
 	definitions := Registered()
 	unsafe := append([]Definition(nil), definitions...)
@@ -62,6 +73,11 @@ func TestValidateRejectsUnsafeAndDuplicateRegistrations(t *testing.T) {
 	mismatchedTag[1].Tag = language.MustParse("fr-FR")
 	if err := Validate(mismatchedTag); err == nil {
 		t.Fatal("route code and BCP-47 tag mismatch was accepted")
+	}
+	missingTranslationName := append([]Definition(nil), definitions...)
+	missingTranslationName[1].TranslationName = ""
+	if err := Validate(missingTranslationName); err == nil {
+		t.Fatal("missing model-facing translation name was accepted")
 	}
 	invalidOpenGraphLocale := append([]Definition(nil), definitions...)
 	invalidOpenGraphLocale[1].OpenGraphLocale = "en-gb"

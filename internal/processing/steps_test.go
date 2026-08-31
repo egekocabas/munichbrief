@@ -43,10 +43,11 @@ func TestRegisteredPipelineStepsAreStableAndOrdered(t *testing.T) {
 }
 
 func TestTranslationDefinitionFactorySupportsBCP47Target(t *testing.T) {
-	target := langregistry.Definition{Code: "pt-br", Tag: language.MustParse("pt-BR"), DisplayName: "Português (Brasil)"}
+	source := langregistry.Definition{Code: "de", Tag: language.MustParse("de-DE"), DisplayName: "Deutsch", TranslationName: "German", Canonical: true}
+	target := langregistry.Definition{Code: "pt-br", Tag: language.MustParse("pt-BR"), DisplayName: "Português (Brasil)", TranslationName: "Portuguese"}
 	prompt := PromptDefinition{
 		Version: "incident-translation-pt-br-v1", StepKey: TranslationStepKey(target.Code), TranslationLanguage: target.Code,
-		Status: PromptActive, SystemPrompt: "Translate safely.", UserPromptTemplate: "%s",
+		Status: PromptActive, UserOnly: true, UserPromptTemplate: translateGemmaV2UserPromptTemplate(source, target, ""),
 	}
 	translation, err := newTranslationDefinition(target, prompt)
 	if err != nil {
@@ -54,6 +55,10 @@ func TestTranslationDefinitionFactorySupportsBCP47Target(t *testing.T) {
 	}
 	if translation.Language != "pt-br" || translation.Step.Key != "translation/pt-br" || !bytes.Contains(translation.Step.Schema, []byte(`"title_pt_br"`)) || !bytes.Contains(translation.Step.Schema, []byte(`"summary_pt_br"`)) {
 		t.Fatalf("synthetic translation definition = %#v / %s", translation, translation.Step.Schema)
+	}
+	message := fmt.Sprintf(prompt.UserPromptTemplate, `{"title_de":"Titel","summary_de":"Zusammenfassung."}`)
+	if !strings.Contains(message, "German (de-DE) to Portuguese (pt-BR)") || !strings.Contains(message, `"title_pt_br"`) || !strings.Contains(message, `"summary_pt_br"`) {
+		t.Fatalf("synthetic TranslateGemma prompt = %q", message)
 	}
 	output, err := translation.Step.OutputDecoder(`{"title_pt_br":"Título","summary_pt_br":"Resumo seguro."}`)
 	if err != nil {
@@ -75,19 +80,20 @@ func TestTranslationDefinitionFactorySupportsBCP47Target(t *testing.T) {
 }
 
 func TestTranslationDefinitionFactoryRejectsIncompletePrompt(t *testing.T) {
-	target := langregistry.Definition{Code: "pt-br", Tag: language.MustParse("pt-BR"), DisplayName: "Português (Brasil)"}
+	target := langregistry.Definition{Code: "pt-br", Tag: language.MustParse("pt-BR"), DisplayName: "Português (Brasil)", TranslationName: "Portuguese"}
 	valid := PromptDefinition{
 		Version: "incident-translation-pt-br-v1", StepKey: TranslationStepKey(target.Code), TranslationLanguage: target.Code,
-		Status: PromptActive, SystemPrompt: "Translate safely.", UserPromptTemplate: "%s",
+		Status: PromptActive, UserOnly: true, UserPromptTemplate: "%s",
 	}
 	for name, mutate := range map[string]func(*PromptDefinition){
-		"inactive":         func(prompt *PromptDefinition) { prompt.Status = "retired" },
-		"missing version":  func(prompt *PromptDefinition) { prompt.Version = "" },
-		"missing system":   func(prompt *PromptDefinition) { prompt.SystemPrompt = "" },
-		"missing payload":  func(prompt *PromptDefinition) { prompt.UserPromptTemplate = "Translate this." },
-		"repeated payload": func(prompt *PromptDefinition) { prompt.UserPromptTemplate = "%s %s" },
-		"escaped payload":  func(prompt *PromptDefinition) { prompt.UserPromptTemplate = "%%s" },
-		"invalid format":   func(prompt *PromptDefinition) { prompt.UserPromptTemplate = "100% safe: %s" },
+		"inactive":          func(prompt *PromptDefinition) { prompt.Status = "retired" },
+		"missing version":   func(prompt *PromptDefinition) { prompt.Version = "" },
+		"not user-only":     func(prompt *PromptDefinition) { prompt.UserOnly = false },
+		"unexpected system": func(prompt *PromptDefinition) { prompt.SystemPrompt = "Translate safely." },
+		"missing payload":   func(prompt *PromptDefinition) { prompt.UserPromptTemplate = "Translate this." },
+		"repeated payload":  func(prompt *PromptDefinition) { prompt.UserPromptTemplate = "%s %s" },
+		"escaped payload":   func(prompt *PromptDefinition) { prompt.UserPromptTemplate = "%%s" },
+		"invalid format":    func(prompt *PromptDefinition) { prompt.UserPromptTemplate = "100% safe: %s" },
 	} {
 		t.Run(name, func(t *testing.T) {
 			prompt := valid
@@ -401,7 +407,10 @@ func TestEnglishTranslationReceivesOnlyDeclaredGermanPresentation(t *testing.T) 
 		if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
 			t.Fatal(err)
 		}
-		user := payload.Messages[1].Content
+		if len(payload.Messages) != 1 || payload.Messages[0].Role != "user" {
+			t.Fatalf("translation request messages = %#v", payload.Messages)
+		}
+		user := payload.Messages[0].Content
 		for _, forbidden := range []string{"private original body", "original_title", "incident_body"} {
 			if strings.Contains(user, forbidden) {
 				t.Fatalf("translation request leaked %q: %s", forbidden, user)
@@ -409,6 +418,11 @@ func TestEnglishTranslationReceivesOnlyDeclaredGermanPresentation(t *testing.T) 
 		}
 		if !strings.Contains(user, "Sicherer Titel") || !strings.Contains(user, "Sichere Zusammenfassung") {
 			t.Fatalf("translation request omitted accepted German text: %s", user)
+		}
+		for _, expected := range []string{"German (de-DE) to English (en-GB)", `"title_en"`, `"summary_en"`} {
+			if !strings.Contains(user, expected) {
+				t.Fatalf("translation request omitted %q: %s", expected, user)
+			}
 		}
 		var response bytes.Buffer
 		_ = json.NewEncoder(&response).Encode(chatResponse{Model: "translategemma:4b", Done: true, Message: chatMessage{Role: "assistant", Content: `{"title_en":"Safe title","summary_en":"Safe summary."}`}})
