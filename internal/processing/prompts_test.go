@@ -103,7 +103,10 @@ func TestRegisteredTranslateGemmaPromptsUseTargetLanguageIdentities(t *testing.T
 			}
 		}
 		if translation.Language != EnglishLanguage {
-			for _, expected := range []string{"streets, squares, parks, bridges, and stations", "street-type", "rather than relying on an example list"} {
+			for _, expected := range []string{
+				"streets, squares, parks, bridges, and stations", "street-type", "rather than relying on an example list",
+				"copy each complete source spelling at least once, character for character", "If the input contains the literal token “U-Bahn”", "if it contains “S-Bahn”", "reproduce every listed name individually",
+			} {
 				if !strings.Contains(rendered, expected) {
 					t.Errorf("%s TranslateGemma prompt omitted generic place-name contract %q", translation.Language, expected)
 				}

@@ -80,10 +80,13 @@ can both preserve identity. An idiomatic target-language rendering of a generic
 street-type word or grammatical case ending can also be acceptable when every
 proper-name component and the complete street identity remain recognizable;
 translating a proper name's literal meaning, dropping a component, or inventing
-a district qualifier does not. Smoke fixtures must cover more than a district
-list, including representative streets, squares, stations, parks, and
-municipalities; do not hardcode an application allowlist and assume it covers
-future source wording.
+a district qualifier does not. For machine-verifiable identity, new target
+prompts require the complete Latin source spelling at least once and permit a
+localized or transliterated form only alongside it. Preserve official transit
+labels such as `U-Bahn` and `S-Bahn`, and never collapse an enumerated place
+list. Smoke fixtures must cover more than a district list, including
+representative streets, squares, stations, parks, and municipalities; do not
+hardcode an application allowlist and assume it covers future source wording.
 Keep the existing title and summary limits and strict two-field JSON output.
 Generated fields are normalized to Unicode NFC before character-count
 validation and persistence. Tests should include decomposed accents and the

@@ -101,6 +101,20 @@ district and street names, required terminology, attribution and uncertainty,
 strict JSON, Han, Devanagari, Greek, and Cyrillic script output, and
 instruction-like translated data without logging generated text.
 
+The longer Munich place-name preservation matrix is independently gated so it
+does not slow the normal live smoke suite. It checks every translation target
+for explicit retention of transit labels, streets, districts, municipalities,
+and hyphenated place names without logging translated content. The protected
+spellings are NFC-normalized; the street fixture also accepts documented ASCII
+fallbacks such as `Ingolstadter Strasse` and `Ingolstaedter Strasse`:
+
+```bash
+MUNICHBRIEF_OLLAMA_PLACE_NAMES_LIVE_TEST=1 \
+MUNICHBRIEF_OLLAMA_TRANSLATION_MODEL=translategemma:4b \
+go test -timeout 90m -run TestLiveOllamaMunichPlaceNamePreservationMatrix \
+  -v ./internal/processing
+```
+
 The real-RSS Qwen check requires its separate explicit opt-in:
 
 ```bash

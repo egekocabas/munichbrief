@@ -357,6 +357,91 @@ func TestLiveOllamaRegisteredTranslationTargets(t *testing.T) {
 	}
 }
 
+func TestLiveOllamaMunichPlaceNamePreservationMatrix(t *testing.T) {
+	if os.Getenv("MUNICHBRIEF_OLLAMA_PLACE_NAMES_LIVE_TEST") != "1" {
+		t.Skip("set MUNICHBRIEF_OLLAMA_PLACE_NAMES_LIVE_TEST=1 for the extended Munich place-name translation test")
+	}
+	baseURL := os.Getenv("MUNICHBRIEF_OLLAMA_BASE_URL")
+	if baseURL == "" {
+		baseURL = "http://127.0.0.1:11434"
+	}
+	model := os.Getenv("MUNICHBRIEF_OLLAMA_TRANSLATION_MODEL")
+	if model == "" {
+		model = "translategemma:4b"
+	}
+	client, err := NewOllamaClient(baseURL, model, liveOllamaJobTimeout, 8192, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixtures := []struct {
+		name, title, summary string
+		protected            map[string][]string
+	}{
+		{
+			name: "transit labels", title: "U-Bahn und S-Bahn in München",
+			summary:   "Die U-Bahn und die S-Bahn waren von der Meldung betroffen.",
+			protected: map[string][]string{"U-Bahn": {"U-Bahn"}, "S-Bahn": {"S-Bahn"}},
+		},
+		{
+			name: "street names", title: "Ingolstädter Straße und Ganghoferstraße",
+			summary: "Die Meldung nennt die Ingolstädter Straße und die Ganghoferstraße als eigenständige Ortsangaben.",
+			protected: map[string][]string{
+				"Ingolstädter Straße": {
+					"Ingolstädter Straße", "Ingolstadter Straße", "Ingolstaedter Straße",
+					"Ingolstädter Strasse", "Ingolstadter Strasse", "Ingolstaedter Strasse",
+				},
+				"Ganghoferstraße": {"Ganghoferstraße", "Ganghoferstrasse"},
+			},
+		},
+		{
+			name: "northern districts", title: "Milbertshofen und Schwabing",
+			summary:   "Milbertshofen und Schwabing werden in der Meldung getrennt genannt.",
+			protected: map[string][]string{"Milbertshofen": {"Milbertshofen"}, "Schwabing": {"Schwabing"}},
+		},
+		{
+			name: "southern and eastern districts", title: "Sendling und Ramersdorf-Perlach",
+			summary:   "Sendling und Ramersdorf-Perlach werden in der Meldung getrennt genannt.",
+			protected: map[string][]string{"Sendling": {"Sendling"}, "Ramersdorf-Perlach": {"Ramersdorf-Perlach"}},
+		},
+		{
+			name: "west and southern places", title: "Schwabing-West, Oberhaching und Geiselgasteig",
+			summary: "Schwabing-West, Oberhaching und Geiselgasteig werden als drei eigenständige Ortsangaben genannt.",
+			protected: map[string][]string{
+				"Schwabing-West": {"Schwabing-West"},
+				"Oberhaching":    {"Oberhaching"},
+				"Geiselgasteig":  {"Geiselgasteig"},
+			},
+		},
+	}
+
+	for _, target := range RegisteredTranslations() {
+		t.Run(target.Language, func(t *testing.T) {
+			for _, fixture := range fixtures {
+				t.Run(fixture.name, func(t *testing.T) {
+					ctx, cancel := context.WithTimeout(context.Background(), liveOllamaJobTimeout)
+					defer cancel()
+					output, returnedModel, err := client.GenerateStep(ctx, target.Step, StepInput{Values: map[string]string{
+						"title_de": fixture.title, "summary_de": fixture.summary,
+					}})
+					if err != nil {
+						t.Fatal(err)
+					}
+					if strings.TrimSpace(returnedModel) == "" {
+						t.Fatal("translation model identity is empty")
+					}
+					translated := norm.NFC.String(output.Values["title"] + "\n" + output.Values["summary"])
+					for label, acceptedSpellings := range fixture.protected {
+						if !containsAny(translated, acceptedSpellings...) {
+							t.Errorf("%s translation did not retain protected Munich wording %s", target.Language, label)
+						}
+					}
+					t.Logf("model=%s target=%s fixture=%s protected_names=%d", returnedModel, target.Language, fixture.name, len(fixture.protected))
+				})
+			}
+		})
+	}
+}
+
 func TestLiveOllamaOfficialRSSMetadataAndGermanPresentation(t *testing.T) {
 	if os.Getenv("MUNICHBRIEF_OLLAMA_RSS_LIVE_TEST") != "1" {
 		t.Skip("set MUNICHBRIEF_OLLAMA_RSS_LIVE_TEST=1 for the explicit official-RSS Qwen test")
