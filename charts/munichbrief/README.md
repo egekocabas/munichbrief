@@ -24,6 +24,8 @@ helm install munichbrief ./charts/munichbrief \
 - Reader and metrics use separate service ports.
 - Both LAN and public ingresses are disabled.
 - Ollama processing and its dedicated egress rule are disabled.
+- Gazetteer refresh follows the source mode by default: disabled for fixtures
+  and enabled for live deployments. An explicit boolean overrides that rule.
 
 The default NetworkPolicy permits DNS, same-namespace traffic, selected ingress
 namespaces, metrics scraping, and public HTTPS for opt-in live ingestion. The
@@ -40,6 +42,7 @@ Public ingress requires:
 
 - `application.sourceMode=live`;
 - `application.presentationMode=public`;
+- `application.gazetteerEnabled=true` before enabling translation processing;
 - every public ingress hostname in `application.publicHosts`;
 - an HTTPS `application.canonicalOrigin` using one of those hosts; and
 - `ingress.public.languageCodes` matching the compiled reader registry; and

@@ -1,81 +1,94 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 )
 
 const (
-	defaultAddress      = "127.0.0.1:8080"
-	defaultMetricsAddr  = "127.0.0.1:9090"
-	defaultDatabasePath = ".data/munichbrief.db"
-	defaultSourceMode   = "fixture"
-	defaultPageSize     = 20
-	defaultFeedURL      = "https://www.polizei.bayern.de/rss/polizeiprasidium-munchen.xml"
-	defaultUserAgent    = "MunichBrief/dev (+https://github.com/egekocabas/munichbrief)"
-	defaultHTTPTimeout  = 10 * time.Second
-	defaultRefreshAfter = 6 * time.Hour
-	defaultAIEnabled    = false
-	defaultOllamaURL    = "http://127.0.0.1:11434"
-	defaultAIInterval   = 15 * time.Second
-	defaultAITimeout    = 15 * time.Minute
-	defaultAIContext    = 8192
-	defaultAIImmediate  = false
-	defaultAIWindow     = "03:00-08:00"
-	defaultSecureCookie = false
-	repositoryURL       = "https://github.com/egekocabas/munichbrief"
+	defaultAddress               = "127.0.0.1:8080"
+	defaultMetricsAddr           = "127.0.0.1:9090"
+	defaultDatabasePath          = ".data/munichbrief.db"
+	defaultGazetteerDatabasePath = ".data/munichbrief-gazetteer.db"
+	defaultSourceMode            = "fixture"
+	defaultPageSize              = 20
+	defaultFeedURL               = "https://www.polizei.bayern.de/rss/polizeiprasidium-munchen.xml"
+	defaultUserAgent             = "MunichBrief/dev (+https://github.com/egekocabas/munichbrief)"
+	defaultHTTPTimeout           = 10 * time.Second
+	defaultRefreshAfter          = 6 * time.Hour
+	defaultAIEnabled             = false
+	defaultOllamaURL             = "http://127.0.0.1:11434"
+	defaultAIInterval            = 15 * time.Second
+	defaultAITimeout             = 15 * time.Minute
+	defaultAIContext             = 8192
+	defaultAIImmediate           = false
+	defaultAIWindow              = "03:00-08:00"
+	defaultSecureCookie          = false
+	defaultGazetteerRefresh      = 7 * 24 * time.Hour
+	defaultGazetteerTimeout      = 2 * time.Minute
+	repositoryURL                = "https://github.com/egekocabas/munichbrief"
 )
 
 // Config contains the application runtime settings.
 type Config struct {
-	Address          string
-	MetricsAddress   string
-	DatabasePath     string
-	SourceMode       string
-	PageSize         int
-	FeedURL          string
-	UserAgent        string
-	HTTPTimeout      time.Duration
-	RefreshAfter     time.Duration
-	AIEnabled        bool
-	OllamaBaseURL    string
-	AIInterval       time.Duration
-	AITimeout        time.Duration
-	AIContextSize    int
-	AIImmediate      bool
-	AIWindowStart    time.Duration
-	AIWindowEnd      time.Duration
-	PresentationMode string
-	SecureCookies    bool
-	AdminEnabled     bool
-	PublicHosts      []string
-	CanonicalOrigin  string
+	Address                  string
+	MetricsAddress           string
+	DatabasePath             string
+	GazetteerEnabled         bool
+	GazetteerDatabasePath    string
+	GazetteerRefreshInterval time.Duration
+	GazetteerHTTPTimeout     time.Duration
+	SourceMode               string
+	PageSize                 int
+	FeedURL                  string
+	UserAgent                string
+	HTTPTimeout              time.Duration
+	RefreshAfter             time.Duration
+	AIEnabled                bool
+	OllamaBaseURL            string
+	AIInterval               time.Duration
+	AITimeout                time.Duration
+	AIContextSize            int
+	AIImmediate              bool
+	AIWindowStart            time.Duration
+	AIWindowEnd              time.Duration
+	PresentationMode         string
+	SecureCookies            bool
+	AdminEnabled             bool
+	PublicHosts              []string
+	CanonicalOrigin          string
 }
 
 // Load reads configuration from the environment and applies local-safe defaults.
 func Load() (Config, error) {
 	cfg := Config{
-		Address:        envOrDefault("MUNICHBRIEF_ADDR", defaultAddress),
-		MetricsAddress: envOrDefault("MUNICHBRIEF_METRICS_ADDR", defaultMetricsAddr),
-		DatabasePath:   envOrDefault("MUNICHBRIEF_DATABASE_PATH", defaultDatabasePath),
-		SourceMode:     envOrDefault("MUNICHBRIEF_SOURCE_MODE", defaultSourceMode),
-		PageSize:       defaultPageSize,
-		FeedURL:        envOrDefault("MUNICHBRIEF_FEED_URL", defaultFeedURL),
-		UserAgent:      envOrDefault("MUNICHBRIEF_USER_AGENT", defaultUserAgent),
-		HTTPTimeout:    defaultHTTPTimeout,
-		RefreshAfter:   defaultRefreshAfter,
-		AIEnabled:      defaultAIEnabled,
-		OllamaBaseURL:  envOrDefault("MUNICHBRIEF_OLLAMA_BASE_URL", defaultOllamaURL),
-		AIInterval:     defaultAIInterval,
-		AITimeout:      defaultAITimeout,
-		AIContextSize:  defaultAIContext,
-		AIImmediate:    defaultAIImmediate,
-		SecureCookies:  defaultSecureCookie,
+		Address:                  envOrDefault("MUNICHBRIEF_ADDR", defaultAddress),
+		MetricsAddress:           envOrDefault("MUNICHBRIEF_METRICS_ADDR", defaultMetricsAddr),
+		DatabasePath:             envOrDefault("MUNICHBRIEF_DATABASE_PATH", defaultDatabasePath),
+		GazetteerDatabasePath:    envOrDefault("MUNICHBRIEF_GAZETTEER_DATABASE_PATH", defaultGazetteerDatabasePath),
+		GazetteerRefreshInterval: defaultGazetteerRefresh,
+		GazetteerHTTPTimeout:     defaultGazetteerTimeout,
+		SourceMode:               envOrDefault("MUNICHBRIEF_SOURCE_MODE", defaultSourceMode),
+		PageSize:                 defaultPageSize,
+		FeedURL:                  envOrDefault("MUNICHBRIEF_FEED_URL", defaultFeedURL),
+		UserAgent:                envOrDefault("MUNICHBRIEF_USER_AGENT", defaultUserAgent),
+		HTTPTimeout:              defaultHTTPTimeout,
+		RefreshAfter:             defaultRefreshAfter,
+		AIEnabled:                defaultAIEnabled,
+		OllamaBaseURL:            envOrDefault("MUNICHBRIEF_OLLAMA_BASE_URL", defaultOllamaURL),
+		AIInterval:               defaultAIInterval,
+		AITimeout:                defaultAITimeout,
+		AIContextSize:            defaultAIContext,
+		AIImmediate:              defaultAIImmediate,
+		SecureCookies:            defaultSecureCookie,
 	}
+	cfg.GazetteerEnabled = cfg.SourceMode == "live"
 	var err error
 	if cfg.PublicHosts, err = publicHostsFromEnv("MUNICHBRIEF_PUBLIC_HOSTS"); err != nil {
 		return Config{}, err
@@ -94,6 +107,13 @@ func Load() (Config, error) {
 			return Config{}, fmt.Errorf("MUNICHBRIEF_AI_ENABLED must be true or false")
 		}
 		cfg.AIEnabled = value
+	}
+	if raw := os.Getenv("MUNICHBRIEF_GAZETTEER_ENABLED"); raw != "" {
+		value, err := strconv.ParseBool(raw)
+		if err != nil {
+			return Config{}, fmt.Errorf("MUNICHBRIEF_GAZETTEER_ENABLED must be true or false")
+		}
+		cfg.GazetteerEnabled = value
 	}
 	if raw := os.Getenv("MUNICHBRIEF_AI_IMMEDIATE"); raw != "" {
 		value, err := strconv.ParseBool(raw)
@@ -128,6 +148,9 @@ func Load() (Config, error) {
 	if cfg.SourceMode != "fixture" && cfg.SourceMode != "live" {
 		return Config{}, fmt.Errorf("unsupported MUNICHBRIEF_SOURCE_MODE %q: use fixture or live", cfg.SourceMode)
 	}
+	if filepath.Clean(cfg.DatabasePath) == filepath.Clean(cfg.GazetteerDatabasePath) {
+		return Config{}, errors.New("MUNICHBRIEF_GAZETTEER_DATABASE_PATH must differ from MUNICHBRIEF_DATABASE_PATH")
+	}
 	if cfg.PresentationMode != "review" && cfg.PresentationMode != "public" {
 		return Config{}, fmt.Errorf("unsupported MUNICHBRIEF_PRESENTATION_MODE %q: use review or public", cfg.PresentationMode)
 	}
@@ -136,6 +159,12 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	if cfg.RefreshAfter, err = durationFromEnv("MUNICHBRIEF_ARTICLE_REFRESH_INTERVAL", cfg.RefreshAfter, 15*time.Minute); err != nil {
+		return Config{}, err
+	}
+	if cfg.GazetteerRefreshInterval, err = durationFromEnv("MUNICHBRIEF_GAZETTEER_REFRESH_INTERVAL", cfg.GazetteerRefreshInterval, time.Hour); err != nil {
+		return Config{}, err
+	}
+	if cfg.GazetteerHTTPTimeout, err = durationFromEnv("MUNICHBRIEF_GAZETTEER_HTTP_TIMEOUT", cfg.GazetteerHTTPTimeout, 10*time.Second); err != nil {
 		return Config{}, err
 	}
 	if cfg.AIInterval, err = durationFromEnv("MUNICHBRIEF_AI_INTERVAL", cfg.AIInterval, time.Second); err != nil {

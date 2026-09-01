@@ -64,6 +64,7 @@ Start with fixture data and explicitly enable processing:
 ```bash
 MUNICHBRIEF_AI_ENABLED=true \
 MUNICHBRIEF_AI_IMMEDIATE=true \
+MUNICHBRIEF_GAZETTEER_ENABLED=true \
 MUNICHBRIEF_OLLAMA_BASE_URL=http://127.0.0.1:11434 \
 MUNICHBRIEF_ADMIN_ENABLED=true \
 MUNICHBRIEF_PRESENTATION_MODE=review \
@@ -71,7 +72,9 @@ go run ./cmd/munichbrief
 ```
 
 Select an installed model for every registered step in the protected/local
-admin view. The explicit live Ollama smoke test is:
+admin view. Enabling the gazetteer performs bounded public-source downloads;
+omit it when testing only canonical German or verification processors, in which
+case translation claims remain paused. The explicit live Ollama smoke test is:
 
 ```bash
 MUNICHBRIEF_OLLAMA_LIVE_TEST=1 go test -run TestLiveOllamaPrivacySafeMetadataFirstPresentation -v ./internal/processing
@@ -87,7 +90,9 @@ incidents. Never commit downloaded source text, model output, or test databases,
 and never write to a production database during verification.
 
 For a focused translation prompt check without running the German metadata and
-presentation stages, use the same explicit opt-in against TranslateGemma:
+presentation stages, use the same explicit opt-in. TranslateGemma remains the
+default, and `MUNICHBRIEF_OLLAMA_TRANSLATION_MODEL` may select another
+schema-capable Ollama model:
 
 ```bash
 MUNICHBRIEF_OLLAMA_LIVE_TEST=1 \
@@ -103,10 +108,11 @@ instruction-like translated data without logging generated text.
 
 The longer Munich place-name preservation matrix is independently gated so it
 does not slow the normal live smoke suite. It checks every translation target
-for explicit retention of transit labels, streets, districts, municipalities,
-and hyphenated place names without logging translated content. The protected
-spellings are NFC-normalized; the street fixture also accepts documented ASCII
-fallbacks such as `Ingolstadter Strasse` and `Ingolstaedter Strasse`:
+through the real placeholder wrapper with one dense request containing all 11
+requested forms: transit labels, streets, formatted and linked district names,
+municipalities, and hyphenated names. Every restored spelling must exactly
+match the NFC-normalized source, Markdown URLs must remain unchanged, and model
+output is not logged:
 
 ```bash
 MUNICHBRIEF_OLLAMA_PLACE_NAMES_LIVE_TEST=1 \

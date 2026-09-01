@@ -15,6 +15,9 @@ application:
   sourceMode: live
   presentationMode: public
   secureCookies: true
+  gazetteerEnabled: true
+  gazetteerRefreshInterval: 168h
+  gazetteerHTTPTimeout: 2m
   aiEnabled: false
   ollamaBaseURL: http://127.0.0.1:11434
 

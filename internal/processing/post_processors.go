@@ -55,11 +55,12 @@ type PostProcessorDefinition struct {
 
 // PostProcessorRegistry provides validated deterministic lookup and ordering.
 type PostProcessorRegistry struct {
-	definitions []PostProcessorDefinition
+	definitions  []PostProcessorDefinition
+	availability map[string]func() bool
 }
 
 func NewPostProcessorRegistry(definitions ...PostProcessorDefinition) (*PostProcessorRegistry, error) {
-	registry := &PostProcessorRegistry{definitions: make([]PostProcessorDefinition, len(definitions))}
+	registry := &PostProcessorRegistry{definitions: make([]PostProcessorDefinition, len(definitions)), availability: make(map[string]func() bool)}
 	seenProcessors := make(map[string]struct{}, len(definitions))
 	for index, definition := range definitions {
 		definition = clonePostProcessorDefinition(definition)
@@ -165,7 +166,11 @@ func NewPostProcessorRegistry(definitions ...PostProcessorDefinition) (*PostProc
 	return registry, nil
 }
 
-func DefaultPostProcessorRegistry() *PostProcessorRegistry {
+func DefaultPostProcessorRegistry(protectors ...TranslationProtector) *PostProcessorRegistry {
+	var translationReady func() bool
+	if len(protectors) > 0 && protectors[0] != nil {
+		translationReady = protectors[0].Ready
+	}
 	translationScopes := make([]PostProcessorScope, 0, len(registeredTranslations))
 	for _, translation := range RegisteredTranslations() {
 		translationScopes = append(translationScopes, PostProcessorScope{Key: translation.Language, DisplayName: translation.DisplayName, Step: translation.Step})
@@ -196,7 +201,18 @@ func DefaultPostProcessorRegistry() *PostProcessorRegistry {
 	if err != nil {
 		panic(err)
 	}
+	if translationReady != nil {
+		registry.availability[TranslationModelStep] = translationReady
+	}
 	return registry
+}
+
+func (r *PostProcessorRegistry) Ready(key string) bool {
+	if r == nil {
+		return false
+	}
+	ready := r.availability[key]
+	return ready == nil || ready()
 }
 
 func (r *PostProcessorRegistry) Definitions() []PostProcessorDefinition {

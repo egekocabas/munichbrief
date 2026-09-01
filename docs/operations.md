@@ -21,6 +21,10 @@ Operational commands use the same environment configuration:
 ```bash
 go run ./cmd/munichbrief migrate
 
+go run ./cmd/munichbrief gazetteer status
+
+go run ./cmd/munichbrief gazetteer refresh
+
 MUNICHBRIEF_SOURCE_MODE=live \
 MUNICHBRIEF_DATABASE_PATH=.data/munichbrief-live.db \
 go run ./cmd/munichbrief sync
@@ -37,6 +41,18 @@ go run ./cmd/munichbrief ai-process --all
 The reader listens on `127.0.0.1:8080` and metrics listen separately on
 `127.0.0.1:9090`. The reader provides `/healthz` and `/readyz`; only the
 metrics listener provides `/metrics`.
+
+Live mode enables the separate place-name gazetteer by default. It refreshes
+immediately at startup and weekly thereafter, using conditional HTTP requests
+and retaining the last successful generation on any failure. Set
+`MUNICHBRIEF_GAZETTEER_ENABLED=false` only for offline diagnostics; production
+servers pause the translation processor while the gazetteer is explicitly
+disabled so place-name protection cannot be bypassed. Canonical German and
+other independent processors can continue. `gazetteer status` is network-free, while
+`gazetteer refresh` performs one bounded refresh regardless of the scheduler
+setting. The rebuildable database defaults to
+`.data/munichbrief-gazetteer.db`; deleting it removes no incident or translated
+content, but new translation claims pause until the next successful refresh.
 
 The AI worker automatically considers incidents created after the persisted v2
 cutover. It freezes a canonical cycle, processes all metadata-extraction jobs,
@@ -136,6 +152,12 @@ History does not read mutable incident text. Raw HTML is never retained, and
 snapshots are served only through protected admin routes with no-store headers.
 Snapshots have no automatic expiry and increase database/backup storage; see
 [retention policy](source-policy.md#retention).
+
+Gazetteer metrics report attempts, failures, last success, next refresh, active
+entry count, and refresh duration. Source responses and errors are logged
+without downloaded payloads. The fixed sources are Landeshauptstadt München –
+GeodatenService (`dl-de/by-2.0`), GeoNames (`CC BY 4.0`), and OpenStreetMap
+contributors (`ODbL 1.0`). Public HTTPS egress must remain enabled for refresh.
 
 `review` presentation mode displays stored German source text and processing
 states and is intended for local fixture development. `public` mode fails closed: it

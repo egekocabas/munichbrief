@@ -26,6 +26,8 @@ Visit the live reader at [munichbrief.de](https://munichbrief.de).
 - Metadata-first Ollama processing: a two-stage canonical German pipeline plus
   independent public-assistance verification, category verification, and
   per-language translation jobs.
+- A separately refreshed Munich-area gazetteer protects official place names
+  with deterministic placeholders before any translation request.
 - Fail-closed public presentation: retained source text is never rendered on a
   public host.
 - Protected operational review, structured logs, health checks, and Prometheus
@@ -91,7 +93,8 @@ privacy-safe presentations for the current source and prompt versions. Review
 mode retains the original text for local or protected quality control.
 
 The detailed component, data-flow, and trust-boundary design is documented in
-[Architecture](docs/architecture.md).
+[Architecture](docs/architecture.md). Source contracts and refresh behavior are
+documented in [Place-name gazetteer](docs/gazetteer.md).
 
 ## Configuration
 
@@ -102,6 +105,10 @@ Common settings:
 | `MUNICHBRIEF_ADDR` | `127.0.0.1:8080` | Reader listen address |
 | `MUNICHBRIEF_METRICS_ADDR` | `127.0.0.1:9090` | Internal metrics listener |
 | `MUNICHBRIEF_DATABASE_PATH` | `.data/munichbrief.db` | SQLite database path |
+| `MUNICHBRIEF_GAZETTEER_DATABASE_PATH` | `.data/munichbrief-gazetteer.db` | Rebuildable gazetteer SQLite path |
+| `MUNICHBRIEF_GAZETTEER_ENABLED` | live-mode dependent | Refresh and require the place-name gazetteer |
+| `MUNICHBRIEF_GAZETTEER_REFRESH_INTERVAL` | `168h` | Successful gazetteer refresh interval |
+| `MUNICHBRIEF_GAZETTEER_HTTP_TIMEOUT` | `2m` | Timeout for one gazetteer source request |
 | `MUNICHBRIEF_SOURCE_MODE` | `fixture` | `fixture` or explicit `live` ingestion |
 | `MUNICHBRIEF_PRESENTATION_MODE` | mode-dependent | Local `review` or fail-closed `public` |
 | `MUNICHBRIEF_PUBLIC_HOSTS` | empty | Hosts forced through public path and content restrictions |

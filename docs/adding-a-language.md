@@ -40,13 +40,12 @@ own stable code.
    BCP-47 tag is listed by the
    [Ollama TranslateGemma prompt guide](https://ollama.com/library/translategemma:4b)
    before registration.
-2. Add a target-specific immutable translation prompt to
+2. Register a new immutable translation prompt version in
    `internal/processing/prompts.go`. Set its translation language to the new
-   registry code and its step key to `translation/<code>`. Build its user-only
-   template with the versioned TranslateGemma helper so source/target names,
-   exact BCP-47 codes, output field names, and payload spacing cannot drift.
-   Target-specific terminology guidance may be supplied without changing the
-   shared request shape. The generic factory creates the schema, decoder,
+   registry code and its step key to `translation/<code>`. The shared user-only
+   factory derives source/target names, exact BCP-47 tags, output field names,
+   placeholder rules, and payload spacing from the registry. Do not fork the
+   prompt for place-name examples or target-specific checklists. The factory creates the schema, decoder,
    validator, queue scope, admin control, history, metrics contract, and a row
    in the translation operations dashboard. No dashboard template branch is
    needed for the new language.
@@ -72,21 +71,14 @@ automatic-enablement cutover for every newly registered scope.
 ## Validate AI output and privacy
 
 The new prompt receives only the accepted privacy-safe German title and
-summary. It must preserve subjects, claims, uncertainty, Munich place names,
-and the presumption of innocence without adding explanations or source details.
-Define “preserve” with a fluent reviewer for the target script: retaining the
-official Latin spelling and applying a standard local-script transliteration
-can both preserve identity. An idiomatic target-language rendering of a generic
-street-type word or grammatical case ending can also be acceptable when every
-proper-name component and the complete street identity remain recognizable;
-translating a proper name's literal meaning, dropping a component, or inventing
-a district qualifier does not. For machine-verifiable identity, new target
-prompts require the complete Latin source spelling at least once and permit a
-localized or transliterated form only alongside it. Preserve official transit
-labels such as `U-Bahn` and `S-Bahn`, and never collapse an enumerated place
-list. Smoke fixtures must cover more than a district list, including
-representative streets, squares, stations, parks, and municipalities; do not
-hardcode an application allowlist and assume it covers future source wording.
+summary. The shared prompt preserves subjects, claims, uncertainty, and the
+presumption of innocence without adding explanations or source details.
+Munich-area names are detected from the separately refreshed gazetteer and
+replaced with opaque `__MB_PLACE_####__` tokens before the model request. The
+model must copy each token exactly once in the corresponding field; application
+code restores the original spelling. Smoke fixtures must cover streets,
+districts, stations, parks, municipalities, Markdown link labels, repeated
+names, Unicode boundaries, and the static `U-Bahn` and `S-Bahn` labels.
 Keep the existing title and summary limits and strict two-field JSON output.
 Generated fields are normalized to Unicode NFC before character-count
 validation and persistence. Tests should include decomposed accents and the

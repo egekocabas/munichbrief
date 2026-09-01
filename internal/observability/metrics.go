@@ -16,31 +16,38 @@ import (
 // Metrics stores fixed-cardinality counters and gauges using atomics so
 // instrumentation does not serialize request or worker paths.
 type Metrics struct {
-	version               string
-	startedAt             time.Time
-	feedAttempts          atomic.Uint64
-	feedFailures          atomic.Uint64
-	feedNotModified       atomic.Uint64
-	itemsDiscovered       atomic.Uint64
-	articlesFetched       atomic.Uint64
-	articleFetchFailures  atomic.Uint64
-	parserFailures        atomic.Uint64
-	lastFeedSuccess       atomic.Int64
-	nextFeedSync          atomic.Int64
-	feedDurationNanos     atomic.Uint64
-	feedDurationCount     atomic.Uint64
-	httpResponses         [6]atomic.Uint64
-	sourceFeedResponses   [6]atomic.Uint64
-	sourcePageResponses   [6]atomic.Uint64
-	processorAvailable    atomic.Int64
-	processingWindowOpen  atomic.Int64
-	lastProcessingSuccess atomic.Int64
-	pipelineMu            sync.RWMutex
-	pipeline              map[string]*pipelineStepMetrics
-	postCounters          map[postCounterKey]int64
-	pipelineActiveCycle   atomic.Int64
-	pipelineActiveStep    atomic.Value
-	pipelineActiveKind    [3]atomic.Int64
+	version                string
+	startedAt              time.Time
+	feedAttempts           atomic.Uint64
+	feedFailures           atomic.Uint64
+	feedNotModified        atomic.Uint64
+	itemsDiscovered        atomic.Uint64
+	articlesFetched        atomic.Uint64
+	articleFetchFailures   atomic.Uint64
+	parserFailures         atomic.Uint64
+	lastFeedSuccess        atomic.Int64
+	nextFeedSync           atomic.Int64
+	feedDurationNanos      atomic.Uint64
+	feedDurationCount      atomic.Uint64
+	gazetteerAttempts      atomic.Uint64
+	gazetteerFailures      atomic.Uint64
+	gazetteerLastSuccess   atomic.Int64
+	gazetteerNextRefresh   atomic.Int64
+	gazetteerEntries       atomic.Int64
+	gazetteerDurationNanos atomic.Uint64
+	gazetteerDurationCount atomic.Uint64
+	httpResponses          [6]atomic.Uint64
+	sourceFeedResponses    [6]atomic.Uint64
+	sourcePageResponses    [6]atomic.Uint64
+	processorAvailable     atomic.Int64
+	processingWindowOpen   atomic.Int64
+	lastProcessingSuccess  atomic.Int64
+	pipelineMu             sync.RWMutex
+	pipeline               map[string]*pipelineStepMetrics
+	postCounters           map[postCounterKey]int64
+	pipelineActiveCycle    atomic.Int64
+	pipelineActiveStep     atomic.Value
+	pipelineActiveKind     [3]atomic.Int64
 }
 
 type pipelineStepMetrics struct {
@@ -104,6 +111,18 @@ func (m *Metrics) RecordFeedDuration(duration time.Duration) {
 func (m *Metrics) SetNextFeedSync(at time.Time) {
 	m.nextFeedSync.Store(at.Unix())
 }
+
+func (m *Metrics) RecordGazetteerAttempt() { m.gazetteerAttempts.Add(1) }
+func (m *Metrics) RecordGazetteerFailure() { m.gazetteerFailures.Add(1) }
+func (m *Metrics) RecordGazetteerSuccess(at time.Time, entries int) {
+	m.gazetteerLastSuccess.Store(at.Unix())
+	m.gazetteerEntries.Store(int64(max(entries, 0)))
+}
+func (m *Metrics) RecordGazetteerDuration(duration time.Duration) {
+	m.gazetteerDurationNanos.Add(uint64(max(duration.Nanoseconds(), 0)))
+	m.gazetteerDurationCount.Add(1)
+}
+func (m *Metrics) SetNextGazetteerRefresh(at time.Time) { m.gazetteerNextRefresh.Store(at.Unix()) }
 
 func (m *Metrics) ObserveHTTPResponse(status int) {
 	m.httpResponses[responseClass(status)].Add(1)
@@ -303,6 +322,18 @@ func (m *Metrics) write(writer io.Writer) {
 	fmt.Fprintln(writer, "# TYPE munichbrief_next_feed_sync_timestamp_seconds gauge")
 	fmt.Fprintf(writer, "munichbrief_next_feed_sync_timestamp_seconds %d\n", m.nextFeedSync.Load())
 	writeDurationSummary(writer, "munichbrief_feed_sync_duration_seconds", "Feed synchronization duration.", m.feedDurationNanos.Load(), m.feedDurationCount.Load())
+	writeCounter(writer, "munichbrief_gazetteer_refresh_attempts_total", "Gazetteer refresh attempts.", m.gazetteerAttempts.Load())
+	writeCounter(writer, "munichbrief_gazetteer_refresh_failures_total", "Gazetteer refresh failures.", m.gazetteerFailures.Load())
+	fmt.Fprintln(writer, "# HELP munichbrief_gazetteer_last_success_timestamp_seconds Unix timestamp of the last successful gazetteer refresh.")
+	fmt.Fprintln(writer, "# TYPE munichbrief_gazetteer_last_success_timestamp_seconds gauge")
+	fmt.Fprintf(writer, "munichbrief_gazetteer_last_success_timestamp_seconds %d\n", m.gazetteerLastSuccess.Load())
+	fmt.Fprintln(writer, "# HELP munichbrief_gazetteer_next_refresh_timestamp_seconds Unix timestamp of the next gazetteer refresh.")
+	fmt.Fprintln(writer, "# TYPE munichbrief_gazetteer_next_refresh_timestamp_seconds gauge")
+	fmt.Fprintf(writer, "munichbrief_gazetteer_next_refresh_timestamp_seconds %d\n", m.gazetteerNextRefresh.Load())
+	fmt.Fprintln(writer, "# HELP munichbrief_gazetteer_entries Active normalized gazetteer entries.")
+	fmt.Fprintln(writer, "# TYPE munichbrief_gazetteer_entries gauge")
+	fmt.Fprintf(writer, "munichbrief_gazetteer_entries %d\n", m.gazetteerEntries.Load())
+	writeDurationSummary(writer, "munichbrief_gazetteer_refresh_duration_seconds", "Gazetteer refresh duration.", m.gazetteerDurationNanos.Load(), m.gazetteerDurationCount.Load())
 	fmt.Fprintln(writer, "# HELP munichbrief_process_uptime_seconds Process uptime in seconds.")
 	fmt.Fprintln(writer, "# TYPE munichbrief_process_uptime_seconds gauge")
 	fmt.Fprintf(writer, "munichbrief_process_uptime_seconds %.0f\n", time.Since(m.startedAt).Seconds())

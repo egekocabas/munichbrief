@@ -60,6 +60,13 @@ job. Translation records never contain retained source text, contact details,
 or identity data. A translation failure cannot expose the original or delay the
 canonical German presentation.
 
+Translation place protection uses a separate rebuildable gazetteer derived
+from Landeshauptstadt München – GeodatenService (`dl-de/by-2.0`), GeoNames
+(`CC BY 4.0`), and OpenStreetMap contributors (`ODbL 1.0`). Only normalized
+names, classifications, source identifiers, hashes, and request validators are
+stored; raw downloads are bounded temporary inputs and are not retained. The
+public About page carries the required source attribution.
+
 The independent category verifier receives the same accepted German title and
 summary plus the German display name mapped from the immutable broad category
 code. It never receives internal category codes, retained source text,

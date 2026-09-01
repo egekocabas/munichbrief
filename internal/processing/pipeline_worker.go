@@ -483,6 +483,9 @@ func (w *PipelineWorker) processAvailable(ctx context.Context) {
 
 		processedPostJob := false
 		for _, definition := range w.postProcessors.Definitions() {
+			if !w.postProcessors.Ready(definition.Key) {
+				continue
+			}
 			contracts := make(store.PostProcessingContract, len(definition.Scopes))
 			for _, scope := range definition.Scopes {
 				contracts[scope.Key] = store.PostProcessingScopeContract{

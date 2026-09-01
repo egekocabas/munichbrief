@@ -30,71 +30,8 @@ func TestPromptRegistryResolvesRegisteredVersions(t *testing.T) {
 	}
 }
 
-func TestEnglishTranslateGemmaV2PromptUsesRegisteredLanguageIdentity(t *testing.T) {
-	prompt, found := PromptByVersion(EnglishTranslationPromptVersion)
-	if !found || prompt.Status != PromptActive || !prompt.UserOnly || prompt.SystemPrompt != "" {
-		t.Fatalf("active English translation prompt = %#v, found=%t", prompt, found)
-	}
-	retired, found := PromptByVersion(EnglishTranslationV1PromptVersion)
-	if !found || retired.Status != PromptRetired || retired.UserOnly {
-		t.Fatalf("retired English translation prompt = %#v, found=%t", retired, found)
-	}
-	const payload = `{"title_de":"Titel","summary_de":"Zusammenfassung."}`
-	rendered := promptUserMessage(EnglishTranslationPromptVersion, payload)
-	for _, expected := range []string{
-		"German (de-DE) to English (en-GB)", `"title_de"`, `"summary_de"`, `"title_en"`, `"summary_en"`,
-		"Maxvorstadt", "slightly injured", "presumption-of-innocence",
-	} {
-		if !strings.Contains(rendered, expected) {
-			t.Errorf("TranslateGemma prompt omitted %q: %s", expected, rendered)
-		}
-	}
-	if strings.Count(rendered, payload) != 1 || !strings.HasSuffix(rendered, "English:\n\n\n"+payload) {
-		t.Fatalf("TranslateGemma payload separator or occurrence count is invalid: %q", rendered)
-	}
-}
-
-func TestFrenchTranslateGemmaPromptProtectsTransitLabels(t *testing.T) {
-	prompt, found := PromptByVersion(FrenchTranslationPromptVersion)
-	if !found || prompt.Status != PromptActive || !prompt.UserOnly || prompt.SystemPrompt != "" {
-		t.Fatalf("active French translation prompt = %#v, found=%t", prompt, found)
-	}
-	for _, expected := range []string{
-		"incident-translation-fr-v1", "protected proper names", "recopier exactement chaque chaîne “U-Bahn” et “S-Bahn”",
-		"Ne jamais les remplacer par « métro »", "même trait d’union ASCII",
-	} {
-		text := prompt.UserPromptTemplate
-		if expected == "incident-translation-fr-v1" {
-			text = prompt.Version
-		}
-		if !strings.Contains(text, expected) {
-			t.Errorf("French v2 prompt omitted %q", expected)
-		}
-	}
-}
-
-func TestGreekTranslateGemmaPromptEndsWithExactLatinNameCheck(t *testing.T) {
-	prompt, found := PromptByVersion(GreekTranslationPromptVersion)
-	if !found || prompt.Status != PromptActive || !prompt.UserOnly || prompt.SystemPrompt != "" {
-		t.Fatalf("active Greek translation prompt = %#v, found=%t", prompt, found)
-	}
-	const payload = `{"title_de":"Sendling","summary_de":"Ramersdorf-Perlach"}`
-	rendered := promptUserMessage(GreekTranslationPromptVersion, payload)
-	for _, expected := range []string{
-		"FINAL GREEK OUTPUT CHECK", "internal checklist of every Latin-script Munich proper name",
-		"matching only a Greek transliteration is invalid", "Pasing και Moosach", "Milbertshofen und Schwabing",
-		"Schwabing-West, Sendling und Ramersdorf-Perlach", "Pattern examples only, never an allowlist", "Τελικός υποχρεωτικός έλεγχος",
-	} {
-		if !strings.Contains(rendered, expected) {
-			t.Errorf("Greek prompt omitted final check %q", expected)
-		}
-	}
-	if strings.LastIndex(rendered, greekTranslationV1FinalCheck) < strings.LastIndex(rendered, payload) {
-		t.Fatal("Greek exact-name check must follow the untrusted source payload")
-	}
-}
-
-func TestRegisteredTranslateGemmaPromptsUseTargetLanguageIdentities(t *testing.T) {
+func TestRegisteredTranslationPromptsUseOnePlaceholderContract(t *testing.T) {
+	var sharedBody string
 	for _, translation := range RegisteredTranslations() {
 		prompt, found := PromptByVersion(translation.PromptVersion)
 		if !found || prompt.Status != PromptActive || !prompt.UserOnly || prompt.SystemPrompt != "" {
@@ -110,6 +47,7 @@ func TestRegisteredTranslateGemmaPromptsUseTargetLanguageIdentities(t *testing.T
 		for _, expected := range []string{
 			"German (de-DE) to " + definition.TranslationName + " (" + definition.Tag.String() + ")",
 			`"title_` + fieldCode + `"`, `"summary_` + fieldCode + `"`, "presumption-of-innocence",
+			`__MB_PLACE_####__`, "Copy every such token exactly once", "Preserve Markdown syntax and link URLs exactly",
 		} {
 			if !strings.Contains(rendered, expected) {
 				t.Errorf("%s TranslateGemma prompt omitted %q", translation.Language, expected)
@@ -118,39 +56,24 @@ func TestRegisteredTranslateGemmaPromptsUseTargetLanguageIdentities(t *testing.T
 		if strings.Count(rendered, payload) != 1 {
 			t.Errorf("%s TranslateGemma payload occurrence count = %d", translation.Language, strings.Count(rendered, payload))
 		}
-		for language, expected := range map[string][]string{
-			"tr": {"recognizable Latin spelling", "generic street-type word", "rather than relying on an example list", "hafif yaralandı"},
-			"hr": {"recognizable Latin spelling", "generic street-type word", "rather than relying on an example list", "opsežna policijska akcija"},
-			"it": {"original Latin spelling", "complete street-type suffix", "rather than relying on an example list", "appello ai testimoni"},
-			"uk": {"standard, consistent Ukrainian transliteration", "including a street-type suffix", "rather than relying on an example list", "зазнала легких травм"},
-			"bs": {"recognizable Latin spelling", "generic street-type word", "rather than relying on an example list", "lakše povrijeđen/a"},
-			"zh": {"standard, consistent Chinese transliteration", "including a street-type suffix", "rather than relying on an example list", "受轻伤"},
-			"hi": {"standard, consistent Hindi transliteration", "including a street-type suffix", "rather than relying on an example list", "मामूली रूप से घायल", "प्रत्यक्षदर्शियों से अपील"},
-			"es": {"original Latin spelling", "complete street-type suffix", "rather than relying on an example list", "amplio operativo policial", "presuntamente"},
-			"fr": {"original Latin spelling", "complete street-type suffix", "rather than relying on an example list", "important dispositif policier", "appel à témoins", "protected proper names", "Consigne obligatoire pour la sortie française", "Ne jamais les remplacer par « métro »"},
-			"el": {"complete original spelling", "same letters, capitalization, diacritics, and ASCII hyphens", "Υποχρεωτικός κανόνας για την ελληνική έξοδο", "Η ελληνική μεταγραφή επιτρέπεται μόνο επιπλέον", "ποτέ ως αντικατάσταση", "rather than relying on an example list", "τραυματίστηκε ελαφρά", "φέρεται να"},
-			"ro": {"original Latin spelling", "complete street-type suffix", "indivisible protected proper name", "Regula obligatorie pentru rezultatul în limba română", "nu înlocui numele complet cu „strada”", "amplă operațiune a poliției", "se presupune că"},
-			"pl": {"original Latin spelling", "complete street-type suffix", "zakrojona na szeroką skalę akcja policyjna", "prawdopodobnie"},
-			"ru": {"standard, consistent Russian transliteration", "including a street-type suffix", "rather than relying on an example list", "лёгкие травмы", "предположительно"},
-		} {
-			if translation.Language != language {
-				continue
-			}
-			for _, fragment := range expected {
-				if !strings.Contains(rendered, fragment) {
-					t.Errorf("%s TranslateGemma prompt omitted target guidance %q", language, fragment)
-				}
-			}
+		body := strings.ReplaceAll(prompt.UserPromptTemplate, definition.TranslationName, "TARGET")
+		body = strings.ReplaceAll(body, definition.Tag.String(), "TAG")
+		body = strings.ReplaceAll(body, `title_`+fieldCode, "title_TARGET")
+		body = strings.ReplaceAll(body, `summary_`+fieldCode, "summary_TARGET")
+		if sharedBody == "" {
+			sharedBody = body
+		} else if body != sharedBody {
+			t.Errorf("%s prompt diverged from the unified template", translation.Language)
 		}
-		if translation.Language != EnglishLanguage {
-			for _, expected := range []string{
-				"streets, squares, parks, bridges, and stations", "street-type", "rather than relying on an example list",
-				"copy each complete source spelling at least once, character for character", "If the input contains the literal token “U-Bahn”", "if it contains “S-Bahn”", "reproduce every listed name individually",
-			} {
-				if !strings.Contains(rendered, expected) {
-					t.Errorf("%s TranslateGemma prompt omitted generic place-name contract %q", translation.Language, expected)
-				}
-			}
+	}
+}
+
+func TestPreviousTranslationPromptsRemainRetiredAndAddressable(t *testing.T) {
+	versions := []string{EnglishTranslationV1PromptVersion, EnglishTranslationV2PromptVersion}
+	for _, version := range versions {
+		prompt, found := PromptByVersion(version)
+		if !found || prompt.Status != PromptRetired {
+			t.Errorf("retired prompt %q = %#v, found=%v", version, prompt, found)
 		}
 	}
 }

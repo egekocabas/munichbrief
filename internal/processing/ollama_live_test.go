@@ -10,6 +10,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/egekocabas/munichbrief/internal/gazetteer"
 	"github.com/egekocabas/munichbrief/internal/parser"
 	"github.com/egekocabas/munichbrief/internal/source"
 	"golang.org/x/text/unicode/norm"
@@ -248,13 +249,21 @@ func TestLiveOllamaRegisteredTranslationTargets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	matcher, err := gazetteer.NewMatcher([]gazetteer.Entry{
+		{Name: "Maxvorstadt", Kind: gazetteer.KindNeighbourhood, Priority: 10},
+		{Name: "Leopoldstraße", Kind: gazetteer.KindStreet, Priority: 10},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	protectedClient := &protectedGenerator{inner: client, protector: liveMatcherProtector{Matcher: matcher}}
 	const titleDE = "Polizeieinsatz in Maxvorstadt"
 	const summaryDE = "Nach Angaben der Polizei soll eine Person einen Gegenstand abgelegt haben. Die Ermittlungen dauern an."
 	for _, target := range RegisteredTranslations() {
 		t.Run(target.Language, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), liveOllamaJobTimeout)
 			defer cancel()
-			output, returnedModel, err := client.GenerateStep(ctx, target.Step, StepInput{Values: map[string]string{
+			output, returnedModel, err := protectedClient.GenerateStep(ctx, target.Step, StepInput{Values: map[string]string{
 				"title_de": titleDE, "summary_de": summaryDE,
 			}})
 			if err != nil {
@@ -266,21 +275,7 @@ func TestLiveOllamaRegisteredTranslationTargets(t *testing.T) {
 				t.Fatalf("translation result/model is incomplete: %#v/%q", output.Values, returnedModel)
 			}
 			combined := strings.ToLower(title + "\n" + summary)
-			foldedCombined := foldLiveTranslationText(combined)
-			placePreserved := strings.Contains(combined, "maxvorstadt")
-			switch target.Language {
-			case "uk":
-				placePreserved = placePreserved || (strings.Contains(combined, "макс") && strings.Contains(combined, "штадт"))
-			case "el":
-				placePreserved = placePreserved || (containsAny(foldedCombined, "μαξ", "μακσ") && containsAny(foldedCombined, "φορ", "βορ", "σταντ"))
-			case "ru":
-				placePreserved = placePreserved || (strings.Contains(combined, "макс") && containsAny(combined, "фор", "вор", "штадт"))
-			case "zh":
-				placePreserved = placePreserved || containsAny(combined, "马克斯", "馬克斯", "麦克斯", "麥克斯")
-			case "hi":
-				placePreserved = placePreserved || containsAny(combined, "मैक्स", "माक्स", "मैक्")
-			}
-			if !placePreserved {
+			if !strings.Contains(combined, "maxvorstadt") {
 				t.Error("translation did not preserve the Munich place name Maxvorstadt")
 			}
 			if title == titleDE && summary == summaryDE {
@@ -303,7 +298,7 @@ func TestLiveOllamaRegisteredTranslationTargets(t *testing.T) {
 			}
 			if target.Language != EnglishLanguage {
 				streetContext, cancelStreet := context.WithTimeout(context.Background(), liveOllamaJobTimeout)
-				streetOutput, _, streetErr := client.GenerateStep(streetContext, target.Step, StepInput{Values: map[string]string{
+				streetOutput, _, streetErr := protectedClient.GenerateStep(streetContext, target.Step, StepInput{Values: map[string]string{
 					"title_de":   "Polizeieinsatz an der Leopoldstraße",
 					"summary_de": "Nach Angaben der Polizei soll eine Person an der Leopoldstraße leicht verletzt worden sein. Die Ermittlungen dauern an.",
 				}})
@@ -312,44 +307,8 @@ func TestLiveOllamaRegisteredTranslationTargets(t *testing.T) {
 					t.Fatal(streetErr)
 				}
 				streetText := strings.ToLower(streetOutput.Values["title"] + "\n" + streetOutput.Values["summary"])
-				foldedStreetText := foldLiveTranslationText(streetText)
-				streetPreserved := strings.Contains(streetText, "leopoldstraße") || strings.Contains(streetText, "leopoldstrasse")
-				namePreserved := streetPreserved
-				streetTypePreserved := streetPreserved
-				switch target.Language {
-				case "tr":
-					namePreserved = strings.Contains(streetText, "leopold")
-					streetTypePreserved = streetPreserved || containsAny(streetText, "cadde", "sokak", "bulvar")
-					streetPreserved = namePreserved && streetTypePreserved
-				case "hr", "bs":
-					namePreserved = strings.Contains(streetText, "leopold")
-					streetTypePreserved = streetPreserved || containsAny(streetText, "ulic", "cest", "trg")
-					streetPreserved = namePreserved && streetTypePreserved
-				case "uk":
-					namePreserved = strings.Contains(streetText, "leopold") || strings.Contains(streetText, "леопольд")
-					streetTypePreserved = strings.Contains(streetText, "straße") || strings.Contains(streetText, "strasse") || strings.Contains(streetText, "штрас") || strings.Contains(streetText, "вулиц")
-					streetPreserved = namePreserved && streetTypePreserved
-				case "zh":
-					namePreserved = containsAny(streetText, "利奥波德", "利奧波德", "利奥波尔德", "利奧波爾德", "莱奥波德", "萊奧波德", "莱奥波尔德", "萊奧波爾德", "列奥波德", "列奧波德", "列奥波尔德", "列奧波爾德")
-					streetTypePreserved = containsAny(streetText, "街", "大道", "路", "施特拉瑟", "施特拉塞")
-					streetPreserved = namePreserved && streetTypePreserved
-				case "hi":
-					namePreserved = containsAny(streetText, "लियोपोल्ड", "लिओपोल्ड", "लेओपोल्ड", "लियोपॉल्ड", "लेओपॉल्ड")
-					streetTypePreserved = containsAny(streetText, "स्ट्र", "श्ट्र", "स्ट्रीट", "सड़क", "मार्ग", "गली", "रोड")
-					// Hindi postpositions can make the street relationship explicit without
-					// repeating a standalone rendering of the German -straße suffix.
-					streetPreserved = namePreserved
-				case "el":
-					namePreserved = containsAny(foldedStreetText, "leopold", "λεοπολ")
-					streetTypePreserved = containsAny(foldedStreetText, "straße", "strasse", "στρα", "οδο")
-					streetPreserved = namePreserved && streetTypePreserved
-				case "ru":
-					namePreserved = containsAny(streetText, "leopold", "леопольд")
-					streetTypePreserved = containsAny(streetText, "straße", "strasse", "штрас", "улиц")
-					streetPreserved = namePreserved && streetTypePreserved
-				}
-				if !streetPreserved {
-					t.Errorf("%s translation did not preserve the Munich street name Leopoldstraße (recognizable name=%t street type=%t)", target.Language, namePreserved, streetTypePreserved)
+				if !strings.Contains(streetText, "leopoldstraße") {
+					t.Errorf("%s translation did not preserve the exact Munich street name Leopoldstraße", target.Language)
 				}
 			}
 			t.Logf("model=%s target=%s", returnedModel, target.Language)
@@ -378,41 +337,39 @@ func TestLiveOllamaMunichPlaceNamePreservationMatrix(t *testing.T) {
 		protected            map[string][]string
 	}{
 		{
-			name: "transit labels", title: "U-Bahn und S-Bahn in München",
-			summary:   "Die U-Bahn und die S-Bahn waren von der Meldung betroffen.",
-			protected: map[string][]string{"U-Bahn": {"U-Bahn"}, "S-Bahn": {"S-Bahn"}},
-		},
-		{
-			name: "street names", title: "Ingolstädter Straße und Ganghoferstraße",
-			summary: "Die Meldung nennt die Ingolstädter Straße und die Ganghoferstraße als eigenständige Ortsangaben.",
+			name:    "all requested place forms",
+			title:   "U-Bahn und S-Bahn in München",
+			summary: "Ingolstädter Straße, Milbertshofen, **Schwabing**, Ganghoferstraße, Sendling, [Ramersdorf-Perlach](https://munichbrief.de/en/incidents/717), [Schwabing-West](https://munichbrief.de/en/incidents/378?page=2), Oberhaching und Geiselgasteig werden als eigenständige Ortsangaben genannt.",
 			protected: map[string][]string{
-				"Ingolstädter Straße": {
-					"Ingolstädter Straße", "Ingolstadter Straße", "Ingolstaedter Straße",
-					"Ingolstädter Strasse", "Ingolstadter Strasse", "Ingolstaedter Strasse",
-				},
-				"Ganghoferstraße": {"Ganghoferstraße", "Ganghoferstrasse"},
-			},
-		},
-		{
-			name: "northern districts", title: "Milbertshofen und Schwabing",
-			summary:   "Milbertshofen und Schwabing werden in der Meldung getrennt genannt.",
-			protected: map[string][]string{"Milbertshofen": {"Milbertshofen"}, "Schwabing": {"Schwabing"}},
-		},
-		{
-			name: "southern and eastern districts", title: "Sendling und Ramersdorf-Perlach",
-			summary:   "Sendling und Ramersdorf-Perlach werden in der Meldung getrennt genannt.",
-			protected: map[string][]string{"Sendling": {"Sendling"}, "Ramersdorf-Perlach": {"Ramersdorf-Perlach"}},
-		},
-		{
-			name: "west and southern places", title: "Schwabing-West, Oberhaching und Geiselgasteig",
-			summary: "Schwabing-West, Oberhaching und Geiselgasteig werden als drei eigenständige Ortsangaben genannt.",
-			protected: map[string][]string{
-				"Schwabing-West": {"Schwabing-West"},
-				"Oberhaching":    {"Oberhaching"},
-				"Geiselgasteig":  {"Geiselgasteig"},
+				"U-Bahn":              {"U-Bahn"},
+				"S-Bahn":              {"S-Bahn"},
+				"Ingolstädter Straße": {"Ingolstädter Straße"},
+				"Milbertshofen":       {"Milbertshofen"},
+				"Schwabing":           {"Schwabing"},
+				"Ganghoferstraße":     {"Ganghoferstraße"},
+				"Sendling":            {"Sendling"},
+				"Ramersdorf-Perlach":  {"Ramersdorf-Perlach"},
+				"Schwabing-West":      {"Schwabing-West"},
+				"Oberhaching":         {"Oberhaching"},
+				"Geiselgasteig":       {"Geiselgasteig"},
 			},
 		},
 	}
+	protectedNames := make(map[string]struct{})
+	for _, fixture := range fixtures {
+		for name := range fixture.protected {
+			protectedNames[name] = struct{}{}
+		}
+	}
+	entries := make([]gazetteer.Entry, 0, len(protectedNames))
+	for name := range protectedNames {
+		entries = append(entries, gazetteer.Entry{Name: name, Kind: gazetteer.KindNeighbourhood, Priority: 10})
+	}
+	matcher, err := gazetteer.NewMatcher(entries)
+	if err != nil {
+		t.Fatal(err)
+	}
+	protectedClient := &protectedGenerator{inner: client, protector: liveMatcherProtector{Matcher: matcher}}
 
 	for _, target := range RegisteredTranslations() {
 		t.Run(target.Language, func(t *testing.T) {
@@ -420,7 +377,7 @@ func TestLiveOllamaMunichPlaceNamePreservationMatrix(t *testing.T) {
 				t.Run(fixture.name, func(t *testing.T) {
 					ctx, cancel := context.WithTimeout(context.Background(), liveOllamaJobTimeout)
 					defer cancel()
-					output, returnedModel, err := client.GenerateStep(ctx, target.Step, StepInput{Values: map[string]string{
+					output, returnedModel, err := protectedClient.GenerateStep(ctx, target.Step, StepInput{Values: map[string]string{
 						"title_de": fixture.title, "summary_de": fixture.summary,
 					}})
 					if err != nil {
@@ -441,6 +398,10 @@ func TestLiveOllamaMunichPlaceNamePreservationMatrix(t *testing.T) {
 		})
 	}
 }
+
+type liveMatcherProtector struct{ *gazetteer.Matcher }
+
+func (liveMatcherProtector) Ready() bool { return true }
 
 func TestLiveOllamaOfficialRSSMetadataAndGermanPresentation(t *testing.T) {
 	if os.Getenv("MUNICHBRIEF_OLLAMA_RSS_LIVE_TEST") != "1" {
@@ -673,13 +634,4 @@ func containsAny(text string, candidates ...string) bool {
 		}
 	}
 	return false
-}
-
-func foldLiveTranslationText(value string) string {
-	return strings.Map(func(character rune) rune {
-		if unicode.Is(unicode.Mn, character) {
-			return -1
-		}
-		return character
-	}, norm.NFD.String(strings.ToLower(value)))
 }

@@ -18,6 +18,8 @@ github.com/ncruces/go-strftime v1.0.0 h1:HMFp8mLCTPp341M/ZnA4qaf7ZlsbTc+miZjCLOF
 github.com/ncruces/go-strftime v1.0.0/go.mod h1:Fwc5htZGVVkseilnfgOVb9mKy6w1naJmn9CehxcKcls=
 github.com/nicksnyder/go-i18n/v2 v2.6.1 h1:JDEJraFsQE17Dut9HFDHzCoAWGEQJom5s0TRd17NIEQ=
 github.com/nicksnyder/go-i18n/v2 v2.6.1/go.mod h1:Vee0/9RD3Quc/NmwEjzzD7VTZ+Ir7QbXocrkhOzmUKA=
+github.com/pgavlin/aho-corasick v0.5.1 h1:ujv4DzpWK8G+MhoPAKYAir7znMHtcRQLDVa0cwFRvHw=
+github.com/pgavlin/aho-corasick v0.5.1/go.mod h1:UyKgVsAp5Un59BCpzrpFkPyETFMn1tGjdbRYvoq0l2g=
 github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec h1:W09IVJc94icq4NjY3clb7Lk8O1qJ8BdBEF8z0ibU0rE=
 github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec/go.mod h1:qqbHyh8v60DhA7CoWK5oRCqLrMHRGoxYCSS9EjAz6Eo=
 go.yaml.in/yaml/v3 v3.0.4 h1:tfq32ie2Jv2UxXFdLJdh3jXuOzWiL1fo0bu/FbuKpbc=

@@ -1,9 +1,10 @@
 # Architecture
 
-MunichBrief is one Go process with a single SQLite writer. It combines source
-discovery, bounded article fetching, deterministic parsing, asynchronous AI
-processing, and server-rendered delivery without sharing the database between
-replicas.
+MunichBrief is one Go process with one connection per SQLite database. The main
+database holds incidents and processing state; a separate rebuildable database
+holds place-name generations. The process combines source discovery, bounded
+article fetching, deterministic parsing, asynchronous AI processing, and
+server-rendered delivery without sharing either database between replicas.
 
 ## Components
 
@@ -16,6 +17,9 @@ replicas.
   records and hashes the retained source representation.
 - `internal/ingest` coordinates conditional synchronization, refresh policy,
   retries, persistence, and source metrics.
+- `internal/gazetteer` conditionally downloads official Munich, GeoNames, and
+  OpenStreetMap place data; activates validated generations in a separate
+  SQLite database; and exposes an immutable Unicode-aware matcher.
 - `internal/store` owns migrations, SQLite transactions, presentation queries,
   processing cycles, and consistent backups.
 - `internal/processing` defines the staged prompt registry, Ollama clients,
@@ -107,11 +111,29 @@ failed recheck leaves the previous successful result effective, or falls back
 to the immutable original metadata category when no verification has succeeded.
 
 Translation scopes are generated from registered languages. Each language owns
-an immutable prompt, schema, validator, generator, and enablement cutover, while
-all languages share one preferred translation model. English, Turkish,
+an immutable prompt version, schema, validator, generator, and enablement
+cutover, while all languages share one preferred translation model and one
+registry-driven prompt template. English, Turkish,
 Croatian, Italian, Ukrainian, Bosnian, Simplified Chinese, Hindi, Spanish,
 French, Greek, Romanian, Polish, and Russian each receive only the accepted
 German title and summary.
+
+Before a translation request, the active gazetteer matcher replaces exact
+Munich-area streets, districts, neighbourhoods, municipalities, transit names,
+parks, squares, and landmarks with opaque tokens. It uses leftmost-longest
+Aho–Corasick matching plus Unicode word boundaries; ambiguous common nouns
+require location context. The model must return every token exactly once in the
+same field. The application rejects missing, duplicated, moved, or invented
+tokens and restores the exact NFC-normalized German spelling before ordinary
+validation and persistence. If no valid generation is loaded, translation job
+claims pause while German processing, existing publications, and readiness
+continue.
+
+The gazetteer database records immutable generations and source provenance.
+Refreshes require every fixed HTTPS source to pass size, schema, and count
+checks before activation. Any source or matcher failure leaves the last
+successful generation active. The database is rebuildable and is not part of
+the incident database backup.
 
 Application code localizes metadata labels. Each step declares its ordered
 input kinds; the worker passes only those values and hashes the actual inputs

@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -248,7 +250,7 @@ func newTranslationDefinition(target langregistry.Definition, prompt PromptDefin
 			InputKinds: []string{"title_de", "summary_de"}, OutputKinds: []string{"title", "summary"},
 			SystemPrompt: prompt.SystemPrompt, Schema: schema,
 			Generator: translationInputGenerator(prompt.Version), OutputDecoder: translationOutputDecoder(titleField, summaryField),
-			Validator: func(_ StepInput, output *StepOutput) error { return validateTranslation(output) }, OutputValues: postProcessingOutputValues},
+			Validator: validateTranslation, OutputValues: postProcessingOutputValues},
 	}, nil
 }
 
@@ -757,7 +759,9 @@ func validateGermanPresentation(_ StepInput, output *StepOutput) error {
 	return validatePublicText(output.TitleDE + "\n" + output.SummaryDE)
 }
 
-func validateTranslation(output *StepOutput) error {
+var translationURLPattern = regexp.MustCompile(`(?i)\b(?:https?://|www\.)[^\s)]+`)
+
+func validateTranslation(input StepInput, output *StepOutput) error {
 	title, titleFound := output.Values["title"]
 	summary, summaryFound := output.Values["summary"]
 	if !titleFound || !summaryFound {
@@ -770,7 +774,26 @@ func validateTranslation(output *StepOutput) error {
 		return err
 	}
 	output.Values["title"], output.Values["summary"] = title, summary
-	return validatePublicText(title + "\n" + summary)
+	for _, field := range []struct {
+		name, source, translated string
+	}{
+		{name: "title", source: input.Value("title_de"), translated: title},
+		{name: "summary", source: input.Value("summary_de"), translated: summary},
+	} {
+		sourceURLs := translationURLPattern.FindAllString(field.source, -1)
+		translatedURLs := translationURLPattern.FindAllString(field.translated, -1)
+		if strings.Join(sourceURLs, "\x00") != strings.Join(translatedURLs, "\x00") {
+			return errorOf(ErrorPrivacy, "translated %s changed, added, removed, or reordered a web address", field.name)
+		}
+		for _, rawURL := range sourceURLs {
+			parsed, err := url.Parse(rawURL)
+			if err != nil || parsed.Scheme != "https" || parsed.Hostname() != "munichbrief.de" || parsed.Port() != "" || parsed.User != nil {
+				return errorOf(ErrorPrivacy, "translated %s contains a non-public or third-party web address", field.name)
+			}
+		}
+	}
+	publicText := translationURLPattern.ReplaceAllString(title+"\n"+summary, "")
+	return validatePublicText(publicText)
 }
 
 func validatePublicAssistanceVerification(input StepInput, output *StepOutput) error {
