@@ -109,8 +109,8 @@ to the immutable original metadata category when no verification has succeeded.
 Translation scopes are generated from registered languages. Each language owns
 an immutable prompt, schema, validator, generator, and enablement cutover, while
 all languages share one preferred translation model. English, Turkish,
-Croatian, Italian, Ukrainian, and Bosnian each receive only the accepted German
-title and summary.
+Croatian, Italian, Ukrainian, Bosnian, Simplified Chinese, Hindi, Spanish, and
+French each receive only the accepted German title and summary.
 
 Application code localizes metadata labels. Each step declares its ordered
 input kinds; the worker passes only those values and hashes the actual inputs
@@ -214,6 +214,12 @@ The same registry supplies exact BCP-47 document tags and stable route/scope
 codes; target-specific prompts feed a generic translation-step factory. See
 [Adding a reader language](adding-a-language.md) for the cross-repository
 extension and rollout contract.
+
+Social previews use embedded OFL-licensed fonts. The default Go font covers the
+Latin and Cyrillic readers; Noto Sans SC covers Simplified Chinese, and Noto
+Sans Devanagari is rendered through a pure-Go OpenType shaping engine so Hindi
+vowel marks and conjuncts retain their proper glyph order. Font bytes are part
+of the renderer cache identity.
 
 Reader queries choose content and metadata from one presentation run. The
 effective category is the newest successful verification for that run, or its

@@ -4,6 +4,7 @@ go 1.26.6
 
 require (
 	github.com/BurntSushi/toml v1.6.0
+	github.com/go-text/typesetting v0.3.4
 	github.com/nicksnyder/go-i18n/v2 v2.6.1
 	golang.org/x/image v0.45.0
 	golang.org/x/net v0.58.0

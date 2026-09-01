@@ -85,6 +85,21 @@ func TestRegisteredTranslateGemmaPromptsUseTargetLanguageIdentities(t *testing.T
 				}
 			}
 		}
+		for language, expected := range map[string][]string{
+			"zh": {"standard, consistent Chinese transliteration", "including a street-type suffix", "rather than relying on an example list", "受轻伤"},
+			"hi": {"standard, consistent Hindi transliteration", "including a street-type suffix", "rather than relying on an example list", "मामूली रूप से घायल", "प्रत्यक्षदर्शियों से अपील"},
+			"es": {"Leopoldstraße", "amplio operativo policial", "presuntamente"},
+			"fr": {"Leopoldstraße", "important dispositif policier", "appel à témoins"},
+		} {
+			if translation.Language != language {
+				continue
+			}
+			for _, fragment := range expected {
+				if !strings.Contains(rendered, fragment) {
+					t.Errorf("%s TranslateGemma prompt omitted target guidance %q", language, fragment)
+				}
+			}
+		}
 		if translation.Language != EnglishLanguage && !strings.Contains(rendered, "streets, squares, parks, bridges, and stations") {
 			t.Errorf("%s TranslateGemma prompt does not cover non-district place names", translation.Language)
 		}

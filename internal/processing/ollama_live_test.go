@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode"
 
 	"github.com/egekocabas/munichbrief/internal/parser"
 	"github.com/egekocabas/munichbrief/internal/source"
@@ -265,8 +266,13 @@ func TestLiveOllamaRegisteredTranslationTargets(t *testing.T) {
 			}
 			combined := strings.ToLower(title + "\n" + summary)
 			placePreserved := strings.Contains(combined, "maxvorstadt")
-			if target.Language == "uk" {
+			switch target.Language {
+			case "uk":
 				placePreserved = placePreserved || (strings.Contains(combined, "макс") && strings.Contains(combined, "штадт"))
+			case "zh":
+				placePreserved = placePreserved || containsAny(combined, "马克斯", "馬克斯", "麦克斯", "麥克斯")
+			case "hi":
+				placePreserved = placePreserved || containsAny(combined, "मैक्स", "माक्स", "मैक्")
 			}
 			if !placePreserved {
 				t.Error("translation did not preserve the Munich place name Maxvorstadt")
@@ -274,20 +280,44 @@ func TestLiveOllamaRegisteredTranslationTargets(t *testing.T) {
 			if title == titleDE && summary == summaryDE {
 				t.Error("translation returned the German input unchanged")
 			}
-			if target.Language == "uk" {
-				streetOutput, _, streetErr := client.GenerateStep(ctx, target.Step, StepInput{Values: map[string]string{
+			if target.Language == "zh" && !strings.ContainsFunc(combined, func(character rune) bool { return unicode.Is(unicode.Han, character) }) {
+				t.Error("Simplified Chinese translation contains no Han characters")
+			}
+			if target.Language == "hi" && !strings.ContainsFunc(combined, func(character rune) bool { return unicode.Is(unicode.Devanagari, character) }) {
+				t.Error("Hindi translation contains no Devanagari characters")
+			}
+			if target.Language == "uk" || target.Language == "zh" || target.Language == "hi" || target.Language == "es" || target.Language == "fr" {
+				streetContext, cancelStreet := context.WithTimeout(context.Background(), liveOllamaJobTimeout)
+				streetOutput, _, streetErr := client.GenerateStep(streetContext, target.Step, StepInput{Values: map[string]string{
 					"title_de":   "Polizeieinsatz an der Leopoldstraße",
-					"summary_de": "Nach Angaben der Polizei dauern die Ermittlungen an der Leopoldstraße an.",
+					"summary_de": "Nach Angaben der Polizei soll eine Person an der Leopoldstraße leicht verletzt worden sein. Die Ermittlungen dauern an.",
 				}})
+				cancelStreet()
 				if streetErr != nil {
 					t.Fatal(streetErr)
 				}
 				streetText := strings.ToLower(streetOutput.Values["title"] + "\n" + streetOutput.Values["summary"])
-				namePreserved := strings.Contains(streetText, "leopold") || strings.Contains(streetText, "леопольд")
-				streetTypePreserved := strings.Contains(streetText, "straße") || strings.Contains(streetText, "strasse") || strings.Contains(streetText, "штрас") || strings.Contains(streetText, "вулиц")
-				streetPreserved := namePreserved && streetTypePreserved
+				streetPreserved := strings.Contains(streetText, "leopoldstraße") || strings.Contains(streetText, "leopoldstrasse")
+				namePreserved := streetPreserved
+				streetTypePreserved := streetPreserved
+				switch target.Language {
+				case "uk":
+					namePreserved = strings.Contains(streetText, "leopold") || strings.Contains(streetText, "леопольд")
+					streetTypePreserved = strings.Contains(streetText, "straße") || strings.Contains(streetText, "strasse") || strings.Contains(streetText, "штрас") || strings.Contains(streetText, "вулиц")
+					streetPreserved = namePreserved && streetTypePreserved
+				case "zh":
+					namePreserved = containsAny(streetText, "利奥波德", "利奧波德", "利奥波尔德", "利奧波爾德", "莱奥波德", "萊奧波德", "莱奥波尔德", "萊奧波爾德", "列奥波德", "列奧波德", "列奥波尔德", "列奧波爾德")
+					streetTypePreserved = containsAny(streetText, "街", "大道", "路", "施特拉瑟", "施特拉塞")
+					streetPreserved = namePreserved && streetTypePreserved
+				case "hi":
+					namePreserved = containsAny(streetText, "लियोपोल्ड", "लिओपोल्ड", "लेओपोल्ड", "लियोपॉल्ड", "लेओपॉल्ड")
+					streetTypePreserved = containsAny(streetText, "स्ट्र", "श्ट्र", "स्ट्रीट", "सड़क", "मार्ग", "गली", "रोड")
+					// Hindi postpositions can make the street relationship explicit without
+					// repeating a standalone rendering of the German -straße suffix.
+					streetPreserved = namePreserved
+				}
 				if !streetPreserved {
-					t.Error("Ukrainian translation did not preserve the Munich street name Leopoldstraße")
+					t.Errorf("%s translation did not preserve the Munich street name Leopoldstraße (recognizable name=%t street type=%t)", target.Language, namePreserved, streetTypePreserved)
 				}
 			}
 			t.Logf("model=%s target=%s", returnedModel, target.Language)
@@ -517,4 +547,13 @@ func assertOptionalString(t *testing.T, name string, actual *string, expected st
 		}
 		t.Fatalf("%s = %s, want %s", name, value, expected)
 	}
+}
+
+func containsAny(text string, candidates ...string) bool {
+	for _, candidate := range candidates {
+		if strings.Contains(text, candidate) {
+			return true
+		}
+	}
+	return false
 }

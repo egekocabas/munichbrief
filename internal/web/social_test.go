@@ -7,10 +7,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"unicode/utf8"
-
-	xfont "golang.org/x/image/font"
 )
 
 func TestSocialCardsRenderURLSpecificPNGResponses(t *testing.T) {
@@ -52,7 +51,7 @@ func TestSocialCardsRenderURLSpecificPNGResponses(t *testing.T) {
 		t.Errorf("conditional social card response = %d/%d bytes", notModified.Code, notModified.Body.Len())
 	}
 
-	for _, path := range []string{"/social/fr/home", "/social/en/incidents/0", "/social/en/incidents/999999"} {
+	for _, path := range []string{"/social/pt/home", "/social/en/incidents/0", "/social/en/incidents/999999"} {
 		response := httptest.NewRecorder()
 		handler.ServeHTTP(response, publicDiscoveryRequest(http.MethodGet, path))
 		if response.Code != http.StatusNotFound {
@@ -109,10 +108,107 @@ func TestSocialCardFontCoversReaderAlphabets(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer closeFace()
-	const representativeCharacters = "çğıİöşüčćđšžàèéìíòóùúÀÈÉÌÍÒÓÙÚАБВГҐДЕЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЬЮЯабвгґдеєжзиіїйклмнопрстуфхцчшщьюя"
+	const representativeCharacters = "çğıİöşüčćđšžàáâèéêìíîòóôùúûüñœÀÈÉÌÍÒÓÙÚАБВГҐДЕЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЬЮЯабвгґдеєжзиіїйклмнопрстуфхцчшщьюя"
 	for _, character := range representativeCharacters {
 		if _, ok := face.GlyphAdvance(character); !ok {
 			t.Errorf("embedded social font does not cover %q (U+%04X)", character, character)
+		}
+	}
+}
+
+func TestSocialCardFontsShapeChineseAndHindi(t *testing.T) {
+	renderer, err := newSocialCardRenderer()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		name, tag, text, characters string
+	}{
+		{name: "Chinese", tag: "zh-CN", text: "警方在慕尼黑市中心展开调查", characters: "警方在慕尼黑市中心展开调查"},
+		{name: "Hindi", tag: "hi-IN", text: "म्यूनिख में पुलिस कार्रवाई", characters: "अआइईउऊऋॠऌॡएऐओऔअंअःकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसहक्षत्रज्ञड़ढ़क़ख़ग़ज़फ़म्यूनिखपुलिसकार्रवाई"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			face, ok := renderer.localizedFace(test.tag, 52, nil).(shapedSocialTextFace)
+			if !ok {
+				t.Fatalf("%s did not select a shaped social font", test.tag)
+			}
+			for _, character := range test.characters {
+				if _, found := face.face.NominalGlyph(character); !found {
+					t.Errorf("%s social font does not cover %q (U+%04X)", test.name, character, character)
+				}
+			}
+			renderer.shapeMu.Lock()
+			shaped := face.output(test.text)
+			renderer.shapeMu.Unlock()
+			if shaped.Advance <= 0 || len(shaped.Glyphs) == 0 {
+				t.Fatalf("%s shaped output is empty: %#v", test.name, shaped)
+			}
+			contents, err := renderer.render(socialCardSpec{LanguageTag: test.tag, Eyebrow: test.text, Title: test.text})
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertSocialCardDimensions(t, contents)
+			rendered, err := png.Decode(bytes.NewReader(contents))
+			if err != nil {
+				t.Fatal(err)
+			}
+			changed := 0
+			for y := 130; y < 380; y++ {
+				for x := socialTextLeft; x < socialTextRightEdge; x++ {
+					if rgba(rendered.At(x, y)) != rgba(renderer.background.At(x, y)) {
+						changed++
+					}
+				}
+			}
+			if changed < 100 {
+				t.Fatalf("%s social text changed only %d pixels", test.name, changed)
+			}
+		})
+	}
+	hindiFace := renderer.localizedFace("hi-IN", 52, nil).(shapedSocialTextFace)
+	renderer.shapeMu.Lock()
+	conjunct := hindiFace.output("क्षेत्र")
+	renderer.shapeMu.Unlock()
+	if len(conjunct.Glyphs) >= len([]rune("क्षेत्र")) {
+		t.Fatalf("Devanagari conjunct was not shaped: %d glyphs for %d runes", len(conjunct.Glyphs), len([]rune("क्षेत्र")))
+	}
+
+	chineseFace := renderer.localizedFace("zh-CN", 52, nil)
+	lines := wrapSocialTitle("慕尼黑警方正在调查一起情况尚不明确的事件并继续征集相关线索", chineseFace, socialTextMaxWidth, 2)
+	if len(lines) != 2 || strings.Contains(strings.Join(lines, ""), " ") {
+		t.Fatalf("Chinese title wrapping = %#v", lines)
+	}
+	for _, line := range lines {
+		if width := chineseFace.measure(line); width > socialTextMaxWidth {
+			t.Errorf("Chinese wrapped line is %dpx wide, max %dpx: %q", width, socialTextMaxWidth, line)
+		}
+	}
+}
+
+func TestSocialCardShapingIsSafeForConcurrentRequests(t *testing.T) {
+	renderer, err := newSocialCardRenderer()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wait sync.WaitGroup
+	errors := make(chan error, 8)
+	for index := 0; index < 8; index++ {
+		wait.Add(1)
+		go func(index int) {
+			defer wait.Done()
+			tag, title := "zh-CN", "慕尼黑警方正在调查"
+			if index%2 == 1 {
+				tag, title = "hi-IN", "म्यूनिख में पुलिस जाँच जारी"
+			}
+			_, err := renderer.render(socialCardSpec{LanguageTag: tag, Eyebrow: title, Title: title})
+			errors <- err
+		}(index)
+	}
+	wait.Wait()
+	close(errors)
+	for err := range errors {
+		if err != nil {
+			t.Fatal(err)
 		}
 	}
 }
@@ -155,12 +251,13 @@ func TestSocialCardTextStaysInsideSkySafeArea(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer closeTitle()
-	lines := wrapSocialTitle(longestPublishedTitle, titleFace, socialTextMaxWidth, 2)
+	socialFace := basicSocialTextFace{face: titleFace}
+	lines := wrapSocialTitle(longestPublishedTitle, socialFace, socialTextMaxWidth, 2)
 	if len(lines) > 2 {
 		t.Fatalf("wrapped title has %d lines, want at most 2: %#v", len(lines), lines)
 	}
 	for _, line := range lines {
-		if width := xfont.MeasureString(titleFace, line).Ceil(); width > socialTextMaxWidth {
+		if width := socialFace.measure(line); width > socialTextMaxWidth {
 			t.Errorf("wrapped line %q is %dpx wide, max %dpx", line, width, socialTextMaxWidth)
 		}
 	}

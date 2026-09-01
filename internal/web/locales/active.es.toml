@@ -1,0 +1,166 @@
+SiteDescription = { other = "Mantente al día con resúmenes mediante IA de los comunicados oficiales de la Policía de Múnich." }
+BrandTagline = { other = "Múnich de un vistazo" }
+SocialImageAlt = { other = "Vista previa de MunichBrief con el Olympiapark de Múnich." }
+SocialIncidentLabel = { other = "Incidente" }
+Timeline = { other = "Últimas noticias" }
+About = { other = "Información" }
+PrimaryNavigation = { other = "Navegación principal" }
+SkipToContent = { other = "Ir al contenido" }
+DarkMode = { other = "Modo oscuro" }
+NoticeLabel = { other = "Aviso importante" }
+NoticeLead = { other = "Independiente y no oficial." }
+FixtureNotice = { other = "Esta vista contiene únicamente datos de prueba sintéticos." }
+LiveNotice = { other = "Se utiliza IA para resumir, clasificar y extraer detalles de comunicados oficiales de la policía. Puede haber errores y los comunicados pueden actualizarse después de su publicación." }
+AuthorityNotice = { other = "La información oficial más reciente sigue siendo la fuente autorizada y se aplica la presunción de inocencia." }
+ReviewNotice = { other = "Modo de revisión: puede mostrarse texto original sin anonimizar. No debe exponerse públicamente." }
+AIGeneratedContent = { other = "Contenido generado por IA" }
+AIFixtureLabelPreview = { other = "Vista previa de la etiqueta — este contenido sintético no ha sido procesado por IA" }
+AIDisclosureTitle = { other = "Contenido generado por IA" }
+AIDisclosureFixtureCopy = { other = "Vista previa local: esta página utiliza contenido de prueba sintético." }
+AIDisclosureCopy = { other = "MunichBrief utiliza IA operada localmente para crear titulares, resúmenes, traducciones, categorías y datos estructurados, como la zona y la hora comunicadas y si la policía solicita colaboración ciudadana, a partir de comunicados oficiales de la Policía de Múnich. La información generada o inferida por IA puede contener errores o quedar desactualizada si se modifica el comunicado original. Cada página de incidente identifica y enlaza la fuente policial oficial; consulta esa fuente para obtener información autorizada. MunichBrief es un proyecto independiente y no está vinculado a la Policía de Baviera. Toda persona mencionada se presume inocente mientras no se demuestre su culpabilidad." }
+AIDisclosurePreferenceCopy = { other = "Al seleccionar «Entendido», este aviso se recordará durante 30 días." }
+AIDisclosureLearnMore = { other = "Encontrarás más información sobre MunichBrief y su funcionamiento en la página Información." }
+AIDisclosureGotIt = { other = "Entendido" }
+AITransparencyEU = { other = "Transparencia de la IA y orientaciones de la UE" }
+AITransparencyEUCopy = { other = "MunichBrief utiliza la etiqueta de la UE para contenido íntegramente generado por IA porque las orientaciones de la Comisión Europea incluyen expresamente los resúmenes de noticias generados por IA como caso de uso. Las etiquetas visibles y la procedencia legible por máquinas favorecen la transparencia, pero el uso del icono no demuestra por sí solo el cumplimiento legal ni indica que MunichBrief haya firmado el Código de buenas prácticas voluntario." }
+EUIconGuidance = { other = "Orientaciones de la UE sobre iconos" }
+EUCodePractice = { other = "Código de buenas prácticas de la UE" }
+Footer = { other = "MunichBrief es independiente de la Policía de Baviera. Sin analítica, cuentas ni publicidad." }
+Built = { other = "Compilación" }
+Language = { other = "Idioma" }
+German = { other = "Alemán" }
+English = { other = "Inglés" }
+SwitchToGerman = { other = "Cambiar a la versión en alemán" }
+SwitchToEnglish = { other = "Cambiar a la versión en inglés" }
+SwitchToTurkish = { other = "Cambiar a la versión en turco" }
+SwitchToCroatian = { other = "Cambiar a la versión en croata" }
+SwitchToItalian = { other = "Cambiar a la versión en italiano" }
+SwitchToUkrainian = { other = "Cambiar a la versión en ucraniano" }
+SwitchToBosnian = { other = "Cambiar a la versión en bosnio" }
+SwitchToChinese = { other = "Cambiar a la versión en chino simplificado" }
+SwitchToHindi = { other = "Cambiar a la versión en hindi" }
+SwitchToSpanish = { other = "Cambiar a la versión en español" }
+SwitchToFrench = { other = "Cambiar a la versión en francés" }
+HeroEyebrowFixture = { other = "Prototipo local" }
+HeroEyebrowLive = { other = "Comunicados de la Policía de Múnich" }
+HeroTitle = { other = "Últimos incidentes comunicados por la Policía de Múnich" }
+HeroCopy = { other = "Una visión clara de los incidentes locales, resumidos a partir de comunicados policiales oficiales." }
+FixtureIncidents = { other = "Informes sintéticos" }
+LatestIncidents = { other = "Últimos incidentes" }
+Reports = { one = "{{.Count}} informe", other = "{{.Count}} informes" }
+ShownTotal = { other = "{{.Shown}} mostrados / {{.Total}} en total" }
+Report = { other = "Informe policial" }
+SourceMetadata = { other = "Metadatos de la fuente" }
+ReadIncident = { other = "Leer el informe" }
+OpenOfficialSource = { other = "Abrir la fuente oficial" }
+OpenOfficialPoliceRelease = { other = "Abrir el comunicado policial oficial" }
+Newer = { other = "Más recientes" }
+Older = { other = "Más antiguos" }
+Page = { other = "Página" }
+Of = { other = "de" }
+NoIncidents = { other = "Todavía no hay informes" }
+NoFixtureCopy = { other = "Ejecuta la importación de datos de prueba para rellenar esta vista." }
+NoLiveCopy = { other = "El sincronizador aún no ha encontrado ningún comunicado dentro del intervalo previsto." }
+BodyUnavailable = { other = "El texto del comunicado todavía no está disponible. MunichBrief lo está intentando de nuevo; mientras tanto, consulta la fuente oficial." }
+SourceRefreshFailed = { other = "La última actualización de la fuente ha fallado; esta copia guardada sigue disponible." }
+Back = { other = "Volver" }
+Breadcrumb = { other = "Ruta de navegación" }
+PublishedWithin = { other = "Publicado en" }
+Published = { other = "Publicado" }
+LastProcessed = { other = "Último procesamiento" }
+Model = { other = "Modelo" }
+PromptVersion = { other = "Versión del prompt" }
+Category = { other = "Categoría" }
+CategoryTraffic = { other = "Tráfico" }
+CategoryTheftBurglary = { other = "Hurto, robo y allanamiento" }
+CategoryRobberyExtortion = { other = "Robo con violencia y extorsión" }
+CategoryViolence = { other = "Violencia" }
+CategorySexualOffense = { other = "Delitos sexuales" }
+CategoryFraudCyber = { other = "Fraude y ciberdelincuencia" }
+CategoryDrugs = { other = "Drogas" }
+CategoryFireHazard = { other = "Incendios y peligros" }
+CategoryPropertyDamage = { other = "Daños materiales" }
+CategoryMissingWanted = { other = "Personas desaparecidas y buscadas" }
+CategoryPoliceOperation = { other = "Operativo policial" }
+CategoryOther = { other = "Otros" }
+Area = { other = "Zona" }
+ReportKind = { other = "Tipo de informe" }
+PublicAssistance = { other = "Colaboración ciudadana" }
+PublicAssistanceRequested = { other = "La policía solicita colaboración ciudadana" }
+PublicAssistanceNeeded = { other = "Se necesita colaboración ciudadana" }
+PublicAssistanceSourceCopy = { other = "Las instrucciones, vías de contacto y demás detalles solo están disponibles en la fuente oficial." }
+TimeStatedInReport = { other = "Hora indicada en el informe" }
+DayPartMorning = { other = "mañana" }
+DayPartMidday = { other = "mediodía" }
+DayPartAfternoon = { other = "tarde" }
+DayPartEvening = { other = "tarde-noche" }
+DayPartNight = { other = "noche" }
+ReportKindIncident = { other = "Incidente" }
+ReportKindFollowUp = { other = "Seguimiento" }
+ReportKindMissingPerson = { other = "Aviso de persona desaparecida" }
+ReportKindWantedPerson = { other = "Aviso de persona buscada" }
+ReportKindPublicWarning = { other = "Aviso público" }
+ReportKindOther = { other = "Otro informe" }
+AssistanceWitnessObservations = { other = "Observaciones de testigos" }
+AssistanceIdentifyPerson = { other = "Identificar a una persona" }
+AssistanceLocatePerson = { other = "Localizar a una persona" }
+AssistancePhotoVideo = { other = "Fotos o vídeos" }
+AssistanceVehicleInformation = { other = "Información sobre vehículos" }
+AssistancePropertyInformation = { other = "Información sobre objetos" }
+AssistanceOtherInformation = { other = "Otra información" }
+AIProcessing = { other = "Procesamiento mediante IA" }
+Step = { other = "Paso" }
+Translation = { other = "Traducción" }
+IncidentMetadataStep = { other = "Metadatos del incidente" }
+GermanPresentationStep = { other = "Presentación en alemán" }
+PublicAssistanceVerificationStep = { other = "Verificación de la colaboración ciudadana" }
+CategoryVerificationStep = { other = "Verificación de la categoría" }
+EnglishTranslationStep = { other = "Traducción al inglés" }
+TurkishTranslationStep = { other = "Traducción al turco" }
+CroatianTranslationStep = { other = "Traducción al croata" }
+ItalianTranslationStep = { other = "Traducción al italiano" }
+UkrainianTranslationStep = { other = "Traducción al ucraniano" }
+BosnianTranslationStep = { other = "Traducción al bosnio" }
+ChineseTranslationStep = { other = "Traducción al chino simplificado" }
+HindiTranslationStep = { other = "Traducción al hindi" }
+SpanishTranslationStep = { other = "Traducción al español" }
+FrenchTranslationStep = { other = "Traducción al francés" }
+StagedPipeline = { other = "Proceso por etapas" }
+MetadataFirstPipeline = { other = "Proceso con metadatos primero v2" }
+Generated = { other = "Generado" }
+AISummary = { other = "Resumen generado por IA" }
+VerifySource = { other = "Comprueba los detalles importantes en la información oficial más reciente." }
+OriginalGerman = { other = "Texto original en alemán" }
+OriginalQACopy = { other = "Visible únicamente para el control de calidad en el modo de revisión restringido." }
+AuthoritativeSource = { other = "Fuente autorizada" }
+FixtureSourceCopy = { other = "Esta página utiliza contenido de prueba sintético." }
+LiveSourceCopy = { other = "Esta es una presentación no oficial. El comunicado de la Policía de Baviera sigue siendo la fuente autorizada." }
+NotProcessed = { other = "Aún sin resumir ni traducir" }
+Queued = { other = "Resumen y traducción mediante IA en cola" }
+Running = { other = "Resumen y traducción mediante IA en curso" }
+Retrying = { other = "IA temporalmente no disponible; reintento programado" }
+NeedsReview = { other = "El resultado de la IA requiere revisión" }
+OriginalShown = { other = "Se muestra el informe original en alemán." }
+AboutTitle = { other = "Cómo funciona MunichBrief" }
+Methodology = { other = "Acerca de MunichBrief" }
+AboutIntro = { other = "MunichBrief convierte comunicados oficiales de la Policía de Múnich en resúmenes de incidentes claros y estructurados en varios idiomas." }
+FromReleaseToIncident = { other = "Del comunicado al incidente" }
+Discover = { other = "Descubrir" }
+DiscoverCopy = { other = "Los nuevos comunicados se detectan únicamente mediante el canal RSS oficial de la Policía de Múnich." }
+Organize = { other = "Organizar" }
+OrganizeCopy = { other = "Los comunicados que contienen varios informes se dividen según sus números oficiales. Los informes publicados por separado permanecen separados." }
+Summarize = { other = "Resumir" }
+SummarizeCopy = { other = "Los modelos locales de IA extraen datos como categorías, lugares, fechas y solicitudes de colaboración ciudadana y después crean un resumen en alemán con datos personales minimizados." }
+TranslatePublish = { other = "Traducir y publicar" }
+TranslatePublishCopy = { other = "Los resúmenes en alemán que superan las comprobaciones automáticas se traducen a los idiomas disponibles. Las páginas públicas solo muestran contenido generado por IA cuando el proceso finaliza correctamente." }
+AccuracyOfficialInformation = { other = "Exactitud e información oficial" }
+AccuracyOfficialInformationCopy = { other = "Los resúmenes generados por IA y los datos extraídos pueden contener errores. Los comunicados policiales pueden actualizarse después de publicarse. La información oficial más reciente sigue siendo la fuente autorizada y se aplica la presunción de inocencia." }
+PrivacyDataHandling = { other = "Privacidad y tratamiento de datos" }
+PrivacyCopy = { other = "MunichBrief no utiliza cuentas, analítica ni publicidad. Una cookie necesaria guarda el idioma seleccionado durante un año. Después de seleccionar «Entendido», una cookie propia de preferencias recuerda el aviso de IA durante 30 días. El tema de color elegido se guarda localmente en el navegador." }
+DataHandlingCopy = { other = "El texto extraído de la fuente alemana se almacena localmente. El modo de revisión restringido puede mostrar originales y estados de procesamiento para el control de calidad; el modo público no muestra los originales almacenados." }
+IndependenceLegalReview = { other = "Independencia y revisión jurídica" }
+IndependenceLegalReviewCopy = { other = "MunichBrief es independiente de la Policía de Baviera. Las medidas técnicas no sustituyen la revisión jurídica. La conservación, la base jurídica, los datos relacionados con delitos y las excepciones periodísticas aplicables requieren una revisión continua." }
+ContactHeading = { other = "Preguntas, correcciones o comentarios" }
+ContactPublicLead = { other = "¿Has encontrado un error o tienes una sugerencia?" }
+ContactIssueLink = { other = "Abrir una incidencia en GitHub" }
+ContactPrivateLead = { other = "Para cuestiones de privacidad o cualquier asunto que no deba compartirse públicamente, escribe a" }

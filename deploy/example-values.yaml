@@ -31,6 +31,10 @@ ingress:
       - it
       - uk
       - bs
+      - zh
+      - hi
+      - es
+      - fr
 
 admin:
   enabled: false

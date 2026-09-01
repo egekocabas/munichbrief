@@ -1,0 +1,166 @@
+SiteDescription = { other = "म्यूनिख पुलिस की आधिकारिक विज्ञप्तियों के AI सारांशों से जानकारी पाते रहें।" }
+BrandTagline = { other = "एक नज़र में म्यूनिख" }
+SocialImageAlt = { other = "म्यूनिख के ओलंपियापार्क के साथ MunichBrief का पूर्वावलोकन।" }
+SocialIncidentLabel = { other = "घटना" }
+Timeline = { other = "नवीनतम" }
+About = { other = "परिचय" }
+PrimaryNavigation = { other = "मुख्य नेविगेशन" }
+SkipToContent = { other = "सामग्री पर जाएँ" }
+DarkMode = { other = "डार्क मोड" }
+NoticeLabel = { other = "महत्वपूर्ण सूचना" }
+NoticeLead = { other = "स्वतंत्र और अनाधिकारिक।" }
+FixtureNotice = { other = "इस दृश्य में केवल कृत्रिम परीक्षण डेटा है।" }
+LiveNotice = { other = "आधिकारिक पुलिस विज्ञप्तियों का सारांश बनाने, वर्गीकरण करने और विवरण निकालने के लिए AI का उपयोग किया जाता है। त्रुटियाँ हो सकती हैं और प्रकाशन के बाद विज्ञप्तियाँ अपडेट की जा सकती हैं।" }
+AuthorityNotice = { other = "नवीनतम आधिकारिक जानकारी ही प्रामाणिक है और निर्दोष माने जाने का सिद्धांत लागू होता है।" }
+ReviewNotice = { other = "समीक्षा मोड: ऐसा मूल पाठ दिखाई दे सकता है जिसे गुमनाम नहीं किया गया है। इसे सार्वजनिक न करें।" }
+AIGeneratedContent = { other = "AI द्वारा तैयार सामग्री" }
+AIFixtureLabelPreview = { other = "लेबल पूर्वावलोकन — इस कृत्रिम परीक्षण सामग्री को AI ने संसाधित नहीं किया है" }
+AIDisclosureTitle = { other = "AI द्वारा तैयार सामग्री" }
+AIDisclosureFixtureCopy = { other = "स्थानीय पूर्वावलोकन: यह पृष्ठ कृत्रिम परीक्षण सामग्री का उपयोग करता है।" }
+AIDisclosureCopy = { other = "MunichBrief स्थानीय रूप से संचालित AI का उपयोग करके म्यूनिख पुलिस की आधिकारिक विज्ञप्तियों से शीर्षक, सारांश, अनुवाद, श्रेणियाँ और संरचित विवरण तैयार करता है, जैसे बताया गया क्षेत्र और समय तथा क्या पुलिस जनता से सहायता माँग रही है। AI द्वारा तैयार या अनुमानित जानकारी में त्रुटियाँ हो सकती हैं या मूल विज्ञप्ति अपडेट होने पर वह पुरानी हो सकती है। प्रत्येक घटना पृष्ठ आधिकारिक पुलिस स्रोत की पहचान करता है और उसका लिंक देता है; प्रामाणिक जानकारी के लिए उसी स्रोत को देखें। MunichBrief एक स्वतंत्र परियोजना है और बवेरियन पुलिस से संबद्ध नहीं है। दोष सिद्ध होने तक उल्लेखित प्रत्येक व्यक्ति को निर्दोष माना जाता है।" }
+AIDisclosurePreferenceCopy = { other = "“समझ गया” चुनने पर यह सूचना 30 दिनों तक याद रखी जाती है।" }
+AIDisclosureLearnMore = { other = "MunichBrief और इसके काम करने के तरीके की अधिक जानकारी परिचय पृष्ठ पर उपलब्ध है।" }
+AIDisclosureGotIt = { other = "समझ गया" }
+AITransparencyEU = { other = "AI पारदर्शिता और EU मार्गदर्शन" }
+AITransparencyEUCopy = { other = "MunichBrief EU के पूर्णतः AI-जनित लेबल का उपयोग करता है क्योंकि यूरोपीय आयोग का मार्गदर्शन AI-जनित समाचार सारांशों को स्पष्ट रूप से एक उपयोग के रूप में सूचीबद्ध करता है। दिखाई देने वाले लेबल और मशीन-पठनीय स्रोत-सूचना पारदर्शिता में मदद करते हैं, लेकिन केवल आइकन का उपयोग कानूनी अनुपालन सिद्ध नहीं करता और न ही यह दर्शाता है कि MunichBrief ने स्वैच्छिक आचार संहिता पर हस्ताक्षर किए हैं।" }
+EUIconGuidance = { other = "EU आइकन मार्गदर्शन" }
+EUCodePractice = { other = "EU आचार संहिता" }
+Footer = { other = "MunichBrief बवेरियन पुलिस से स्वतंत्र है। कोई विश्लेषण, खाता या विज्ञापन नहीं।" }
+Built = { other = "बिल्ड" }
+Language = { other = "भाषा" }
+German = { other = "जर्मन" }
+English = { other = "अंग्रेज़ी" }
+SwitchToGerman = { other = "जर्मन संस्करण पर जाएँ" }
+SwitchToEnglish = { other = "अंग्रेज़ी संस्करण पर जाएँ" }
+SwitchToTurkish = { other = "तुर्की संस्करण पर जाएँ" }
+SwitchToCroatian = { other = "क्रोएशियाई संस्करण पर जाएँ" }
+SwitchToItalian = { other = "इतालवी संस्करण पर जाएँ" }
+SwitchToUkrainian = { other = "यूक्रेनी संस्करण पर जाएँ" }
+SwitchToBosnian = { other = "बोस्नियाई संस्करण पर जाएँ" }
+SwitchToChinese = { other = "सरलीकृत चीनी संस्करण पर जाएँ" }
+SwitchToHindi = { other = "हिन्दी संस्करण पर जाएँ" }
+SwitchToSpanish = { other = "स्पेनी संस्करण पर जाएँ" }
+SwitchToFrench = { other = "फ़्रांसीसी संस्करण पर जाएँ" }
+HeroEyebrowFixture = { other = "स्थानीय प्रोटोटाइप" }
+HeroEyebrowLive = { other = "म्यूनिख पुलिस की विज्ञप्तियाँ" }
+HeroTitle = { other = "म्यूनिख पुलिस द्वारा बताई गई नवीनतम घटनाएँ" }
+HeroCopy = { other = "आधिकारिक पुलिस विज्ञप्तियों से संक्षेपित स्थानीय घटनाओं का स्पष्ट अवलोकन।" }
+FixtureIncidents = { other = "कृत्रिम परीक्षण रिपोर्ट" }
+LatestIncidents = { other = "नवीनतम घटनाएँ" }
+Reports = { one = "{{.Count}} रिपोर्ट", other = "{{.Count}} रिपोर्टें" }
+ShownTotal = { other = "{{.Shown}} दिखाई गईं / कुल {{.Total}}" }
+Report = { other = "पुलिस रिपोर्ट" }
+SourceMetadata = { other = "स्रोत मेटाडेटा" }
+ReadIncident = { other = "रिपोर्ट पढ़ें" }
+OpenOfficialSource = { other = "आधिकारिक स्रोत खोलें" }
+OpenOfficialPoliceRelease = { other = "आधिकारिक पुलिस विज्ञप्ति खोलें" }
+Newer = { other = "नई" }
+Older = { other = "पुरानी" }
+Page = { other = "पृष्ठ" }
+Of = { other = "में से" }
+NoIncidents = { other = "अभी कोई रिपोर्ट नहीं" }
+NoFixtureCopy = { other = "इस दृश्य को भरने के लिए परीक्षण डेटा आयात चलाएँ।" }
+NoLiveCopy = { other = "सिंक्रोनाइज़र को अभी समय-सीमा के भीतर कोई विज्ञप्ति नहीं मिली है।" }
+BodyUnavailable = { other = "विज्ञप्ति का मुख्य पाठ अभी उपलब्ध नहीं है। MunichBrief दोबारा प्रयास कर रहा है; इस बीच आधिकारिक स्रोत देखें।" }
+SourceRefreshFailed = { other = "स्रोत का पिछला अपडेट विफल रहा; सहेजी गई यह प्रति उपलब्ध है।" }
+Back = { other = "वापस" }
+Breadcrumb = { other = "ब्रेडक्रंब नेविगेशन" }
+PublishedWithin = { other = "इसमें प्रकाशित" }
+Published = { other = "प्रकाशित" }
+LastProcessed = { other = "अंतिम संसाधन" }
+Model = { other = "मॉडल" }
+PromptVersion = { other = "प्रॉम्प्ट संस्करण" }
+Category = { other = "श्रेणी" }
+CategoryTraffic = { other = "यातायात" }
+CategoryTheftBurglary = { other = "चोरी और सेंधमारी" }
+CategoryRobberyExtortion = { other = "लूट और जबरन वसूली" }
+CategoryViolence = { other = "हिंसा" }
+CategorySexualOffense = { other = "यौन अपराध" }
+CategoryFraudCyber = { other = "धोखाधड़ी और साइबर अपराध" }
+CategoryDrugs = { other = "मादक पदार्थ" }
+CategoryFireHazard = { other = "आग और खतरा" }
+CategoryPropertyDamage = { other = "संपत्ति को नुकसान" }
+CategoryMissingWanted = { other = "लापता और वांछित व्यक्ति" }
+CategoryPoliceOperation = { other = "पुलिस कार्रवाई" }
+CategoryOther = { other = "अन्य" }
+Area = { other = "क्षेत्र" }
+ReportKind = { other = "रिपोर्ट का प्रकार" }
+PublicAssistance = { other = "जन सहायता" }
+PublicAssistanceRequested = { other = "पुलिस ने जनता से सहायता माँगी है" }
+PublicAssistanceNeeded = { other = "जन सहायता आवश्यक है" }
+PublicAssistanceSourceCopy = { other = "निर्देश, संपर्क के तरीके और अन्य विवरण केवल आधिकारिक स्रोत में उपलब्ध हैं।" }
+TimeStatedInReport = { other = "रिपोर्ट में बताया गया समय" }
+DayPartMorning = { other = "सुबह" }
+DayPartMidday = { other = "दोपहर" }
+DayPartAfternoon = { other = "अपराह्न" }
+DayPartEvening = { other = "शाम" }
+DayPartNight = { other = "रात" }
+ReportKindIncident = { other = "घटना" }
+ReportKindFollowUp = { other = "अनुवर्ती रिपोर्ट" }
+ReportKindMissingPerson = { other = "लापता व्यक्ति की रिपोर्ट" }
+ReportKindWantedPerson = { other = "वांछित व्यक्ति की रिपोर्ट" }
+ReportKindPublicWarning = { other = "सार्वजनिक चेतावनी" }
+ReportKindOther = { other = "अन्य रिपोर्ट" }
+AssistanceWitnessObservations = { other = "प्रत्यक्षदर्शी की जानकारी" }
+AssistanceIdentifyPerson = { other = "किसी व्यक्ति की पहचान" }
+AssistanceLocatePerson = { other = "किसी व्यक्ति का पता" }
+AssistancePhotoVideo = { other = "फ़ोटो या वीडियो" }
+AssistanceVehicleInformation = { other = "वाहन संबंधी जानकारी" }
+AssistancePropertyInformation = { other = "वस्तु संबंधी जानकारी" }
+AssistanceOtherInformation = { other = "अन्य जानकारी" }
+AIProcessing = { other = "AI संसाधन" }
+Step = { other = "चरण" }
+Translation = { other = "अनुवाद" }
+IncidentMetadataStep = { other = "घटना मेटाडेटा" }
+GermanPresentationStep = { other = "जर्मन प्रस्तुति" }
+PublicAssistanceVerificationStep = { other = "जन सहायता अनुरोध सत्यापन" }
+CategoryVerificationStep = { other = "श्रेणी सत्यापन" }
+EnglishTranslationStep = { other = "अंग्रेज़ी अनुवाद" }
+TurkishTranslationStep = { other = "तुर्की अनुवाद" }
+CroatianTranslationStep = { other = "क्रोएशियाई अनुवाद" }
+ItalianTranslationStep = { other = "इतालवी अनुवाद" }
+UkrainianTranslationStep = { other = "यूक्रेनी अनुवाद" }
+BosnianTranslationStep = { other = "बोस्नियाई अनुवाद" }
+ChineseTranslationStep = { other = "सरलीकृत चीनी अनुवाद" }
+HindiTranslationStep = { other = "हिन्दी अनुवाद" }
+SpanishTranslationStep = { other = "स्पेनी अनुवाद" }
+FrenchTranslationStep = { other = "फ़्रांसीसी अनुवाद" }
+StagedPipeline = { other = "चरणबद्ध पाइपलाइन" }
+MetadataFirstPipeline = { other = "मेटाडेटा-प्रथम पाइपलाइन v2" }
+Generated = { other = "तैयार किया गया" }
+AISummary = { other = "AI द्वारा तैयार सारांश" }
+VerifySource = { other = "महत्वपूर्ण विवरण नवीनतम आधिकारिक जानकारी में जाँचें।" }
+OriginalGerman = { other = "मूल जर्मन पाठ" }
+OriginalQACopy = { other = "केवल सीमित समीक्षा मोड में गुणवत्ता जाँच के लिए दिखाई देता है।" }
+AuthoritativeSource = { other = "प्रामाणिक स्रोत" }
+FixtureSourceCopy = { other = "यह पृष्ठ कृत्रिम परीक्षण सामग्री का उपयोग करता है।" }
+LiveSourceCopy = { other = "यह अनाधिकारिक प्रस्तुति है। बवेरियन पुलिस की विज्ञप्ति ही प्रामाणिक है।" }
+NotProcessed = { other = "अभी सारांशित या अनुवादित नहीं" }
+Queued = { other = "AI सारांश और अनुवाद कतार में हैं" }
+Running = { other = "AI सारांश और अनुवाद जारी हैं" }
+Retrying = { other = "AI अस्थायी रूप से उपलब्ध नहीं; पुनः प्रयास निर्धारित है" }
+NeedsReview = { other = "AI आउटपुट की समीक्षा आवश्यक है" }
+OriginalShown = { other = "मूल जर्मन रिपोर्ट दिखाई जा रही है।" }
+AboutTitle = { other = "MunichBrief कैसे काम करता है" }
+Methodology = { other = "MunichBrief के बारे में" }
+AboutIntro = { other = "MunichBrief म्यूनिख पुलिस की आधिकारिक विज्ञप्तियों को कई पाठक भाषाओं में स्पष्ट, संरचित घटना सारांशों में बदलता है।" }
+FromReleaseToIncident = { other = "विज्ञप्ति से घटना तक" }
+Discover = { other = "खोजना" }
+DiscoverCopy = { other = "नई विज्ञप्तियाँ केवल म्यूनिख पुलिस के आधिकारिक RSS फ़ीड से खोजी जाती हैं।" }
+Organize = { other = "व्यवस्थित करना" }
+OrganizeCopy = { other = "कई रिपोर्टों वाली विज्ञप्तियों को उनके आधिकारिक रिपोर्ट नंबरों से अलग किया जाता है। अलग प्रकाशित रिपोर्टें अलग ही रहती हैं।" }
+Summarize = { other = "सारांश बनाना" }
+SummarizeCopy = { other = "स्थानीय AI मॉडल श्रेणी, स्थान, तारीख और जन सहायता अनुरोध जैसे विवरण निकालते हैं, फिर न्यूनतम व्यक्तिगत डेटा वाला जर्मन सारांश बनाते हैं।" }
+TranslatePublish = { other = "अनुवाद और प्रकाशन" }
+TranslatePublishCopy = { other = "स्वचालित संसाधन जाँच पूरी करने वाले जर्मन सारांश उपलब्ध पाठक भाषाओं में अनुवादित किए जाते हैं। सार्वजनिक पृष्ठ AI-जनित सामग्री तभी दिखाते हैं जब संसाधन पाइपलाइन सफलतापूर्वक पूरी हो जाती है।" }
+AccuracyOfficialInformation = { other = "सटीकता और आधिकारिक जानकारी" }
+AccuracyOfficialInformationCopy = { other = "AI द्वारा तैयार सारांशों और निकाले गए विवरणों में त्रुटियाँ हो सकती हैं। पुलिस विज्ञप्तियाँ प्रकाशन के बाद अपडेट हो सकती हैं। नवीनतम आधिकारिक जानकारी ही प्रामाणिक है और निर्दोष माने जाने का सिद्धांत लागू होता है।" }
+PrivacyDataHandling = { other = "गोपनीयता और डेटा प्रबंधन" }
+PrivacyCopy = { other = "MunichBrief में खाते, विश्लेषण या विज्ञापन नहीं हैं। एक आवश्यक कुकी चुनी गई भाषा को एक वर्ष तक सहेजती है। “समझ गया” चुनने के बाद प्रथम-पक्ष वरीयता कुकी AI सूचना को 30 दिनों तक याद रखती है। चुनी गई रंग थीम आपके ब्राउज़र में स्थानीय रूप से सहेजी जाती है।" }
+DataHandlingCopy = { other = "निकाला गया जर्मन स्रोत पाठ स्थानीय रूप से सहेजा जाता है। सीमित समीक्षा मोड गुणवत्ता नियंत्रण के लिए मूल पाठ और संसाधन स्थितियाँ दिखा सकता है; सार्वजनिक मोड सहेजे गए मूल पाठ नहीं दिखाता।" }
+IndependenceLegalReview = { other = "स्वतंत्रता और कानूनी समीक्षा" }
+IndependenceLegalReviewCopy = { other = "MunichBrief बवेरियन पुलिस से स्वतंत्र है। तकनीकी सुरक्षा उपाय कानूनी समीक्षा का विकल्प नहीं हैं। डेटा रखने की अवधि, कानूनी आधार, अपराध-संबंधी डेटा और लागू पत्रकारिता अपवादों की निरंतर समीक्षा आवश्यक है।" }
+ContactHeading = { other = "प्रश्न, सुधार या प्रतिक्रिया" }
+ContactPublicLead = { other = "कोई त्रुटि मिली या सुझाव है?" }
+ContactIssueLink = { other = "GitHub पर समस्या दर्ज करें" }
+ContactPrivateLead = { other = "गोपनीयता संबंधी चिंता या ऐसी बात जिसे सार्वजनिक रूप से साझा नहीं किया जाना चाहिए, उसके लिए ईमेल करें" }

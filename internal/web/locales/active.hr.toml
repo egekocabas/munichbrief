@@ -37,6 +37,10 @@ SwitchToCroatian = { other = "Prijeđi na hrvatsku verziju" }
 SwitchToItalian = { other = "Prijeđi na talijansku verziju" }
 SwitchToUkrainian = { other = "Prijeđi na ukrajinsku verziju" }
 SwitchToBosnian = { other = "Prijeđi na bosansku verziju" }
+SwitchToChinese = { other = "Prijeđi na pojednostavljenu kinesku verziju" }
+SwitchToHindi = { other = "Prijeđi na hindsku verziju" }
+SwitchToSpanish = { other = "Prijeđi na španjolsku verziju" }
+SwitchToFrench = { other = "Prijeđi na francusku verziju" }
 HeroEyebrowFixture = { other = "Lokalni prototip" }
 HeroEyebrowLive = { other = "Priopćenja minhenske policije" }
 HeroTitle = { other = "Najnoviji događaji koje je prijavila minhenska policija" }
@@ -117,6 +121,10 @@ CroatianTranslationStep = { other = "Hrvatski prijevod" }
 ItalianTranslationStep = { other = "Talijanski prijevod" }
 UkrainianTranslationStep = { other = "Ukrajinski prijevod" }
 BosnianTranslationStep = { other = "Bosanski prijevod" }
+ChineseTranslationStep = { other = "Pojednostavljeni kineski prijevod" }
+HindiTranslationStep = { other = "Hindski prijevod" }
+SpanishTranslationStep = { other = "Španjolski prijevod" }
+FrenchTranslationStep = { other = "Francuski prijevod" }
 StagedPipeline = { other = "Fazni proces" }
 MetadataFirstPipeline = { other = "Proces s metapodacima na prvom mjestu v2" }
 Generated = { other = "Generirano" }

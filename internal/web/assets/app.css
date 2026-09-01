@@ -83,6 +83,16 @@
     color-scheme: dark;
   }
 
+  html:lang(zh-CN) {
+    --font-sans: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+    --font-serif: "Songti SC", "Noto Serif CJK SC", serif;
+  }
+
+  html:lang(hi-IN) {
+    --font-sans: "Noto Sans Devanagari", "Kohinoor Devanagari", "Nirmala UI", system-ui, sans-serif;
+    --font-serif: "Noto Serif Devanagari", "Kohinoor Devanagari", serif;
+  }
+
   a:focus-visible,
   button:focus-visible,
   select:focus-visible,

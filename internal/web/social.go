@@ -17,13 +17,20 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
+	"github.com/go-text/typesetting/di"
+	textfont "github.com/go-text/typesetting/font"
+	textopentype "github.com/go-text/typesetting/font/opentype"
+	textlanguage "github.com/go-text/typesetting/language"
+	"github.com/go-text/typesetting/shaping"
 	xdraw "golang.org/x/image/draw"
 	xfont "golang.org/x/image/font"
 	"golang.org/x/image/font/gofont/gobold"
 	"golang.org/x/image/font/gofont/goregular"
 	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/math/fixed"
+	"golang.org/x/image/vector"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	"golang.org/x/text/unicode/norm"
@@ -49,11 +56,39 @@ var (
 )
 
 type socialCardRenderer struct {
-	background  *image.RGBA
-	aiLabel     image.Image
-	boldFont    *opentype.Font
-	regularFont *opentype.Font
-	version     string
+	background     *image.RGBA
+	aiLabel        image.Image
+	boldFont       *opentype.Font
+	regularFont    *opentype.Font
+	chineseFont    *textfont.Face
+	devanagariFont *textfont.Face
+	shapeMu        sync.Mutex
+	shaper         shaping.HarfbuzzShaper
+	version        string
+}
+
+type socialTextFace interface {
+	measure(string) int
+	draw(draw.Image, color.Color, string, int, int)
+	wordSeparator() string
+}
+
+type basicSocialTextFace struct{ face xfont.Face }
+
+func (f basicSocialTextFace) measure(value string) int {
+	return xfont.MeasureString(f.face, value).Ceil()
+}
+func (f basicSocialTextFace) wordSeparator() string { return " " }
+func (f basicSocialTextFace) draw(destination draw.Image, textColor color.Color, value string, x, baseline int) {
+	drawText(destination, f.face, textColor, value, x, baseline)
+}
+
+type shapedSocialTextFace struct {
+	renderer *socialCardRenderer
+	face     *textfont.Face
+	size     fixed.Int26_6
+	script   textlanguage.Script
+	language textlanguage.Language
 }
 
 type socialCardSpec struct {
@@ -91,9 +126,22 @@ func buildSocialCardRenderer() (*socialCardRenderer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse regular font: %w", err)
 	}
-	versionInput := append(append(append([]byte{}, socialCardBackground...), euAISocialLabel...), socialCardXMP...)
+	chineseFont, err := textfont.ParseTTF(bytes.NewReader(notoSansSC))
+	if err != nil {
+		return nil, fmt.Errorf("parse Noto Sans SC: %w", err)
+	}
+	chineseFont.SetVariations([]textfont.Variation{{Tag: textopentype.MustNewTag("wght"), Value: 700}})
+	devanagariFont, err := textfont.ParseTTF(bytes.NewReader(notoSansDevanagari))
+	if err != nil {
+		return nil, fmt.Errorf("parse Noto Sans Devanagari: %w", err)
+	}
+	devanagariFont.SetVariations([]textfont.Variation{{Tag: textopentype.MustNewTag("wght"), Value: 700}})
+	versionInput := append(append(append(append(append([]byte{}, socialCardBackground...), euAISocialLabel...), notoSansSC...), notoSansDevanagari...), socialCardXMP...)
 	digest := sha256.Sum256(versionInput)
-	return &socialCardRenderer{background: background, aiLabel: aiLabel, boldFont: boldFont, regularFont: regularFont, version: fmt.Sprintf("%x", digest[:8])}, nil
+	return &socialCardRenderer{
+		background: background, aiLabel: aiLabel, boldFont: boldFont, regularFont: regularFont,
+		chineseFont: chineseFont, devanagariFont: devanagariFont, version: fmt.Sprintf("%x", digest[:8]),
+	}, nil
 }
 
 func (r *socialCardRenderer) render(spec socialCardSpec) ([]byte, error) {
@@ -120,6 +168,8 @@ func (r *socialCardRenderer) render(spec socialCardSpec) ([]byte, error) {
 		return nil, err
 	}
 	defer closeTitle()
+	localizedEyebrowFace := r.localizedFace(spec.LanguageTag, 16, eyebrowFace)
+	localizedTitleFace := r.localizedFace(spec.LanguageTag, 52, titleFace)
 	urlFace, closeURL, err := r.face(r.boldFont, 18)
 	if err != nil {
 		return nil, err
@@ -137,11 +187,11 @@ func (r *socialCardRenderer) render(spec socialCardSpec) ([]byte, error) {
 	spec.Title = normalizeSocialText(spec.Title)
 	titleY := 235
 	if strings.TrimSpace(spec.Eyebrow) != "" {
-		drawText(canvas, eyebrowFace, socialAlert, localizedUpper(spec.LanguageTag, spec.Eyebrow), socialTextLeft, 170)
+		localizedEyebrowFace.draw(canvas, socialAlert, localizedUpper(spec.LanguageTag, spec.Eyebrow), socialTextLeft, 170)
 		titleY = 252
 	}
-	for index, line := range wrapSocialTitle(spec.Title, titleFace, socialTextMaxWidth, 2) {
-		drawText(canvas, titleFace, socialInk, line, socialTextLeft, titleY+index*62)
+	for index, line := range wrapSocialTitle(spec.Title, localizedTitleFace, socialTextMaxWidth, 2) {
+		localizedTitleFace.draw(canvas, socialInk, line, socialTextLeft, titleY+index*62)
 	}
 	drawText(canvas, urlFace, socialCivic, "munichbrief.de", socialTextLeft, 385)
 
@@ -152,6 +202,86 @@ func (r *socialCardRenderer) render(spec socialCardSpec) ([]byte, error) {
 	// The Olympiapark illustration was generated with AI. Embed provenance in
 	// every final card because decoding and re-encoding drops source PNG metadata.
 	return embedPNGXMP(output.Bytes(), []byte(socialCardXMP))
+}
+
+func (r *socialCardRenderer) localizedFace(tag string, size float64, fallback xfont.Face) socialTextFace {
+	base, _ := language.Make(tag).Base()
+	switch base.String() {
+	case "zh":
+		return shapedSocialTextFace{renderer: r, face: r.chineseFont, size: fixed.Int26_6(size * 64), script: textlanguage.Han, language: textlanguage.NewLanguage(tag)}
+	case "hi":
+		return shapedSocialTextFace{renderer: r, face: r.devanagariFont, size: fixed.Int26_6(size * 64), script: textlanguage.Devanagari, language: textlanguage.NewLanguage(tag)}
+	default:
+		return basicSocialTextFace{face: fallback}
+	}
+}
+
+func (f shapedSocialTextFace) output(value string) shaping.Output {
+	runes := []rune(value)
+	return f.renderer.shaper.Shape(shaping.Input{
+		Text: runes, RunStart: 0, RunEnd: len(runes), Direction: di.DirectionLTR,
+		Face: f.face, Size: f.size, Script: f.script, Language: f.language,
+	})
+}
+
+func (f shapedSocialTextFace) measure(value string) int {
+	f.renderer.shapeMu.Lock()
+	defer f.renderer.shapeMu.Unlock()
+	return f.output(value).Advance.Ceil()
+}
+
+func (f shapedSocialTextFace) wordSeparator() string {
+	if f.script == textlanguage.Han {
+		return ""
+	}
+	return " "
+}
+
+func (f shapedSocialTextFace) draw(destination draw.Image, textColor color.Color, value string, x, baseline int) {
+	f.renderer.shapeMu.Lock()
+	defer f.renderer.shapeMu.Unlock()
+	output := f.output(value)
+	rasterizer := vector.NewRasterizer(destination.Bounds().Dx(), destination.Bounds().Dy())
+	dotX := fixed.I(x)
+	for _, glyph := range output.Glyphs {
+		if glyph.GlyphID == textfont.EmptyGlyph {
+			dotX += glyph.Advance
+			continue
+		}
+		outline, ok := output.Face.GlyphData(glyph.GlyphID).(textfont.GlyphOutline)
+		if !ok {
+			dotX += glyph.Advance
+			continue
+		}
+		glyphX := dotX + glyph.XOffset
+		glyphY := fixed.I(baseline) - glyph.YOffset
+		for _, segment := range outline.Segments {
+			points := segment.ArgsSlice()
+			point := func(index int) (float32, float32) {
+				return float32(glyphX)/64 + float32(output.FromFontUnit(points[index].X))/64,
+					float32(glyphY)/64 - float32(output.FromFontUnit(points[index].Y))/64
+			}
+			switch segment.Op {
+			case textopentype.SegmentOpMoveTo:
+				x0, y0 := point(0)
+				rasterizer.MoveTo(x0, y0)
+			case textopentype.SegmentOpLineTo:
+				x0, y0 := point(0)
+				rasterizer.LineTo(x0, y0)
+			case textopentype.SegmentOpQuadTo:
+				x0, y0 := point(0)
+				x1, y1 := point(1)
+				rasterizer.QuadTo(x0, y0, x1, y1)
+			case textopentype.SegmentOpCubeTo:
+				x0, y0 := point(0)
+				x1, y1 := point(1)
+				x2, y2 := point(2)
+				rasterizer.CubeTo(x0, y0, x1, y1, x2, y2)
+			}
+		}
+		dotX += glyph.Advance
+	}
+	rasterizer.Draw(destination, destination.Bounds(), image.NewUniform(textColor), image.Point{})
 }
 
 func (r *socialCardRenderer) etag(spec socialCardSpec) string {
@@ -231,8 +361,17 @@ func drawRoundedRect(destination draw.Image, bounds image.Rectangle, radius int,
 	}
 }
 
-func wrapSocialTitle(value string, face xfont.Face, maxWidth, maxLines int) []string {
+func wrapSocialTitle(value string, face socialTextFace, maxWidth, maxLines int) []string {
+	separator := face.wordSeparator()
 	words := strings.Fields(value)
+	if separator == "" {
+		words = make([]string, 0, len([]rune(value)))
+		for _, character := range value {
+			if !unicode.IsSpace(character) {
+				words = append(words, string(character))
+			}
+		}
+	}
 	if len(words) == 0 || maxLines < 1 {
 		return nil
 	}
@@ -241,9 +380,9 @@ func wrapSocialTitle(value string, face xfont.Face, maxWidth, maxLines int) []st
 	for _, word := range words {
 		candidate := word
 		if current != "" {
-			candidate = current + " " + word
+			candidate = current + separator + word
 		}
-		if xfont.MeasureString(face, candidate).Ceil() <= maxWidth {
+		if face.measure(candidate) <= maxWidth {
 			current = candidate
 			continue
 		}
@@ -260,21 +399,21 @@ func wrapSocialTitle(value string, face xfont.Face, maxWidth, maxLines int) []st
 	if len(lines) <= maxLines {
 		return lines
 	}
-	remainder := strings.Join(lines[maxLines-1:], " ")
+	remainder := strings.Join(lines[maxLines-1:], separator)
 	lines = lines[:maxLines]
 	lines[maxLines-1] = truncateSocialText(remainder, face, maxWidth)
 	return lines
 }
 
-func truncateSocialText(value string, face xfont.Face, maxWidth int) string {
+func truncateSocialText(value string, face socialTextFace, maxWidth int) string {
 	value = strings.TrimSpace(value)
-	if xfont.MeasureString(face, value).Ceil() <= maxWidth {
+	if face.measure(value) <= maxWidth {
 		return value
 	}
 	runes := []rune(value)
 	for len(runes) > 0 {
 		candidate := strings.TrimSpace(string(runes)) + "…"
-		if xfont.MeasureString(face, candidate).Ceil() <= maxWidth {
+		if face.measure(candidate) <= maxWidth {
 			return candidate
 		}
 		runes = runes[:len(runes)-1]

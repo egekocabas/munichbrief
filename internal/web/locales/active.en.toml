@@ -115,6 +115,18 @@ other = "Switch to the Ukrainian version"
 [SwitchToBosnian]
 other = "Switch to the Bosnian version"
 
+[SwitchToChinese]
+other = "Switch to the Simplified Chinese version"
+
+[SwitchToHindi]
+other = "Switch to the Hindi version"
+
+[SwitchToSpanish]
+other = "Switch to the Spanish version"
+
+[SwitchToFrench]
+other = "Switch to the French version"
+
 [HeroEyebrowFixture]
 other = "Local prototype"
 
@@ -355,6 +367,18 @@ other = "Ukrainian translation"
 
 [BosnianTranslationStep]
 other = "Bosnian translation"
+
+[ChineseTranslationStep]
+other = "Simplified Chinese translation"
+
+[HindiTranslationStep]
+other = "Hindi translation"
+
+[SpanishTranslationStep]
+other = "Spanish translation"
+
+[FrenchTranslationStep]
+other = "French translation"
 
 [StagedPipeline]
 other = "Staged pipeline"

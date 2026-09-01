@@ -37,6 +37,10 @@ SwitchToCroatian = { other = "Passa alla versione croata" }
 SwitchToItalian = { other = "Passa alla versione italiana" }
 SwitchToUkrainian = { other = "Passa alla versione ucraina" }
 SwitchToBosnian = { other = "Passa alla versione bosniaca" }
+SwitchToChinese = { other = "Passa alla versione cinese semplificata" }
+SwitchToHindi = { other = "Passa alla versione hindi" }
+SwitchToSpanish = { other = "Passa alla versione spagnola" }
+SwitchToFrench = { other = "Passa alla versione francese" }
 HeroEyebrowFixture = { other = "Prototipo locale" }
 HeroEyebrowLive = { other = "Comunicati della Polizia di Monaco" }
 HeroTitle = { other = "Ultimi eventi segnalati dalla Polizia di Monaco" }
@@ -117,6 +121,10 @@ CroatianTranslationStep = { other = "Traduzione croata" }
 ItalianTranslationStep = { other = "Traduzione italiana" }
 UkrainianTranslationStep = { other = "Traduzione ucraina" }
 BosnianTranslationStep = { other = "Traduzione bosniaca" }
+ChineseTranslationStep = { other = "Traduzione cinese semplificata" }
+HindiTranslationStep = { other = "Traduzione hindi" }
+SpanishTranslationStep = { other = "Traduzione spagnola" }
+FrenchTranslationStep = { other = "Traduzione francese" }
 StagedPipeline = { other = "Pipeline a fasi" }
 MetadataFirstPipeline = { other = "Pipeline con metadati prioritari v2" }
 Generated = { other = "Generato" }

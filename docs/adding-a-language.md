@@ -116,8 +116,13 @@ and social cards. Confirm:
 - public-host path filtering still rejects admin and unknown routes.
 
 Social cards use embedded fonts, so confirm glyph coverage for the complete
-target alphabet before registration. Test locale-aware casing (especially
-Turkish dotted and dotless I), title wrapping, and the text safe area. Keep
+target alphabet before registration. Scripts with contextual forms, conjuncts,
+or reordered marks require a shaping engine; rune-by-rune glyph drawing is not
+acceptable. CJK titles also require line-breaking tests that do not assume
+spaces between words. Bundle the font's license, include its bytes in the card
+cache identity, and test actual rendered pixels in addition to nominal glyph
+coverage. Test locale-aware casing (especially Turkish dotted and dotless I),
+title wrapping, and the text safe area. Keep
 website text unchanged; any substitution for an unsupported punctuation mark,
 such as modifier apostrophes or non-breaking hyphens, belongs only in the
 social-image renderer and must have a focused test.

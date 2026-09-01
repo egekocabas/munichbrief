@@ -24,6 +24,10 @@ const (
 	ItalianTranslationPromptVersion           = "incident-translation-it-v1"
 	UkrainianTranslationPromptVersion         = "incident-translation-uk-v1"
 	BosnianTranslationPromptVersion           = "incident-translation-bs-v1"
+	ChineseTranslationPromptVersion           = "incident-translation-zh-v1"
+	HindiTranslationPromptVersion             = "incident-translation-hi-v1"
+	SpanishTranslationPromptVersion           = "incident-translation-es-v1"
+	FrenchTranslationPromptVersion            = "incident-translation-fr-v1"
 	CategoryVerificationPromptVersion         = "incident-category-verification-v2"
 	PublicAssistanceVerificationPromptVersion = "incident-public-assistance-verification-v2"
 )
@@ -110,6 +114,38 @@ var promptRegistry = []PromptDefinition{{
 		Status:              PromptActive,
 		UserOnly:            true,
 		UserPromptTemplate:  mustTranslateGemmaV2UserPromptTemplate("bs", bosnianTranslationV1Guidance),
+	},
+	{
+		Version:             ChineseTranslationPromptVersion,
+		StepKey:             TranslationStepKey("zh"),
+		TranslationLanguage: "zh",
+		Status:              PromptActive,
+		UserOnly:            true,
+		UserPromptTemplate:  mustTranslateGemmaV2UserPromptTemplate("zh", chineseTranslationV1Guidance),
+	},
+	{
+		Version:             HindiTranslationPromptVersion,
+		StepKey:             TranslationStepKey("hi"),
+		TranslationLanguage: "hi",
+		Status:              PromptActive,
+		UserOnly:            true,
+		UserPromptTemplate:  mustTranslateGemmaV2UserPromptTemplate("hi", hindiTranslationV1Guidance),
+	},
+	{
+		Version:             SpanishTranslationPromptVersion,
+		StepKey:             TranslationStepKey("es"),
+		TranslationLanguage: "es",
+		Status:              PromptActive,
+		UserOnly:            true,
+		UserPromptTemplate:  mustTranslateGemmaV2UserPromptTemplate("es", spanishTranslationV1Guidance),
+	},
+	{
+		Version:             FrenchTranslationPromptVersion,
+		StepKey:             TranslationStepKey("fr"),
+		TranslationLanguage: "fr",
+		Status:              PromptActive,
+		UserOnly:            true,
+		UserPromptTemplate:  mustTranslateGemmaV2UserPromptTemplate("fr", frenchTranslationV1Guidance),
 	},
 	{
 		Version:            PublicAssistanceVerificationPromptVersion,
@@ -281,5 +317,13 @@ const italianTranslationV1Guidance = `Preserve the identity of every Munich plac
 const ukrainianTranslationV1Guidance = `Preserve the identity of every Munich place name, including neighbourhoods, municipalities, streets, squares, parks, bridges, and stations. Retain its Latin spelling or use a standard, consistent Ukrainian transliteration; never translate the name's literal meaning, omit it, or add a district label unless the German text does so. Use neutral police-news wording: render “leicht verletzt” as “зазнала легких травм” or a grammatically appropriate equivalent, “vor Ort medizinisch versorgt” as “медичну допомогу надали на місці”, “größerer Polizeieinsatz” as “масштабна поліцейська операція”, and “Zeugenaufruf” as “заклик до свідків”. Preserve German modal or evidential uncertainty explicitly with “як повідомляється”, “імовірно”, or an equally uncertain formulation, never as an established fact.`
 
 const bosnianTranslationV1Guidance = `Preserve the identity of every Munich place name, including neighbourhoods, municipalities, streets, squares, parks, bridges, and stations. Keep names such as Maxvorstadt, Schwabing, and Altstadt unchanged; never translate a name's literal meaning or add a district label unless the German text does so. Use neutral police-news wording: render “leicht verletzt” with “lakše povrijeđen/a” as grammar requires, “vor Ort medizinisch versorgt” with “medicinski zbrinut/a na mjestu događaja”, “größerer Polizeieinsatz” as “opsežna policijska akcija”, and “Zeugenaufruf” as “poziv svjedocima”. Preserve German modal or evidential uncertainty explicitly with “navodno”, “kako se navodi”, or an equally uncertain formulation, never as an established fact.`
+
+const chineseTranslationV1Guidance = `Preserve the identity of every Munich place name, including neighbourhoods, municipalities, streets, squares, parks, bridges, and stations. Retain its official Latin spelling or use a standard, consistent Chinese transliteration or established Chinese name; never translate the name's literal meaning, omit any part including a street-type suffix, or add a district label unless the German text does so. Apply this generic rule to every place name rather than relying on an example list. Use neutral police-news wording: render “leicht verletzt” as “受轻伤”, “vor Ort medizinisch versorgt” as “在现场接受医疗救治”, “größerer Polizeieinsatz” as “大规模警方行动”, and “Zeugenaufruf” as “征集目击者线索”. Preserve German modal or evidential uncertainty explicitly with “据称”, “据警方称”, “可能”, or an equally uncertain formulation, never as an established fact.`
+
+const hindiTranslationV1Guidance = `Preserve the identity of every Munich place name, including neighbourhoods, municipalities, streets, squares, parks, bridges, and stations. Retain its official Latin spelling or use a standard, consistent Hindi transliteration; never translate the name's literal meaning, omit any part including a street-type suffix, or add a district label unless the German text does so. Apply this generic rule to every place name rather than relying on an example list. Use neutral police-news wording: render “leicht verletzt” as “मामूली रूप से घायल”, “vor Ort medizinisch versorgt” as “मौके पर चिकित्सा सहायता दी गई”, “größerer Polizeieinsatz” as “बड़े पैमाने पर पुलिस कार्रवाई”, and “Zeugenaufruf” as “प्रत्यक्षदर्शियों से अपील”. Preserve German modal or evidential uncertainty explicitly with “बताया गया है कि”, “पुलिस के अनुसार”, “संभवतः”, or an equally uncertain formulation, never as an established fact.`
+
+const spanishTranslationV1Guidance = `Preserve the identity of every Munich place name, including neighbourhoods, municipalities, streets, squares, parks, bridges, and stations. Keep official names such as Maxvorstadt, Schwabing, Altstadt, and Leopoldstraße unchanged; never translate a name's literal meaning, omit it, or add a district label unless the German text does so. Use neutral police-news wording: render “leicht verletzt” with “resultó herido/a leve” as grammar requires, “vor Ort medizinisch versorgt” as “recibió atención médica en el lugar”, “größerer Polizeieinsatz” as “amplio operativo policial”, and “Zeugenaufruf” as “llamamiento a testigos”. Preserve German modal or evidential uncertainty explicitly with “presuntamente”, “según la policía”, the conditional mood, or an equally uncertain formulation, never as an established fact.`
+
+const frenchTranslationV1Guidance = `Preserve the identity of every Munich place name, including neighbourhoods, municipalities, streets, squares, parks, bridges, and stations. Keep official names such as Maxvorstadt, Schwabing, Altstadt, and Leopoldstraße unchanged; never translate a name's literal meaning, omit it, or add a district label unless the German text does so. Use neutral police-news wording: render “leicht verletzt” with “légèrement blessé(e)” as grammar requires, “vor Ort medizinisch versorgt” as “a reçu des soins médicaux sur place”, “größerer Polizeieinsatz” as “important dispositif policier”, and “Zeugenaufruf” as “appel à témoins”. Preserve German modal or evidential uncertainty explicitly with “selon la police”, the conditional mood, “aurait”, or an equally uncertain formulation, never as an established fact.`
 
 const englishTranslationV1SystemPrompt = `Translate the supplied privacy-safe German title and summary faithfully into concise, idiomatic English. Preserve every claim's subject, verb, object, referent, strength, and uncertainty. Do not add, omit, explain, classify, or infer facts. Preserve Munich place names such as Maxvorstadt, Schwabing, and Altstadt without translating them or adding “district” unless the German text says so. Translate “leicht verletzt” as “slightly injured”, “vor Ort medizinisch versorgt” as “received medical treatment at the scene”, “größerer Polizeieinsatz” as “large-scale police operation”, and “Zeugenaufruf” as “appeal for witnesses”. Return only the requested JSON.`

@@ -60,6 +60,10 @@ ingress:
       - it
       - uk
       - bs
+      - zh
+      - hi
+      - es
+      - fr
     tls: []
 
 admin:

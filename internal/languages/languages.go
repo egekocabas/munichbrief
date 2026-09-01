@@ -120,6 +120,58 @@ var registered = []Definition{
 			return value.Format("02.") + " " + bosnianMonths[value.Month()] + value.Format(" 2006., 15:04 MST")
 		},
 	},
+	{
+		Code: "zh", Tag: language.MustParse("zh-CN"), DisplayName: "简体中文", TranslationName: "Simplified Chinese", Catalog: "locales/active.zh.toml", OpenGraphLocale: "zh_CN",
+		SwitchMessageID: "SwitchToChinese", StepMessageID: "ChineseTranslationStep",
+		FormatDate: func(value time.Time) string {
+			return value.Format("2006年1月2日")
+		},
+		FormatDay: func(value time.Time) string {
+			return value.Format("2006年1月2日") + chineseWeekdays[value.Weekday()]
+		},
+		FormatDateTime: func(value time.Time) string {
+			return value.Format("2006年1月2日 15:04 MST")
+		},
+	},
+	{
+		Code: "hi", Tag: language.MustParse("hi-IN"), DisplayName: "हिन्दी", TranslationName: "Hindi", Catalog: "locales/active.hi.toml", OpenGraphLocale: "hi_IN",
+		SwitchMessageID: "SwitchToHindi", StepMessageID: "HindiTranslationStep",
+		FormatDate: func(value time.Time) string {
+			return value.Format("02") + " " + hindiMonths[value.Month()] + " " + value.Format("2006")
+		},
+		FormatDay: func(value time.Time) string {
+			return hindiWeekdays[value.Weekday()] + ", " + value.Format("02") + " " + hindiMonths[value.Month()] + " " + value.Format("2006")
+		},
+		FormatDateTime: func(value time.Time) string {
+			return value.Format("02") + " " + hindiMonths[value.Month()] + value.Format(" 2006, 15:04 MST")
+		},
+	},
+	{
+		Code: "es", Tag: language.MustParse("es-ES"), DisplayName: "Español", TranslationName: "Spanish", Catalog: "locales/active.es.toml", OpenGraphLocale: "es_ES",
+		SwitchMessageID: "SwitchToSpanish", StepMessageID: "SpanishTranslationStep",
+		FormatDate: func(value time.Time) string {
+			return value.Format("02") + " de " + spanishMonths[value.Month()] + " de " + value.Format("2006")
+		},
+		FormatDay: func(value time.Time) string {
+			return spanishWeekdays[value.Weekday()] + ", " + value.Format("02") + " de " + spanishMonths[value.Month()] + " de " + value.Format("2006")
+		},
+		FormatDateTime: func(value time.Time) string {
+			return value.Format("02") + " de " + spanishMonths[value.Month()] + value.Format(" de 2006, 15:04 MST")
+		},
+	},
+	{
+		Code: "fr", Tag: language.MustParse("fr-FR"), DisplayName: "Français", TranslationName: "French", Catalog: "locales/active.fr.toml", OpenGraphLocale: "fr_FR",
+		SwitchMessageID: "SwitchToFrench", StepMessageID: "FrenchTranslationStep",
+		FormatDate: func(value time.Time) string {
+			return value.Format("02") + " " + frenchMonths[value.Month()] + " " + value.Format("2006")
+		},
+		FormatDay: func(value time.Time) string {
+			return frenchWeekdays[value.Weekday()] + " " + value.Format("02") + " " + frenchMonths[value.Month()] + " " + value.Format("2006")
+		},
+		FormatDateTime: func(value time.Time) string {
+			return value.Format("02") + " " + frenchMonths[value.Month()] + value.Format(" 2006, 15:04 MST")
+		},
+	},
 }
 
 var germanMonths = map[time.Month]string{
@@ -186,6 +238,44 @@ var bosnianMonths = map[time.Month]string{
 var bosnianWeekdays = map[time.Weekday]string{
 	time.Sunday: "nedjelja", time.Monday: "ponedjeljak", time.Tuesday: "utorak", time.Wednesday: "srijeda",
 	time.Thursday: "četvrtak", time.Friday: "petak", time.Saturday: "subota",
+}
+
+var chineseWeekdays = map[time.Weekday]string{
+	time.Sunday: "星期日", time.Monday: "星期一", time.Tuesday: "星期二", time.Wednesday: "星期三",
+	time.Thursday: "星期四", time.Friday: "星期五", time.Saturday: "星期六",
+}
+
+var hindiMonths = map[time.Month]string{
+	time.January: "जनवरी", time.February: "फ़रवरी", time.March: "मार्च", time.April: "अप्रैल",
+	time.May: "मई", time.June: "जून", time.July: "जुलाई", time.August: "अगस्त",
+	time.September: "सितंबर", time.October: "अक्टूबर", time.November: "नवंबर", time.December: "दिसंबर",
+}
+
+var hindiWeekdays = map[time.Weekday]string{
+	time.Sunday: "रविवार", time.Monday: "सोमवार", time.Tuesday: "मंगलवार", time.Wednesday: "बुधवार",
+	time.Thursday: "गुरुवार", time.Friday: "शुक्रवार", time.Saturday: "शनिवार",
+}
+
+var spanishMonths = map[time.Month]string{
+	time.January: "enero", time.February: "febrero", time.March: "marzo", time.April: "abril",
+	time.May: "mayo", time.June: "junio", time.July: "julio", time.August: "agosto",
+	time.September: "septiembre", time.October: "octubre", time.November: "noviembre", time.December: "diciembre",
+}
+
+var spanishWeekdays = map[time.Weekday]string{
+	time.Sunday: "domingo", time.Monday: "lunes", time.Tuesday: "martes", time.Wednesday: "miércoles",
+	time.Thursday: "jueves", time.Friday: "viernes", time.Saturday: "sábado",
+}
+
+var frenchMonths = map[time.Month]string{
+	time.January: "janvier", time.February: "février", time.March: "mars", time.April: "avril",
+	time.May: "mai", time.June: "juin", time.July: "juillet", time.August: "août",
+	time.September: "septembre", time.October: "octobre", time.November: "novembre", time.December: "décembre",
+}
+
+var frenchWeekdays = map[time.Weekday]string{
+	time.Sunday: "dimanche", time.Monday: "lundi", time.Tuesday: "mardi", time.Wednesday: "mercredi",
+	time.Thursday: "jeudi", time.Friday: "vendredi", time.Saturday: "samedi",
 }
 
 // Registered returns a defensive copy in navigation and processing order.

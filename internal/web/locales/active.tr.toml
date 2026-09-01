@@ -37,6 +37,10 @@ SwitchToCroatian = { other = "Hırvatça sürüme geç" }
 SwitchToItalian = { other = "İtalyanca sürüme geç" }
 SwitchToUkrainian = { other = "Ukraynaca sürüme geç" }
 SwitchToBosnian = { other = "Boşnakça sürüme geç" }
+SwitchToChinese = { other = "Basitleştirilmiş Çince sürüme geç" }
+SwitchToHindi = { other = "Hintçe sürüme geç" }
+SwitchToSpanish = { other = "İspanyolca sürüme geç" }
+SwitchToFrench = { other = "Fransızca sürüme geç" }
 HeroEyebrowFixture = { other = "Yerel prototip" }
 HeroEyebrowLive = { other = "Münih Polisi bildirimleri" }
 HeroTitle = { other = "Münih Polisi tarafından bildirilen son olaylar" }
@@ -117,6 +121,10 @@ CroatianTranslationStep = { other = "Hırvatça çeviri" }
 ItalianTranslationStep = { other = "İtalyanca çeviri" }
 UkrainianTranslationStep = { other = "Ukraynaca çeviri" }
 BosnianTranslationStep = { other = "Boşnakça çeviri" }
+ChineseTranslationStep = { other = "Basitleştirilmiş Çince çeviri" }
+HindiTranslationStep = { other = "Hintçe çeviri" }
+SpanishTranslationStep = { other = "İspanyolca çeviri" }
+FrenchTranslationStep = { other = "Fransızca çeviri" }
 StagedPipeline = { other = "Aşamalı işlem hattı" }
 MetadataFirstPipeline = { other = "Önce üst veri işlem hattı v2" }
 Generated = { other = "Oluşturuldu" }

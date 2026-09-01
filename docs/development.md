@@ -97,8 +97,9 @@ go test -run 'TestLiveOllama(TranslateGemmaPromptContract|RegisteredTranslationT
 ```
 
 The focused checks cover every registered target, language identities, Munich
-place names, required terminology, attribution and uncertainty, strict JSON,
-and instruction-like translated data without logging generated text.
+district and street names, required terminology, attribution and uncertainty,
+strict JSON, Han and Devanagari script output, and instruction-like translated
+data without logging generated text.
 
 The real-RSS Qwen check requires its separate explicit opt-in:
 

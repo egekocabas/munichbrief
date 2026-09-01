@@ -73,6 +73,12 @@ var euAIAssetFiles embed.FS
 //go:embed static/eu-ai-generated-white-50.png
 var euAISocialLabel []byte
 
+//go:embed fonts/NotoSansSC-VF.ttf
+var notoSansSC []byte
+
+//go:embed fonts/NotoSansDevanagari-VF.ttf
+var notoSansDevanagari []byte
+
 type incidentStore interface {
 	ListPresentationEntries(context.Context, int, int, string, store.PresentationScope) ([]store.IncidentRecord, int, error)
 	ListPublicIncidentLinks(context.Context, string, store.PresentationScope) ([]store.PublicIncidentLink, error)
