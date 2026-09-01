@@ -253,6 +253,9 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 	}
 	base.PublishedTime = view.Record.PublishedAt.Format(time.RFC3339)
 	modifiedAt := view.Record.UpdatedAt
+	if view.Record.AIGeneratedAt != nil && view.Record.AIGeneratedAt.After(modifiedAt) {
+		modifiedAt = *view.Record.AIGeneratedAt
+	}
 	if view.Record.AIPublicAssistanceVerificationGeneratedAt != nil && view.Record.AIPublicAssistanceVerificationGeneratedAt.After(modifiedAt) {
 		modifiedAt = *view.Record.AIPublicAssistanceVerificationGeneratedAt
 	}
