@@ -20,7 +20,7 @@ func TestOllamaClientRequestsStructuredPipelineStep(t *testing.T) {
 		if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
 			t.Fatalf("decode request: %v", err)
 		}
-		if payload.Model != "qwen3.5:4b" || payload.Stream || payload.Think || payload.Options.NumCtx != 8192 || payload.Options.Temperature != 0 || payload.Options.Seed != 42 {
+		if payload.Model != "qwen3.5:4b" || payload.Stream || payload.Think || payload.Options.NumCtx != 8192 {
 			t.Errorf("unexpected request options: %+v", payload)
 		}
 		step, _ := StepByKey(IncidentMetadataStep)

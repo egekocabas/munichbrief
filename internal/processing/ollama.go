@@ -95,10 +95,7 @@ type chatMessage struct {
 type chatOptions struct {
 	Temperature float64 `json:"temperature"`
 	NumCtx      int     `json:"num_ctx"`
-	Seed        int     `json:"seed"`
 }
-
-const deterministicOllamaSeed = 42
 
 type chatResponse struct {
 	Model   string      `json:"model"`
@@ -174,7 +171,7 @@ func (c *OllamaClient) chat(ctx context.Context, userOnly bool, system, user str
 		Model:    c.model,
 		Messages: messages,
 		Stream:   false, Think: false, Format: schema,
-		Options: chatOptions{Temperature: 0, NumCtx: c.contextSize, Seed: deterministicOllamaSeed}, KeepAlive: "10m",
+		Options: chatOptions{Temperature: 0, NumCtx: c.contextSize}, KeepAlive: "10m",
 	})
 	if err != nil {
 		return "", "", errorOf(ErrorOutput, "encode ollama request: %v", err)
