@@ -115,6 +115,25 @@ func TestSitemapContainsOnlyCanonicalPublicDocuments(t *testing.T) {
 	}
 }
 
+func TestCanonicalIncidentModifiedTimeMatchesSuccessfulPresentation(t *testing.T) {
+	database := fixtureStore(t)
+	server, job := publicDiscoveryServer(t, database, testPresentation{
+		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
+		TitleEN: "Safe title", SummaryEN: "Safe summary.",
+	})
+	record, err := database.GetPresentationIncident(context.Background(), job.IncidentID, store.PresentationScope{Language: "de", PublicOnly: true})
+	if err != nil || record.AIGeneratedAt == nil {
+		t.Fatalf("load canonical detail metadata = %#v/%v", record.AIGeneratedAt, err)
+	}
+
+	response := httptest.NewRecorder()
+	server.Handler().ServeHTTP(response, publicDiscoveryRequest(http.MethodGet, "/de/incidents/"+formatID(job.IncidentID)))
+	want := `<meta property="article:modified_time" content="` + record.AIGeneratedAt.Format(time.RFC3339) + `">`
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), want) {
+		t.Fatalf("canonical detail response = %d, does not contain %q", response.Code, want)
+	}
+}
+
 func TestSyntheticReaderLanguageDrivesRoutesNegotiationAndSEO(t *testing.T) {
 	server, job := publicDiscoveryServer(t, fixtureStore(t), testPresentation{
 		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
