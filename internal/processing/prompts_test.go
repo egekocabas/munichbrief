@@ -54,24 +54,17 @@ func TestEnglishTranslateGemmaV2PromptUsesRegisteredLanguageIdentity(t *testing.
 	}
 }
 
-func TestFrenchTranslateGemmaV2PromptProtectsTransitLabels(t *testing.T) {
+func TestFrenchTranslateGemmaPromptProtectsTransitLabels(t *testing.T) {
 	prompt, found := PromptByVersion(FrenchTranslationPromptVersion)
 	if !found || prompt.Status != PromptActive || !prompt.UserOnly || prompt.SystemPrompt != "" {
 		t.Fatalf("active French translation prompt = %#v, found=%t", prompt, found)
 	}
-	retired, found := PromptByVersion(FrenchTranslationV1PromptVersion)
-	if !found || retired.Status != PromptRetired || !retired.UserOnly || retired.SystemPrompt != "" {
-		t.Fatalf("retired French translation prompt = %#v, found=%t", retired, found)
-	}
-	if strings.Contains(retired.UserPromptTemplate, "Consigne obligatoire pour la sortie française") {
-		t.Fatal("retired French v1 prompt unexpectedly contains v2 transit-label guidance")
-	}
 	for _, expected := range []string{
-		"incident-translation-fr-v2", "protected proper names", "recopier exactement chaque chaîne “U-Bahn” et “S-Bahn”",
+		"incident-translation-fr-v1", "protected proper names", "recopier exactement chaque chaîne “U-Bahn” et “S-Bahn”",
 		"Ne jamais les remplacer par « métro »", "même trait d’union ASCII",
 	} {
 		text := prompt.UserPromptTemplate
-		if expected == "incident-translation-fr-v2" {
+		if expected == "incident-translation-fr-v1" {
 			text = prompt.Version
 		}
 		if !strings.Contains(text, expected) {
@@ -115,7 +108,7 @@ func TestRegisteredTranslateGemmaPromptsUseTargetLanguageIdentities(t *testing.T
 			"es": {"original Latin spelling", "complete street-type suffix", "rather than relying on an example list", "amplio operativo policial", "presuntamente"},
 			"fr": {"original Latin spelling", "complete street-type suffix", "rather than relying on an example list", "important dispositif policier", "appel à témoins", "protected proper names", "Consigne obligatoire pour la sortie française", "Ne jamais les remplacer par « métro »"},
 			"el": {"standard, consistent Greek transliteration", "including a street-type suffix", "rather than relying on an example list", "τραυματίστηκε ελαφρά", "φέρεται να"},
-			"ro": {"original Latin spelling", "complete street-type suffix", "amplă operațiune a poliției", "se presupune că"},
+			"ro": {"original Latin spelling", "complete street-type suffix", "indivisible protected proper name", "Regula obligatorie pentru rezultatul în limba română", "nu înlocui numele complet cu „strada”", "amplă operațiune a poliției", "se presupune că"},
 			"pl": {"original Latin spelling", "complete street-type suffix", "zakrojona na szeroką skalę akcja policyjna", "prawdopodobnie"},
 			"ru": {"standard, consistent Russian transliteration", "including a street-type suffix", "rather than relying on an example list", "лёгкие травмы", "предположительно"},
 		} {
