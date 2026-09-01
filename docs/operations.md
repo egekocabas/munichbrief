@@ -143,10 +143,10 @@ lists only incidents with a privacy-safe presentation from the active source
 hash and supported pipeline lifecycle, and never renders stored originals. Only
 a complete current v2 run is eligible; v1 and imported legacy output are
 retained for audit but never selected. Back up SQLite
-before deploying a migration. German and English pages use explicit `/de` and
-`/en` paths; visiting either path refreshes one one-year, HTTP-only preference
-cookie used by the root and legacy-route redirects. Enable secure cookies
-behind TLS.
+before deploying a migration. Reader pages use explicit `/de`, `/en`, `/tr`,
+`/hr`, `/it`, `/uk`, and `/bs` paths; visiting any registered path refreshes one
+one-year, HTTP-only preference cookie used by the root and legacy-route
+redirects. Enable secure cookies behind TLS.
 Additional languages use the same registry-driven contract and require an
 explicit public ingress prefix. Follow [Adding a reader language](adding-a-language.md)
 for the safe ingress-first rollout and manual historical backfill.

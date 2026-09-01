@@ -14,6 +14,7 @@ import (
 
 	langregistry "github.com/egekocabas/munichbrief/internal/languages"
 	"github.com/egekocabas/munichbrief/internal/store"
+	"golang.org/x/text/unicode/norm"
 )
 
 const (
@@ -837,7 +838,7 @@ func normalizeLimitedField(name string, value *string, limit int) error {
 	if !utf8.ValidString(*value) {
 		return errorOf(ErrorOutput, "model output %s is not valid UTF-8", name)
 	}
-	*value = strings.Join(strings.Fields(*value), " ")
+	*value = norm.NFC.String(strings.Join(strings.Fields(*value), " "))
 	if *value == "" {
 		return errorOf(ErrorOutput, "model output %s is empty", name)
 	}

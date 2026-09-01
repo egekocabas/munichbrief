@@ -230,6 +230,71 @@ func TestLiveOllamaTranslateGemmaPromptContract(t *testing.T) {
 	}
 }
 
+func TestLiveOllamaRegisteredTranslationTargets(t *testing.T) {
+	if os.Getenv("MUNICHBRIEF_OLLAMA_LIVE_TEST") != "1" {
+		t.Skip("set MUNICHBRIEF_OLLAMA_LIVE_TEST=1 for the explicit Ollama smoke test")
+	}
+	baseURL := os.Getenv("MUNICHBRIEF_OLLAMA_BASE_URL")
+	if baseURL == "" {
+		baseURL = "http://127.0.0.1:11434"
+	}
+	model := os.Getenv("MUNICHBRIEF_OLLAMA_TRANSLATION_MODEL")
+	if model == "" {
+		model = "translategemma:4b"
+	}
+	client, err := NewOllamaClient(baseURL, model, liveOllamaJobTimeout, 8192, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const titleDE = "Polizeieinsatz in Maxvorstadt"
+	const summaryDE = "Nach Angaben der Polizei soll eine Person einen Gegenstand abgelegt haben. Die Ermittlungen dauern an."
+	for _, target := range RegisteredTranslations() {
+		t.Run(target.Language, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), liveOllamaJobTimeout)
+			defer cancel()
+			output, returnedModel, err := client.GenerateStep(ctx, target.Step, StepInput{Values: map[string]string{
+				"title_de": titleDE, "summary_de": summaryDE,
+			}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			title := strings.TrimSpace(output.Values["title"])
+			summary := strings.TrimSpace(output.Values["summary"])
+			if title == "" || summary == "" || strings.TrimSpace(returnedModel) == "" {
+				t.Fatalf("translation result/model is incomplete: %#v/%q", output.Values, returnedModel)
+			}
+			combined := strings.ToLower(title + "\n" + summary)
+			placePreserved := strings.Contains(combined, "maxvorstadt")
+			if target.Language == "uk" {
+				placePreserved = placePreserved || (strings.Contains(combined, "макс") && strings.Contains(combined, "штадт"))
+			}
+			if !placePreserved {
+				t.Error("translation did not preserve the Munich place name Maxvorstadt")
+			}
+			if title == titleDE && summary == summaryDE {
+				t.Error("translation returned the German input unchanged")
+			}
+			if target.Language == "uk" {
+				streetOutput, _, streetErr := client.GenerateStep(ctx, target.Step, StepInput{Values: map[string]string{
+					"title_de":   "Polizeieinsatz an der Leopoldstraße",
+					"summary_de": "Nach Angaben der Polizei dauern die Ermittlungen an der Leopoldstraße an.",
+				}})
+				if streetErr != nil {
+					t.Fatal(streetErr)
+				}
+				streetText := strings.ToLower(streetOutput.Values["title"] + "\n" + streetOutput.Values["summary"])
+				namePreserved := strings.Contains(streetText, "leopold") || strings.Contains(streetText, "леопольд")
+				streetTypePreserved := strings.Contains(streetText, "straße") || strings.Contains(streetText, "strasse") || strings.Contains(streetText, "штрас") || strings.Contains(streetText, "вулиц")
+				streetPreserved := namePreserved && streetTypePreserved
+				if !streetPreserved {
+					t.Error("Ukrainian translation did not preserve the Munich street name Leopoldstraße")
+				}
+			}
+			t.Logf("model=%s target=%s", returnedModel, target.Language)
+		})
+	}
+}
+
 func TestLiveOllamaOfficialRSSMetadataAndGermanPresentation(t *testing.T) {
 	if os.Getenv("MUNICHBRIEF_OLLAMA_RSS_LIVE_TEST") != "1" {
 		t.Skip("set MUNICHBRIEF_OLLAMA_RSS_LIVE_TEST=1 for the explicit official-RSS Qwen test")

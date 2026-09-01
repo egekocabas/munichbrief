@@ -90,6 +90,33 @@ func TestSocialCardRendererIsShared(t *testing.T) {
 	}
 }
 
+func TestSocialCardTextNormalizationAndLocaleAwareCasing(t *testing.T) {
+	if got := normalizeSocialText("Украі\u0308нська ʼслово non‑breaking"); got != "Українська ’слово non-breaking" {
+		t.Fatalf("normalized social text = %q", got)
+	}
+	if got := localizedUpper("tr-TR", "içerik ıslak"); got != "İÇERİK ISLAK" {
+		t.Fatalf("Turkish uppercase = %q", got)
+	}
+}
+
+func TestSocialCardFontCoversReaderAlphabets(t *testing.T) {
+	renderer, err := newSocialCardRenderer()
+	if err != nil {
+		t.Fatal(err)
+	}
+	face, closeFace, err := renderer.face(renderer.boldFont, 24)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeFace()
+	const representativeCharacters = "çğıİöşüčćđšžàèéìíòóùúÀÈÉÌÍÒÓÙÚАБВГҐДЕЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЬЮЯабвгґдеєжзиіїйклмнопрстуфхцчшщьюя"
+	for _, character := range representativeCharacters {
+		if _, ok := face.GlyphAdvance(character); !ok {
+			t.Errorf("embedded social font does not cover %q (U+%04X)", character, character)
+		}
+	}
+}
+
 func TestSocialCardTextStaysInsideSkySafeArea(t *testing.T) {
 	t.Parallel()
 	const longestPublishedTitle = "Verkehrsunfall am Mittleren Ring verursacht längere Sperrungen während des Berufsverkehrs."

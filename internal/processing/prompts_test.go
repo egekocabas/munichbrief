@@ -3,6 +3,8 @@ package processing
 import (
 	"strings"
 	"testing"
+
+	langregistry "github.com/egekocabas/munichbrief/internal/languages"
 )
 
 func TestPromptRegistryResolvesRegisteredVersions(t *testing.T) {
@@ -49,6 +51,43 @@ func TestEnglishTranslateGemmaV2PromptUsesRegisteredLanguageIdentity(t *testing.
 	}
 	if strings.Count(rendered, payload) != 1 || !strings.HasSuffix(rendered, "English:\n\n\n"+payload) {
 		t.Fatalf("TranslateGemma payload separator or occurrence count is invalid: %q", rendered)
+	}
+}
+
+func TestRegisteredTranslateGemmaPromptsUseTargetLanguageIdentities(t *testing.T) {
+	for _, translation := range RegisteredTranslations() {
+		prompt, found := PromptByVersion(translation.PromptVersion)
+		if !found || prompt.Status != PromptActive || !prompt.UserOnly || prompt.SystemPrompt != "" {
+			t.Fatalf("active %s translation prompt = %#v, found=%t", translation.Language, prompt, found)
+		}
+		definition, found := langregistry.ByCode(langregistry.Registered(), translation.Language)
+		if !found {
+			t.Fatalf("translation language %q is not registered", translation.Language)
+		}
+		payload := `{"title_de":"Titel","summary_de":"Zusammenfassung."}`
+		rendered := promptUserMessage(translation.PromptVersion, payload)
+		fieldCode := strings.ReplaceAll(translation.Language, "-", "_")
+		for _, expected := range []string{
+			"German (de-DE) to " + definition.TranslationName + " (" + definition.Tag.String() + ")",
+			`"title_` + fieldCode + `"`, `"summary_` + fieldCode + `"`, "presumption-of-innocence",
+		} {
+			if !strings.Contains(rendered, expected) {
+				t.Errorf("%s TranslateGemma prompt omitted %q", translation.Language, expected)
+			}
+		}
+		if strings.Count(rendered, payload) != 1 {
+			t.Errorf("%s TranslateGemma payload occurrence count = %d", translation.Language, strings.Count(rendered, payload))
+		}
+		if translation.Language == "uk" {
+			for _, expected := range []string{"streets, squares, parks, bridges, and stations", "standard, consistent Ukrainian transliteration", "never translate the name's literal meaning"} {
+				if !strings.Contains(rendered, expected) {
+					t.Errorf("Ukrainian TranslateGemma prompt omitted generic place-name rule %q", expected)
+				}
+			}
+		}
+		if translation.Language != EnglishLanguage && !strings.Contains(rendered, "streets, squares, parks, bridges, and stations") {
+			t.Errorf("%s TranslateGemma prompt does not cover non-district place names", translation.Language)
+		}
 	}
 }
 

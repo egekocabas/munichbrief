@@ -401,7 +401,7 @@ func TestAdminRetriesPostProcessingAndRejectsRemovedBackfillRoutes(t *testing.T)
 	handler := adminTestServer(t, database, nil).Handler()
 	page := httptest.NewRecorder()
 	handler.ServeHTTP(page, httptest.NewRequest(http.MethodGet, "/admin", nil))
-	for _, expected := range []string{"Kanonischer Titel", "0 / 1 published", "Manage translations", "/admin/translations?incident=", "Category verification", "Not checked"} {
+	for _, expected := range []string{"Kanonischer Titel", fmt.Sprintf("0 / %d published", len(processing.RegisteredTranslations())), "Manage translations", "/admin/translations?incident=", "Category verification", "Not checked"} {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("admin missing-translation page does not contain %q", expected)
 		}
@@ -498,7 +498,7 @@ func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
 	}
 	for _, expected := range []string{
 		"Unprocessed incidents", "2 shown / 28 total", "All incidents", "2 shown / 28 total",
-		presentation.TitleDE, presentation.SummaryDE, "1 / 1 published", "Manage translations",
+		presentation.TitleDE, presentation.SummaryDE, fmt.Sprintf("1 / %d published", len(processing.RegisteredTranslations())), "Manage translations",
 		job.TitleDE, job.BodyDE, "Original German text", "German presentation ready",
 		"all_page=1&amp;unprocessed_page=2", "all_page=2&amp;unprocessed_page=1",
 	} {
@@ -596,7 +596,7 @@ func TestAdminTranslationOperationsOverviewDrilldownsAndActions(t *testing.T) {
 	}
 	dashboard := httptest.NewRecorder()
 	handler.ServeHTTP(dashboard, httptest.NewRequest(http.MethodGet, "/admin", nil))
-	for _, expected := range []string{"1 / 1 published", "1 attention", "1 retained replacement warning", "Manage translations"} {
+	for _, expected := range []string{fmt.Sprintf("1 / %d published", len(processing.RegisteredTranslations())), "1 attention", "1 retained replacement warning", "Manage translations"} {
 		if dashboard.Code != http.StatusOK || !strings.Contains(dashboard.Body.String(), expected) {
 			t.Errorf("compact translation rollup = %d, missing %q", dashboard.Code, expected)
 		}

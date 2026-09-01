@@ -52,12 +52,12 @@
   <a class="sr-only z-50 rounded-sm bg-paper px-4 py-2 font-bold text-civic focus:not-sr-only focus:fixed focus:left-4 focus:top-4" href="#content">{{t .Lang "SkipToContent"}}</a>
   {{/* Shared reader navigation and language switcher. */}}
   <header class="border-b border-rule/90 bg-paper/95">
-    <div class="page-shell flex min-h-16 items-center justify-between gap-2 py-3 sm:min-h-18 sm:gap-6">
+    <div class="page-shell flex min-h-16 flex-wrap items-center justify-between gap-3 py-3 sm:min-h-18 sm:flex-nowrap sm:gap-6">
       <a class="group inline-flex min-w-0 items-center gap-2 text-ink no-underline sm:gap-3" href="{{.HomeURL}}" aria-label="MunichBrief">
         <span class="grid size-9 shrink-0 place-items-center rounded-[0.6rem_0.6rem_0.6rem_0.18rem] bg-civic font-serif text-lg font-bold text-on-accent transition-colors group-hover:bg-civic-dark sm:size-10 sm:text-xl" aria-hidden="true">M</span>
         <span class="min-w-0 leading-tight"><strong class="block font-serif text-base tracking-tight sm:text-lg">MunichBrief</strong><small class="hidden text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted sm:block">{{t .Lang "BrandTagline"}}</small></span>
       </a>
-      <div class="flex shrink-0 items-center justify-end gap-1 sm:gap-4">
+      <div class="flex w-full shrink-0 items-center justify-between gap-1 sm:w-auto sm:justify-end sm:gap-4">
         <nav class="flex items-center gap-1 text-sm font-bold" aria-label="{{t .Lang "PrimaryNavigation"}}">
           <a class="rounded-md px-2 py-2 text-ink no-underline hover:bg-newsprint hover:text-civic sm:px-3" href="{{.AboutURL}}">{{t .Lang "About"}}</a>
         </nav>
@@ -68,7 +68,18 @@
           <svg class="theme-icon-moon size-5" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.4 15.5A8.8 8.8 0 0 1 8.5 3.6 9 9 0 1 0 20.4 15.5Z"/></svg>
           <svg class="theme-icon-sun size-5" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0-5a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1Zm0 17a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1ZM3 11h1a1 1 0 1 1 0 2H3a1 1 0 1 1 0-2Zm17 0h1a1 1 0 1 1 0 2h-1a1 1 0 1 1 0-2ZM5.6 4.2l.7.7a1 1 0 0 1-1.4 1.4l-.7-.7a1 1 0 0 1 1.4-1.4Zm13.5 13.5.7.7a1 1 0 0 1-1.4 1.4l-.7-.7a1 1 0 0 1 1.4-1.4ZM18.4 4.2a1 1 0 0 1 1.4 1.4l-.7.7a1 1 0 0 1-1.4-1.4l.7-.7ZM6.3 17.7a1 1 0 0 1 0 1.4l-.7.7a1 1 0 0 1-1.4-1.4l.7-.7a1 1 0 0 1 1.4 0Z"/></svg>
         </button>
-        {{range .LanguageSwitches}}<a class="inline-flex min-h-9 items-center rounded-md border border-rule bg-white px-2.5 text-xs font-extrabold uppercase tracking-[0.08em] text-civic no-underline hover:border-civic/40 hover:bg-newsprint" href="{{.URL}}" lang="{{.Tag}}" hreflang="{{.Tag}}" aria-label="{{.Label}}">{{.Code}}</a>{{end}}
+        <details class="language-menu relative">
+          <summary class="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-md border border-rule bg-white px-2.5 text-xs font-extrabold uppercase tracking-[0.08em] text-civic hover:border-civic/40 hover:bg-newsprint" aria-label="{{t .Lang "Language"}}: {{.Lang}}">
+            <svg class="size-5" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm6.92 6h-3.01a15.7 15.7 0 0 0-1.35-3.11A8.04 8.04 0 0 1 18.92 8ZM12 4c.83 1.2 1.48 2.54 1.9 4h-3.8A13.7 13.7 0 0 1 12 4ZM4.26 14a8 8 0 0 1 0-4h3.39a16.5 16.5 0 0 0 0 4H4.26Zm.82 2h3.01c.3 1.1.76 2.15 1.35 3.11A8.04 8.04 0 0 1 5.08 16Zm3.01-8H5.08a8.04 8.04 0 0 1 4.36-3.11A15.7 15.7 0 0 0 8.09 8ZM12 20a13.7 13.7 0 0 1-1.9-4h3.8A13.7 13.7 0 0 1 12 20Zm2.35-6h-4.7a14.6 14.6 0 0 1 0-4h4.7a14.6 14.6 0 0 1 0 4Zm.21 5.11A15.7 15.7 0 0 0 15.91 16h3.01a8.04 8.04 0 0 1-4.36 3.11ZM16.35 14a16.5 16.5 0 0 0 0-4h3.39a8 8 0 0 1 0 4h-3.39Z"/></svg>
+            <span>{{.Lang}}</span>
+          </summary>
+          <div class="absolute right-0 top-full z-50 mt-2 w-56 rounded-md border border-rule bg-paper p-2 normal-case tracking-normal shadow-xl">
+            <p class="px-2 py-1 text-xs font-extrabold uppercase tracking-wider text-muted">{{t .Lang "Language"}}</p>
+            <ul>
+              {{range .LanguageSwitches}}<li><a class="flex min-h-11 items-center justify-between gap-3 rounded-md px-2 py-2 text-sm font-bold text-ink no-underline hover:bg-newsprint hover:text-civic" href="{{.URL}}" lang="{{.Tag}}" hreflang="{{.Tag}}" aria-label="{{.Label}}"><span>{{.DisplayName}}</span><span class="text-xs uppercase tracking-wider text-muted">{{.Code}}</span></a></li>{{end}}
+            </ul>
+          </div>
+        </details>
       </div>
     </div>
   </header>

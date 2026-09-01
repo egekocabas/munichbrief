@@ -12,11 +12,13 @@ import (
 	"testing"
 	"testing/fstest"
 	"time"
+	"unicode/utf8"
 
 	"github.com/egekocabas/munichbrief/internal/domain"
 	langregistry "github.com/egekocabas/munichbrief/internal/languages"
 	"github.com/egekocabas/munichbrief/internal/processing"
 	"github.com/egekocabas/munichbrief/internal/store"
+	"golang.org/x/text/unicode/norm"
 )
 
 func TestTimelineAndDetailRenderFixtureData(t *testing.T) {
@@ -735,6 +737,11 @@ func TestLocalizedRoutesAndLanguagePreference(t *testing.T) {
 	if !strings.Contains(english.Body.String(), `href="/de/about?page=2"`) || !strings.Contains(english.Body.String(), `hreflang="de-DE"`) {
 		t.Fatal("English page does not preserve path and query in its language switch")
 	}
+	for _, expected := range []string{`<details class="language-menu`, "Deutsch", "Türkçe", "Hrvatski", "Italiano", "Українська", "Bosanski"} {
+		if !strings.Contains(english.Body.String(), expected) {
+			t.Errorf("compact language menu does not contain %q", expected)
+		}
+	}
 	cookies := english.Result().Cookies()
 	if len(cookies) != 1 || cookies[0].Name != "munichbrief_language" || cookies[0].Value != "en" || !cookies[0].HttpOnly || cookies[0].SameSite != http.SameSiteLaxMode || cookies[0].MaxAge != 365*24*60*60 || cookies[0].Expires.Before(time.Now().Add(364*24*time.Hour)) {
 		t.Fatalf("language cookie = %#v", cookies)
@@ -832,6 +839,19 @@ func TestTranslationCatalogsAreCompleteAndPluralized(t *testing.T) {
 		{language: "de", count: 2, expected: "2 Meldungen"},
 		{language: "en", count: 1, expected: "1 report"},
 		{language: "en", count: 2, expected: "2 reports"},
+		{language: "tr", count: 1, expected: "1 bildirim"},
+		{language: "tr", count: 2, expected: "2 bildirim"},
+		{language: "hr", count: 1, expected: "1 priopćenje"},
+		{language: "hr", count: 2, expected: "2 priopćenja"},
+		{language: "hr", count: 5, expected: "5 priopćenja"},
+		{language: "it", count: 1, expected: "1 comunicato"},
+		{language: "it", count: 2, expected: "2 comunicati"},
+		{language: "uk", count: 1, expected: "1 повідомлення"},
+		{language: "uk", count: 2, expected: "2 повідомлення"},
+		{language: "uk", count: 5, expected: "5 повідомлень"},
+		{language: "bs", count: 1, expected: "1 saopćenje"},
+		{language: "bs", count: 2, expected: "2 saopćenja"},
+		{language: "bs", count: 5, expected: "5 saopćenja"},
 	} {
 		if actual := translations.Count(test.language, "Reports", test.count); actual != test.expected {
 			t.Errorf("Count(%q, %d) = %q, want %q", test.language, test.count, actual, test.expected)
@@ -857,6 +877,34 @@ func TestTranslationCatalogsAreCompleteAndPluralized(t *testing.T) {
 	}
 	if err := validateCatalogParity(missingPluralCount, "de.toml", "en.toml"); err == nil {
 		t.Fatal("translation catalog plural forms without count rendering were accepted")
+	}
+}
+
+func TestReaderCatalogsAreUTF8NFCAndContainRepresentativeCharacters(t *testing.T) {
+	representative := map[string]string{
+		"tr": "çğıİöşü",
+		"hr": "čćđšž",
+		"it": "àèéòù",
+		"uk": "ЄІєї",
+		"bs": "čćđšž",
+	}
+	for code, characters := range representative {
+		definition, found := langregistry.ByCode(langregistry.Registered(), code)
+		if !found {
+			t.Fatalf("reader language %q is not registered", code)
+		}
+		contents, err := localeFiles.ReadFile(definition.Catalog)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !utf8.Valid(contents) || !norm.NFC.IsNormal(contents) {
+			t.Errorf("catalog %s is not valid NFC-normalized UTF-8", definition.Catalog)
+		}
+		for _, character := range characters {
+			if !strings.ContainsRune(string(contents), character) {
+				t.Errorf("catalog %s does not exercise representative character %q (U+%04X)", definition.Catalog, character, character)
+			}
+		}
 	}
 }
 

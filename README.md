@@ -3,10 +3,11 @@
 [![CI](https://github.com/egekocabas/munichbrief/actions/workflows/ci.yml/badge.svg)](https://github.com/egekocabas/munichbrief/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-MunichBrief turns official Munich Police press releases into a clear bilingual
+MunichBrief turns official Munich Police press releases into a clear multilingual
 incident reader. It discovers the official RSS feed, separates combined daily
 releases into individual reports, and publishes privacy-minimised German
-summaries and English translations with provenance and links to the
+summaries and translations in English, Turkish, Croatian, Italian, Ukrainian,
+and Bosnian with provenance and links to the
 authoritative source.
 
 Visit the live reader at [munichbrief.de](https://munichbrief.de).
@@ -30,7 +31,7 @@ Visit the live reader at [munichbrief.de](https://munichbrief.de).
 - Protected operational review, structured logs, health checks, and Prometheus
   metrics.
 - Multi-architecture container images and a security-hardened Helm chart.
-- HTML and Markdown representations with canonical bilingual discovery links.
+- HTML and Markdown representations with canonical multilingual discovery links.
 
 ## Quick start
 
@@ -80,7 +81,7 @@ flowchart LR
     Category --> DB
     DB --> Translation["Independent translation jobs"]
     Translation --> DB
-    DB --> Reader["German and English reader"]
+    DB --> Reader["Multilingual reader"]
     Reader --> Source["Authoritative source links"]
 ```
 

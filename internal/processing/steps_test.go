@@ -24,8 +24,21 @@ func TestRegisteredPipelineStepsAreStableAndOrdered(t *testing.T) {
 		t.Fatalf("registered step identities = %v", StepKeys())
 	}
 	translations := RegisteredTranslations()
-	if len(translations) != 1 || translations[0].Language != EnglishLanguage || translations[0].PromptVersion != EnglishTranslationPromptVersion || translations[0].Step.OutputDecoder == nil {
+	wantTranslations := []struct{ language, prompt string }{
+		{EnglishLanguage, EnglishTranslationPromptVersion},
+		{"tr", TurkishTranslationPromptVersion},
+		{"hr", CroatianTranslationPromptVersion},
+		{"it", ItalianTranslationPromptVersion},
+		{"uk", UkrainianTranslationPromptVersion},
+		{"bs", BosnianTranslationPromptVersion},
+	}
+	if len(translations) != len(wantTranslations) {
 		t.Fatalf("registered translations = %#v", translations)
+	}
+	for index, want := range wantTranslations {
+		if translations[index].Language != want.language || translations[index].PromptVersion != want.prompt || translations[index].Step.OutputDecoder == nil {
+			t.Errorf("registered translation %d = %#v, want %s/%s", index, translations[index], want.language, want.prompt)
+		}
 	}
 	if PipelineVersion != "incident-pipeline-v2" {
 		t.Fatalf("pipeline version = %q", PipelineVersion)
@@ -39,6 +52,16 @@ func TestRegisteredPipelineStepsAreStableAndOrdered(t *testing.T) {
 		if strings.Contains(steps[1].SystemPrompt, forbidden) {
 			t.Errorf("German presentation prompt contains English instruction %q", forbidden)
 		}
+	}
+}
+
+func TestGeneratedTextIsNormalizedToUnicodeNFCBeforeValidation(t *testing.T) {
+	value := "  Ukrai\u0308nische   Straße  "
+	if err := normalizeLimitedField("translated title", &value, 90); err != nil {
+		t.Fatal(err)
+	}
+	if value != "Ukraïnische Straße" {
+		t.Fatalf("normalized text = %q", value)
 	}
 }
 

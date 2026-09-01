@@ -92,12 +92,13 @@ presentation stages, use the same explicit opt-in against TranslateGemma:
 ```bash
 MUNICHBRIEF_OLLAMA_LIVE_TEST=1 \
 MUNICHBRIEF_OLLAMA_TRANSLATION_MODEL=translategemma:4b \
-go test -run TestLiveOllamaTranslateGemmaPromptContract -v ./internal/processing
+go test -run 'TestLiveOllama(TranslateGemmaPromptContract|RegisteredTranslationTargets)$' \
+  -v ./internal/processing
 ```
 
-The focused check covers registered language identities, Munich place names,
-required terminology, attribution and uncertainty, strict JSON, and
-instruction-like translated data without logging generated text.
+The focused checks cover every registered target, language identities, Munich
+place names, required terminology, attribution and uncertainty, strict JSON,
+and instruction-like translated data without logging generated text.
 
 The real-RSS Qwen check requires its separate explicit opt-in:
 

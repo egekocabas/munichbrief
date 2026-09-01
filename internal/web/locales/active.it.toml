@@ -1,0 +1,158 @@
+SiteDescription = { other = "Resta informato con i riepiloghi AI dei comunicati ufficiali della Polizia di Monaco." }
+BrandTagline = { other = "Monaco a colpo d’occhio" }
+SocialImageAlt = { other = "Anteprima di MunichBrief con l’Olympiapark di Monaco." }
+SocialIncidentLabel = { other = "Evento" }
+Timeline = { other = "Ultime notizie" }
+About = { other = "Informazioni" }
+PrimaryNavigation = { other = "Navigazione principale" }
+SkipToContent = { other = "Vai al contenuto" }
+DarkMode = { other = "Modalità scura" }
+NoticeLabel = { other = "Avviso importante" }
+NoticeLead = { other = "Indipendente e non ufficiale." }
+FixtureNotice = { other = "Questa vista contiene esclusivamente dati di prova sintetici." }
+LiveNotice = { other = "L’AI viene usata per riassumere, classificare ed estrarre dettagli dai comunicati ufficiali della polizia. Possono verificarsi errori e i comunicati possono essere aggiornati dopo la pubblicazione." }
+AuthorityNotice = { other = "Le informazioni ufficiali più recenti restano autorevoli e si applica la presunzione d’innocenza." }
+ReviewNotice = { other = "Modalità di revisione: potrebbe essere visibile testo originale non anonimizzato. Non esporre pubblicamente." }
+AIGeneratedContent = { other = "Contenuto generato dall’AI" }
+AIFixtureLabelPreview = { other = "Anteprima etichetta — questo contenuto sintetico non è stato elaborato dall’AI" }
+AIDisclosureTitle = { other = "Contenuto generato dall’AI" }
+AIDisclosureFixtureCopy = { other = "Anteprima locale: questa pagina usa contenuti di prova sintetici." }
+AIDisclosureCopy = { other = "MunichBrief usa AI eseguita localmente per creare titoli, riepiloghi, traduzioni, categorie e dettagli strutturati, come il luogo e l’ora segnalati e l’eventuale richiesta di aiuto al pubblico, a partire dai comunicati ufficiali della Polizia di Monaco. Le informazioni generate o dedotte dall’AI possono contenere errori o diventare obsolete se il comunicato originale viene aggiornato. Ogni pagina dell’evento identifica e collega la fonte ufficiale della polizia; consulta tale fonte per le informazioni autorevoli. MunichBrief è un progetto indipendente e non è affiliato alla Polizia bavarese. Ogni persona menzionata è presunta innocente fino a prova contraria." }
+AIDisclosurePreferenceCopy = { other = "Selezionando “Ho capito”, questo avviso viene ricordato per 30 giorni." }
+AIDisclosureLearnMore = { other = "Ulteriori informazioni su MunichBrief e sul suo funzionamento sono disponibili nella pagina Informazioni." }
+AIDisclosureGotIt = { other = "Ho capito" }
+AITransparencyEU = { other = "Trasparenza dell’AI e orientamenti UE" }
+AITransparencyEUCopy = { other = "MunichBrief usa l’etichetta UE per i contenuti interamente generati dall’AI perché gli orientamenti della Commissione europea citano espressamente i riepiloghi di notizie generati dall’AI. Le etichette visibili e la provenienza leggibile dalle macchine favoriscono la trasparenza, ma l’uso dell’icona non dimostra di per sé la conformità legale né indica che MunichBrief abbia sottoscritto il Codice di buone pratiche volontario." }
+EUIconGuidance = { other = "Orientamenti UE sulle icone" }
+EUCodePractice = { other = "Codice di buone pratiche UE" }
+Footer = { other = "MunichBrief è indipendente dalla Polizia bavarese. Nessuna analisi, account o pubblicità." }
+Built = { other = "Build" }
+Language = { other = "Lingua" }
+German = { other = "Tedesco" }
+English = { other = "Inglese" }
+SwitchToGerman = { other = "Passa alla versione tedesca" }
+SwitchToEnglish = { other = "Passa alla versione inglese" }
+SwitchToTurkish = { other = "Passa alla versione turca" }
+SwitchToCroatian = { other = "Passa alla versione croata" }
+SwitchToItalian = { other = "Passa alla versione italiana" }
+SwitchToUkrainian = { other = "Passa alla versione ucraina" }
+SwitchToBosnian = { other = "Passa alla versione bosniaca" }
+HeroEyebrowFixture = { other = "Prototipo locale" }
+HeroEyebrowLive = { other = "Comunicati della Polizia di Monaco" }
+HeroTitle = { other = "Ultimi eventi segnalati dalla Polizia di Monaco" }
+HeroCopy = { other = "Una panoramica chiara degli eventi locali, riassunti dai comunicati ufficiali della polizia." }
+FixtureIncidents = { other = "Comunicati sintetici" }
+LatestIncidents = { other = "Ultimi eventi" }
+Reports = { one = "{{.Count}} comunicato", other = "{{.Count}} comunicati" }
+ShownTotal = { other = "{{.Shown}} visualizzati / {{.Total}} totali" }
+Report = { other = "Comunicato della polizia" }
+SourceMetadata = { other = "Metadati della fonte" }
+ReadIncident = { other = "Leggi il comunicato" }
+OpenOfficialSource = { other = "Apri la fonte ufficiale" }
+OpenOfficialPoliceRelease = { other = "Apri il comunicato ufficiale della polizia" }
+Newer = { other = "Più recenti" }
+Older = { other = "Meno recenti" }
+Page = { other = "Pagina" }
+Of = { other = "di" }
+NoIncidents = { other = "Nessun comunicato per ora" }
+NoFixtureCopy = { other = "Esegui l’importazione dei dati di prova per popolare questa vista." }
+NoLiveCopy = { other = "Il sincronizzatore non ha ancora trovato comunicati nell’intervallo previsto." }
+BodyUnavailable = { other = "Il testo del comunicato non è ancora disponibile. MunichBrief sta riprovando; nel frattempo usa la fonte ufficiale." }
+SourceRefreshFailed = { other = "L’ultimo aggiornamento della fonte non è riuscito; questa copia salvata resta disponibile." }
+Back = { other = "Indietro" }
+Breadcrumb = { other = "Percorso di navigazione" }
+PublishedWithin = { other = "Pubblicato in" }
+Published = { other = "Pubblicato" }
+LastProcessed = { other = "Ultima elaborazione" }
+Model = { other = "Modello" }
+PromptVersion = { other = "Versione del prompt" }
+Category = { other = "Categoria" }
+CategoryTraffic = { other = "Traffico" }
+CategoryTheftBurglary = { other = "Furto e scasso" }
+CategoryRobberyExtortion = { other = "Rapina ed estorsione" }
+CategoryViolence = { other = "Violenza" }
+CategorySexualOffense = { other = "Reati sessuali" }
+CategoryFraudCyber = { other = "Frode e criminalità informatica" }
+CategoryDrugs = { other = "Stupefacenti" }
+CategoryFireHazard = { other = "Incendi e pericoli" }
+CategoryPropertyDamage = { other = "Danneggiamento" }
+CategoryMissingWanted = { other = "Persone scomparse e ricercate" }
+CategoryPoliceOperation = { other = "Operazione di polizia" }
+CategoryOther = { other = "Altro" }
+Area = { other = "Zona" }
+ReportKind = { other = "Tipo di comunicato" }
+PublicAssistance = { other = "Collaborazione del pubblico" }
+PublicAssistanceRequested = { other = "La polizia chiede la collaborazione del pubblico" }
+PublicAssistanceNeeded = { other = "È necessaria la collaborazione del pubblico" }
+PublicAssistanceSourceCopy = { other = "Istruzioni, modalità di contatto e ulteriori dettagli sono disponibili solo nella fonte ufficiale." }
+TimeStatedInReport = { other = "Ora dell’evento" }
+DayPartMorning = { other = "mattina" }
+DayPartMidday = { other = "mezzogiorno" }
+DayPartAfternoon = { other = "pomeriggio" }
+DayPartEvening = { other = "sera" }
+DayPartNight = { other = "notte" }
+ReportKindIncident = { other = "Evento" }
+ReportKindFollowUp = { other = "Aggiornamento" }
+ReportKindMissingPerson = { other = "Segnalazione di persona scomparsa" }
+ReportKindWantedPerson = { other = "Segnalazione di persona ricercata" }
+ReportKindPublicWarning = { other = "Avviso pubblico" }
+ReportKindOther = { other = "Altro comunicato" }
+AssistanceWitnessObservations = { other = "Osservazioni di testimoni" }
+AssistanceIdentifyPerson = { other = "Identificare una persona" }
+AssistanceLocatePerson = { other = "Localizzare una persona" }
+AssistancePhotoVideo = { other = "Foto o video" }
+AssistanceVehicleInformation = { other = "Informazioni su veicoli" }
+AssistancePropertyInformation = { other = "Informazioni su oggetti" }
+AssistanceOtherInformation = { other = "Altre informazioni" }
+AIProcessing = { other = "Elaborazione AI" }
+Step = { other = "Fase" }
+Translation = { other = "Traduzione" }
+IncidentMetadataStep = { other = "Metadati dell’evento" }
+GermanPresentationStep = { other = "Presentazione tedesca" }
+PublicAssistanceVerificationStep = { other = "Verifica della collaborazione pubblica" }
+CategoryVerificationStep = { other = "Verifica della categoria" }
+EnglishTranslationStep = { other = "Traduzione inglese" }
+TurkishTranslationStep = { other = "Traduzione turca" }
+CroatianTranslationStep = { other = "Traduzione croata" }
+ItalianTranslationStep = { other = "Traduzione italiana" }
+UkrainianTranslationStep = { other = "Traduzione ucraina" }
+BosnianTranslationStep = { other = "Traduzione bosniaca" }
+StagedPipeline = { other = "Pipeline a fasi" }
+MetadataFirstPipeline = { other = "Pipeline con metadati prioritari v2" }
+Generated = { other = "Generato" }
+AISummary = { other = "Riepilogo generato dall’AI" }
+VerifySource = { other = "Verifica i dettagli importanti nelle informazioni ufficiali più recenti." }
+OriginalGerman = { other = "Testo originale tedesco" }
+OriginalQACopy = { other = "Visibile solo per il controllo qualità nella modalità di revisione limitata." }
+AuthoritativeSource = { other = "Fonte autorevole" }
+FixtureSourceCopy = { other = "Questa pagina usa contenuti di prova sintetici." }
+LiveSourceCopy = { other = "Questa è una presentazione non ufficiale. Il comunicato della Polizia bavarese resta autorevole." }
+NotProcessed = { other = "Non ancora riassunto o tradotto" }
+Queued = { other = "Riepilogo e traduzione AI in coda" }
+Running = { other = "Riepilogo e traduzione AI in elaborazione" }
+Retrying = { other = "AI temporaneamente non disponibile; nuovo tentativo pianificato" }
+NeedsReview = { other = "Il risultato AI richiede revisione" }
+OriginalShown = { other = "Viene mostrato il comunicato originale tedesco." }
+AboutTitle = { other = "Come funziona MunichBrief" }
+Methodology = { other = "Informazioni su MunichBrief" }
+AboutIntro = { other = "MunichBrief trasforma i comunicati ufficiali della Polizia di Monaco in riepiloghi chiari e strutturati in più lingue." }
+FromReleaseToIncident = { other = "Dal comunicato all’evento" }
+Discover = { other = "Individuazione" }
+DiscoverCopy = { other = "I nuovi comunicati vengono individuati esclusivamente tramite il feed RSS ufficiale della Polizia di Monaco." }
+Organize = { other = "Organizzazione" }
+OrganizeCopy = { other = "I comunicati con più rapporti vengono suddivisi usando i numeri ufficiali. I rapporti pubblicati separatamente restano separati." }
+Summarize = { other = "Riepilogo" }
+SummarizeCopy = { other = "Modelli AI locali estraggono categorie, luoghi, date e richieste di collaborazione, quindi creano un riepilogo tedesco con dati personali ridotti al minimo." }
+TranslatePublish = { other = "Traduzione e pubblicazione" }
+TranslatePublishCopy = { other = "I riepiloghi tedeschi che superano i controlli automatici vengono tradotti nelle lingue disponibili. Le pagine pubbliche mostrano contenuti generati dall’AI solo dopo il completamento della pipeline." }
+AccuracyOfficialInformation = { other = "Accuratezza e informazioni ufficiali" }
+AccuracyOfficialInformationCopy = { other = "I riepiloghi AI e i dettagli estratti possono contenere errori. I comunicati della polizia possono essere aggiornati dopo la pubblicazione. Le informazioni ufficiali più recenti restano autorevoli e si applica la presunzione d’innocenza." }
+PrivacyDataHandling = { other = "Privacy e trattamento dei dati" }
+PrivacyCopy = { other = "MunichBrief non usa account, analisi o pubblicità. Un cookie necessario conserva la lingua selezionata per un anno. Dopo “Ho capito”, un cookie di prima parte ricorda l’informativa AI per 30 giorni. Il tema cromatico selezionato viene salvato localmente nel browser." }
+DataHandlingCopy = { other = "Il testo tedesco estratto viene conservato localmente. La modalità di revisione limitata può mostrare originali e stati di elaborazione per il controllo qualità; la modalità pubblica non mostra gli originali conservati." }
+IndependenceLegalReview = { other = "Indipendenza e revisione legale" }
+IndependenceLegalReviewCopy = { other = "MunichBrief è indipendente dalla Polizia bavarese. Le misure tecniche non sostituiscono la revisione legale. Conservazione, base giuridica, dati relativi a reati ed eventuali eccezioni giornalistiche richiedono una valutazione continua." }
+ContactHeading = { other = "Domande, correzioni o commenti" }
+ContactPublicLead = { other = "Hai trovato un errore o hai un suggerimento?" }
+ContactIssueLink = { other = "Apri una segnalazione su GitHub" }
+ContactPrivateLead = { other = "Per questioni di privacy o contenuti che non devono essere condivisi pubblicamente, scrivi a" }

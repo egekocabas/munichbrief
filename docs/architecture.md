@@ -108,13 +108,14 @@ to the immutable original metadata category when no verification has succeeded.
 
 Translation scopes are generated from registered languages. Each language owns
 an immutable prompt, schema, validator, generator, and enablement cutover, while
-all languages share one preferred translation model. English is currently the
-only target and receives only the accepted German title and summary.
+all languages share one preferred translation model. English, Turkish,
+Croatian, Italian, Ukrainian, and Bosnian each receive only the accepted German
+title and summary.
 
 Application code localizes metadata labels. Each step declares its ordered
 input kinds; the worker passes only those values and hashes the actual inputs
 with prompt version and model identity. A metadata change therefore invalidates
-the German-stage input without exposing source text to the English stage. Each
+the German-stage input without exposing source text to any translation stage. Each
 job stores its prompt version, model identity, input hash, timestamps, status,
 and safe failure category. Reader pages label extracted timing neutrally as a
 time stated in the report.

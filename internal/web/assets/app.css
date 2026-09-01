@@ -110,6 +110,14 @@
     white-space: pre-line;
   }
 
+  .language-menu > summary {
+    list-style: none;
+  }
+
+  .language-menu > summary::-webkit-details-marker {
+    display: none;
+  }
+
   .htmx-progress {
     transform: scaleX(0);
     transform-origin: left;

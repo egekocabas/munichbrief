@@ -26,6 +26,11 @@ ingress:
     languageCodes:
       - de
       - en
+      - tr
+      - hr
+      - it
+      - uk
+      - bs
 
 admin:
   enabled: false

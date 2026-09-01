@@ -81,16 +81,15 @@ func TestSitemapContainsOnlyCanonicalPublicDocuments(t *testing.T) {
 	if err := xml.Unmarshal(response.Body.Bytes(), &document); err != nil {
 		t.Fatalf("decode sitemap: %v", err)
 	}
-	if len(document.URLs) != 6 {
-		t.Fatalf("sitemap URL count = %d, want four static and two incident URLs", len(document.URLs))
+	wantLocations := make(map[string]bool)
+	for _, definition := range langregistry.Registered() {
+		wantLocations["https://munichbrief.de/"+definition.Code] = false
+		wantLocations["https://munichbrief.de/"+definition.Code+"/about"] = false
 	}
-	wantLocations := map[string]bool{
-		"https://munichbrief.de/de":                                       false,
-		"https://munichbrief.de/en":                                       false,
-		"https://munichbrief.de/de/about":                                 false,
-		"https://munichbrief.de/en/about":                                 false,
-		"https://munichbrief.de/de/incidents/" + formatID(job.IncidentID): false,
-		"https://munichbrief.de/en/incidents/" + formatID(job.IncidentID): false,
+	wantLocations["https://munichbrief.de/de/incidents/"+formatID(job.IncidentID)] = false
+	wantLocations["https://munichbrief.de/en/incidents/"+formatID(job.IncidentID)] = false
+	if len(document.URLs) != len(wantLocations) {
+		t.Fatalf("sitemap URL count = %d, want %d available canonical URLs", len(document.URLs), len(wantLocations))
 	}
 	for _, entry := range document.URLs {
 		if _, ok := wantLocations[entry.Location]; !ok {
@@ -161,7 +160,7 @@ func TestSyntheticReaderLanguageDrivesRoutesNegotiationAndSEO(t *testing.T) {
 	for _, expected := range []string{
 		`<html lang="fr-FR"`,
 		`<link rel="alternate" hreflang="fr-FR" href="https://munichbrief.de/fr">`,
-		`"inLanguage":["de-DE","en-GB","fr-FR"]`,
+		`"inLanguage":["de-DE","en-GB","tr-TR","hr-HR","it-IT","uk-UA","bs-BA","fr-FR"]`,
 	} {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("synthetic language page does not contain %q", expected)

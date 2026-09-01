@@ -55,6 +55,71 @@ var registered = []Definition{
 		FormatDay:      func(value time.Time) string { return value.Format("Monday, 02 January 2006") },
 		FormatDateTime: func(value time.Time) string { return value.Format("02 January 2006, 15:04 MST") },
 	},
+	{
+		Code: "tr", Tag: language.MustParse("tr-TR"), DisplayName: "Türkçe", TranslationName: "Turkish", Catalog: "locales/active.tr.toml", OpenGraphLocale: "tr_TR",
+		SwitchMessageID: "SwitchToTurkish", StepMessageID: "TurkishTranslationStep",
+		FormatDate: func(value time.Time) string {
+			return value.Format("02") + " " + turkishMonths[value.Month()] + " " + value.Format("2006")
+		},
+		FormatDay: func(value time.Time) string {
+			return turkishWeekdays[value.Weekday()] + ", " + value.Format("02") + " " + turkishMonths[value.Month()] + " " + value.Format("2006")
+		},
+		FormatDateTime: func(value time.Time) string {
+			return value.Format("02") + " " + turkishMonths[value.Month()] + value.Format(" 2006, 15:04 MST")
+		},
+	},
+	{
+		Code: "hr", Tag: language.MustParse("hr-HR"), DisplayName: "Hrvatski", TranslationName: "Croatian", Catalog: "locales/active.hr.toml", OpenGraphLocale: "hr_HR",
+		SwitchMessageID: "SwitchToCroatian", StepMessageID: "CroatianTranslationStep",
+		FormatDate: func(value time.Time) string {
+			return value.Format("02.") + " " + croatianMonths[value.Month()] + " " + value.Format("2006.")
+		},
+		FormatDay: func(value time.Time) string {
+			return croatianWeekdays[value.Weekday()] + ", " + value.Format("02.") + " " + croatianMonths[value.Month()] + " " + value.Format("2006.")
+		},
+		FormatDateTime: func(value time.Time) string {
+			return value.Format("02.") + " " + croatianMonths[value.Month()] + value.Format(" 2006., 15:04 MST")
+		},
+	},
+	{
+		Code: "it", Tag: language.MustParse("it-IT"), DisplayName: "Italiano", TranslationName: "Italian", Catalog: "locales/active.it.toml", OpenGraphLocale: "it_IT",
+		SwitchMessageID: "SwitchToItalian", StepMessageID: "ItalianTranslationStep",
+		FormatDate: func(value time.Time) string {
+			return value.Format("02") + " " + italianMonths[value.Month()] + " " + value.Format("2006")
+		},
+		FormatDay: func(value time.Time) string {
+			return italianWeekdays[value.Weekday()] + " " + value.Format("02") + " " + italianMonths[value.Month()] + " " + value.Format("2006")
+		},
+		FormatDateTime: func(value time.Time) string {
+			return value.Format("02") + " " + italianMonths[value.Month()] + value.Format(" 2006, 15:04 MST")
+		},
+	},
+	{
+		Code: "uk", Tag: language.MustParse("uk-UA"), DisplayName: "Українська", TranslationName: "Ukrainian", Catalog: "locales/active.uk.toml", OpenGraphLocale: "uk_UA",
+		SwitchMessageID: "SwitchToUkrainian", StepMessageID: "UkrainianTranslationStep",
+		FormatDate: func(value time.Time) string {
+			return value.Format("02") + " " + ukrainianMonths[value.Month()] + " " + value.Format("2006") + " р."
+		},
+		FormatDay: func(value time.Time) string {
+			return ukrainianWeekdays[value.Weekday()] + ", " + value.Format("02") + " " + ukrainianMonths[value.Month()] + " " + value.Format("2006") + " р."
+		},
+		FormatDateTime: func(value time.Time) string {
+			return value.Format("02") + " " + ukrainianMonths[value.Month()] + value.Format(" 2006 р., 15:04 MST")
+		},
+	},
+	{
+		Code: "bs", Tag: language.MustParse("bs-BA"), DisplayName: "Bosanski", TranslationName: "Bosnian", Catalog: "locales/active.bs.toml", OpenGraphLocale: "bs_BA",
+		SwitchMessageID: "SwitchToBosnian", StepMessageID: "BosnianTranslationStep",
+		FormatDate: func(value time.Time) string {
+			return value.Format("02.") + " " + bosnianMonths[value.Month()] + " " + value.Format("2006.")
+		},
+		FormatDay: func(value time.Time) string {
+			return bosnianWeekdays[value.Weekday()] + ", " + value.Format("02.") + " " + bosnianMonths[value.Month()] + " " + value.Format("2006.")
+		},
+		FormatDateTime: func(value time.Time) string {
+			return value.Format("02.") + " " + bosnianMonths[value.Month()] + value.Format(" 2006., 15:04 MST")
+		},
+	},
 }
 
 var germanMonths = map[time.Month]string{
@@ -66,6 +131,61 @@ var germanMonths = map[time.Month]string{
 var germanWeekdays = map[time.Weekday]string{
 	time.Sunday: "Sonntag", time.Monday: "Montag", time.Tuesday: "Dienstag", time.Wednesday: "Mittwoch",
 	time.Thursday: "Donnerstag", time.Friday: "Freitag", time.Saturday: "Samstag",
+}
+
+var turkishMonths = map[time.Month]string{
+	time.January: "Ocak", time.February: "Şubat", time.March: "Mart", time.April: "Nisan",
+	time.May: "Mayıs", time.June: "Haziran", time.July: "Temmuz", time.August: "Ağustos",
+	time.September: "Eylül", time.October: "Ekim", time.November: "Kasım", time.December: "Aralık",
+}
+
+var turkishWeekdays = map[time.Weekday]string{
+	time.Sunday: "Pazar", time.Monday: "Pazartesi", time.Tuesday: "Salı", time.Wednesday: "Çarşamba",
+	time.Thursday: "Perşembe", time.Friday: "Cuma", time.Saturday: "Cumartesi",
+}
+
+var croatianMonths = map[time.Month]string{
+	time.January: "siječnja", time.February: "veljače", time.March: "ožujka", time.April: "travnja",
+	time.May: "svibnja", time.June: "lipnja", time.July: "srpnja", time.August: "kolovoza",
+	time.September: "rujna", time.October: "listopada", time.November: "studenoga", time.December: "prosinca",
+}
+
+var croatianWeekdays = map[time.Weekday]string{
+	time.Sunday: "nedjelja", time.Monday: "ponedjeljak", time.Tuesday: "utorak", time.Wednesday: "srijeda",
+	time.Thursday: "četvrtak", time.Friday: "petak", time.Saturday: "subota",
+}
+
+var italianMonths = map[time.Month]string{
+	time.January: "gennaio", time.February: "febbraio", time.March: "marzo", time.April: "aprile",
+	time.May: "maggio", time.June: "giugno", time.July: "luglio", time.August: "agosto",
+	time.September: "settembre", time.October: "ottobre", time.November: "novembre", time.December: "dicembre",
+}
+
+var italianWeekdays = map[time.Weekday]string{
+	time.Sunday: "domenica", time.Monday: "lunedì", time.Tuesday: "martedì", time.Wednesday: "mercoledì",
+	time.Thursday: "giovedì", time.Friday: "venerdì", time.Saturday: "sabato",
+}
+
+var ukrainianMonths = map[time.Month]string{
+	time.January: "січня", time.February: "лютого", time.March: "березня", time.April: "квітня",
+	time.May: "травня", time.June: "червня", time.July: "липня", time.August: "серпня",
+	time.September: "вересня", time.October: "жовтня", time.November: "листопада", time.December: "грудня",
+}
+
+var ukrainianWeekdays = map[time.Weekday]string{
+	time.Sunday: "неділя", time.Monday: "понеділок", time.Tuesday: "вівторок", time.Wednesday: "середа",
+	time.Thursday: "четвер", time.Friday: "п’ятниця", time.Saturday: "субота",
+}
+
+var bosnianMonths = map[time.Month]string{
+	time.January: "januar", time.February: "februar", time.March: "mart", time.April: "april",
+	time.May: "maj", time.June: "juni", time.July: "juli", time.August: "august",
+	time.September: "septembar", time.October: "oktobar", time.November: "novembar", time.December: "decembar",
+}
+
+var bosnianWeekdays = map[time.Weekday]string{
+	time.Sunday: "nedjelja", time.Monday: "ponedjeljak", time.Tuesday: "utorak", time.Wednesday: "srijeda",
+	time.Thursday: "četvrtak", time.Friday: "petak", time.Saturday: "subota",
 }
 
 // Registered returns a defensive copy in navigation and processing order.

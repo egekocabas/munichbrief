@@ -54,10 +54,16 @@ own stable code.
    ID in the existing catalogs, including plural forms, category/report/time
    metadata, disclosure text, language switching, and processing provenance.
    Add the new language's switch and step labels to every existing catalog too.
+   Supply every plural category used by the locale (for example `one`, `few`,
+   `many`, and `other`) and test representative counts through the actual
+   localization matcher.
 4. Add native-language tests for representative singular/plural values, dates,
    metadata labels, navigation, disclosure text, and long mobile labels. Do not
    rely on machine translation as the only review of legal, privacy, or source
    attribution copy.
+5. Confirm the compact language menu remains keyboard accessible and fits at
+   320px, tablet, and desktop widths in light and dark modes. Header controls
+   may wrap to a second row; language names must not be clipped.
 
 No database migration is normally required. Translation jobs and values are
 already keyed by processor and language scope, and startup records a durable
@@ -68,7 +74,17 @@ automatic-enablement cutover for every newly registered scope.
 The new prompt receives only the accepted privacy-safe German title and
 summary. It must preserve subjects, claims, uncertainty, Munich place names,
 and the presumption of innocence without adding explanations or source details.
+Define “preserve” with a fluent reviewer for the target script: retaining the
+official Latin spelling and applying a standard local-script transliteration
+can both preserve identity, while translating a name's literal meaning or
+inventing a district qualifier does not. Smoke fixtures must cover more than a
+district list, including representative streets, squares, stations, parks, and
+municipalities; do not hardcode an application allowlist and assume it covers
+future source wording.
 Keep the existing title and summary limits and strict two-field JSON output.
+Generated fields are normalized to Unicode NFC before character-count
+validation and persistence. Tests should include decomposed accents and the
+target alphabet so equivalent text has one stable stored and cache identity.
 TranslateGemma supports only user and assistant roles in its native template;
 MunichBrief therefore sends the complete translation instruction and payload as
 one user message while retaining Ollama's JSON schema constraint. The model
@@ -98,6 +114,18 @@ and social cards. Confirm:
 - an incident without a successful translation remains absent from that public
   language, while German and other successful languages remain available; and
 - public-host path filtering still rejects admin and unknown routes.
+
+Social cards use embedded fonts, so confirm glyph coverage for the complete
+target alphabet before registration. Test locale-aware casing (especially
+Turkish dotted and dotless I), title wrapping, and the text safe area. Keep
+website text unchanged; any substitution for an unsupported punctuation mark,
+such as modifier apostrophes or non-breaking hyphens, belongs only in the
+social-image renderer and must have a focused test.
+
+Before release, a fluent native reviewer must approve navigation and metadata,
+AI disclosure, privacy language, source attribution, neutral police
+terminology, uncertainty, and presumption-of-innocence copy. Keep the pull
+request in draft until that legal-sensitive checklist is complete.
 
 Run the complete validation suite in `docs/development.md` before opening the
 application pull request.

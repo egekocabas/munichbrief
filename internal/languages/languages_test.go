@@ -26,6 +26,11 @@ func TestPreferredCodeUsesBCP47Matching(t *testing.T) {
 	for header, want := range map[string]string{
 		"en-US,en;q=0.8,de;q=0.5": "en",
 		"de-AT,de;q=0.9":          "de",
+		"tr-DE,tr;q=0.9":          "tr",
+		"hr-BA,hr;q=0.9":          "hr",
+		"it-CH,it;q=0.9":          "it",
+		"uk-UA,uk;q=0.9":          "uk",
+		"bs-BA,bs;q=0.9":          "bs",
 		"fr-FR,*;q=0.1":           "de",
 		"":                        "de",
 	} {
@@ -39,11 +44,29 @@ func TestRegisteredDateFormatting(t *testing.T) {
 	value := time.Date(2026, time.August, 31, 12, 30, 0, 0, time.FixedZone("CEST", 2*60*60))
 	de, _ := ByCode(Registered(), "de")
 	en, _ := ByCode(Registered(), "en")
+	tr, _ := ByCode(Registered(), "tr")
+	hr, _ := ByCode(Registered(), "hr")
+	it, _ := ByCode(Registered(), "it")
+	uk, _ := ByCode(Registered(), "uk")
+	bs, _ := ByCode(Registered(), "bs")
 	if got := de.FormatDay(value); got != "Montag, 31. August 2026" {
 		t.Fatalf("German day = %q", got)
 	}
 	if got := en.FormatDateTime(value); got != "31 August 2026, 12:30 CEST" {
 		t.Fatalf("English date-time = %q", got)
+	}
+	for name, actual := range map[string]string{
+		"Turkish": tr.FormatDay(value), "Croatian": hr.FormatDay(value), "Italian": it.FormatDay(value),
+		"Ukrainian": uk.FormatDay(value), "Bosnian": bs.FormatDay(value),
+	} {
+		want := map[string]string{
+			"Turkish": "Pazartesi, 31 Ağustos 2026", "Croatian": "ponedjeljak, 31. kolovoza 2026.",
+			"Italian": "lunedì 31 agosto 2026", "Ukrainian": "понеділок, 31 серпня 2026 р.",
+			"Bosnian": "ponedjeljak, 31. august 2026.",
+		}[name]
+		if actual != want {
+			t.Errorf("%s day = %q, want %q", name, actual, want)
+		}
 	}
 }
 

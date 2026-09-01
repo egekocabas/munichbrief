@@ -1,0 +1,158 @@
+SiteDescription = { other = "Будьте в курсі подій завдяки ШІ-оглядам офіційних повідомлень поліції Мюнхена." }
+BrandTagline = { other = "Мюнхен стисло" }
+SocialImageAlt = { other = "Попередній перегляд MunichBrief із зображенням Олімпійського парку Мюнхена." }
+SocialIncidentLabel = { other = "Подія" }
+Timeline = { other = "Останні новини" }
+About = { other = "Про проєкт" }
+PrimaryNavigation = { other = "Основна навігація" }
+SkipToContent = { other = "Перейти до вмісту" }
+DarkMode = { other = "Темний режим" }
+NoticeLabel = { other = "Важливе повідомлення" }
+NoticeLead = { other = "Незалежний і неофіційний ресурс." }
+FixtureNotice = { other = "Ця сторінка містить лише синтетичні тестові дані." }
+LiveNotice = { other = "ШІ використовується для узагальнення, категоризації та вилучення відомостей з офіційних повідомлень поліції. Можливі помилки, а повідомлення можуть оновлюватися після публікації." }
+AuthorityNotice = { other = "Найновіша офіційна інформація залишається визначальною; діє презумпція невинуватості." }
+ReviewNotice = { other = "Режим перевірки: може відображатися неанонімізований оригінальний текст. Не публікуйте його у відкритому доступі." }
+AIGeneratedContent = { other = "Вміст, створений ШІ" }
+AIFixtureLabelPreview = { other = "Попередній перегляд позначки — цей синтетичний вміст не оброблявся ШІ" }
+AIDisclosureTitle = { other = "Вміст, створений ШІ" }
+AIDisclosureFixtureCopy = { other = "Локальний перегляд: ця сторінка використовує синтетичний тестовий вміст." }
+AIDisclosureCopy = { other = "MunichBrief використовує локально запущений ШІ, щоб на основі офіційних повідомлень поліції Мюнхена створювати заголовки, огляди, переклади, категорії та структуровані відомості, зокрема про зазначені місце й час та про те, чи просить поліція допомоги громадськості. Створена або виведена ШІ інформація може містити помилки чи застаріти після оновлення оригінального повідомлення. На кожній сторінці події зазначено офіційне джерело поліції та наведено посилання на нього; для отримання достовірної інформації звертайтеся до цього джерела. MunichBrief є незалежним проєктом і не пов’язаний із поліцією Баварії. Кожна згадана особа вважається невинуватою, доки її вину не буде доведено." }
+AIDisclosurePreferenceCopy = { other = "Після вибору «Зрозуміло» це повідомлення зберігатиметься протягом 30 днів." }
+AIDisclosureLearnMore = { other = "Докладніше про MunichBrief і принципи його роботи читайте на сторінці «Про проєкт»." }
+AIDisclosureGotIt = { other = "Зрозуміло" }
+AITransparencyEU = { other = "Прозорість ШІ та настанови ЄС" }
+AITransparencyEUCopy = { other = "MunichBrief використовує позначку ЄС для повністю створеного ШІ вмісту, оскільки настанови Європейської комісії прямо наводять створені ШІ огляди новин як приклад застосування. Видимі позначки та машинозчитувані дані про походження сприяють прозорості, але саме використання значка не доводить правову відповідність і не означає, що MunichBrief підписав добровільний Кодекс практики." }
+EUIconGuidance = { other = "Настанови ЄС щодо значків" }
+EUCodePractice = { other = "Кодекс практики ЄС" }
+Footer = { other = "MunichBrief не залежить від поліції Баварії. Без аналітики, облікових записів і реклами." }
+Built = { other = "Збірка" }
+Language = { other = "Мова" }
+German = { other = "Німецька" }
+English = { other = "Англійська" }
+SwitchToGerman = { other = "Перейти до німецької версії" }
+SwitchToEnglish = { other = "Перейти до англійської версії" }
+SwitchToTurkish = { other = "Перейти до турецької версії" }
+SwitchToCroatian = { other = "Перейти до хорватської версії" }
+SwitchToItalian = { other = "Перейти до італійської версії" }
+SwitchToUkrainian = { other = "Перейти до української версії" }
+SwitchToBosnian = { other = "Перейти до боснійської версії" }
+HeroEyebrowFixture = { other = "Локальний прототип" }
+HeroEyebrowLive = { other = "Повідомлення поліції Мюнхена" }
+HeroTitle = { other = "Останні події за повідомленнями поліції Мюнхена" }
+HeroCopy = { other = "Зрозумілий огляд місцевих подій на основі офіційних повідомлень поліції." }
+FixtureIncidents = { other = "Синтетичні повідомлення" }
+LatestIncidents = { other = "Останні події" }
+Reports = { one = "{{.Count}} повідомлення", few = "{{.Count}} повідомлення", many = "{{.Count}} повідомлень", other = "{{.Count}} повідомлення" }
+ShownTotal = { other = "показано {{.Shown}} / усього {{.Total}}" }
+Report = { other = "Повідомлення поліції" }
+SourceMetadata = { other = "Метадані джерела" }
+ReadIncident = { other = "Прочитати повідомлення" }
+OpenOfficialSource = { other = "Відкрити офіційне джерело" }
+OpenOfficialPoliceRelease = { other = "Відкрити офіційне повідомлення поліції" }
+Newer = { other = "Новіші" }
+Older = { other = "Старіші" }
+Page = { other = "Сторінка" }
+Of = { other = "з" }
+NoIncidents = { other = "Повідомлень поки немає" }
+NoFixtureCopy = { other = "Запустіть імпорт тестових даних, щоб заповнити цю сторінку." }
+NoLiveCopy = { other = "Синхронізатор ще не знайшов повідомлень у межах часового вікна." }
+BodyUnavailable = { other = "Текст повідомлення поки недоступний. MunichBrief повторює спробу; тим часом скористайтеся офіційним джерелом." }
+SourceRefreshFailed = { other = "Останнє оновлення джерела не вдалося; ця збережена копія залишається доступною." }
+Back = { other = "Назад" }
+Breadcrumb = { other = "Навігаційний ланцюжок" }
+PublishedWithin = { other = "Опубліковано в" }
+Published = { other = "Опубліковано" }
+LastProcessed = { other = "Остання обробка" }
+Model = { other = "Модель" }
+PromptVersion = { other = "Версія запиту" }
+Category = { other = "Категорія" }
+CategoryTraffic = { other = "Дорожній рух" }
+CategoryTheftBurglary = { other = "Крадіжка та проникнення" }
+CategoryRobberyExtortion = { other = "Розбій і вимагання" }
+CategoryViolence = { other = "Насильство" }
+CategorySexualOffense = { other = "Сексуальні правопорушення" }
+CategoryFraudCyber = { other = "Шахрайство та кіберзлочинність" }
+CategoryDrugs = { other = "Наркотики" }
+CategoryFireHazard = { other = "Пожежі та небезпеки" }
+CategoryPropertyDamage = { other = "Пошкодження майна" }
+CategoryMissingWanted = { other = "Зниклі та розшукувані особи" }
+CategoryPoliceOperation = { other = "Поліцейська операція" }
+CategoryOther = { other = "Інше" }
+Area = { other = "Район" }
+ReportKind = { other = "Тип повідомлення" }
+PublicAssistance = { other = "Допомога громадськості" }
+PublicAssistanceRequested = { other = "Поліція просить допомоги громадськості" }
+PublicAssistanceNeeded = { other = "Потрібна допомога громадськості" }
+PublicAssistanceSourceCopy = { other = "Інструкції, способи зв’язку та додаткові подробиці доступні лише в офіційному джерелі." }
+TimeStatedInReport = { other = "Час події" }
+DayPartMorning = { other = "вранці" }
+DayPartMidday = { other = "опівдні" }
+DayPartAfternoon = { other = "після обіду" }
+DayPartEvening = { other = "увечері" }
+DayPartNight = { other = "уночі" }
+ReportKindIncident = { other = "Подія" }
+ReportKindFollowUp = { other = "Подальше повідомлення" }
+ReportKindMissingPerson = { other = "Повідомлення про зниклу особу" }
+ReportKindWantedPerson = { other = "Повідомлення про розшукувану особу" }
+ReportKindPublicWarning = { other = "Публічне попередження" }
+ReportKindOther = { other = "Інше повідомлення" }
+AssistanceWitnessObservations = { other = "Спостереження свідків" }
+AssistanceIdentifyPerson = { other = "Встановити особу" }
+AssistanceLocatePerson = { other = "Встановити місцеперебування особи" }
+AssistancePhotoVideo = { other = "Фото- або відеоматеріали" }
+AssistanceVehicleInformation = { other = "Інформація про транспортний засіб" }
+AssistancePropertyInformation = { other = "Інформація про майно" }
+AssistanceOtherInformation = { other = "Інша інформація" }
+AIProcessing = { other = "Обробка ШІ" }
+Step = { other = "Етап" }
+Translation = { other = "Переклад" }
+IncidentMetadataStep = { other = "Метадані події" }
+GermanPresentationStep = { other = "Німецьке представлення" }
+PublicAssistanceVerificationStep = { other = "Перевірка запиту про допомогу" }
+CategoryVerificationStep = { other = "Перевірка категорії" }
+EnglishTranslationStep = { other = "Переклад англійською" }
+TurkishTranslationStep = { other = "Переклад турецькою" }
+CroatianTranslationStep = { other = "Переклад хорватською" }
+ItalianTranslationStep = { other = "Переклад італійською" }
+UkrainianTranslationStep = { other = "Переклад українською" }
+BosnianTranslationStep = { other = "Переклад боснійською" }
+StagedPipeline = { other = "Поетапний процес" }
+MetadataFirstPipeline = { other = "Процес із пріоритетом метаданих v2" }
+Generated = { other = "Створено" }
+AISummary = { other = "Огляд, створений ШІ" }
+VerifySource = { other = "Перевіряйте важливі подробиці за найновішою офіційною інформацією." }
+OriginalGerman = { other = "Оригінальний текст німецькою" }
+OriginalQACopy = { other = "Видимий лише для контролю якості в обмеженому режимі перевірки." }
+AuthoritativeSource = { other = "Офіційне джерело" }
+FixtureSourceCopy = { other = "Ця сторінка використовує синтетичний тестовий вміст." }
+LiveSourceCopy = { other = "Це неофіційне представлення. Повідомлення поліції Баварії залишається визначальним." }
+NotProcessed = { other = "Ще не узагальнено або не перекладено" }
+Queued = { other = "Огляд і переклад ШІ додано до черги" }
+Running = { other = "Огляд і переклад ШІ виконується" }
+Retrying = { other = "ШІ тимчасово недоступний; заплановано повторну спробу" }
+NeedsReview = { other = "Результат ШІ потребує перевірки" }
+OriginalShown = { other = "Показано оригінальне повідомлення німецькою." }
+AboutTitle = { other = "Як працює MunichBrief" }
+Methodology = { other = "Про MunichBrief" }
+AboutIntro = { other = "MunichBrief перетворює офіційні повідомлення поліції Мюнхена на зрозумілі структуровані огляди подій кількома мовами." }
+FromReleaseToIncident = { other = "Від повідомлення до події" }
+Discover = { other = "Виявлення" }
+DiscoverCopy = { other = "Нові повідомлення виявляються лише через офіційний RSS-канал поліції Мюнхена." }
+Organize = { other = "Упорядкування" }
+OrganizeCopy = { other = "Повідомлення з кількома звітами розділяються за їхніми офіційними номерами. Окремо опубліковані звіти залишаються окремими." }
+Summarize = { other = "Узагальнення" }
+SummarizeCopy = { other = "Локальні моделі ШІ вилучають категорії, місця, дати та запити про допомогу громадськості, а потім створюють німецький огляд із мінімізацією персональних даних." }
+TranslatePublish = { other = "Переклад і публікація" }
+TranslatePublishCopy = { other = "Німецькі огляди, що пройшли автоматичні перевірки, перекладаються доступними мовами. Публічні сторінки показують створений ШІ вміст лише після успішного завершення процесу обробки." }
+AccuracyOfficialInformation = { other = "Точність та офіційна інформація" }
+AccuracyOfficialInformationCopy = { other = "Створені ШІ огляди та вилучені відомості можуть містити помилки. Повідомлення поліції можуть оновлюватися після публікації. Найновіша офіційна інформація залишається визначальною; діє презумпція невинуватості." }
+PrivacyDataHandling = { other = "Конфіденційність та обробка даних" }
+PrivacyCopy = { other = "MunichBrief не має облікових записів, аналітики чи реклами. Необхідний файл cookie зберігає вибрану мову протягом року. Після вибору «Зрозуміло» основний файл cookie зберігає повідомлення про ШІ 30 днів. Вибрана колірна тема зберігається локально у браузері." }
+DataHandlingCopy = { other = "Вилучений німецький текст джерела зберігається локально. Обмежений режим перевірки може показувати оригінали та стани обробки для контролю якості; публічний режим не показує збережені оригінали." }
+IndependenceLegalReview = { other = "Незалежність і правова перевірка" }
+IndependenceLegalReviewCopy = { other = "MunichBrief не залежить від поліції Баварії. Технічні заходи не замінюють правову перевірку. Строки зберігання, правові підстави, дані про правопорушення та застосовні журналістські винятки потребують постійного аналізу." }
+ContactHeading = { other = "Запитання, виправлення або відгуки" }
+ContactPublicLead = { other = "Знайшли помилку чи маєте пропозицію?" }
+ContactIssueLink = { other = "Створити звернення на GitHub" }
+ContactPrivateLead = { other = "Щодо конфіденційності або інформації, яку не слід публікувати, напишіть на адресу" }

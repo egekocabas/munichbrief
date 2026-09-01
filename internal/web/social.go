@@ -24,6 +24,9 @@ import (
 	"golang.org/x/image/font/gofont/goregular"
 	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/math/fixed"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+	"golang.org/x/text/unicode/norm"
 
 	"github.com/egekocabas/munichbrief/internal/store"
 )
@@ -56,6 +59,7 @@ type socialCardRenderer struct {
 type socialCardSpec struct {
 	Eyebrow       string
 	Title         string
+	LanguageTag   string
 	AIGenerated   bool
 	AIModel       string
 	CacheIdentity string
@@ -129,9 +133,11 @@ func (r *socialCardRenderer) render(spec socialCardSpec) ([]byte, error) {
 		xdraw.CatmullRom.Scale(canvas, image.Rect(899, 55, 1130, 129), r.aiLabel, r.aiLabel.Bounds(), draw.Over, nil)
 	}
 
+	spec.Eyebrow = normalizeSocialText(spec.Eyebrow)
+	spec.Title = normalizeSocialText(spec.Title)
 	titleY := 235
 	if strings.TrimSpace(spec.Eyebrow) != "" {
-		drawText(canvas, eyebrowFace, socialAlert, strings.ToUpper(spec.Eyebrow), socialTextLeft, 170)
+		drawText(canvas, eyebrowFace, socialAlert, localizedUpper(spec.LanguageTag, spec.Eyebrow), socialTextLeft, 170)
 		titleY = 252
 	}
 	for index, line := range wrapSocialTitle(spec.Title, titleFace, socialTextMaxWidth, 2) {
@@ -149,8 +155,17 @@ func (r *socialCardRenderer) render(spec socialCardSpec) ([]byte, error) {
 }
 
 func (r *socialCardRenderer) etag(spec socialCardSpec) string {
-	digest := sha256.Sum256([]byte(r.version + "\x00" + spec.Eyebrow + "\x00" + spec.Title + "\x00" + strconv.FormatBool(spec.AIGenerated) + "\x00" + spec.AIModel + "\x00" + spec.CacheIdentity))
+	digest := sha256.Sum256([]byte(r.version + "\x00" + spec.LanguageTag + "\x00" + spec.Eyebrow + "\x00" + spec.Title + "\x00" + strconv.FormatBool(spec.AIGenerated) + "\x00" + spec.AIModel + "\x00" + spec.CacheIdentity))
 	return fmt.Sprintf(`"%x"`, digest[:12])
+}
+
+func normalizeSocialText(value string) string {
+	value = norm.NFC.String(value)
+	return strings.NewReplacer("\u02bc", "\u2019", "\u2011", "-").Replace(value)
+}
+
+func localizedUpper(tag, value string) string {
+	return cases.Upper(language.Make(tag)).String(value)
 }
 
 func embedPNGXMP(contents, packet []byte) ([]byte, error) {
@@ -334,9 +349,10 @@ func (s *Server) socialCardLanguage(request *http.Request) (string, bool) {
 }
 
 func (s *Server) writeSocialCard(response http.ResponseWriter, request *http.Request, language string, spec socialCardSpec) {
+	definition, _ := s.languageByCode(language)
+	spec.LanguageTag = definition.Tag.String()
 	etag := s.socialCards.etag(spec)
 	response.Header().Set("Content-Type", "image/png")
-	definition, _ := s.languageByCode(language)
 	response.Header().Set("Content-Language", definition.Tag.String())
 	response.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400")
 	response.Header().Set("ETag", etag)
