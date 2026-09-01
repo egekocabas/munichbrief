@@ -7,8 +7,8 @@ MunichBrief turns official Munich Police press releases into a clear multilingua
 incident reader. It discovers the official RSS feed, separates combined daily
 releases into individual reports, and publishes privacy-minimised German
 summaries and translations in English, Turkish, Croatian, Italian, Ukrainian,
-Bosnian, Simplified Chinese, Hindi, Spanish, and French with provenance and links to the
-authoritative source.
+Bosnian, Simplified Chinese, Hindi, Spanish, French, Greek, Romanian, Polish,
+and Russian with provenance and links to the authoritative source.
 
 Visit the live reader at [munichbrief.de](https://munichbrief.de).
 

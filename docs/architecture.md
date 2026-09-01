@@ -109,8 +109,9 @@ to the immutable original metadata category when no verification has succeeded.
 Translation scopes are generated from registered languages. Each language owns
 an immutable prompt, schema, validator, generator, and enablement cutover, while
 all languages share one preferred translation model. English, Turkish,
-Croatian, Italian, Ukrainian, Bosnian, Simplified Chinese, Hindi, Spanish, and
-French each receive only the accepted German title and summary.
+Croatian, Italian, Ukrainian, Bosnian, Simplified Chinese, Hindi, Spanish,
+French, Greek, Romanian, Polish, and Russian each receive only the accepted
+German title and summary.
 
 Application code localizes metadata labels. Each step declares its ordered
 input kinds; the worker passes only those values and hashes the actual inputs

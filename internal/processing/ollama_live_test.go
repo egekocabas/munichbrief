@@ -12,6 +12,7 @@ import (
 
 	"github.com/egekocabas/munichbrief/internal/parser"
 	"github.com/egekocabas/munichbrief/internal/source"
+	"golang.org/x/text/unicode/norm"
 )
 
 const liveOllamaJobTimeout = 10 * time.Minute
@@ -265,10 +266,15 @@ func TestLiveOllamaRegisteredTranslationTargets(t *testing.T) {
 				t.Fatalf("translation result/model is incomplete: %#v/%q", output.Values, returnedModel)
 			}
 			combined := strings.ToLower(title + "\n" + summary)
+			foldedCombined := foldLiveTranslationText(combined)
 			placePreserved := strings.Contains(combined, "maxvorstadt")
 			switch target.Language {
 			case "uk":
 				placePreserved = placePreserved || (strings.Contains(combined, "макс") && strings.Contains(combined, "штадт"))
+			case "el":
+				placePreserved = placePreserved || (containsAny(foldedCombined, "μαξ", "μακσ") && containsAny(foldedCombined, "φορ", "βορ", "σταντ"))
+			case "ru":
+				placePreserved = placePreserved || (strings.Contains(combined, "макс") && containsAny(combined, "фор", "вор", "штадт"))
 			case "zh":
 				placePreserved = placePreserved || containsAny(combined, "马克斯", "馬克斯", "麦克斯", "麥克斯")
 			case "hi":
@@ -286,7 +292,16 @@ func TestLiveOllamaRegisteredTranslationTargets(t *testing.T) {
 			if target.Language == "hi" && !strings.ContainsFunc(combined, func(character rune) bool { return unicode.Is(unicode.Devanagari, character) }) {
 				t.Error("Hindi translation contains no Devanagari characters")
 			}
-			if target.Language == "uk" || target.Language == "zh" || target.Language == "hi" || target.Language == "es" || target.Language == "fr" {
+			if target.Language == "uk" && !strings.ContainsFunc(combined, func(character rune) bool { return unicode.Is(unicode.Cyrillic, character) }) {
+				t.Error("Ukrainian translation contains no Cyrillic characters")
+			}
+			if target.Language == "el" && !strings.ContainsFunc(combined, func(character rune) bool { return unicode.Is(unicode.Greek, character) }) {
+				t.Error("Greek translation contains no Greek characters")
+			}
+			if target.Language == "ru" && !strings.ContainsFunc(combined, func(character rune) bool { return unicode.Is(unicode.Cyrillic, character) }) {
+				t.Error("Russian translation contains no Cyrillic characters")
+			}
+			if target.Language == "uk" || target.Language == "zh" || target.Language == "hi" || target.Language == "es" || target.Language == "fr" || target.Language == "el" || target.Language == "ro" || target.Language == "pl" || target.Language == "ru" {
 				streetContext, cancelStreet := context.WithTimeout(context.Background(), liveOllamaJobTimeout)
 				streetOutput, _, streetErr := client.GenerateStep(streetContext, target.Step, StepInput{Values: map[string]string{
 					"title_de":   "Polizeieinsatz an der Leopoldstraße",
@@ -297,6 +312,7 @@ func TestLiveOllamaRegisteredTranslationTargets(t *testing.T) {
 					t.Fatal(streetErr)
 				}
 				streetText := strings.ToLower(streetOutput.Values["title"] + "\n" + streetOutput.Values["summary"])
+				foldedStreetText := foldLiveTranslationText(streetText)
 				streetPreserved := strings.Contains(streetText, "leopoldstraße") || strings.Contains(streetText, "leopoldstrasse")
 				namePreserved := streetPreserved
 				streetTypePreserved := streetPreserved
@@ -315,6 +331,14 @@ func TestLiveOllamaRegisteredTranslationTargets(t *testing.T) {
 					// Hindi postpositions can make the street relationship explicit without
 					// repeating a standalone rendering of the German -straße suffix.
 					streetPreserved = namePreserved
+				case "el":
+					namePreserved = containsAny(foldedStreetText, "leopold", "λεοπολ")
+					streetTypePreserved = containsAny(foldedStreetText, "straße", "strasse", "στρα", "οδο")
+					streetPreserved = namePreserved && streetTypePreserved
+				case "ru":
+					namePreserved = containsAny(streetText, "leopold", "леопольд")
+					streetTypePreserved = containsAny(streetText, "straße", "strasse", "штрас", "улиц")
+					streetPreserved = namePreserved && streetTypePreserved
 				}
 				if !streetPreserved {
 					t.Errorf("%s translation did not preserve the Munich street name Leopoldstraße (recognizable name=%t street type=%t)", target.Language, namePreserved, streetTypePreserved)
@@ -556,4 +580,13 @@ func containsAny(text string, candidates ...string) bool {
 		}
 	}
 	return false
+}
+
+func foldLiveTranslationText(value string) string {
+	return strings.Map(func(character rune) rune {
+		if unicode.Is(unicode.Mn, character) {
+			return -1
+		}
+		return character
+	}, norm.NFD.String(strings.ToLower(value)))
 }

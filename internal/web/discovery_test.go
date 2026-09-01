@@ -160,7 +160,7 @@ func TestSyntheticReaderLanguageDrivesRoutesNegotiationAndSEO(t *testing.T) {
 	for _, expected := range []string{
 		`<html lang="pt-BR"`,
 		`<link rel="alternate" hreflang="pt-BR" href="https://munichbrief.de/pt">`,
-		`"inLanguage":["de-DE","en-GB","tr-TR","hr-HR","it-IT","uk-UA","bs-BA","zh-CN","hi-IN","es-ES","fr-FR","pt-BR"]`,
+		`"inLanguage":["de-DE","en-GB","tr-TR","hr-HR","it-IT","uk-UA","bs-BA","zh-CN","hi-IN","es-ES","fr-FR","el-GR","ro-RO","pl-PL","ru-RU","pt-BR"]`,
 	} {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("synthetic language page does not contain %q", expected)

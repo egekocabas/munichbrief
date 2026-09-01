@@ -35,6 +35,10 @@ ingress:
       - hi
       - es
       - fr
+      - el
+      - ro
+      - pl
+      - ru
 
 admin:
   enabled: false

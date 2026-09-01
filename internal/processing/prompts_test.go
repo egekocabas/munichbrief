@@ -90,6 +90,10 @@ func TestRegisteredTranslateGemmaPromptsUseTargetLanguageIdentities(t *testing.T
 			"hi": {"standard, consistent Hindi transliteration", "including a street-type suffix", "rather than relying on an example list", "मामूली रूप से घायल", "प्रत्यक्षदर्शियों से अपील"},
 			"es": {"Leopoldstraße", "amplio operativo policial", "presuntamente"},
 			"fr": {"Leopoldstraße", "important dispositif policier", "appel à témoins"},
+			"el": {"standard, consistent Greek transliteration", "including a street-type suffix", "rather than relying on an example list", "τραυματίστηκε ελαφρά", "φέρεται να"},
+			"ro": {"original Latin spelling", "complete street-type suffix", "amplă operațiune a poliției", "se presupune că"},
+			"pl": {"original Latin spelling", "complete street-type suffix", "zakrojona na szeroką skalę akcja policyjna", "prawdopodobnie"},
+			"ru": {"standard, consistent Russian transliteration", "including a street-type suffix", "rather than relying on an example list", "лёгкие травмы", "предположительно"},
 		} {
 			if translation.Language != language {
 				continue

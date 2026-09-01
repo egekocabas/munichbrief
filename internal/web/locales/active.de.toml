@@ -127,6 +127,18 @@ other = "Zur spanischen Version wechseln"
 [SwitchToFrench]
 other = "Zur französischen Version wechseln"
 
+[SwitchToGreek]
+other = "Zur griechischen Version wechseln"
+
+[SwitchToRomanian]
+other = "Zur rumänischen Version wechseln"
+
+[SwitchToPolish]
+other = "Zur polnischen Version wechseln"
+
+[SwitchToRussian]
+other = "Zur russischen Version wechseln"
+
 [HeroEyebrowFixture]
 other = "Lokaler Prototyp"
 
@@ -379,6 +391,18 @@ other = "Spanische Übersetzung"
 
 [FrenchTranslationStep]
 other = "Französische Übersetzung"
+
+[GreekTranslationStep]
+other = "Griechische Übersetzung"
+
+[RomanianTranslationStep]
+other = "Rumänische Übersetzung"
+
+[PolishTranslationStep]
+other = "Polnische Übersetzung"
+
+[RussianTranslationStep]
+other = "Russische Übersetzung"
 
 [StagedPipeline]
 other = "Mehrstufige Pipeline"

@@ -64,6 +64,10 @@ ingress:
       - hi
       - es
       - fr
+      - el
+      - ro
+      - pl
+      - ru
     tls: []
 
 admin:

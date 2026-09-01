@@ -164,3 +164,11 @@ ContactHeading = { other = "Sorular, düzeltmeler veya geri bildirim" }
 ContactPublicLead = { other = "Bir hata mı buldunuz veya öneriniz mi var?" }
 ContactIssueLink = { other = "GitHub’da konu aç" }
 ContactPrivateLead = { other = "Gizlilikle ilgili endişeler veya herkese açık paylaşılmaması gereken konular için e-posta gönderin:" }
+SwitchToGreek = { other = "Yunanca sürüme geç" }
+SwitchToRomanian = { other = "Rumence sürüme geç" }
+SwitchToPolish = { other = "Lehçe sürüme geç" }
+SwitchToRussian = { other = "Rusça sürüme geç" }
+GreekTranslationStep = { other = "Yunanca çeviri" }
+RomanianTranslationStep = { other = "Rumence çeviri" }
+PolishTranslationStep = { other = "Lehçe çeviri" }
+RussianTranslationStep = { other = "Rusça çeviri" }

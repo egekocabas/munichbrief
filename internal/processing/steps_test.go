@@ -35,6 +35,10 @@ func TestRegisteredPipelineStepsAreStableAndOrdered(t *testing.T) {
 		{"hi", HindiTranslationPromptVersion},
 		{"es", SpanishTranslationPromptVersion},
 		{"fr", FrenchTranslationPromptVersion},
+		{"el", GreekTranslationPromptVersion},
+		{"ro", RomanianTranslationPromptVersion},
+		{"pl", PolishTranslationPromptVersion},
+		{"ru", RussianTranslationPromptVersion},
 	}
 	if len(translations) != len(wantTranslations) {
 		t.Fatalf("registered translations = %#v", translations)
