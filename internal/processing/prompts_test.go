@@ -78,18 +78,16 @@ func TestRegisteredTranslateGemmaPromptsUseTargetLanguageIdentities(t *testing.T
 		if strings.Count(rendered, payload) != 1 {
 			t.Errorf("%s TranslateGemma payload occurrence count = %d", translation.Language, strings.Count(rendered, payload))
 		}
-		if translation.Language == "uk" {
-			for _, expected := range []string{"streets, squares, parks, bridges, and stations", "standard, consistent Ukrainian transliteration", "never translate the name's literal meaning"} {
-				if !strings.Contains(rendered, expected) {
-					t.Errorf("Ukrainian TranslateGemma prompt omitted generic place-name rule %q", expected)
-				}
-			}
-		}
 		for language, expected := range map[string][]string{
+			"tr": {"recognizable Latin spelling", "generic street-type word", "rather than relying on an example list", "hafif yaralandı"},
+			"hr": {"recognizable Latin spelling", "generic street-type word", "rather than relying on an example list", "opsežna policijska akcija"},
+			"it": {"original Latin spelling", "complete street-type suffix", "rather than relying on an example list", "appello ai testimoni"},
+			"uk": {"standard, consistent Ukrainian transliteration", "including a street-type suffix", "rather than relying on an example list", "зазнала легких травм"},
+			"bs": {"recognizable Latin spelling", "generic street-type word", "rather than relying on an example list", "lakše povrijeđen/a"},
 			"zh": {"standard, consistent Chinese transliteration", "including a street-type suffix", "rather than relying on an example list", "受轻伤"},
 			"hi": {"standard, consistent Hindi transliteration", "including a street-type suffix", "rather than relying on an example list", "मामूली रूप से घायल", "प्रत्यक्षदर्शियों से अपील"},
-			"es": {"Leopoldstraße", "amplio operativo policial", "presuntamente"},
-			"fr": {"Leopoldstraße", "important dispositif policier", "appel à témoins"},
+			"es": {"original Latin spelling", "complete street-type suffix", "rather than relying on an example list", "amplio operativo policial", "presuntamente"},
+			"fr": {"original Latin spelling", "complete street-type suffix", "rather than relying on an example list", "important dispositif policier", "appel à témoins"},
 			"el": {"standard, consistent Greek transliteration", "including a street-type suffix", "rather than relying on an example list", "τραυματίστηκε ελαφρά", "φέρεται να"},
 			"ro": {"original Latin spelling", "complete street-type suffix", "amplă operațiune a poliției", "se presupune că"},
 			"pl": {"original Latin spelling", "complete street-type suffix", "zakrojona na szeroką skalę akcja policyjna", "prawdopodobnie"},
@@ -104,8 +102,12 @@ func TestRegisteredTranslateGemmaPromptsUseTargetLanguageIdentities(t *testing.T
 				}
 			}
 		}
-		if translation.Language != EnglishLanguage && !strings.Contains(rendered, "streets, squares, parks, bridges, and stations") {
-			t.Errorf("%s TranslateGemma prompt does not cover non-district place names", translation.Language)
+		if translation.Language != EnglishLanguage {
+			for _, expected := range []string{"streets, squares, parks, bridges, and stations", "street-type", "rather than relying on an example list"} {
+				if !strings.Contains(rendered, expected) {
+					t.Errorf("%s TranslateGemma prompt omitted generic place-name contract %q", translation.Language, expected)
+				}
+			}
 		}
 	}
 }

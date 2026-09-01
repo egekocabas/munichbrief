@@ -183,6 +183,10 @@ func TestSocialCardFontsShapeChineseAndHindi(t *testing.T) {
 			t.Errorf("Chinese wrapped line is %dpx wide, max %dpx: %q", width, socialTextMaxWidth, line)
 		}
 	}
+	latinName := wrapSocialTitle("警方在 Maxvorstadt 继续调查", chineseFace, 2000, 2)
+	if got := strings.Join(latinName, ""); got != "警方在 Maxvorstadt 继续调查" {
+		t.Fatalf("Chinese title changed embedded Latin place name spacing: %q", got)
+	}
 }
 
 func TestSocialCardShapingIsSafeForConcurrentRequests(t *testing.T) {
@@ -259,6 +263,12 @@ func TestSocialCardTextStaysInsideSkySafeArea(t *testing.T) {
 	for _, line := range lines {
 		if width := socialFace.measure(line); width > socialTextMaxWidth {
 			t.Errorf("wrapped line %q is %dpx wide, max %dpx", line, width, socialTextMaxWidth)
+		}
+	}
+	longUnbrokenTitle := strings.Repeat("W", 90)
+	for _, line := range wrapSocialTitle(longUnbrokenTitle, socialFace, socialTextMaxWidth, 2) {
+		if width := socialFace.measure(line); width > socialTextMaxWidth {
+			t.Errorf("unbroken wrapped line %q is %dpx wide, max %dpx", line, width, socialTextMaxWidth)
 		}
 	}
 }

@@ -76,9 +76,12 @@ summary. It must preserve subjects, claims, uncertainty, Munich place names,
 and the presumption of innocence without adding explanations or source details.
 Define “preserve” with a fluent reviewer for the target script: retaining the
 official Latin spelling and applying a standard local-script transliteration
-can both preserve identity, while translating a name's literal meaning or
-inventing a district qualifier does not. Smoke fixtures must cover more than a
-district list, including representative streets, squares, stations, parks, and
+can both preserve identity. An idiomatic target-language rendering of a generic
+street-type word or grammatical case ending can also be acceptable when every
+proper-name component and the complete street identity remain recognizable;
+translating a proper name's literal meaning, dropping a component, or inventing
+a district qualifier does not. Smoke fixtures must cover more than a district
+list, including representative streets, squares, stations, parks, and
 municipalities; do not hardcode an application allowlist and assume it covers
 future source wording.
 Keep the existing title and summary limits and strict two-field JSON output.

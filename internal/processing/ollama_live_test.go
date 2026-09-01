@@ -301,7 +301,7 @@ func TestLiveOllamaRegisteredTranslationTargets(t *testing.T) {
 			if target.Language == "ru" && !strings.ContainsFunc(combined, func(character rune) bool { return unicode.Is(unicode.Cyrillic, character) }) {
 				t.Error("Russian translation contains no Cyrillic characters")
 			}
-			if target.Language == "uk" || target.Language == "zh" || target.Language == "hi" || target.Language == "es" || target.Language == "fr" || target.Language == "el" || target.Language == "ro" || target.Language == "pl" || target.Language == "ru" {
+			if target.Language != EnglishLanguage {
 				streetContext, cancelStreet := context.WithTimeout(context.Background(), liveOllamaJobTimeout)
 				streetOutput, _, streetErr := client.GenerateStep(streetContext, target.Step, StepInput{Values: map[string]string{
 					"title_de":   "Polizeieinsatz an der Leopoldstraße",
@@ -317,6 +317,14 @@ func TestLiveOllamaRegisteredTranslationTargets(t *testing.T) {
 				namePreserved := streetPreserved
 				streetTypePreserved := streetPreserved
 				switch target.Language {
+				case "tr":
+					namePreserved = strings.Contains(streetText, "leopold")
+					streetTypePreserved = streetPreserved || containsAny(streetText, "cadde", "sokak", "bulvar")
+					streetPreserved = namePreserved && streetTypePreserved
+				case "hr", "bs":
+					namePreserved = strings.Contains(streetText, "leopold")
+					streetTypePreserved = streetPreserved || containsAny(streetText, "ulic", "cest", "trg")
+					streetPreserved = namePreserved && streetTypePreserved
 				case "uk":
 					namePreserved = strings.Contains(streetText, "leopold") || strings.Contains(streetText, "леопольд")
 					streetTypePreserved = strings.Contains(streetText, "straße") || strings.Contains(streetText, "strasse") || strings.Contains(streetText, "штрас") || strings.Contains(streetText, "вулиц")

@@ -365,12 +365,7 @@ func wrapSocialTitle(value string, face socialTextFace, maxWidth, maxLines int) 
 	separator := face.wordSeparator()
 	words := strings.Fields(value)
 	if separator == "" {
-		words = make([]string, 0, len([]rune(value)))
-		for _, character := range value {
-			if !unicode.IsSpace(character) {
-				words = append(words, string(character))
-			}
-		}
+		words = hanSocialTitleTokens(value)
 	}
 	if len(words) == 0 || maxLines < 1 {
 		return nil
@@ -378,8 +373,10 @@ func wrapSocialTitle(value string, face socialTextFace, maxWidth, maxLines int) 
 	lines := make([]string, 0, maxLines)
 	current := ""
 	for _, word := range words {
-		candidate := word
-		if current != "" {
+		candidate := strings.TrimLeftFunc(word, unicode.IsSpace)
+		if current != "" && separator == "" {
+			candidate = current + word
+		} else if current != "" {
 			candidate = current + separator + word
 		}
 		if face.measure(candidate) <= maxWidth {
@@ -387,14 +384,18 @@ func wrapSocialTitle(value string, face socialTextFace, maxWidth, maxLines int) 
 			continue
 		}
 		if current != "" {
-			lines = append(lines, current)
-			current = word
+			lines = append(lines, strings.TrimSpace(current))
+			current = strings.TrimLeftFunc(word, unicode.IsSpace)
+			if face.measure(current) > maxWidth {
+				lines = append(lines, truncateSocialText(current, face, maxWidth))
+				current = ""
+			}
 		} else {
 			lines = append(lines, truncateSocialText(word, face, maxWidth))
 		}
 	}
 	if current != "" {
-		lines = append(lines, current)
+		lines = append(lines, strings.TrimSpace(current))
 	}
 	if len(lines) <= maxLines {
 		return lines
@@ -403,6 +404,36 @@ func wrapSocialTitle(value string, face socialTextFace, maxWidth, maxLines int) 
 	lines = lines[:maxLines]
 	lines[maxLines-1] = truncateSocialText(remainder, face, maxWidth)
 	return lines
+}
+
+func hanSocialTitleTokens(value string) []string {
+	fields := strings.Fields(value)
+	tokens := make([]string, 0, len([]rune(value)))
+	for fieldIndex, field := range fields {
+		fieldTokens := make([]string, 0, len([]rune(field)))
+		var nonHan strings.Builder
+		flushNonHan := func() {
+			if nonHan.Len() == 0 {
+				return
+			}
+			fieldTokens = append(fieldTokens, nonHan.String())
+			nonHan.Reset()
+		}
+		for _, character := range field {
+			if unicode.Is(unicode.Han, character) {
+				flushNonHan()
+				fieldTokens = append(fieldTokens, string(character))
+				continue
+			}
+			nonHan.WriteRune(character)
+		}
+		flushNonHan()
+		if fieldIndex > 0 && len(fieldTokens) > 0 {
+			fieldTokens[0] = " " + fieldTokens[0]
+		}
+		tokens = append(tokens, fieldTokens...)
+	}
+	return tokens
 }
 
 func truncateSocialText(value string, face socialTextFace, maxWidth int) string {
