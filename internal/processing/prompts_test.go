@@ -73,6 +73,27 @@ func TestFrenchTranslateGemmaPromptProtectsTransitLabels(t *testing.T) {
 	}
 }
 
+func TestGreekTranslateGemmaPromptEndsWithExactLatinNameCheck(t *testing.T) {
+	prompt, found := PromptByVersion(GreekTranslationPromptVersion)
+	if !found || prompt.Status != PromptActive || !prompt.UserOnly || prompt.SystemPrompt != "" {
+		t.Fatalf("active Greek translation prompt = %#v, found=%t", prompt, found)
+	}
+	const payload = `{"title_de":"Sendling","summary_de":"Ramersdorf-Perlach"}`
+	rendered := promptUserMessage(GreekTranslationPromptVersion, payload)
+	for _, expected := range []string{
+		"FINAL GREEK OUTPUT CHECK", "internal checklist of every Latin-script Munich proper name",
+		"matching only a Greek transliteration is invalid", "Pasing και Moosach", "Milbertshofen und Schwabing",
+		"Schwabing-West, Sendling und Ramersdorf-Perlach", "Pattern examples only, never an allowlist", "Τελικός υποχρεωτικός έλεγχος",
+	} {
+		if !strings.Contains(rendered, expected) {
+			t.Errorf("Greek prompt omitted final check %q", expected)
+		}
+	}
+	if strings.LastIndex(rendered, greekTranslationV1FinalCheck) < strings.LastIndex(rendered, payload) {
+		t.Fatal("Greek exact-name check must follow the untrusted source payload")
+	}
+}
+
 func TestRegisteredTranslateGemmaPromptsUseTargetLanguageIdentities(t *testing.T) {
 	for _, translation := range RegisteredTranslations() {
 		prompt, found := PromptByVersion(translation.PromptVersion)
@@ -107,7 +128,7 @@ func TestRegisteredTranslateGemmaPromptsUseTargetLanguageIdentities(t *testing.T
 			"hi": {"standard, consistent Hindi transliteration", "including a street-type suffix", "rather than relying on an example list", "मामूली रूप से घायल", "प्रत्यक्षदर्शियों से अपील"},
 			"es": {"original Latin spelling", "complete street-type suffix", "rather than relying on an example list", "amplio operativo policial", "presuntamente"},
 			"fr": {"original Latin spelling", "complete street-type suffix", "rather than relying on an example list", "important dispositif policier", "appel à témoins", "protected proper names", "Consigne obligatoire pour la sortie française", "Ne jamais les remplacer par « métro »"},
-			"el": {"standard, consistent Greek transliteration", "including a street-type suffix", "rather than relying on an example list", "τραυματίστηκε ελαφρά", "φέρεται να"},
+			"el": {"complete original spelling", "same letters, capitalization, diacritics, and ASCII hyphens", "Υποχρεωτικός κανόνας για την ελληνική έξοδο", "Η ελληνική μεταγραφή επιτρέπεται μόνο επιπλέον", "ποτέ ως αντικατάσταση", "rather than relying on an example list", "τραυματίστηκε ελαφρά", "φέρεται να"},
 			"ro": {"original Latin spelling", "complete street-type suffix", "indivisible protected proper name", "Regula obligatorie pentru rezultatul în limba română", "nu înlocui numele complet cu „strada”", "amplă operațiune a poliției", "se presupune că"},
 			"pl": {"original Latin spelling", "complete street-type suffix", "zakrojona na szeroką skalę akcja policyjna", "prawdopodobnie"},
 			"ru": {"standard, consistent Russian transliteration", "including a street-type suffix", "rather than relying on an example list", "лёгкие травмы", "предположительно"},

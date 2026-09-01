@@ -37,7 +37,10 @@ TranslateGemma prompts derive the English model-facing language names and exact
 BCP-47 codes from the shared language registry. They use the model's recommended
 single-user-message shape, with the complete instruction followed by the JSON
 payload after the required two blank lines; Ollama's structured-output schema
-still constrains the response to the registered title and summary fields. Each
+still constrains the response to the registered title and summary fields.
+Ollama requests use temperature zero and a fixed seed so repeated work with the
+same frozen input, model, and prompt has a reproducible sampling configuration;
+the normal schema, grounding, and privacy validation remains authoritative. Each
 target keeps one active immutable prompt, and retired prompt versions remain
 registered for audit. The generic factory derives its schema, decoder, step,
 and scope; follow
