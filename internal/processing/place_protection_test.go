@@ -55,6 +55,36 @@ func TestProtectedGeneratorRejectsDamagedTokens(t *testing.T) {
 	}
 }
 
+func TestProtectedGeneratorOwnsProtectedPlaceMarkdown(t *testing.T) {
+	inner := &staticGenerator{output: StepOutput{Values: map[string]string{
+		"title":   "Between __MB_PLACE_0002__ and __MB_PLACE_0001__",
+		"summary": "See __MB_PLACE_0003__",
+	}}}
+	protector := staticProtector{ready: true, value: gazetteer.Protected{
+		Title:   "Zwischen **__MB_PLACE_0001__** und __MB_PLACE_0002__",
+		Summary: "Siehe [__MB_PLACE_0003__](https://munichbrief.de/de/incidents/717)",
+		Replacements: []gazetteer.Replacement{
+			{Token: "__MB_PLACE_0001__", Original: "Hauptbahnhof", Field: "title"},
+			{Token: "__MB_PLACE_0002__", Original: "Ostbahnhof", Field: "title"},
+			{Token: "__MB_PLACE_0003__", Original: "Ramersdorf-Perlach", Field: "summary"},
+		},
+	}}
+	generator := &protectedGenerator{inner: inner, protector: protector}
+	output, _, err := generator.GenerateStep(context.Background(), TranslationByLanguageMust(t, "en").Step, StepInput{Values: map[string]string{
+		"title_de":   "Zwischen **Hauptbahnhof** und Ostbahnhof",
+		"summary_de": "Siehe [Ramersdorf-Perlach](https://munichbrief.de/de/incidents/717)",
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inner.input.Value("title_de") != "Zwischen __MB_PLACE_0001__ und __MB_PLACE_0002__" || inner.input.Value("summary_de") != "Siehe __MB_PLACE_0003__" {
+		t.Fatalf("model still received protected Markdown: %#v", inner.input.Values)
+	}
+	if output.Values["title"] != "Between Ostbahnhof and **Hauptbahnhof**" || output.Values["summary"] != "See [Ramersdorf-Perlach](https://munichbrief.de/de/incidents/717)" {
+		t.Fatalf("programmatic Markdown restoration = %#v", output.Values)
+	}
+}
+
 func TestTranslationProcessorAvailabilityTracksGazetteer(t *testing.T) {
 	registry := DefaultPostProcessorRegistry(staticProtector{ready: false})
 	if registry.Ready(TranslationModelStep) {
@@ -79,6 +109,11 @@ func TestTranslationValidationAllowsOnlySameFieldSourceURLs(t *testing.T) {
 	valid := StepOutput{Values: map[string]string{"title": "Title", "summary": "[Schwabing](https://munichbrief.de/en/incidents/378?page=2)"}}
 	if err := validateTranslation(input, &valid); err != nil {
 		t.Fatalf("unchanged source URL rejected: %v", err)
+	}
+	reorderedInput := StepInput{Values: map[string]string{"title_de": "Titel", "summary_de": "[A](https://munichbrief.de/de/incidents/1) und [B](https://munichbrief.de/de/incidents/2)"}}
+	reorderedOutput := StepOutput{Values: map[string]string{"title": "Title", "summary": "[B](https://munichbrief.de/de/incidents/2) and [A](https://munichbrief.de/de/incidents/1)"}}
+	if err := validateTranslation(reorderedInput, &reorderedOutput); err != nil {
+		t.Fatalf("safe target-language link reordering rejected: %v", err)
 	}
 	for _, output := range []StepOutput{
 		{Values: map[string]string{"title": "https://munichbrief.de/en/incidents/378?page=2", "summary": "Schwabing"}},
@@ -115,6 +150,30 @@ func TestTranslationValidationPreservesNumbersAndMarkdownStructure(t *testing.T)
 		if err := validateTranslation(input, &output); err == nil {
 			t.Fatalf("invalid structure accepted: %#v", output.Values)
 		}
+	}
+}
+
+func TestTranslationValidationAcceptsEquivalentLocalizedNumberFormatting(t *testing.T) {
+	input := StepInput{Values: map[string]string{
+		"title_de": "Titel", "summary_de": "Am 30. August 2026 um 04:40 Uhr wurde die 110 gerufen.",
+	}}
+	for _, summary := range []string{
+		"On 30 August 2026 at 4:40, emergency number 110 was called.",
+		"2026年8月30日4:40，拨打了110。",
+	} {
+		output := StepOutput{Values: map[string]string{"title": "Title", "summary": summary}}
+		if err := validateTranslation(input, &output); err != nil {
+			t.Fatalf("equivalent localized numbers rejected for %q: %v", summary, err)
+		}
+	}
+	changed := StepOutput{Values: map[string]string{"title": "Title", "summary": "On 30 August 2026 at 4:40, emergency number 112 was called."}}
+	if err := validateTranslation(input, &changed); err == nil {
+		t.Fatal("changed emergency number was accepted")
+	}
+	nonMonth := StepInput{Values: map[string]string{"title_de": "Titel", "summary_de": "Einsatz an der Augustinerstraße"}}
+	addedMonthNumber := StepOutput{Values: map[string]string{"title": "Title", "summary": "Incident at Augustinerstraße 8"}}
+	if err := validateTranslation(nonMonth, &addedMonthNumber); err == nil {
+		t.Fatal("month substring authorized an added number")
 	}
 }
 

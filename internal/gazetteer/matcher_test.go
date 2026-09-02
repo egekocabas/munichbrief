@@ -43,7 +43,7 @@ func TestMatcherProtectsRequestedNamesMarkdownAndTransit(t *testing.T) {
 	}
 }
 
-func TestRestoreRejectsMissingDuplicateMovedReorderedModifiedAndUnknownTokens(t *testing.T) {
+func TestRestoreRejectsMissingDuplicateMovedModifiedAndUnknownTokensButAllowsReordering(t *testing.T) {
 	matcher := testMatcher(t)
 	protected, err := matcher.Protect("Schwabing und Sendling", "Oberhaching")
 	if err != nil {
@@ -54,13 +54,15 @@ func TestRestoreRejectsMissingDuplicateMovedReorderedModifiedAndUnknownTokens(t 
 		{protected.Title + protected.Title, protected.Summary},
 		{protected.Summary, protected.Title},
 		{protected.Title, protected.Summary + " __MB_PLACE_9999__"},
-		{"__MB_PLACE_0002__ und __MB_PLACE_0001__", protected.Summary},
 		{protected.Title + "suffix", protected.Summary},
 	}
 	for _, test := range tests {
 		if _, _, err := Restore(protected, test.title, test.summary); err == nil {
 			t.Fatalf("Restore(%q, %q) accepted invalid tokens", test.title, test.summary)
 		}
+	}
+	if title, _, err := Restore(protected, "__MB_PLACE_0002__ und __MB_PLACE_0001__", protected.Summary); err != nil || title != "Sendling und Schwabing" {
+		t.Fatalf("Restore rejected target-language token reordering: title=%q err=%v", title, err)
 	}
 	if _, _, err := Restore(protected, "**"+protected.Title+"**", "["+protected.Summary+"](https://munichbrief.de/en/incidents/1)"); err != nil {
 		t.Fatalf("Restore rejected Markdown punctuation around intact tokens: %v", err)

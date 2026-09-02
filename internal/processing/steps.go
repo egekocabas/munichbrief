@@ -798,8 +798,8 @@ func validateTranslation(input StepInput, output *StepOutput) error {
 	} {
 		sourceURLs := translationURLPattern.FindAllString(field.source, -1)
 		translatedURLs := translationURLPattern.FindAllString(field.translated, -1)
-		if strings.Join(sourceURLs, "\x00") != strings.Join(translatedURLs, "\x00") {
-			return errorOf(ErrorPrivacy, "translated %s changed, added, removed, or reordered a web address", field.name)
+		if !sameStringMultiset(sourceURLs, translatedURLs) {
+			return errorOf(ErrorPrivacy, "translated %s changed, added, or removed a web address", field.name)
 		}
 		for _, rawURL := range sourceURLs {
 			parsed, err := url.Parse(rawURL)
@@ -823,10 +823,45 @@ func sameTranslationNumbers(source, translated string) bool {
 		value = translationURLPattern.ReplaceAllString(value, "")
 		value = translationPlaceTokenPattern.ReplaceAllString(value, "")
 		numbers := translationNumberPattern.FindAllString(value, -1)
+		for index, number := range numbers {
+			number = strings.TrimLeft(number, "0")
+			if number == "" {
+				number = "0"
+			}
+			numbers[index] = number
+		}
 		sort.Strings(numbers)
 		return numbers
 	}
-	return strings.Join(normalize(source), "\x00") == strings.Join(normalize(translated), "\x00")
+	sourceNumbers, translatedNumbers := normalize(source), normalize(translated)
+	if strings.Join(sourceNumbers, "\x00") == strings.Join(translatedNumbers, "\x00") {
+		return true
+	}
+	month := germanMonthNumber(source)
+	if month == "" {
+		return false
+	}
+	for index, number := range translatedNumbers {
+		if number == month {
+			translatedNumbers = append(translatedNumbers[:index], translatedNumbers[index+1:]...)
+			break
+		}
+	}
+	return strings.Join(sourceNumbers, "\x00") == strings.Join(translatedNumbers, "\x00")
+}
+
+func germanMonthNumber(value string) string {
+	words := strings.FieldsFunc(strings.ToLower(value), func(character rune) bool {
+		return !unicode.IsLetter(character)
+	})
+	for _, word := range words {
+		for index, month := range []string{"januar", "februar", "märz", "april", "mai", "juni", "juli", "august", "september", "oktober", "november", "dezember"} {
+			if word == month {
+				return strconv.Itoa(index + 1)
+			}
+		}
+	}
+	return ""
 }
 
 func sameMarkdownStructure(source, translated string) bool {
@@ -840,7 +875,7 @@ func sameMarkdownStructure(source, translated string) bool {
 		}
 		return tokens
 	}
-	if strings.Join(protectedInBold(source), "\x00") != strings.Join(protectedInBold(translated), "\x00") {
+	if !sameStringMultiset(protectedInBold(source), protectedInBold(translated)) {
 		return false
 	}
 	links := func(value string) []string {
@@ -850,7 +885,17 @@ func sameMarkdownStructure(source, translated string) bool {
 		}
 		return signatures
 	}
-	return strings.Join(links(source), "\x01") == strings.Join(links(translated), "\x01")
+	return sameStringMultiset(links(source), links(translated))
+}
+
+func sameStringMultiset(left, right []string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	left, right = append([]string(nil), left...), append([]string(nil), right...)
+	sort.Strings(left)
+	sort.Strings(right)
+	return strings.Join(left, "\x00") == strings.Join(right, "\x00")
 }
 
 func validateTargetScript(language, title, summary string) error {

@@ -82,7 +82,7 @@ type chatRequest struct {
 	Messages  []chatMessage   `json:"messages"`
 	Stream    bool            `json:"stream"`
 	Think     bool            `json:"think"`
-	Format    json.RawMessage `json:"format"`
+	Format    json.RawMessage `json:"format,omitempty"`
 	Options   chatOptions     `json:"options"`
 	KeepAlive string          `json:"keep_alive"`
 }

@@ -106,6 +106,10 @@ district and street names, required terminology, attribution and uncertainty,
 strict JSON, Han, Devanagari, Greek, and Cyrillic script output, and
 instruction-like translated data without logging generated text.
 
+See [Translation model evaluation](translation-model-evaluation.md) for the
+official TranslateGemma request contract, the native-adapter boundary, separate
+structural/editorial scoring, and the bounded comparison protocol.
+
 The longer Munich place-name preservation matrix is independently gated so it
 does not slow the normal live smoke suite. It checks every translation target
 through the real placeholder wrapper with one dense request containing all 11

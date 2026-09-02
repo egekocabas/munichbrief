@@ -122,17 +122,21 @@ func (m *Matcher) protectField(value, field string, replacements []Replacement, 
 }
 
 func Restore(protected Protected, title, summary string) (string, string, error) {
-	expected := map[string][]string{"title": nil, "summary": nil}
+	expected := map[string]map[string]int{"title": {}, "summary": {}}
 	for _, replacement := range protected.Replacements {
 		if replacement.Field != "title" && replacement.Field != "summary" {
 			return "", "", fmt.Errorf("protected place token %s has unknown source field", replacement.Token)
 		}
-		expected[replacement.Field] = append(expected[replacement.Field], replacement.Token)
+		expected[replacement.Field][replacement.Token]++
 	}
 	for field, value := range map[string]string{"title": title, "summary": summary} {
 		actual := placeTokenPattern.FindAllString(value, -1)
-		if strings.Join(actual, "\x00") != strings.Join(expected[field], "\x00") {
-			return "", "", fmt.Errorf("protected place tokens in %s were missing, duplicated, moved, reordered, or unknown", field)
+		actualCounts := make(map[string]int, len(actual))
+		for _, token := range actual {
+			actualCounts[token]++
+		}
+		if !sameTokenCounts(expected[field], actualCounts) {
+			return "", "", fmt.Errorf("protected place tokens in %s were missing, duplicated, moved, or unknown", field)
 		}
 		for _, token := range actual {
 			if !standaloneToken(value, token) {
@@ -153,6 +157,18 @@ func Restore(protected Protected, title, summary string) (string, string, error)
 		return "", "", errors.New("translation output contains an unknown place token")
 	}
 	return norm.NFC.String(title), norm.NFC.String(summary), nil
+}
+
+func sameTokenCounts(expected, actual map[string]int) bool {
+	if len(expected) != len(actual) {
+		return false
+	}
+	for token, count := range expected {
+		if actual[token] != count {
+			return false
+		}
+	}
+	return true
 }
 
 func standaloneToken(value, token string) bool {
