@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	langregistry "github.com/egekocabas/munichbrief/internal/languages"
@@ -250,7 +251,7 @@ func newTranslationDefinition(target langregistry.Definition, prompt PromptDefin
 			InputKinds: []string{"title_de", "summary_de"}, OutputKinds: []string{"title", "summary"},
 			SystemPrompt: prompt.SystemPrompt, Schema: schema,
 			Generator: translationInputGenerator(prompt.Version), OutputDecoder: translationOutputDecoder(titleField, summaryField),
-			Validator: validateTranslation, OutputValues: postProcessingOutputValues},
+			Validator: translationValidator(target.Code), OutputValues: postProcessingOutputValues},
 	}, nil
 }
 
@@ -759,7 +760,22 @@ func validateGermanPresentation(_ StepInput, output *StepOutput) error {
 	return validatePublicText(output.TitleDE + "\n" + output.SummaryDE)
 }
 
-var translationURLPattern = regexp.MustCompile(`(?i)\b(?:https?://|www\.)[^\s)]+`)
+var (
+	translationURLPattern          = regexp.MustCompile(`(?i)\b(?:https?://|www\.)[^\s)]+`)
+	translationPlaceTokenPattern   = regexp.MustCompile(`__MB_PLACE_[0-9]{4}__`)
+	translationNumberPattern       = regexp.MustCompile(`[0-9]+`)
+	translationBoldPattern         = regexp.MustCompile(`\*\*([^*\n]+)\*\*`)
+	translationMarkdownLinkPattern = regexp.MustCompile(`\[([^\]\n]*)\]\((https://[^)\s]+)\)`)
+)
+
+func translationValidator(language string) func(StepInput, *StepOutput) error {
+	return func(input StepInput, output *StepOutput) error {
+		if err := validateTranslation(input, output); err != nil {
+			return err
+		}
+		return validateTargetScript(language, output.Values["title"], output.Values["summary"])
+	}
+}
 
 func validateTranslation(input StepInput, output *StepOutput) error {
 	title, titleFound := output.Values["title"]
@@ -791,9 +807,78 @@ func validateTranslation(input StepInput, output *StepOutput) error {
 				return errorOf(ErrorPrivacy, "translated %s contains a non-public or third-party web address", field.name)
 			}
 		}
+		if !sameTranslationNumbers(field.source, field.translated) {
+			return errorOf(ErrorOutput, "translated %s changed or omitted a number", field.name)
+		}
+		if !sameMarkdownStructure(field.source, field.translated) {
+			return errorOf(ErrorOutput, "translated %s changed Markdown structure", field.name)
+		}
 	}
 	publicText := translationURLPattern.ReplaceAllString(title+"\n"+summary, "")
 	return validatePublicText(publicText)
+}
+
+func sameTranslationNumbers(source, translated string) bool {
+	normalize := func(value string) []string {
+		value = translationURLPattern.ReplaceAllString(value, "")
+		value = translationPlaceTokenPattern.ReplaceAllString(value, "")
+		numbers := translationNumberPattern.FindAllString(value, -1)
+		sort.Strings(numbers)
+		return numbers
+	}
+	return strings.Join(normalize(source), "\x00") == strings.Join(normalize(translated), "\x00")
+}
+
+func sameMarkdownStructure(source, translated string) bool {
+	if strings.Count(source, "**") != strings.Count(translated, "**") {
+		return false
+	}
+	protectedInBold := func(value string) []string {
+		var tokens []string
+		for _, match := range translationBoldPattern.FindAllStringSubmatch(value, -1) {
+			tokens = append(tokens, translationPlaceTokenPattern.FindAllString(match[1], -1)...)
+		}
+		return tokens
+	}
+	if strings.Join(protectedInBold(source), "\x00") != strings.Join(protectedInBold(translated), "\x00") {
+		return false
+	}
+	links := func(value string) []string {
+		var signatures []string
+		for _, match := range translationMarkdownLinkPattern.FindAllStringSubmatch(value, -1) {
+			signatures = append(signatures, match[2]+"\x00"+strings.Join(translationPlaceTokenPattern.FindAllString(match[1], -1), "\x00"))
+		}
+		return signatures
+	}
+	return strings.Join(links(source), "\x01") == strings.Join(links(translated), "\x01")
+}
+
+func validateTargetScript(language, title, summary string) error {
+	target := map[string]*unicode.RangeTable{
+		"zh": unicode.Han, "hi": unicode.Devanagari, "el": unicode.Greek,
+		"uk": unicode.Cyrillic, "ru": unicode.Cyrillic,
+	}[language]
+	if target == nil {
+		return nil
+	}
+	for field, value := range map[string]string{"title": title, "summary": summary} {
+		value = translationURLPattern.ReplaceAllString(value, "")
+		value = translationPlaceTokenPattern.ReplaceAllString(value, "")
+		letters, targetLetters := 0, 0
+		for _, character := range value {
+			if !unicode.IsLetter(character) {
+				continue
+			}
+			letters++
+			if unicode.Is(target, character) {
+				targetLetters++
+			}
+		}
+		if targetLetters < 2 || letters > 0 && targetLetters*100/letters < 60 {
+			return errorOf(ErrorOutput, "translated %s is not predominantly in the target script", field)
+		}
+	}
+	return nil
 }
 
 func validatePublicAssistanceVerification(input StepInput, output *StepOutput) error {
@@ -860,6 +945,11 @@ func validateCategoryVerification(input StepInput, output *StepOutput) error {
 func normalizeLimitedField(name string, value *string, limit int) error {
 	if !utf8.ValidString(*value) {
 		return errorOf(ErrorOutput, "model output %s is not valid UTF-8", name)
+	}
+	for _, character := range *value {
+		if unicode.IsControl(character) && character != '\n' && character != '\r' && character != '\t' {
+			return errorOf(ErrorOutput, "model output %s contains a control character", name)
+		}
 	}
 	*value = norm.NFC.String(strings.Join(strings.Fields(*value), " "))
 	if *value == "" {

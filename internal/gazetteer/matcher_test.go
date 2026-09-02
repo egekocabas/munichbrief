@@ -56,7 +56,6 @@ func TestRestoreRejectsMissingDuplicateMovedReorderedModifiedAndUnknownTokens(t 
 		{protected.Title, protected.Summary + " __MB_PLACE_9999__"},
 		{"__MB_PLACE_0002__ und __MB_PLACE_0001__", protected.Summary},
 		{protected.Title + "suffix", protected.Summary},
-		{protected.Title + "'da", protected.Summary},
 	}
 	for _, test := range tests {
 		if _, _, err := Restore(protected, test.title, test.summary); err == nil {
@@ -68,6 +67,26 @@ func TestRestoreRejectsMissingDuplicateMovedReorderedModifiedAndUnknownTokens(t 
 	}
 	if title, summary, err := Restore(protected, "警方在__MB_PLACE_0001__和__MB_PLACE_0002__行动", "靠近__MB_PLACE_0003__的现场"); err != nil || title != "警方在Schwabing和Sendling行动" || summary != "靠近Oberhaching的现场" {
 		t.Fatalf("Restore rejected normal Han adjacency: title=%q summary=%q err=%v", title, summary, err)
+	}
+	if title, _, err := Restore(protected, protected.Title+"'da", protected.Summary); err != nil || title != "Schwabing und Sendling'da" {
+		t.Fatalf("Restore rejected an apostrophe-delimited suffix: title=%q err=%v", title, err)
+	}
+}
+
+func TestMatcherReusesStableTokenForRepeatedNameAndChecksEveryOccurrence(t *testing.T) {
+	matcher := testMatcher(t)
+	protected, err := matcher.Protect("Einsatz in Schwabing", "Schwabing bleibt gesperrt; Schwabing wird geprüft.")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if protected.Title != "Einsatz in __MB_PLACE_0001__" || protected.Summary != "__MB_PLACE_0001__ bleibt gesperrt; __MB_PLACE_0001__ wird geprüft." || len(protected.Replacements) != 3 {
+		t.Fatalf("stable repeated token = %#v", protected)
+	}
+	if _, _, err := Restore(protected, protected.Title, "__MB_PLACE_0001__ bleibt gesperrt."); err == nil {
+		t.Fatal("Restore accepted a missing repeated occurrence")
+	}
+	if title, summary, err := Restore(protected, protected.Title, protected.Summary); err != nil || title != "Einsatz in Schwabing" || summary != "Schwabing bleibt gesperrt; Schwabing wird geprüft." {
+		t.Fatalf("Restore repeated token: title=%q summary=%q err=%v", title, summary, err)
 	}
 }
 
@@ -107,7 +126,7 @@ func BenchmarkMatcherBuild(b *testing.B) {
 	b.ResetTimer()
 	for range b.N {
 		matcher, err := NewMatcher(entries)
-		if err != nil || matcher.Count() != len(entries)+2 {
+		if err != nil || matcher.Count() != len(entries)+4 {
 			b.Fatal(err)
 		}
 	}

@@ -25,7 +25,7 @@ const (
 	// sourceContractVersion invalidates conditional HTTP validators whenever parsing,
 	// filtering, or source-entry semantics change. Bump it with those changes so a
 	// 304 cannot silently reuse entries produced by an older contract.
-	sourceContractVersion = "2026-09-02-1"
+	sourceContractVersion = "2026-09-02-2"
 	munichStreetURL       = "https://geoportal.muenchen.de/geoserver/gsm_wfs/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=gsm_wfs:erlaeuterung_strassennamen&outputFormat=application/json"
 	munichDistrictURL     = "https://geoportal.muenchen.de/geoserver/gsm_wfs/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=gsm_wfs:vablock_stadtbezirk&outputFormat=application/json"
 	geoNamesURL           = "https://download.geonames.org/export/dump/DE.zip"
@@ -40,7 +40,7 @@ func DefaultSources() []SourceDefinition {
 		{Key: "geonames_munich", DisplayName: "GeoNames Munich places", URL: geoNamesURL, License: "CC BY 4.0", Attribution: "GeoNames", MinimumRows: 150, MaximumRows: 500, MaximumSize: 20 << 20, Parse: parseGeoNames},
 		osmSource("osm_places", "OpenStreetMap Munich places", `[out:json][timeout:90];area[boundary=administrative]["de:amtlicher_gemeindeschluessel"~"^(09162000|09184)"]->.a;(nwr(area.a)[place~"^(city|town|village|suburb|quarter|neighbourhood|hamlet|locality|square)$"][name];);out tags;`, 100, 10000),
 		osmSource("osm_transit", "OpenStreetMap Munich transit", `[out:json][timeout:90];area[boundary=administrative]["de:amtlicher_gemeindeschluessel"~"^(09162000|09184)"]->.a;(nwr(area.a)[railway~"^(station|halt|tram_stop|subway_entrance)$"][name];nwr(area.a)[public_transport~"^(station|stop_position|platform)$"][name];);out tags;`, 100, 20000),
-		osmSource("osm_landmarks", "OpenStreetMap Munich landmarks", `[out:json][timeout:90];area[boundary=administrative]["de:amtlicher_gemeindeschluessel"~"^(09162000|09184)"]->.a;(nwr(area.a)[leisure~"^(park|garden|stadium)$"][name];nwr(area.a)[tourism~"^(attraction|museum|zoo)$"][name];nwr(area.a)[historic~"^(castle|monument|memorial)$"][name];nwr(area.a)[amenity=marketplace][name];nwr(area.a)[aeroway=aerodrome][name];);out tags;`, 50, 20000),
+		osmSource("osm_landmarks", "OpenStreetMap Munich landmarks", `[out:json][timeout:90];area[boundary=administrative]["de:amtlicher_gemeindeschluessel"~"^(09162000|09184)"]->.a;(nwr(area.a)[leisure~"^(park|garden|stadium)$"][name];nwr(area.a)[tourism~"^(attraction|museum|zoo)$"][name];nwr(area.a)[historic~"^(castle|monument|memorial)$"][name];nwr(area.a)[amenity=marketplace][name];nwr(area.a)[aeroway=aerodrome][name];nwr(area.a)[natural~"^(wood|heath|scrub)$"][name];nwr(area.a)[landuse~"^(forest|recreation_ground)$"][name];nwr(area.a)[boundary~"^(protected_area|national_park)$"][name];);out tags;`, 50, 20000),
 		osmSource("osm_roads", "OpenStreetMap Munich roads", `[out:json][timeout:120];area[boundary=administrative]["de:amtlicher_gemeindeschluessel"~"^(09162000|09184)"]->.a;(way(area.a)[highway][name];);out tags;`, 5000, 150000),
 	}
 }

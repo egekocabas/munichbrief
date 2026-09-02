@@ -6,11 +6,32 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestDefaultLandmarkSourceCoversNamedNaturalAreas(t *testing.T) {
+	for _, source := range DefaultSources() {
+		if source.Key != "osm_landmarks" {
+			continue
+		}
+		parsed, err := url.Parse(source.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		query := parsed.Query().Get("data")
+		for _, expected := range []string{"[natural~", "[landuse~", "[boundary~"} {
+			if !strings.Contains(query, expected) {
+				t.Fatalf("landmark query omitted %q: %s", expected, query)
+			}
+		}
+		return
+	}
+	t.Fatal("osm_landmarks source is missing")
+}
 
 func TestOfficialAndOSMParsersUseExpectedFields(t *testing.T) {
 	streets, err := parseMunichStreets([]byte(`{"features":[{"id":"street.1","properties":{"strassenname":"Ingolstädter Straße"}}]}`))

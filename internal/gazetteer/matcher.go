@@ -35,7 +35,7 @@ type Protected struct {
 }
 
 func NewMatcher(entries []Entry) (*Matcher, error) {
-	byName := make(map[string]Entry, len(entries)+2)
+	byName := make(map[string]Entry, len(entries)+4)
 	for _, entry := range entries {
 		entry.Name = norm.NFC.String(strings.TrimSpace(entry.Name))
 		if !validName(entry.Name) {
@@ -48,7 +48,7 @@ func NewMatcher(entries []Entry) (*Matcher, error) {
 			byName[entry.Name] = entry
 		}
 	}
-	for _, name := range []string{"U-Bahn", "S-Bahn"} {
+	for _, name := range []string{"U-Bahn", "U-Bahnen", "S-Bahn", "S-Bahnen"} {
 		byName[name] = Entry{Name: name, Kind: KindTransit, Priority: 0}
 	}
 	patterns := make([]string, 0, len(byName))
@@ -87,13 +87,14 @@ func (m *Matcher) Protect(title, summary string) (Protected, error) {
 	}
 	result := Protected{}
 	var replacements []Replacement
-	result.Title, replacements = m.protectField(title, "title", replacements)
-	result.Summary, replacements = m.protectField(summary, "summary", replacements)
+	tokens := make(map[string]string)
+	result.Title, replacements = m.protectField(title, "title", replacements, tokens)
+	result.Summary, replacements = m.protectField(summary, "summary", replacements, tokens)
 	result.Replacements = replacements
 	return result, nil
 }
 
-func (m *Matcher) protectField(value, field string, replacements []Replacement) (string, []Replacement) {
+func (m *Matcher) protectField(value, field string, replacements []Replacement, tokens map[string]string) (string, []Replacement) {
 	var builder strings.Builder
 	position := 0
 	iter := m.automaton.Iter(value)
@@ -103,7 +104,11 @@ func (m *Matcher) protectField(value, field string, replacements []Replacement) 
 		if start < position || !unicodeBoundary(value, start, end) || letterCount(entry.Name) < 3 && touchesDash(value, start, end) || entry.RequiresContext && !hasLocationContext(value, start) {
 			continue
 		}
-		token := fmt.Sprintf("%s%04d__", tokenPrefix, len(replacements)+1)
+		token, found := tokens[entry.Name]
+		if !found {
+			token = fmt.Sprintf("%s%04d__", tokenPrefix, len(tokens)+1)
+			tokens[entry.Name] = token
+		}
 		builder.WriteString(value[position:start])
 		builder.WriteString(token)
 		replacements = append(replacements, Replacement{Token: token, Original: value[start:end], Field: field})
@@ -135,9 +140,14 @@ func Restore(protected Protected, title, summary string) (string, string, error)
 			}
 		}
 	}
+	restored := make(map[string]bool, len(protected.Replacements))
 	for _, replacement := range protected.Replacements {
+		if restored[replacement.Token] {
+			continue
+		}
 		title = strings.ReplaceAll(title, replacement.Token, replacement.Original)
 		summary = strings.ReplaceAll(summary, replacement.Token, replacement.Original)
+		restored[replacement.Token] = true
 	}
 	if strings.Contains(title, tokenPrefix) || strings.Contains(summary, tokenPrefix) {
 		return "", "", errors.New("translation output contains an unknown place token")
@@ -180,7 +190,7 @@ func tokenAttachment(character rune) bool {
 	if unicode.Is(unicode.Han, character) {
 		return false
 	}
-	return unicode.IsLetter(character) || unicode.IsDigit(character) || unicode.IsMark(character) || character == '_' || unicode.Is(unicode.Dash, character) || character == '\'' || character == '’'
+	return unicode.IsLetter(character) || unicode.IsDigit(character) || unicode.IsMark(character) || character == '_' || unicode.Is(unicode.Dash, character)
 }
 
 func validName(name string) bool {
