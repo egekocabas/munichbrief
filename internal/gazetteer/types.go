@@ -22,9 +22,11 @@ type Entry struct {
 }
 
 type EntrySource struct {
-	Key        string
-	ExternalID string
-	Kind       string
+	Key             string
+	ExternalID      string
+	Kind            string
+	Priority        int
+	RequiresContext bool
 }
 
 type SourceDefinition struct {

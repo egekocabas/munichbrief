@@ -179,6 +179,15 @@ func mergeEntries(snapshots []SourceSnapshot, overrides map[string]string) []Ent
 			if !validName(entry.Name) || overrides[entry.Name] == "exclude" {
 				continue
 			}
+			for index := range entry.Sources {
+				if entry.Sources[index].Kind == "" {
+					entry.Sources[index].Kind = entry.Kind
+				}
+				if entry.Sources[index].Priority == 0 {
+					entry.Sources[index].Priority = entry.Priority
+				}
+				entry.Sources[index].RequiresContext = entry.Sources[index].RequiresContext || entry.RequiresContext
+			}
 			if letterCount(entry.Name) < 3 {
 				entry.RequiresContext = true
 			}
@@ -207,9 +216,11 @@ func mergeEntries(snapshots []SourceSnapshot, overrides map[string]string) []Ent
 }
 
 func aggregateSourceHash(snapshots []SourceSnapshot, overrides map[string]string) string {
-	parts := make([]string, 0, len(snapshots)+len(overrides))
+	parts := make([]string, 0, len(snapshots)+len(overrides)+1)
+	parts = append(parts, "source-contract:"+sourceContractVersion)
 	for _, snapshot := range snapshots {
-		parts = append(parts, snapshot.Definition.Key+":"+snapshot.ContentHash)
+		definition := snapshot.Definition
+		parts = append(parts, fmt.Sprintf("source:%s:%s:%s:%s:%s:%d:%d:%d:%s", definition.Key, definition.URL, definition.DisplayName, definition.License, definition.Attribution, definition.MinimumRows, definition.MaximumRows, definition.MaximumSize, snapshot.ContentHash))
 	}
 	for name, action := range overrides {
 		parts = append(parts, "override:"+name+":"+action)

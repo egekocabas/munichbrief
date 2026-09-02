@@ -63,3 +63,13 @@ func TestMergeEntriesAppliesAmbiguityOverridesAndShortNameContext(t *testing.T) 
 		t.Fatalf("mergeEntries() = %#v", entries)
 	}
 }
+
+func TestAggregateSourceHashIncludesSourceContract(t *testing.T) {
+	snapshot := SourceSnapshot{Definition: SourceDefinition{Key: "source", URL: "https://example.test/one"}, ContentHash: "content"}
+	first := aggregateSourceHash([]SourceSnapshot{snapshot}, nil)
+	snapshot.Definition.URL = "https://example.test/two"
+	second := aggregateSourceHash([]SourceSnapshot{snapshot}, nil)
+	if first == second {
+		t.Fatal("source definition change did not invalidate generation hash")
+	}
+}

@@ -122,18 +122,21 @@ Before a translation request, the active gazetteer matcher replaces exact
 Munich-area streets, districts, neighbourhoods, municipalities, transit names,
 parks, squares, and landmarks with opaque tokens. It uses leftmost-longest
 Aho–Corasick matching plus Unicode word boundaries; ambiguous common nouns
-require location context. The model must return every token exactly once in the
-same field. The application rejects missing, duplicated, moved, or invented
-tokens and restores the exact NFC-normalized German spelling before ordinary
-validation and persistence. If no valid generation is loaded, translation job
-claims pause while German processing, existing publications, and readiness
-continue.
+require location context. The model must return every token exactly once, in
+source order, in the same field, and without attaching an inflection. The
+application rejects missing, duplicated, moved, reordered, modified, or
+invented tokens and restores the exact NFC-normalized German spelling before
+ordinary validation and persistence. If no valid generation is loaded,
+translation job claims pause while German processing, existing publications,
+and readiness continue.
 
 The gazetteer database records immutable generations and source provenance.
 Refreshes require every fixed HTTPS source to pass size, schema, and count
-checks before activation. Any source or matcher failure leaves the last
-successful generation active. The database is rebuildable and is not part of
-the incident database backup.
+checks before activation. Conditional validators are bound to the source URL
+and a versioned parser contract, so source or parsing changes force a complete
+download. Any source or matcher failure leaves the last successful generation
+active. The database is rebuildable and is not part of the incident database
+backup.
 
 Application code localizes metadata labels. Each step declares its ordered
 input kinds; the worker passes only those values and hashes the actual inputs

@@ -132,7 +132,7 @@ func TestLiveOllamaPrivacySafeMetadataFirstPresentation(t *testing.T) {
 	}
 }
 
-func TestLiveOllamaTranslateGemmaPromptContract(t *testing.T) {
+func TestLiveOllamaUnifiedTranslationPromptContract(t *testing.T) {
 	if os.Getenv("MUNICHBRIEF_OLLAMA_LIVE_TEST") != "1" {
 		t.Skip("set MUNICHBRIEF_OLLAMA_LIVE_TEST=1 for the explicit Ollama smoke test")
 	}

@@ -50,11 +50,14 @@ func TestRegisteredTranslationPromptsUseOnePlaceholderContract(t *testing.T) {
 			`__MB_PLACE_####__`, "Copy every such token exactly once", "Preserve Markdown syntax and link URLs exactly",
 		} {
 			if !strings.Contains(rendered, expected) {
-				t.Errorf("%s TranslateGemma prompt omitted %q", translation.Language, expected)
+				t.Errorf("%s unified translation prompt omitted %q", translation.Language, expected)
 			}
 		}
 		if strings.Count(rendered, payload) != 1 {
-			t.Errorf("%s TranslateGemma payload occurrence count = %d", translation.Language, strings.Count(rendered, payload))
+			t.Errorf("%s unified translation payload occurrence count = %d", translation.Language, strings.Count(rendered, payload))
+		}
+		if !strings.Contains(rendered, ":\n\n\n"+payload) || strings.Contains(rendered, ":\n\n\n\n"+payload) {
+			t.Errorf("%s unified translation prompt must have exactly two blank lines before the payload", translation.Language)
 		}
 		body := strings.ReplaceAll(prompt.UserPromptTemplate, definition.TranslationName, "TARGET")
 		body = strings.ReplaceAll(body, definition.Tag.String(), "TAG")

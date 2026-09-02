@@ -18,9 +18,9 @@ Choose these values before writing code:
   in URLs, the preference cookie, and persisted translation scope keys, and
   must not be the reserved `api` prefix;
 - the exact BCP-47 content tag, such as `fr-FR` or `pt-BR`, for negotiation,
-  HTML, HTTP, Markdown, hreflang, structured data, and the TranslateGemma
+  HTML, HTTP, Markdown, hreflang, structured data, and the translation
   source/target code;
-- the English model-facing language name used in the TranslateGemma prompt,
+- the English model-facing language name used in the unified prompt,
   such as `French` or `Portuguese`;
 - the Open Graph locale, such as `fr_FR`;
 - the language's own display name and localized language-switch/provenance
@@ -37,9 +37,9 @@ own stable code.
    `internal/languages/languages.go`. Supply its exact tag, catalog filename,
    English model-facing translation name, Open Graph locale, message IDs, and
    date formatters. Keep German as the only canonical entry. Confirm the exact
-   BCP-47 tag is listed by the
-   [Ollama TranslateGemma prompt guide](https://ollama.com/library/translategemma:4b)
-   before registration.
+   BCP-47 tag and target language are supported by the intended translation
+   model, then exercise that exact model through the opt-in live checks before
+   registration.
 2. Register a new immutable translation prompt version in
    `internal/processing/prompts.go`. Set its translation language to the new
    registry code and its step key to `translation/<code>`. The shared user-only
@@ -88,11 +88,13 @@ and `ț` rather than cedilla variants; for Polish, cover its complete extended
 Latin alphabet; and for Russian, distinguish its Cyrillic repertoire (including
 `Ё`) from Ukrainian. Exercise every CLDR plural category used by the locale,
 including `few` and `many` where applicable.
-TranslateGemma supports only user and assistant roles in its native template;
-MunichBrief therefore sends the complete translation instruction and payload as
-one user message while retaining Ollama's JSON schema constraint. The model
-card documents accepted language-code forms and the native template contract:
-[Google TranslateGemma model card](https://huggingface.co/google/translategemma-4b-it).
+MunichBrief sends the complete unified translation instruction and payload as
+one user message while retaining Ollama's JSON schema constraint. Following the
+[Ollama TranslateGemma prompt guide](https://ollama.com/library/translategemma:4b),
+exactly two blank lines separate the instruction from the JSON payload. The
+same clear separation is compatible with general chat templates, but model
+support is not inferred from prompt compatibility: each intended model and
+quantization must pass the registered-target and place-preservation live checks.
 
 Add tests for valid output, missing/extra fields, length limits, unsafe public
 text, and prompt-injection-like input. Then run the opt-in Ollama smoke check

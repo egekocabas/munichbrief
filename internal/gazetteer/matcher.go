@@ -3,6 +3,7 @@ package gazetteer
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"unicode"
@@ -13,6 +14,8 @@ import (
 )
 
 const tokenPrefix = "__MB_PLACE_"
+
+var placeTokenPattern = regexp.MustCompile(`__MB_PLACE_[0-9]{4}__`)
 
 type Matcher struct {
 	automaton ahocorasick.AhoCorasick
@@ -114,13 +117,25 @@ func (m *Matcher) protectField(value, field string, replacements []Replacement) 
 }
 
 func Restore(protected Protected, title, summary string) (string, string, error) {
+	expected := map[string][]string{"title": nil, "summary": nil}
 	for _, replacement := range protected.Replacements {
-		if strings.Count(title, replacement.Token)+strings.Count(summary, replacement.Token) != 1 {
-			return "", "", fmt.Errorf("protected place token %s must occur exactly once", replacement.Token)
+		if replacement.Field != "title" && replacement.Field != "summary" {
+			return "", "", fmt.Errorf("protected place token %s has unknown source field", replacement.Token)
 		}
-		if replacement.Field == "title" && !strings.Contains(title, replacement.Token) || replacement.Field == "summary" && !strings.Contains(summary, replacement.Token) {
-			return "", "", fmt.Errorf("protected place token %s moved between fields", replacement.Token)
+		expected[replacement.Field] = append(expected[replacement.Field], replacement.Token)
+	}
+	for field, value := range map[string]string{"title": title, "summary": summary} {
+		actual := placeTokenPattern.FindAllString(value, -1)
+		if strings.Join(actual, "\x00") != strings.Join(expected[field], "\x00") {
+			return "", "", fmt.Errorf("protected place tokens in %s were missing, duplicated, moved, reordered, or unknown", field)
 		}
+		for _, token := range actual {
+			if !standaloneToken(value, token) {
+				return "", "", fmt.Errorf("protected place token %s was modified or inflected", token)
+			}
+		}
+	}
+	for _, replacement := range protected.Replacements {
 		title = strings.ReplaceAll(title, replacement.Token, replacement.Original)
 		summary = strings.ReplaceAll(summary, replacement.Token, replacement.Original)
 	}
@@ -128,6 +143,44 @@ func Restore(protected Protected, title, summary string) (string, string, error)
 		return "", "", errors.New("translation output contains an unknown place token")
 	}
 	return norm.NFC.String(title), norm.NFC.String(summary), nil
+}
+
+func standaloneToken(value, token string) bool {
+	for offset := 0; ; {
+		index := strings.Index(value[offset:], token)
+		if index < 0 {
+			return true
+		}
+		start := offset + index
+		end := start + len(token)
+		if adjacentWordOrSuffix(value, start, end) {
+			return false
+		}
+		offset = end
+	}
+}
+
+func adjacentWordOrSuffix(value string, start, end int) bool {
+	if start > 0 {
+		character, _ := utf8.DecodeLastRuneInString(value[:start])
+		if tokenAttachment(character) {
+			return true
+		}
+	}
+	if end < len(value) {
+		character, _ := utf8.DecodeRuneInString(value[end:])
+		return tokenAttachment(character)
+	}
+	return false
+}
+
+func tokenAttachment(character rune) bool {
+	// Han prose does not use spaces between words, so an intact token may
+	// legitimately touch a Chinese conjunction or particle on either side.
+	if unicode.Is(unicode.Han, character) {
+		return false
+	}
+	return unicode.IsLetter(character) || unicode.IsDigit(character) || unicode.IsMark(character) || character == '_' || unicode.Is(unicode.Dash, character) || character == '\'' || character == '’'
 }
 
 func validName(name string) bool {

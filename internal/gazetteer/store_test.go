@@ -34,3 +34,55 @@ func TestStoreActivatesAndRetainsARebuildableGeneration(t *testing.T) {
 		t.Fatalf("Overrides() = %#v, err=%v", overrides, err)
 	}
 }
+
+func TestStoreUpdatesSourceMetadataWhenGenerationContentIsUnchanged(t *testing.T) {
+	ctx := context.Background()
+	store, err := Open(ctx, filepath.Join(t.TempDir(), "gazetteer.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	definition := SourceDefinition{Key: "official", DisplayName: "Old", URL: "https://example.test/old", License: "old", Attribution: "Old"}
+	entry := Entry{Name: "Schwabing", Kind: KindNeighbourhood, Priority: 17, Sources: []EntrySource{{Key: "official", ExternalID: "1", Kind: KindNeighbourhood, Priority: 17}}}
+	snapshot := SourceSnapshot{Definition: definition, ContentHash: "one", FetchedAt: time.Now(), Entries: []Entry{entry}}
+	if _, _, err := store.Activate(ctx, []SourceSnapshot{snapshot}, []Entry{entry}, "same", time.Now(), time.Now().Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	snapshot.Definition.DisplayName = "New"
+	snapshot.Definition.URL = "https://example.test/new"
+	snapshot.Definition.License = "new"
+	snapshot.Definition.Attribution = "New"
+	if _, changed, err := store.Activate(ctx, []SourceSnapshot{snapshot}, []Entry{entry}, "same", time.Now(), time.Now().Add(time.Hour)); err != nil || changed {
+		t.Fatalf("unchanged activation changed=%v err=%v", changed, err)
+	}
+	var displayName, sourceURL, license, attribution, contract string
+	if err := store.db.QueryRowContext(ctx, `SELECT display_name, source_url, license, attribution, contract_version FROM gazetteer_sources WHERE source_key='official'`).Scan(&displayName, &sourceURL, &license, &attribution, &contract); err != nil {
+		t.Fatal(err)
+	}
+	if displayName != "New" || sourceURL != snapshot.Definition.URL || license != "new" || attribution != "New" || contract != sourceContractVersion {
+		t.Fatalf("source metadata = %q %q %q %q contract=%q", displayName, sourceURL, license, attribution, contract)
+	}
+}
+
+func TestStoreClearsValidatorsWhenChangedSourceURLFails(t *testing.T) {
+	ctx := context.Background()
+	store, err := Open(ctx, filepath.Join(t.TempDir(), "gazetteer.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	definition := SourceDefinition{Key: "official", DisplayName: "Official", URL: "https://example.test/old", License: "test", Attribution: "Test"}
+	entry := Entry{Name: "Schwabing", Kind: KindNeighbourhood, Priority: 17, Sources: []EntrySource{{Key: "official", ExternalID: "1", Kind: KindNeighbourhood, Priority: 17}}}
+	snapshot := SourceSnapshot{Definition: definition, ContentHash: "old-hash", ETag: `"old"`, LastModified: "yesterday", FetchedAt: time.Now(), Entries: []Entry{entry}}
+	if _, _, err := store.Activate(ctx, []SourceSnapshot{snapshot}, []Entry{entry}, "old-aggregate", time.Now(), time.Now().Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	definition.URL = "https://example.test/new"
+	if err := store.RecordSourceFailure(ctx, definition, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	etag, modified, hash, sourceURL, _, err := store.SourceValidators(ctx, definition.Key)
+	if err != nil || etag != "" || modified != "" || hash != "" || sourceURL != definition.URL {
+		t.Fatalf("validators after changed URL failure = etag:%q modified:%q hash:%q URL:%q err:%v", etag, modified, hash, sourceURL, err)
+	}
+}

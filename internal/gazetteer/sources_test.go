@@ -74,6 +74,46 @@ func TestFetcherConditionalRequestAndSizeLimit(t *testing.T) {
 	}
 }
 
+func TestFetcherRefetchesWhenSourceContractChanges(t *testing.T) {
+	ctx := context.Background()
+	store, err := Open(ctx, filepath.Join(t.TempDir(), "gazetteer.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	definition := SourceDefinition{Key: "custom", DisplayName: "Test", URL: "https://example.test/source", License: "test", Attribution: "test", MinimumRows: 1, MaximumRows: 2, MaximumSize: 1024, Parse: func([]byte) ([]Entry, error) {
+		return []Entry{{Name: "Schwabing", Kind: KindNeighbourhood, Priority: 17, Sources: []EntrySource{{Key: "custom", ExternalID: "1", Kind: KindNeighbourhood, Priority: 17}}}}, nil
+	}}
+	entry := definitionMustParse(t, definition, []byte("current"))[0]
+	snapshot := SourceSnapshot{Definition: definition, ContentHash: "old-hash", ETag: `"old"`, FetchedAt: time.Now(), Entries: []Entry{entry}}
+	if _, _, err := store.Activate(ctx, []SourceSnapshot{snapshot}, []Entry{entry}, "old-aggregate", time.Now(), time.Now().Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.db.ExecContext(ctx, `UPDATE gazetteer_sources SET contract_version='old-contract' WHERE source_key='custom'`); err != nil {
+		t.Fatal(err)
+	}
+	client := &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		if request.Header.Get("If-None-Match") != "" {
+			t.Fatalf("stale parser contract reused HTTP validator: %q", request.Header.Get("If-None-Match"))
+		}
+		return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader("current"))}, nil
+	})}
+	fetcher, _ := NewFetcher(client, "MunichBrief/test", store)
+	fetched, unchanged, err := fetcher.Fetch(ctx, definition)
+	if err != nil || unchanged || len(fetched.Entries) != 1 || fetched.Entries[0].Priority != 17 {
+		t.Fatalf("contract refetch = %#v unchanged=%v err=%v", fetched, unchanged, err)
+	}
+}
+
+func definitionMustParse(t *testing.T, definition SourceDefinition, data []byte) []Entry {
+	t.Helper()
+	entries, err := definition.Parse(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return entries
+}
+
 func TestFetcherRejectsOversizedAndImplausibleResponses(t *testing.T) {
 	ctx := context.Background()
 	store, err := Open(ctx, filepath.Join(t.TempDir(), "gazetteer.db"))

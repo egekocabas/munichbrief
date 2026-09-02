@@ -34,8 +34,11 @@ do not provide a safer bounded category filter for this application.
 
 The server loads an existing active generation before starting workers, then
 refreshes immediately and weekly with jitter. Conditional ETag and
-Last-Modified requests are used when a source supplies validators. Downloads,
-ZIP expansion, parser rows, Unicode, and name lengths are bounded. OSM
+Last-Modified requests are used when a source supplies validators. Validators
+are scoped to the fixed source URL and a versioned parsing contract; changing
+either forces a full download, so a `304 Not Modified` cannot preserve entries
+produced by obsolete parsing or filtering rules. Downloads, ZIP expansion,
+parser rows, Unicode, and name lengths are bounded. OSM
 categories are requested sequentially so one large combined Overpass response
 is not required.
 
@@ -65,6 +68,6 @@ context. Two-letter names such as `Au` also require location context by rule.
 `U-Bahn` and `S-Bahn` are always present as static protected entries.
 
 Every occurrence receives a unique `__MB_PLACE_####__` token. The output is
-invalid if a token is missing, duplicated, moved between title and summary, or
-invented. Markdown link labels may be protected; Markdown syntax and URLs stay
-unchanged.
+invalid if a token is missing, duplicated, moved between title and summary,
+reordered, inflected, modified, or invented. Markdown link labels may be
+protected; Markdown syntax and URLs stay unchanged.

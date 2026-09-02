@@ -90,14 +90,14 @@ incidents. Never commit downloaded source text, model output, or test databases,
 and never write to a production database during verification.
 
 For a focused translation prompt check without running the German metadata and
-presentation stages, use the same explicit opt-in. TranslateGemma remains the
-default, and `MUNICHBRIEF_OLLAMA_TRANSLATION_MODEL` may select another
-schema-capable Ollama model:
+presentation stages, use the same explicit opt-in. The test falls back to
+`translategemma:4b`; `MUNICHBRIEF_OLLAMA_TRANSLATION_MODEL` may select any
+installed schema-capable Ollama model:
 
 ```bash
 MUNICHBRIEF_OLLAMA_LIVE_TEST=1 \
 MUNICHBRIEF_OLLAMA_TRANSLATION_MODEL=translategemma:4b \
-go test -run 'TestLiveOllama(TranslateGemmaPromptContract|RegisteredTranslationTargets)$' \
+go test -run 'TestLiveOllama(UnifiedTranslationPromptContract|RegisteredTranslationTargets)$' \
   -v ./internal/processing
 ```
 

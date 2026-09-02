@@ -143,8 +143,8 @@ func (s *Store) ActiveEntries(ctx context.Context) ([]Entry, error) {
 	return entries, rows.Err()
 }
 
-func (s *Store) SourceValidators(ctx context.Context, key string) (etag, modified, hash string, err error) {
-	err = s.db.QueryRowContext(ctx, `SELECT etag, last_modified, content_sha256 FROM gazetteer_sources WHERE source_key = ?`, key).Scan(&etag, &modified, &hash)
+func (s *Store) SourceValidators(ctx context.Context, key string) (etag, modified, hash, sourceURL, contractVersion string, err error) {
+	err = s.db.QueryRowContext(ctx, `SELECT etag, last_modified, content_sha256, source_url, contract_version FROM gazetteer_sources WHERE source_key = ?`, key).Scan(&etag, &modified, &hash, &sourceURL, &contractVersion)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = nil
 	}
@@ -169,7 +169,7 @@ func (s *Store) ActiveSourceEntries(ctx context.Context, key string) ([]Entry, e
 		if err := rows.Scan(&entry.Name, &entry.Kind, &entry.Priority, &entry.RequiresContext, &externalID); err != nil {
 			return nil, err
 		}
-		entry.Sources = []EntrySource{{Key: key, ExternalID: externalID, Kind: entry.Kind}}
+		entry.Sources = []EntrySource{{Key: key, ExternalID: externalID, Kind: entry.Kind, Priority: entry.Priority, RequiresContext: entry.RequiresContext}}
 		entries = append(entries, entry)
 	}
 	return entries, rows.Err()
@@ -206,7 +206,11 @@ func (s *Store) RecordSourceFailure(ctx context.Context, definition SourceDefini
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO gazetteer_sources(source_key, display_name, source_url, license, attribution, last_checked_at, consecutive_failures)
 		VALUES (?, ?, ?, ?, ?, ?, 1)
-		ON CONFLICT(source_key) DO UPDATE SET display_name=excluded.display_name, source_url=excluded.source_url,
+		ON CONFLICT(source_key) DO UPDATE SET
+		etag=CASE WHEN gazetteer_sources.source_url=excluded.source_url THEN gazetteer_sources.etag ELSE '' END,
+		last_modified=CASE WHEN gazetteer_sources.source_url=excluded.source_url THEN gazetteer_sources.last_modified ELSE '' END,
+		content_sha256=CASE WHEN gazetteer_sources.source_url=excluded.source_url THEN gazetteer_sources.content_sha256 ELSE '' END,
+		display_name=excluded.display_name, source_url=excluded.source_url,
 		license=excluded.license, attribution=excluded.attribution, last_checked_at=excluded.last_checked_at,
 		consecutive_failures=gazetteer_sources.consecutive_failures+1`, definition.Key, definition.DisplayName, definition.URL, definition.License, definition.Attribution, formatTime(at))
 	return err
@@ -245,12 +249,12 @@ func (s *Store) Activate(ctx context.Context, snapshots []SourceSnapshot, entrie
 	for _, snapshot := range snapshots {
 		definition := snapshot.Definition
 		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO gazetteer_sources(source_key, display_name, source_url, license, attribution, etag, last_modified, content_sha256, last_checked_at, last_success_at, consecutive_failures)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+			INSERT INTO gazetteer_sources(source_key, display_name, source_url, license, attribution, etag, last_modified, content_sha256, contract_version, last_checked_at, last_success_at, consecutive_failures)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
 			ON CONFLICT(source_key) DO UPDATE SET display_name=excluded.display_name, source_url=excluded.source_url,
 			license=excluded.license, attribution=excluded.attribution, etag=excluded.etag, last_modified=excluded.last_modified,
-			content_sha256=excluded.content_sha256, last_checked_at=excluded.last_checked_at, last_success_at=excluded.last_success_at, consecutive_failures=0`,
-			definition.Key, definition.DisplayName, definition.URL, definition.License, definition.Attribution, snapshot.ETag, snapshot.LastModified, snapshot.ContentHash, formatTime(at), formatTime(at)); err != nil {
+			content_sha256=excluded.content_sha256, contract_version=excluded.contract_version, last_checked_at=excluded.last_checked_at, last_success_at=excluded.last_success_at, consecutive_failures=0`,
+			definition.Key, definition.DisplayName, definition.URL, definition.License, definition.Attribution, snapshot.ETag, snapshot.LastModified, snapshot.ContentHash, sourceContractVersion, formatTime(at), formatTime(at)); err != nil {
 			return 0, false, err
 		}
 		if _, err := tx.ExecContext(ctx, `INSERT INTO gazetteer_generation_sources(generation_id, source_key, content_sha256, etag, last_modified, fetched_at, row_count) VALUES (?, ?, ?, ?, ?, ?, ?)`, generationID, definition.Key, snapshot.ContentHash, snapshot.ETag, snapshot.LastModified, formatTime(snapshot.FetchedAt), len(snapshot.Entries)); err != nil {
@@ -264,7 +268,11 @@ func (s *Store) Activate(ctx context.Context, snapshots []SourceSnapshot, entrie
 		}
 		nameID, _ := result.LastInsertId()
 		for _, source := range entry.Sources {
-			if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO gazetteer_name_sources(name_id, source_key, external_id, source_kind, source_priority, requires_context) VALUES (?, ?, ?, ?, ?, ?)`, nameID, source.Key, source.ExternalID, source.Kind, sourcePriority(source.Key), entry.RequiresContext); err != nil {
+			priority := source.Priority
+			if priority == 0 {
+				priority = entry.Priority
+			}
+			if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO gazetteer_name_sources(name_id, source_key, external_id, source_kind, source_priority, requires_context) VALUES (?, ?, ?, ?, ?, ?)`, nameID, source.Key, source.ExternalID, source.Kind, priority, source.RequiresContext); err != nil {
 				return 0, false, err
 			}
 		}
@@ -295,7 +303,7 @@ func (s *Store) updateSuccessfulSources(ctx context.Context, snapshots []SourceS
 	defer tx.Rollback()
 	for _, snapshot := range snapshots {
 		definition := snapshot.Definition
-		if _, err := tx.ExecContext(ctx, `INSERT INTO gazetteer_sources(source_key, display_name, source_url, license, attribution, etag, last_modified, content_sha256, last_checked_at, last_success_at, consecutive_failures) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0) ON CONFLICT(source_key) DO UPDATE SET etag=excluded.etag, last_modified=excluded.last_modified, content_sha256=excluded.content_sha256, last_checked_at=excluded.last_checked_at, last_success_at=excluded.last_success_at, consecutive_failures=0`, definition.Key, definition.DisplayName, definition.URL, definition.License, definition.Attribution, snapshot.ETag, snapshot.LastModified, snapshot.ContentHash, formatTime(at), formatTime(at)); err != nil {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO gazetteer_sources(source_key, display_name, source_url, license, attribution, etag, last_modified, content_sha256, contract_version, last_checked_at, last_success_at, consecutive_failures) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0) ON CONFLICT(source_key) DO UPDATE SET display_name=excluded.display_name, source_url=excluded.source_url, license=excluded.license, attribution=excluded.attribution, etag=excluded.etag, last_modified=excluded.last_modified, content_sha256=excluded.content_sha256, contract_version=excluded.contract_version, last_checked_at=excluded.last_checked_at, last_success_at=excluded.last_success_at, consecutive_failures=0`, definition.Key, definition.DisplayName, definition.URL, definition.License, definition.Attribution, snapshot.ETag, snapshot.LastModified, snapshot.ContentHash, sourceContractVersion, formatTime(at), formatTime(at)); err != nil {
 			return err
 		}
 	}
@@ -309,17 +317,4 @@ func formatTime(value time.Time) string { return value.UTC().Format(time.RFC3339
 func parseTime(value string) time.Time {
 	parsed, _ := time.Parse(time.RFC3339Nano, value)
 	return parsed
-}
-
-func sourcePriority(key string) int {
-	switch key {
-	case "munich_streets":
-		return 10
-	case "munich_districts":
-		return 20
-	case "geonames_munich":
-		return 30
-	default:
-		return 40
-	}
 }

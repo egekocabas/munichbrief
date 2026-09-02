@@ -22,10 +22,14 @@ import (
 )
 
 const (
-	munichStreetURL   = "https://geoportal.muenchen.de/geoserver/gsm_wfs/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=gsm_wfs:erlaeuterung_strassennamen&outputFormat=application/json"
-	munichDistrictURL = "https://geoportal.muenchen.de/geoserver/gsm_wfs/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=gsm_wfs:vablock_stadtbezirk&outputFormat=application/json"
-	geoNamesURL       = "https://download.geonames.org/export/dump/DE.zip"
-	overpassURL       = "https://overpass-api.de/api/interpreter?data="
+	// sourceContractVersion invalidates conditional HTTP validators whenever parsing,
+	// filtering, or source-entry semantics change. Bump it with those changes so a
+	// 304 cannot silently reuse entries produced by an older contract.
+	sourceContractVersion = "2026-09-02-1"
+	munichStreetURL       = "https://geoportal.muenchen.de/geoserver/gsm_wfs/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=gsm_wfs:erlaeuterung_strassennamen&outputFormat=application/json"
+	munichDistrictURL     = "https://geoportal.muenchen.de/geoserver/gsm_wfs/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=gsm_wfs:vablock_stadtbezirk&outputFormat=application/json"
+	geoNamesURL           = "https://download.geonames.org/export/dump/DE.zip"
+	overpassURL           = "https://overpass-api.de/api/interpreter?data="
 )
 
 func DefaultSources() []SourceDefinition {
@@ -60,9 +64,15 @@ func NewFetcher(client *http.Client, userAgent string, store *Store) (*Fetcher, 
 }
 
 func (f *Fetcher) Fetch(ctx context.Context, definition SourceDefinition) (SourceSnapshot, bool, error) {
-	etag, modified, oldHash, err := f.store.SourceValidators(ctx, definition.Key)
+	if err := validateSourceDefinition(definition); err != nil {
+		return SourceSnapshot{}, false, err
+	}
+	etag, modified, oldHash, oldURL, contractVersion, err := f.store.SourceValidators(ctx, definition.Key)
 	if err != nil {
 		return SourceSnapshot{}, false, err
+	}
+	if oldURL != definition.URL || contractVersion != sourceContractVersion {
+		etag, modified, oldHash = "", "", ""
 	}
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, definition.URL, nil)
 	if err != nil {
@@ -81,10 +91,16 @@ func (f *Fetcher) Fetch(ctx context.Context, definition SourceDefinition) (Sourc
 		return SourceSnapshot{}, false, err
 	}
 	defer response.Body.Close()
+	if response.Request != nil && response.Request.URL.Scheme != "https" {
+		return SourceSnapshot{}, false, fmt.Errorf("fetch %s: redirected to non-HTTPS URL", definition.Key)
+	}
 	if response.StatusCode == http.StatusNotModified {
 		entries, err := f.store.ActiveSourceEntries(ctx, definition.Key)
 		if err != nil || len(entries) == 0 || oldHash == "" {
 			return SourceSnapshot{}, false, fmt.Errorf("reuse unchanged %s: no active source snapshot", definition.Key)
+		}
+		if len(entries) < definition.MinimumRows || len(entries) > definition.MaximumRows {
+			return SourceSnapshot{}, false, fmt.Errorf("reuse unchanged %s: %d rows outside safety range %d..%d", definition.Key, len(entries), definition.MinimumRows, definition.MaximumRows)
 		}
 		return SourceSnapshot{Definition: definition, ContentHash: oldHash, ETag: etag, LastModified: modified, FetchedAt: f.clock(), Entries: entries}, true, nil
 	}
@@ -108,6 +124,14 @@ func (f *Fetcher) Fetch(ctx context.Context, definition SourceDefinition) (Sourc
 	}
 	hash := sha256.Sum256(data)
 	return SourceSnapshot{Definition: definition, ContentHash: hex.EncodeToString(hash[:]), ETag: response.Header.Get("ETag"), LastModified: response.Header.Get("Last-Modified"), FetchedAt: f.clock(), Entries: entries}, false, nil
+}
+
+func validateSourceDefinition(definition SourceDefinition) error {
+	parsed, err := url.Parse(definition.URL)
+	if strings.TrimSpace(definition.Key) == "" || err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil || definition.Parse == nil || definition.MinimumRows < 1 || definition.MaximumRows < definition.MinimumRows || definition.MaximumSize < 1 {
+		return fmt.Errorf("invalid gazetteer source definition %q", definition.Key)
+	}
+	return nil
 }
 
 func parseMunichStreets(data []byte) ([]Entry, error) {
@@ -161,7 +185,7 @@ func entriesForNames(source, id, kind string, priority int, properties map[strin
 				continue
 			}
 			seen[name] = struct{}{}
-			result = append(result, Entry{Name: name, Kind: kind, Priority: priority, Sources: []EntrySource{{Key: source, ExternalID: id, Kind: kind}}})
+			result = append(result, Entry{Name: name, Kind: kind, Priority: priority, Sources: []EntrySource{{Key: source, ExternalID: id, Kind: kind, Priority: priority}}})
 		}
 	}
 	return result
@@ -209,7 +233,7 @@ func parseGeoNames(data []byte) ([]Entry, error) {
 		if record[7] == "PPLA" || record[7] == "PPLA4" || record[7] == "PPL" {
 			kind = KindMunicipality
 		}
-		entries = append(entries, Entry{Name: norm.NFC.String(record[1]), Kind: kind, Priority: 30, Sources: []EntrySource{{Key: "geonames_munich", ExternalID: record[0], Kind: kind}}})
+		entries = append(entries, Entry{Name: norm.NFC.String(record[1]), Kind: kind, Priority: 30, Sources: []EntrySource{{Key: "geonames_munich", ExternalID: record[0], Kind: kind, Priority: 30}}})
 	}
 	return entries, nil
 }

@@ -89,7 +89,7 @@ func TestTranslationDefinitionFactorySupportsBCP47Target(t *testing.T) {
 	}
 	message := fmt.Sprintf(prompt.UserPromptTemplate, `{"title_de":"Titel","summary_de":"Zusammenfassung."}`)
 	if !strings.Contains(message, "German (de-DE) to Portuguese (pt-BR)") || !strings.Contains(message, `"title_pt_br"`) || !strings.Contains(message, `"summary_pt_br"`) {
-		t.Fatalf("synthetic TranslateGemma prompt = %q", message)
+		t.Fatalf("synthetic unified translation prompt = %q", message)
 	}
 	output, err := translation.Step.OutputDecoder(`{"title_pt_br":"Título","summary_pt_br":"Resumo seguro."}`)
 	if err != nil {
