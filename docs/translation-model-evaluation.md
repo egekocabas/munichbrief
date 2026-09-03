@@ -84,10 +84,11 @@ multi-turn conversation. Its target-language tag is mandatory at the absolute
 end of the prompt. The experimental `SeedXNativeAdapter` therefore calls
 Ollama's `/api/generate` endpoint with `raw=true`, no system prompt or schema,
 and a prompt ending in the exact official tag, such as `<uk>` or `<zh>`. It
-follows the official single-newline boundary between the instruction and source
-and adds a concise rule for preserving every occurrence of MunichBrief's exact
-typed-placeholder pattern. The source text and target tag remain on the final
-line, with the tag as the absolute final prompt content.
+uses ByteDance's minimal documented instruction and single-newline boundary
+without adding a custom placeholder preamble. The protected source text and
+target tag remain on the final line, with the tag as the absolute final prompt
+content. Placeholder preservation is enforced after generation; the adapter is
+not eligible for production routing unless it passes that deterministic gate.
 
 ByteDance recommends beam search with width four and a maximum of 512 output
 tokens. Ollama does not expose beam width through its documented runtime
@@ -149,8 +150,10 @@ as reader content.
 
 ## HY-MT2 and Seed-X critical screen
 
-The opt-in `TestLiveNativeTranslationAdapterScreen` is a 72-field-call gate for
-the two experimental adapters. Its three fixtures isolate transit and repeated
+The opt-in `TestLiveNativeTranslationAdapterScreen` defines a 72-field-call
+comparison for the two experimental adapters. Each adapter must first pass
+`TestLiveNativeTranslationAdapterSmoke`; a failed adapter must be excluded
+instead of spending the larger call budget. The three fixtures isolate transit and repeated
 typed-place relationships; negation, attribution, uncertainty, and legal
 framing; and numbers, dates, causality, Markdown, and links. Title and summary
 are separate calls, as they are in the application.
@@ -172,6 +175,25 @@ additions and omissions, and grammar explicitly pending for human review.
 
 This screen is test-only. It does not enable typed placeholders in production,
 choose per-language models, or alter jobs, persistence, routes, or deployment.
+
+### Adapter smoke gate on 2026-09-03
+
+The production-shaped English control translated title and summary separately
+through each Q5_K_M adapter. HY-MT2 preserved every typed placeholder, number,
+Markdown decoration, URL, attribution, uncertainty marker, and negation. Its
+restored output passed all deterministic checks and retained the source meaning,
+so HY-MT2 is eligible for its 48-field-call screen.
+
+Seed-X-Instruct corrupted typed placeholders in both prompt variants tested. A
+custom preservation instruction changed letters, digits, underscores, or all
+three; a literal placeholder example caused whitespace-only incomplete output.
+ByteDance's minimal documented prompt completed, but changed
+`__MB_COMMUTER_TRAIN_0001__` to `__MB_COMMUTE_TRAIN_0001__`, omitted the
+district token from the summary, and changed important semantic relationships.
+Seed-X therefore failed the prerequisite and must be excluded from the larger
+screen for this unofficial GGUF. The adapter retains the official minimal prompt
+so future artifacts can be reevaluated without treating a harmful custom prompt
+as part of the model contract.
 
 ## Bounded comparison on 2026-09-02/03
 

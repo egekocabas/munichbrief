@@ -30,7 +30,7 @@ func TestSeedXNativeAdapterUsesRawCompletionContract(t *testing.T) {
 		if err := json.Unmarshal(encoded, &payload); err != nil {
 			t.Fatal(err)
 		}
-		wantPrompt := "Translate the following German text into Chinese. Output only the translated text. Preserve every placeholder matching __MB_[A-Z_]+_[0-9]{4}__ exactly, including every occurrence; never translate, transliterate, inflect, modify, remove, duplicate, or replace it:\nEinsatz am __MB_STREET_0001__ <zh>"
+		wantPrompt := "Translate the following German sentence into Chinese:\nEinsatz am __MB_STREET_0001__ <zh>"
 		if !payload.Raw || payload.Stream || payload.Think || payload.Prompt != wantPrompt {
 			t.Fatalf("raw generation payload = %#v", payload)
 		}

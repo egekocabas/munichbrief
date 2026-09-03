@@ -19,9 +19,12 @@ import (
 )
 
 const (
-	nativeAdapterScreenOptIn = "MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_LIVE_TEST"
-	hyMT2ScreenModel         = "hf.co/mradermacher/Hy-MT2-7B-GGUF:Q5_K_M"
-	seedXScreenModel         = "hf.co/mradermacher/Seed-X-Instruct-7B-GGUF:Q5_K_M"
+	nativeAdapterScreenOptIn  = "MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_LIVE_TEST"
+	nativeAdapterScreenFilter = "MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_ADAPTER"
+	nativeAdapterSmokeOptIn   = "MUNICHBRIEF_NATIVE_ADAPTER_SMOKE_LIVE_TEST"
+	nativeAdapterSmokeFilter  = "MUNICHBRIEF_NATIVE_ADAPTER_SMOKE_ADAPTER"
+	hyMT2ScreenModel          = "hf.co/mradermacher/Hy-MT2-7B-GGUF:Q5_K_M"
+	seedXScreenModel          = "hf.co/mradermacher/Seed-X-Instruct-7B-GGUF:Q5_K_M"
 )
 
 // evaluationTranslator keeps live evaluation orchestration independent from a
@@ -142,6 +145,74 @@ type nativeAdapterFactory func(nativeAdapterScreenSpec, string) (evaluationTrans
 
 var nativeAdapterTokenPattern = regexp.MustCompile(`__MB_[A-Z_]+_[0-9]{4}__`)
 
+func TestLiveNativeTranslationAdapterSmoke(t *testing.T) {
+	if os.Getenv(nativeAdapterSmokeOptIn) != "1" {
+		t.Skip("set " + nativeAdapterSmokeOptIn + "=1")
+	}
+	baseURL := os.Getenv("MUNICHBRIEF_OLLAMA_BASE_URL")
+	if baseURL == "" {
+		baseURL = "http://127.0.0.1:11434"
+	}
+	fixture := nativeAdapterScreenFixture{
+		Name:    "adapter-contract-smoke",
+		Title:   "S-Bahn-Einsatz am Hauptbahnhof",
+		Summary: "Nach Angaben der Polizei soll am 29. August 2026 um 03:30 Uhr auf der **Ingolstädter Straße** ein Fahrzeug beschädigt worden sein. Die U-Bahn war nicht betroffen; Hinweise stehen bei [Schwabing-West](https://munichbrief.de/de/incidents/378?page=2).",
+	}
+	matcher, err := nativeAdapterScreenMatcher()
+	if err != nil {
+		t.Fatal(err)
+	}
+	protected, err := protectNativeAdapterFixture(matcher, fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, baseSpec := range nativeAdapterScreenSpecs() {
+		spec := baseSpec
+		if filter := strings.TrimSpace(os.Getenv(nativeAdapterSmokeFilter)); filter != "" && filter != spec.Adapter {
+			continue
+		}
+		t.Run(spec.Adapter, func(t *testing.T) {
+			digest, err := ollamaModelDigest(context.Background(), baseURL, spec.Model)
+			if err != nil {
+				t.Fatalf("verify installed model identity: %v", err)
+			}
+			spec.ModelDigest = digest
+			adapter, prompt, err := liveNativeAdapterFactory(baseURL)(spec, "en")
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Logf("REQUEST adapter=%s model=%s digest=%s prompt_version=%s settings=%v\n  title_prompt=%s\n  summary_prompt=%s",
+				spec.Adapter, spec.Model, spec.ModelDigest, spec.PromptVersion, spec.Settings, prompt(protected.Title), prompt(protected.Summary))
+
+			started := time.Now()
+			title, titleModel, titleErr := adapter.Translate(context.Background(), protected.Title)
+			titleDuration := time.Since(started)
+			if titleErr != nil {
+				t.Fatalf("translate title: %v", titleErr)
+			}
+			t.Logf("TITLE adapter=%s returned_model=%s duration=%s raw=%s", spec.Adapter, titleModel, titleDuration, title)
+
+			started = time.Now()
+			summary, summaryModel, summaryErr := adapter.Translate(context.Background(), protected.Summary)
+			summaryDuration := time.Since(started)
+			if summaryErr != nil {
+				t.Fatalf("translate summary: %v", summaryErr)
+			}
+			t.Logf("SUMMARY adapter=%s returned_model=%s duration=%s raw=%s", spec.Adapter, summaryModel, summaryDuration, summary)
+
+			result := evaluateNativeAdapterScreenResult(spec.Adapter, "en", fixture, protected, 1,
+				nativeAdapterScreenField{State: "completed", RawOutput: title},
+				nativeAdapterScreenField{State: "completed", RawOutput: summary})
+			t.Logf("RESULT adapter=%s status=%s checks=%+v\n  restored_title=%s\n  restored_summary=%s\n  error=%s",
+				spec.Adapter, result.Status, result.Checks, result.RestoredTitle, result.RestoredSummary, result.Error)
+			if result.Status != "PASS_MECHANICAL_PENDING_REVIEW" {
+				t.Errorf("adapter smoke failed mechanical validation: %s: %s", result.Status, result.Error)
+			}
+		})
+	}
+}
+
 func TestLiveNativeTranslationAdapterScreen(t *testing.T) {
 	if os.Getenv(nativeAdapterScreenOptIn) != "1" {
 		t.Skip("set " + nativeAdapterScreenOptIn + "=1")
@@ -158,7 +229,10 @@ func TestLiveNativeTranslationAdapterScreen(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	specs := nativeAdapterScreenSpecs()
+	specs := filterNativeAdapterScreenSpecs(nativeAdapterScreenSpecs(), os.Getenv(nativeAdapterScreenFilter))
+	if len(specs) == 0 {
+		t.Fatalf("%s did not match a configured adapter", nativeAdapterScreenFilter)
+	}
 	for index := range specs {
 		digest, err := ollamaModelDigest(context.Background(), baseURL, specs[index].Model)
 		if err != nil {
@@ -255,11 +329,25 @@ func nativeAdapterScreenSpecs() []nativeAdapterScreenSpec {
 			Languages: []string{"en", "uk", "hi", "ru"}, Repetitions: 2, ContextSize: 8192,
 		},
 		{
-			Adapter: "seed-x", Model: seedXScreenModel, PromptVersion: "seed-x-raw-typed-placeholder-v1",
+			Adapter: "seed-x", Model: seedXScreenModel, PromptVersion: "seed-x-official-raw-v1",
 			Settings:  map[string]any{"temperature": 0, "num_predict": 512, "num_ctx": 4096},
 			Languages: []string{"en", "hr", "ro", "uk"}, Repetitions: 1, ContextSize: 4096,
 		},
 	}
+}
+
+func filterNativeAdapterScreenSpecs(specs []nativeAdapterScreenSpec, filter string) []nativeAdapterScreenSpec {
+	filter = strings.TrimSpace(filter)
+	if filter == "" {
+		return specs
+	}
+	filtered := make([]nativeAdapterScreenSpec, 0, 1)
+	for _, spec := range specs {
+		if spec.Adapter == filter {
+			filtered = append(filtered, spec)
+		}
+	}
+	return filtered
 }
 
 func nativeAdapterScreenFixtures() []nativeAdapterScreenFixture {
@@ -283,6 +371,7 @@ func nativeAdapterScreenMatcher() (*gazetteer.Matcher, error) {
 	return gazetteer.NewMatcher([]gazetteer.Entry{
 		{Name: "Hauptbahnhof", Kind: gazetteer.KindTrainStation},
 		{Name: "Ostbahnhof", Kind: gazetteer.KindTrainStation},
+		{Name: "Ingolstädter Straße", Kind: gazetteer.KindStreet},
 		{Name: "Leopoldstraße", Kind: gazetteer.KindStreet},
 		{Name: "Schwabing-West", Kind: gazetteer.KindDistrict},
 		{Name: "Ganghoferstraße", Kind: gazetteer.KindStreet},
@@ -542,6 +631,17 @@ func TestNativeAdapterScreenMatrixHasSeventyTwoFieldCalls(t *testing.T) {
 	}
 	if calls != 72 {
 		t.Fatalf("native-adapter screen calls = %d, want 72", calls)
+	}
+}
+
+func TestNativeAdapterScreenFilterSelectsOneAdapter(t *testing.T) {
+	specs := nativeAdapterScreenSpecs()
+	filtered := filterNativeAdapterScreenSpecs(specs, "hy-mt2")
+	if len(filtered) != 1 || filtered[0].Adapter != "hy-mt2" {
+		t.Fatalf("filtered screen specs = %#v", filtered)
+	}
+	if filtered := filterNativeAdapterScreenSpecs(specs, "unknown"); len(filtered) != 0 {
+		t.Fatalf("unknown adapter filter = %#v", filtered)
 	}
 }
 

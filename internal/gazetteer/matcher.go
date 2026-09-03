@@ -272,7 +272,7 @@ func tokenAttachment(character rune) bool {
 	if unicode.Is(unicode.Han, character) {
 		return false
 	}
-	return unicode.IsLetter(character) || unicode.IsDigit(character) || unicode.IsMark(character) || character == '_' || unicode.Is(unicode.Dash, character)
+	return unicode.IsLetter(character) || unicode.IsDigit(character) || unicode.IsMark(character) || character == '_'
 }
 
 func validName(name string) bool {

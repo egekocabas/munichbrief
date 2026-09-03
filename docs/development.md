@@ -117,6 +117,19 @@ separate requests, and checkpoints every field under `.local/` so the same run
 can resume after interruption:
 
 ```bash
+MUNICHBRIEF_NATIVE_ADAPTER_SMOKE_LIVE_TEST=1 \
+MUNICHBRIEF_OLLAMA_BASE_URL=http://127.0.0.1:11434 \
+go test -timeout 60m -run TestLiveNativeTranslationAdapterSmoke \
+  -v ./internal/processing
+```
+
+The smoke test makes one production-shaped English-control case per adapter,
+with separate title and summary requests, and prints raw and restored output for
+inspection. Set `MUNICHBRIEF_NATIVE_ADAPTER_SMOKE_ADAPTER` to `hy-mt2` or
+`seed-x` for a targeted rerun. Run the smoke before the complete checkpointed
+screen:
+
+```bash
 MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_LIVE_TEST=1 \
 MUNICHBRIEF_OLLAMA_BASE_URL=http://127.0.0.1:11434 \
 go test -timeout 12h -run TestLiveNativeTranslationAdapterScreen \
@@ -124,10 +137,12 @@ go test -timeout 12h -run TestLiveNativeTranslationAdapterScreen \
 ```
 
 Set `MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_DIR` to use a different checkpoint
-directory. A directory is bound to the exact model digests, prompts, settings,
-fixtures, languages, and repetitions in its manifest; use a new directory when
-any of those inputs changes. Generated output remains local evaluation evidence
-and requires manual semantic review even when all mechanical checks pass.
+directory. Set `MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_ADAPTER` to `hy-mt2` or
+`seed-x` to run only an adapter that passed its smoke gate. A directory is bound
+to the exact selected adapter, model digest, prompt, settings, fixtures,
+languages, and repetitions in its manifest; use a new directory when any of
+those inputs changes. Generated output remains local evaluation evidence and
+requires manual semantic review even when all mechanical checks pass.
 
 The longer Munich place-name preservation matrix is independently gated so it
 does not slow the normal live smoke suite. It checks every translation target

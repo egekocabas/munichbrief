@@ -126,6 +126,9 @@ func TestRestoreRejectsMissingDuplicateMovedModifiedAndUnknownTokensButAllowsReo
 	if title, _, err := Restore(protected, protected.Title+"'da", protected.Summary); err != nil || title != "Schwabing und Sendling'da" {
 		t.Fatalf("Restore rejected an apostrophe-delimited suffix: title=%q err=%v", title, err)
 	}
+	if title, _, err := Restore(protected, protected.Title+"–Einsatz", protected.Summary); err != nil || title != "Schwabing und Sendling–Einsatz" {
+		t.Fatalf("Restore rejected dash punctuation around an intact token: title=%q err=%v", title, err)
+	}
 }
 
 func TestMatcherReusesStableTokenForRepeatedNameAndChecksEveryOccurrence(t *testing.T) {
