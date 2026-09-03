@@ -90,5 +90,18 @@ func (a *HyMT2NativeAdapter) Translate(ctx context.Context, text string) (string
 }
 
 func hyMT2NativePrompt(sourceName, targetName, text string) string {
-	return fmt.Sprintf("Translate the following text from %s into %s. Never translate or alter code tags or variable placeholders; leave them exactly in their original code form. Note that you must ONLY output the translated result without any additional explanation:\n\n%s", sourceName, targetName, strings.TrimSpace(text))
+	return fmt.Sprintf(
+		"### Task\n"+
+			"Translate the following text from %s into %s.\n\n"+
+			"### Strict Rules\n"+
+			"1. Output only the translated text. Do not add explanations, notes, headings, or commentary.\n"+
+			"2. Treat every token matching `__MB_[A-Z_]+_[0-9]{4}__` as an immutable placeholder. Copy every occurrence exactly, character-for-character, and preserve the same number of occurrences.\n"+
+			"3. Never translate, transliterate, inflect, decline, conjugate, modify, split, remove, duplicate, or replace a placeholder.\n"+
+			"4. When a placeholder contains an entity type such as `STREET`, `DISTRICT`, `TRAIN_STATION`, `COMMUTER_TRAIN`, or `SUBWAY_SYSTEM`, use that type only to understand the sentence and produce natural grammar around the placeholder. Do not alter the placeholder itself.\n"+
+			"5. If the target language would normally require changing the hidden entity, restructure the surrounding sentence so the placeholder remains unchanged.\n"+
+			"6. Preserve the original meaning, tone, factual details, numbers, dates, times, negation, uncertainty, attribution, and relationships. Do not add or infer information.\n"+
+			"7. Produce natural, fluent %s rather than a word-for-word translation.\n\n"+
+			"### Source Data\n%s",
+		sourceName, targetName, targetName, strings.TrimSpace(text),
+	)
 }

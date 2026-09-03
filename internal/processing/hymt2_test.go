@@ -20,12 +20,25 @@ func TestHyMT2NativeAdapterUsesOfficialContract(t *testing.T) {
 		if len(payload.Format) != 0 || len(payload.Messages) != 1 || payload.Messages[0].Role != "user" || payload.Think {
 			t.Fatalf("native request unexpectedly used a schema, system role, or thinking: %#v", payload)
 		}
-		wantPrompt := "Translate the following text from German into Chinese. Never translate or alter code tags or variable placeholders; leave them exactly in their original code form. Note that you must ONLY output the translated result without any additional explanation:\n\nEinsatz am <KEEP>__MB_STREET_0001__</KEEP>"
+		wantPrompt := "### Task\n" +
+			"Translate the following text from German into Chinese.\n\n" +
+			"### Strict Rules\n" +
+			"1. Output only the translated text. Do not add explanations, notes, headings, or commentary.\n" +
+			"2. Treat every token matching `__MB_[A-Z_]+_[0-9]{4}__` as an immutable placeholder. Copy every occurrence exactly, character-for-character, and preserve the same number of occurrences.\n" +
+			"3. Never translate, transliterate, inflect, decline, conjugate, modify, split, remove, duplicate, or replace a placeholder.\n" +
+			"4. When a placeholder contains an entity type such as `STREET`, `DISTRICT`, `TRAIN_STATION`, `COMMUTER_TRAIN`, or `SUBWAY_SYSTEM`, use that type only to understand the sentence and produce natural grammar around the placeholder. Do not alter the placeholder itself.\n" +
+			"5. If the target language would normally require changing the hidden entity, restructure the surrounding sentence so the placeholder remains unchanged.\n" +
+			"6. Preserve the original meaning, tone, factual details, numbers, dates, times, negation, uncertainty, attribution, and relationships. Do not add or infer information.\n" +
+			"7. Produce natural, fluent Chinese rather than a word-for-word translation.\n\n" +
+			"### Source Data\nEinsatz am <KEEP>__MB_STREET_0001__</KEEP>"
 		if payload.Messages[0].Content != wantPrompt {
 			t.Fatalf("prompt = %q, want %q", payload.Messages[0].Content, wantPrompt)
 		}
 		if strings.Contains(payload.Messages[0].Content, "Simplified Chinese") || strings.Contains(payload.Messages[0].Content, "zh-CN") {
 			t.Fatalf("prompt did not use Tencent's exact language name: %q", payload.Messages[0].Content)
+		}
+		if strings.Count(payload.Messages[0].Content, "__MB_[A-Z_]+_[0-9]{4}__") != 1 || !strings.Contains(payload.Messages[0].Content, "### Source Data\nEinsatz") {
+			t.Fatalf("prompt omitted the exact placeholder pattern or source separator: %q", payload.Messages[0].Content)
 		}
 		options := payload.Options
 		if options.Temperature != 0.7 || options.TopP != 0.6 || options.TopK != 20 || options.RepeatPenalty != 1.05 || options.NumPredict != 4096 || options.NumCtx != 8192 {

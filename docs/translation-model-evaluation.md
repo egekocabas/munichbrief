@@ -50,11 +50,14 @@ language to Tencent's exact English label. This matters for Chinese: the website
 registry calls it `Simplified Chinese`, while Hy-MT2's supported-language table
 calls `zh` `Chinese`.
 
-The adapter sends one user message with no system prompt or JSON schema. It uses
-Tencent's default translation wording, adds the documented constraint that
-code tags and variable placeholders must remain unchanged, and separates the
-instruction from the protected source with two newline characters. It applies
-Tencent's recommended 1.8B/7B settings through their Ollama equivalents:
+The adapter sends one user message with no system prompt or JSON schema. Its
+task, strict-rules, and source-data sections follow Tencent's structured-data
+instruction pattern. The rules treat MunichBrief's exact placeholder pattern as
+immutable, explain typed entity metadata, require grammar to be restructured
+around protected entities, and explicitly preserve facts, negation, uncertainty,
+attribution, and relationships. The protected text begins on the line immediately
+after the source-data heading. The adapter applies Tencent's recommended
+1.8B/7B settings through their Ollama equivalents:
 `temperature=0.7`, `top_p=0.6`, `top_k=20`, `repeat_penalty=1.05`, and
 `num_predict=4096`. The normal Ollama pipeline retains its existing settings.
 
