@@ -255,7 +255,7 @@ func nativeAdapterScreenSpecs() []nativeAdapterScreenSpec {
 			Languages: []string{"en", "uk", "hi", "ru"}, Repetitions: 2, ContextSize: 8192,
 		},
 		{
-			Adapter: "seed-x", Model: seedXScreenModel, PromptVersion: "seed-x-raw-language-tag-v1",
+			Adapter: "seed-x", Model: seedXScreenModel, PromptVersion: "seed-x-raw-typed-placeholder-v1",
 			Settings:  map[string]any{"temperature": 0, "num_predict": 512, "num_ctx": 4096},
 			Languages: []string{"en", "hr", "ro", "uk"}, Repetitions: 1, ContextSize: 4096,
 		},

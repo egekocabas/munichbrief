@@ -90,5 +90,5 @@ func (a *SeedXNativeAdapter) Translate(ctx context.Context, text string) (string
 }
 
 func seedXNativePrompt(source, target seedXLanguage, text string) string {
-	return fmt.Sprintf("Translate the following text from %s into %s. Never translate or alter code tags or variable placeholders; leave them exactly in their original code form. Only output the translated result:\n\n%s <%s>", source.name, target.name, strings.TrimSpace(text), target.tag)
+	return fmt.Sprintf("Translate the following %s text into %s. Output only the translated text. Preserve every placeholder matching __MB_[A-Z_]+_[0-9]{4}__ exactly, including every occurrence; never translate, transliterate, inflect, modify, remove, duplicate, or replace it:\n%s <%s>", source.name, target.name, strings.TrimSpace(text), target.tag)
 }

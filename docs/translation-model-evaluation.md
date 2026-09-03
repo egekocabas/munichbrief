@@ -84,8 +84,10 @@ multi-turn conversation. Its target-language tag is mandatory at the absolute
 end of the prompt. The experimental `SeedXNativeAdapter` therefore calls
 Ollama's `/api/generate` endpoint with `raw=true`, no system prompt or schema,
 and a prompt ending in the exact official tag, such as `<uk>` or `<zh>`. It
-places two newline characters between the instruction and protected source and
-adds a concise instruction to preserve code tags and variable placeholders.
+follows the official single-newline boundary between the instruction and source
+and adds a concise rule for preserving every occurrence of MunichBrief's exact
+typed-placeholder pattern. The source text and target tag remain on the final
+line, with the tag as the absolute final prompt content.
 
 ByteDance recommends beam search with width four and a maximum of 512 output
 tokens. Ollama does not expose beam width through its documented runtime
