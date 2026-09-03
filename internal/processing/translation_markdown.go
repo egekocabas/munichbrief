@@ -20,8 +20,8 @@ type markdownDecoration struct {
 }
 
 var (
-	protectedMarkdownLinkPattern = regexp.MustCompile(`\[(__MB_PLACE_[0-9]{4}__)\]\((https://[^)\s]+)\)`)
-	protectedMarkdownBoldPattern = regexp.MustCompile(`\*\*(__MB_PLACE_[0-9]{4}__)\*\*`)
+	protectedMarkdownLinkPattern = regexp.MustCompile(`\[(__MB_[A-Z_]+_[0-9]{4}__)\]\((https://[^)\s]+)\)`)
+	protectedMarkdownBoldPattern = regexp.MustCompile(`\*\*(__MB_[A-Z_]+_[0-9]{4}__)\*\*`)
 )
 
 func stripProtectedMarkdown(value, field string) (string, []markdownDecoration) {

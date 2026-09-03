@@ -131,17 +131,45 @@ police terminology, and presumption-of-innocence wording.
 
 ## Bounded comparison protocol
 
-Compare candidates at temperature zero, sequentially per model, using identical
-protected inputs. Start with difficult fixtures spanning repeated and reordered
-places, dates and times, emergency numbers and measurements, Markdown and URLs,
-non-Latin scripts, attribution, uncertainty, and legal framing. Only expand to
-the complete language matrix when a candidate improves editorial quality rather
-than merely its mechanical pass count.
+Compare candidates sequentially per model, using identical protected inputs and
+the decoding settings prescribed by each model when available. Deterministic
+settings remain preferable when the model documents them; otherwise repeat the
+same case to measure sampling stability. Start with difficult fixtures spanning
+repeated and reordered places, dates and times, emergency numbers and
+measurements, Markdown and URLs, non-Latin scripts, attribution, uncertainty,
+and legal framing. Only expand to the complete language matrix when a candidate
+improves editorial quality rather than merely its mechanical pass count.
 
 Checkpoint after every request. A transport interruption must stop the run and
 resume from the checkpoint rather than recording a model failure or repeating
 completed requests. Live output is evaluation evidence and must not be committed
 as reader content.
+
+## HY-MT2 and Seed-X critical screen
+
+The opt-in `TestLiveNativeTranslationAdapterScreen` is a 72-field-call gate for
+the two experimental adapters. Its three fixtures isolate transit and repeated
+typed-place relationships; negation, attribution, uncertainty, and legal
+framing; and numbers, dates, causality, Markdown, and links. Title and summary
+are separate calls, as they are in the application.
+
+HY-MT2 covers the English control plus Ukrainian, Hindi, and Russian with two
+repetitions at Tencent's sampling settings (48 field calls). Seed-X covers the
+English control plus Croatian, Romanian, and Ukrainian with one greedy run (24
+field calls). Bosnian and Greek are absent because neither model officially
+supports them.
+
+The run manifest pins requested model names and resolved Ollama digests, adapter
+and prompt versions, generation settings, fixture content and hashes, languages,
+and repetition counts. An append-only event file is synced after every field;
+the snapshot can be reconstructed from it, and completed fields from HY-MT2 and
+Seed-X have adapter-qualified keys so they cannot overwrite one another. Each
+result records individual mechanical checks and leaves semantic relationships,
+transit terminology, negation and uncertainty, attribution and legal framing,
+additions and omissions, and grammar explicitly pending for human review.
+
+This screen is test-only. It does not enable typed placeholders in production,
+choose per-language models, or alter jobs, persistence, routes, or deployment.
 
 ## Bounded comparison on 2026-09-02/03
 

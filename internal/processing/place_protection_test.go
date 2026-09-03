@@ -85,6 +85,35 @@ func TestProtectedGeneratorOwnsProtectedPlaceMarkdown(t *testing.T) {
 	}
 }
 
+func TestProtectedGeneratorOwnsTypedPlaceMarkdown(t *testing.T) {
+	inner := &staticGenerator{output: StepOutput{Values: map[string]string{
+		"title":   "At __MB_STREET_0001__",
+		"summary": "See __MB_DISTRICT_0002__",
+	}}}
+	protector := staticProtector{ready: true, value: gazetteer.Protected{
+		Title:   "An der **__MB_STREET_0001__**",
+		Summary: "Siehe [__MB_DISTRICT_0002__](https://munichbrief.de/de/incidents/717)",
+		Replacements: []gazetteer.Replacement{
+			{Token: "__MB_STREET_0001__", Original: "Ganghoferstraße", Field: "title", Kind: gazetteer.KindStreet},
+			{Token: "__MB_DISTRICT_0002__", Original: "Ramersdorf-Perlach", Field: "summary", Kind: gazetteer.KindDistrict},
+		},
+	}}
+	generator := &protectedGenerator{inner: inner, protector: protector}
+	output, _, err := generator.GenerateStep(context.Background(), TranslationByLanguageMust(t, "en").Step, StepInput{Values: map[string]string{
+		"title_de":   "An der **Ganghoferstraße**",
+		"summary_de": "Siehe [Ramersdorf-Perlach](https://munichbrief.de/de/incidents/717)",
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inner.input.Value("title_de") != "An der __MB_STREET_0001__" || inner.input.Value("summary_de") != "Siehe __MB_DISTRICT_0002__" {
+		t.Fatalf("model still received typed-place Markdown: %#v", inner.input.Values)
+	}
+	if output.Values["title"] != "At **Ganghoferstraße**" || output.Values["summary"] != "See [Ramersdorf-Perlach](https://munichbrief.de/de/incidents/717)" {
+		t.Fatalf("typed programmatic Markdown restoration = %#v", output.Values)
+	}
+}
+
 func TestTranslationProcessorAvailabilityTracksGazetteer(t *testing.T) {
 	registry := DefaultPostProcessorRegistry(staticProtector{ready: false})
 	if registry.Ready(TranslationModelStep) {

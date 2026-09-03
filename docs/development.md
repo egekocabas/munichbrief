@@ -110,6 +110,25 @@ See [Translation model evaluation](translation-model-evaluation.md) for the
 official TranslateGemma request contract, the native-adapter boundary, separate
 structural/editorial scoring, and the bounded comparison protocol.
 
+The HY-MT2 and Seed-X critical screen is separately gated and never changes
+production model routing. It verifies both installed model identities before
+generation, always uses typed placeholders, sends titles and summaries as
+separate requests, and checkpoints every field under `.local/` so the same run
+can resume after interruption:
+
+```bash
+MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_LIVE_TEST=1 \
+MUNICHBRIEF_OLLAMA_BASE_URL=http://127.0.0.1:11434 \
+go test -timeout 12h -run TestLiveNativeTranslationAdapterScreen \
+  -v ./internal/processing
+```
+
+Set `MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_DIR` to use a different checkpoint
+directory. A directory is bound to the exact model digests, prompts, settings,
+fixtures, languages, and repetitions in its manifest; use a new directory when
+any of those inputs changes. Generated output remains local evaluation evidence
+and requires manual semantic review even when all mechanical checks pass.
+
 The longer Munich place-name preservation matrix is independently gated so it
 does not slow the normal live smoke suite. It checks every translation target
 through the real placeholder wrapper with one dense request containing all 11
