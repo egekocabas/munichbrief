@@ -13,9 +13,21 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
-const tokenPrefix = "__MB_PLACE_"
+const tokenPrefix = "__MB_"
 
-var placeTokenPattern = regexp.MustCompile(`__MB_PLACE_[0-9]{4}__`)
+var placeTokenPattern = regexp.MustCompile(`__MB_[A-Z_]+_[0-9]{4}__`)
+
+type ProtectionMode string
+
+const (
+	ProtectionOpaque ProtectionMode = "opaque"
+	ProtectionTyped  ProtectionMode = "typed"
+)
+
+type ProtectionOptions struct {
+	Mode         ProtectionMode
+	VisibleKinds []string
+}
 
 type Matcher struct {
 	automaton ahocorasick.AhoCorasick
@@ -26,6 +38,7 @@ type Replacement struct {
 	Token    string
 	Original string
 	Field    string
+	Kind     string
 }
 
 type Protected struct {
@@ -48,8 +61,11 @@ func NewMatcher(entries []Entry) (*Matcher, error) {
 			byName[entry.Name] = entry
 		}
 	}
-	for _, name := range []string{"U-Bahn", "U-Bahnen", "S-Bahn", "S-Bahnen"} {
-		byName[name] = Entry{Name: name, Kind: KindTransit, Priority: 0}
+	for _, name := range []string{"U-Bahn", "U-Bahnen"} {
+		byName[name] = Entry{Name: name, Kind: KindSubwaySystem, Priority: 0}
+	}
+	for _, name := range []string{"S-Bahn", "S-Bahnen"} {
+		byName[name] = Entry{Name: name, Kind: KindCommuterTrain, Priority: 0}
 	}
 	patterns := make([]string, 0, len(byName))
 	for name := range byName {
@@ -77,24 +93,38 @@ func (m *Matcher) Count() int {
 }
 
 func (m *Matcher) Protect(title, summary string) (Protected, error) {
+	return m.ProtectWithOptions(title, summary, ProtectionOptions{Mode: ProtectionOpaque})
+}
+
+func (m *Matcher) ProtectWithOptions(title, summary string, options ProtectionOptions) (Protected, error) {
 	if m == nil || len(m.entries) == 0 {
 		return Protected{}, errors.New("gazetteer matcher is unavailable")
+	}
+	if options.Mode == "" {
+		options.Mode = ProtectionOpaque
+	}
+	if options.Mode != ProtectionOpaque && options.Mode != ProtectionTyped {
+		return Protected{}, fmt.Errorf("unknown gazetteer protection mode %q", options.Mode)
 	}
 	title = norm.NFC.String(title)
 	summary = norm.NFC.String(summary)
 	if strings.Contains(title, tokenPrefix) || strings.Contains(summary, tokenPrefix) {
 		return Protected{}, errors.New("source text contains reserved gazetteer token prefix")
 	}
+	visibleKinds := make(map[string]bool, len(options.VisibleKinds))
+	for _, kind := range options.VisibleKinds {
+		visibleKinds[kind] = true
+	}
 	result := Protected{}
 	var replacements []Replacement
 	tokens := make(map[string]string)
-	result.Title, replacements = m.protectField(title, "title", replacements, tokens)
-	result.Summary, replacements = m.protectField(summary, "summary", replacements, tokens)
+	result.Title, replacements = m.protectField(title, "title", replacements, tokens, options.Mode, visibleKinds)
+	result.Summary, replacements = m.protectField(summary, "summary", replacements, tokens, options.Mode, visibleKinds)
 	result.Replacements = replacements
 	return result, nil
 }
 
-func (m *Matcher) protectField(value, field string, replacements []Replacement, tokens map[string]string) (string, []Replacement) {
+func (m *Matcher) protectField(value, field string, replacements []Replacement, tokens map[string]string, mode ProtectionMode, visibleKinds map[string]bool) (string, []Replacement) {
 	var builder strings.Builder
 	position := 0
 	iter := m.automaton.Iter(value)
@@ -104,14 +134,21 @@ func (m *Matcher) protectField(value, field string, replacements []Replacement, 
 		if start < position || !unicodeBoundary(value, start, end) || letterCount(entry.Name) < 3 && touchesDash(value, start, end) || entry.RequiresContext && !hasLocationContext(value, start) {
 			continue
 		}
+		if visibleKinds[entry.Kind] {
+			continue
+		}
 		token, found := tokens[entry.Name]
 		if !found {
-			token = fmt.Sprintf("%s%04d__", tokenPrefix, len(tokens)+1)
+			label := "PLACE"
+			if mode == ProtectionTyped {
+				label = placeholderLabel(entry.Kind)
+			}
+			token = fmt.Sprintf("%s%s_%04d__", tokenPrefix, label, len(tokens)+1)
 			tokens[entry.Name] = token
 		}
 		builder.WriteString(value[position:start])
 		builder.WriteString(token)
-		replacements = append(replacements, Replacement{Token: token, Original: value[start:end], Field: field})
+		replacements = append(replacements, Replacement{Token: token, Original: value[start:end], Field: field, Kind: entry.Kind})
 		position = end
 	}
 	if position == 0 {
@@ -119,6 +156,35 @@ func (m *Matcher) protectField(value, field string, replacements []Replacement, 
 	}
 	builder.WriteString(value[position:])
 	return builder.String(), replacements
+}
+
+func placeholderLabel(kind string) string {
+	switch kind {
+	case KindStreet:
+		return "STREET"
+	case KindDistrict:
+		return "DISTRICT"
+	case KindNeighbourhood:
+		return "NEIGHBOURHOOD"
+	case KindMunicipality:
+		return "MUNICIPALITY"
+	case KindTransit:
+		return "TRANSIT"
+	case KindPark:
+		return "PARK"
+	case KindSquare:
+		return "SQUARE"
+	case KindLandmark:
+		return "LANDMARK"
+	case KindTrainStation:
+		return "TRAIN_STATION"
+	case KindCommuterTrain:
+		return "COMMUTER_TRAIN"
+	case KindSubwaySystem:
+		return "SUBWAY_SYSTEM"
+	default:
+		return "PLACE"
+	}
 }
 
 func Restore(protected Protected, title, summary string) (string, string, error) {

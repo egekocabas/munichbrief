@@ -43,6 +43,59 @@ func TestMatcherProtectsRequestedNamesMarkdownAndTransit(t *testing.T) {
 	}
 }
 
+func TestMatcherTypedProtectionUsesKindsAndCanLeaveTransitVisible(t *testing.T) {
+	matcher, err := NewMatcher([]Entry{
+		{Name: "Hauptbahnhof", Kind: KindTrainStation},
+		{Name: "Ingolstädter Straße", Kind: KindStreet},
+		{Name: "Milbertshofen", Kind: KindDistrict},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	title := "Störung am Hauptbahnhof in Milbertshofen"
+	summary := "S-Bahnen fuhren auf der Ingolstädter Straße verspätet. Die U-Bahn war nicht betroffen."
+	protected, err := matcher.ProtectWithOptions(title, summary, ProtectionOptions{
+		Mode:         ProtectionTyped,
+		VisibleKinds: []string{KindCommuterTrain, KindSubwaySystem},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if protected.Title != "Störung am __MB_TRAIN_STATION_0001__ in __MB_DISTRICT_0002__" {
+		t.Fatalf("typed title = %q", protected.Title)
+	}
+	if protected.Summary != "S-Bahnen fuhren auf der __MB_STREET_0003__ verspätet. Die U-Bahn war nicht betroffen." {
+		t.Fatalf("typed summary = %q", protected.Summary)
+	}
+	if len(protected.Replacements) != 3 || protected.Replacements[0].Kind != KindTrainStation || protected.Replacements[1].Kind != KindDistrict || protected.Replacements[2].Kind != KindStreet {
+		t.Fatalf("typed replacements = %#v", protected.Replacements)
+	}
+	restoredTitle, restoredSummary, err := Restore(protected, protected.Title, protected.Summary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if restoredTitle != title || restoredSummary != summary {
+		t.Fatalf("restored = %q / %q", restoredTitle, restoredSummary)
+	}
+}
+
+func TestMatcherTypedProtectionRejectsUnknownTokensAndModes(t *testing.T) {
+	matcher, err := NewMatcher([]Entry{{Name: "Milbertshofen", Kind: KindDistrict}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := matcher.ProtectWithOptions("Milbertshofen", "", ProtectionOptions{Mode: "invalid"}); err == nil {
+		t.Fatal("unknown protection mode was accepted")
+	}
+	protected, err := matcher.ProtectWithOptions("Milbertshofen", "", ProtectionOptions{Mode: ProtectionTyped})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := Restore(protected, protected.Title+" __MB_STREET_9999__", protected.Summary); err == nil {
+		t.Fatal("unknown typed token was accepted")
+	}
+}
+
 func TestRestoreRejectsMissingDuplicateMovedModifiedAndUnknownTokensButAllowsReordering(t *testing.T) {
 	matcher := testMatcher(t)
 	protected, err := matcher.Protect("Schwabing und Sendling", "Oberhaching")

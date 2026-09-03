@@ -762,7 +762,7 @@ func validateGermanPresentation(_ StepInput, output *StepOutput) error {
 
 var (
 	translationURLPattern          = regexp.MustCompile(`(?i)\b(?:https?://|www\.)[^\s)]+`)
-	translationPlaceTokenPattern   = regexp.MustCompile(`__MB_PLACE_[0-9]{4}__`)
+	translationPlaceTokenPattern   = regexp.MustCompile(`__MB_[A-Z_]+_[0-9]{4}__`)
 	translationNumberPattern       = regexp.MustCompile(`[0-9]+`)
 	translationBoldPattern         = regexp.MustCompile(`\*\*([^*\n]+)\*\*`)
 	translationMarkdownLinkPattern = regexp.MustCompile(`\[([^\]\n]*)\]\((https://[^)\s]+)\)`)

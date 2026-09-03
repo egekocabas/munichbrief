@@ -11,6 +11,9 @@ const (
 	KindPark          = "park"
 	KindSquare        = "square"
 	KindLandmark      = "landmark"
+	KindTrainStation  = "train_station"
+	KindCommuterTrain = "commuter_train"
+	KindSubwaySystem  = "subway_system"
 )
 
 type Entry struct {
