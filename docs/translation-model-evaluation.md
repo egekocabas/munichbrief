@@ -41,6 +41,73 @@ To inspect the exact local GGUF template without generating text, use Ollama's
 identity, parameter size, quantization, and template in evaluation notes; do
 not assume that a third-party GGUF retained Google's structured chat template.
 
+## Hy-MT2 request contract
+
+Tencent's Hy-MT2 instructions require full language names in English prompts,
+not BCP-47 tags or bare language codes. The experimental `HyMT2NativeAdapter`
+therefore maps MunichBrief's canonical German source and each supported reader
+language to Tencent's exact English label. This matters for Chinese: the website
+registry calls it `Simplified Chinese`, while Hy-MT2's supported-language table
+calls `zh` `Chinese`.
+
+The adapter sends one user message with no system prompt or JSON schema. It uses
+Tencent's default translation wording, adds the documented constraint that
+code tags and variable placeholders must remain unchanged, and separates the
+instruction from the protected source with two newline characters. It applies
+Tencent's recommended 1.8B/7B settings through their Ollama equivalents:
+`temperature=0.7`, `top_p=0.6`, `top_k=20`, `repeat_penalty=1.05`, and
+`num_predict=4096`. The normal Ollama pipeline retains its existing settings.
+
+Of MunichBrief's registered translated languages, Hy-MT2 officially supports
+English, Turkish, Italian, Ukrainian, Chinese, Hindi, Spanish, French, Polish,
+and Russian. It does not list Croatian, Bosnian, Greek, or Romanian; the adapter
+rejects those targets instead of attempting an undocumented fallback. It is not
+selected by production routing and requires live quality evaluation after the
+local GGUF download completes.
+
+Primary references:
+
+- Tencent Hy-MT2 7B model card (prompt forms, inference settings, languages):
+  <https://huggingface.co/tencent/Hy-MT2-7B>
+- Tencent Hy-MT2 source repository:
+  <https://github.com/Tencent-Hunyuan/Hy-MT2>
+- Ollama request option definitions:
+  <https://github.com/ollama/ollama/blob/main/api/types.go>
+
+## Seed-X request contract
+
+ByteDance's Seed-X-Instruct model has no chat template and should not receive a
+multi-turn conversation. Its target-language tag is mandatory at the absolute
+end of the prompt. The experimental `SeedXNativeAdapter` therefore calls
+Ollama's `/api/generate` endpoint with `raw=true`, no system prompt or schema,
+and a prompt ending in the exact official tag, such as `<uk>` or `<zh>`. It
+places two newline characters between the instruction and protected source and
+adds a concise instruction to preserve code tags and variable placeholders.
+
+ByteDance recommends beam search with width four and a maximum of 512 output
+tokens. Ollama does not expose beam width through its documented runtime
+options, so the adapter uses ByteDance's documented greedy alternative with
+`temperature=0` and `num_predict=512`.
+
+Of MunichBrief's translated reader languages, Seed-X officially supports
+English, Turkish, Croatian, Italian, Ukrainian, Chinese, Spanish, French,
+Romanian, Polish, and Russian. It does not list Bosnian, Hindi, or Greek; the
+adapter rejects those targets. ByteDance recommends against unofficial
+quantizations, so the downloaded third-party Q5_K_M file must remain an
+evaluation candidate rather than a production default.
+
+Primary references:
+
+- ByteDance Seed-X-Instruct 7B model card (language tags, raw prompting,
+  decoding, and supported languages):
+  <https://huggingface.co/ByteDance-Seed/Seed-X-Instruct-7B>
+- ByteDance Seed-X source repository:
+  <https://github.com/ByteDance-Seed/Seed-X-7B>
+- Ollama raw generation API:
+  <https://docs.ollama.com/api/generate>
+- Evaluated third-party Q5_K_M artifact:
+  <https://huggingface.co/mradermacher/Seed-X-Instruct-7B-GGUF>
+
 ## Deterministic acceptance
 
 Before persistence, a translation must preserve:

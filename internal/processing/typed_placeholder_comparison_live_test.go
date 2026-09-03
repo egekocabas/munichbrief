@@ -416,7 +416,7 @@ func writeAtomicJSON(t *testing.T, path string, value any) {
 	}
 	temporaryPath := temporary.Name()
 	defer os.Remove(temporaryPath)
-	if err := temporary.Chmod(0o600); err == nil {
+	if err = temporary.Chmod(0o600); err == nil {
 		_, err = temporary.Write(append(encoded, '\n'))
 	}
 	if err == nil {
