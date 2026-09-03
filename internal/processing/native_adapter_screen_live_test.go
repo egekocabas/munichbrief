@@ -19,12 +19,14 @@ import (
 )
 
 const (
-	nativeAdapterScreenOptIn  = "MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_LIVE_TEST"
-	nativeAdapterScreenFilter = "MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_ADAPTER"
-	nativeAdapterSmokeOptIn   = "MUNICHBRIEF_NATIVE_ADAPTER_SMOKE_LIVE_TEST"
-	nativeAdapterSmokeFilter  = "MUNICHBRIEF_NATIVE_ADAPTER_SMOKE_ADAPTER"
-	hyMT2ScreenModel          = "hf.co/mradermacher/Hy-MT2-7B-GGUF:Q5_K_M"
-	seedXScreenModel          = "hf.co/mradermacher/Seed-X-Instruct-7B-GGUF:Q5_K_M"
+	nativeAdapterScreenOptIn         = "MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_LIVE_TEST"
+	nativeAdapterScreenFilter        = "MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_ADAPTER"
+	nativeAdapterScreenLanguages     = "MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_LANGUAGES"
+	nativeAdapterScreenFixtureFilter = "MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_FIXTURES"
+	nativeAdapterSmokeOptIn          = "MUNICHBRIEF_NATIVE_ADAPTER_SMOKE_LIVE_TEST"
+	nativeAdapterSmokeFilter         = "MUNICHBRIEF_NATIVE_ADAPTER_SMOKE_ADAPTER"
+	hyMT2ScreenModel                 = "hf.co/mradermacher/Hy-MT2-7B-GGUF:Q5_K_M"
+	seedXScreenModel                 = "hf.co/mradermacher/Seed-X-Instruct-7B-GGUF:Q5_K_M"
 )
 
 // evaluationTranslator keeps live evaluation orchestration independent from a
@@ -233,6 +235,14 @@ func TestLiveNativeTranslationAdapterScreen(t *testing.T) {
 	if len(specs) == 0 {
 		t.Fatalf("%s did not match a configured adapter", nativeAdapterScreenFilter)
 	}
+	specs = filterNativeAdapterScreenLanguages(specs, os.Getenv(nativeAdapterScreenLanguages))
+	if len(specs) == 0 {
+		t.Fatalf("%s did not match a configured language", nativeAdapterScreenLanguages)
+	}
+	fixtures := filterNativeAdapterScreenFixtures(nativeAdapterScreenFixtures(), os.Getenv(nativeAdapterScreenFixtureFilter))
+	if len(fixtures) == 0 {
+		t.Fatalf("%s did not match a configured fixture", nativeAdapterScreenFixtureFilter)
+	}
 	for index := range specs {
 		digest, err := ollamaModelDigest(context.Background(), baseURL, specs[index].Model)
 		if err != nil {
@@ -241,7 +251,7 @@ func TestLiveNativeTranslationAdapterScreen(t *testing.T) {
 		specs[index].ModelDigest = digest
 	}
 	config := nativeAdapterScreenConfig{
-		Version: 1, Placeholder: "typed", Adapters: specs, Fixtures: nativeAdapterScreenFixtures(),
+		Version: 1, Placeholder: "typed", Adapters: specs, Fixtures: fixtures,
 	}
 	configHash := hashJSON(t, config)
 	ensureNativeAdapterScreenManifest(t, runDirectory, configHash, config)
@@ -348,6 +358,51 @@ func filterNativeAdapterScreenSpecs(specs []nativeAdapterScreenSpec, filter stri
 		}
 	}
 	return filtered
+}
+
+func filterNativeAdapterScreenLanguages(specs []nativeAdapterScreenSpec, filter string) []nativeAdapterScreenSpec {
+	selected := commaSeparatedSelection(filter)
+	if len(selected) == 0 {
+		return specs
+	}
+	filtered := make([]nativeAdapterScreenSpec, 0, len(specs))
+	for _, spec := range specs {
+		copy := spec
+		copy.Languages = nil
+		for _, language := range spec.Languages {
+			if selected[language] {
+				copy.Languages = append(copy.Languages, language)
+			}
+		}
+		if len(copy.Languages) > 0 {
+			filtered = append(filtered, copy)
+		}
+	}
+	return filtered
+}
+
+func filterNativeAdapterScreenFixtures(fixtures []nativeAdapterScreenFixture, filter string) []nativeAdapterScreenFixture {
+	selected := commaSeparatedSelection(filter)
+	if len(selected) == 0 {
+		return fixtures
+	}
+	filtered := make([]nativeAdapterScreenFixture, 0, len(fixtures))
+	for _, fixture := range fixtures {
+		if selected[fixture.Name] {
+			filtered = append(filtered, fixture)
+		}
+	}
+	return filtered
+}
+
+func commaSeparatedSelection(value string) map[string]bool {
+	selected := make(map[string]bool)
+	for _, item := range strings.Split(value, ",") {
+		if item = strings.TrimSpace(item); item != "" {
+			selected[item] = true
+		}
+	}
+	return selected
 }
 
 func nativeAdapterScreenFixtures() []nativeAdapterScreenFixture {
@@ -645,6 +700,20 @@ func TestNativeAdapterScreenFilterSelectsOneAdapter(t *testing.T) {
 	}
 }
 
+func TestNativeAdapterScreenFiltersLanguagesAndFixtures(t *testing.T) {
+	specs := filterNativeAdapterScreenLanguages(nativeAdapterScreenSpecs(), "uk, ru")
+	if len(specs) != 2 || strings.Join(specs[0].Languages, ",") != "uk,ru" || strings.Join(specs[1].Languages, ",") != "uk" {
+		t.Fatalf("filtered languages = %#v", specs)
+	}
+	fixtures := filterNativeAdapterScreenFixtures(nativeAdapterScreenFixtures(), "numbers-causality-markdown")
+	if len(fixtures) != 1 || fixtures[0].Name != "numbers-causality-markdown" {
+		t.Fatalf("filtered fixtures = %#v", fixtures)
+	}
+	if filtered := filterNativeAdapterScreenLanguages(nativeAdapterScreenSpecs(), "unknown"); len(filtered) != 0 {
+		t.Fatalf("unknown language filter = %#v", filtered)
+	}
+}
+
 func TestNativeAdapterScreenReplayKeepsAdapterCheckpointsSeparate(t *testing.T) {
 	directory := t.TempDir()
 	state := nativeAdapterScreenSnapshot{ConfigHash: "test", Fields: make(map[string]nativeAdapterScreenField), Results: make(map[string]nativeAdapterScreenResult)}
@@ -682,5 +751,41 @@ func TestNativeAdapterScreenResultSeparatesMechanicalAndManualReview(t *testing.
 		nativeAdapterScreenField{State: "completed", RawOutput: protected.Summary})
 	if result.Status != "PASS_MECHANICAL_PENDING_REVIEW" || result.ManualReview.Status != "pending" || result.Checks.Final != "pass" {
 		t.Fatalf("screen result = %#v", result)
+	}
+}
+
+func TestNativeAdapterScreenAcceptsLocalizedDateAfterProtectedStreet(t *testing.T) {
+	fixture := nativeAdapterScreenFixtures()[2]
+	matcher, err := nativeAdapterScreenMatcher()
+	if err != nil {
+		t.Fatal(err)
+	}
+	protected, err := protectNativeAdapterFixture(matcher, fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		language, title, summary string
+	}{
+		{
+			language: "uk",
+			title:    "Операція біля __MB_STREET_0001__ 29 серпня 2026 року",
+			summary:  "Оскільки о 03:30 було повідомлено про дим з підвалу на вулиці __MB_STREET_0001__, поліція перекрила цю вулицю на 45 хвилин. Було оглянуто двох осіб; ніхто не постраждав. Інформацію можна отримати у __MB_DISTRICT_0002__, у термінових випадках слід телефонувати на 110.",
+		},
+		{
+			language: "ru",
+			title:    "Экспедиция на __MB_STREET_0001__ 29 августа 2026 года",
+			summary:  "Поскольку около 03:30 был зафиксирован дым из подвала на улице __MB_STREET_0001__, полиция перекрыла дорогу на 45 минут. Были допрошены два человека; никто не пострадал. Информацию можно получить в __MB_DISTRICT_0002__, в чрезвычайных ситуациях следует звонить по номеру 110.",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.language, func(t *testing.T) {
+			result := evaluateNativeAdapterScreenResult("hy-mt2", test.language, fixture, protected, 1,
+				nativeAdapterScreenField{State: "completed", RawOutput: test.title},
+				nativeAdapterScreenField{State: "completed", RawOutput: test.summary})
+			if result.Status != "PASS_MECHANICAL_PENDING_REVIEW" {
+				t.Fatalf("localized-date result = %#v", result)
+			}
+		})
 	}
 }

@@ -195,6 +195,33 @@ screen for this unofficial GGUF. The adapter retains the official minimal prompt
 so future artifacts can be reevaluated without treating a harmful custom prompt
 as part of the model contract.
 
+### HY-MT2 screen on 2026-09-03
+
+The HY-MT2-only screen completed all 48 field calls in about 52 minutes: English,
+Ukrainian, Hindi, and Russian across three fixtures, two repetitions, and
+separate title/summary requests. Every typed placeholder, number, Markdown
+decoration, URL, and target script passed its dedicated check. The original
+summary reported English 6/6, Hindi 6/6, Ukrainian 4/6, and Russian 4/6.
+
+The four apparent failures were deterministic false positives, not model token
+failures. Russian and Ukrainian naturally placed the date immediately after
+`Ganghoferstraße`; the address detector interpreted day `29` as a house number.
+The detector now exempts only complete localized calendar forms with a valid day,
+recognized month, and four-digit year (plus year-first Chinese dates). It still
+rejects bare numbers, alphanumeric house numbers, invalid day numbers, and bare
+years after street names. A fresh eight-call targeted rerun of the affected
+fixture passed Ukrainian 2/2 and Russian 2/2, making the adjusted structural
+result 24/24 cases.
+
+Structural success did not imply editorial approval. Manual inspection found a
+stable English plural-agreement error and one examination/questioning error;
+Ukrainian transit plurality and direction problems plus weakened legal terms;
+Hindi agreement, legal-meaning, and examination/questioning errors; and Russian
+transit grammar, weakened legal terms, altered exact times, and
+examination/interrogation errors. Sampling sometimes improved a repetition, but
+the observed legal and event-role changes prevent automatic publication in the
+tested target languages without further model or prompt work.
+
 ## Bounded comparison on 2026-09-02/03
 
 The native adapter was run against the same three German fixtures in Turkish,

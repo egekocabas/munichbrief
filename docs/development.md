@@ -141,8 +141,11 @@ directory. Set `MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_ADAPTER` to `hy-mt2` or
 `seed-x` to run only an adapter that passed its smoke gate. A directory is bound
 to the exact selected adapter, model digest, prompt, settings, fixtures,
 languages, and repetitions in its manifest; use a new directory when any of
-those inputs changes. Generated output remains local evaluation evidence and
-requires manual semantic review even when all mechanical checks pass.
+those inputs changes. Targeted follow-ups may select comma-separated language
+codes with `MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_LANGUAGES` and fixture names with
+`MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_FIXTURES`. Generated output remains local
+evaluation evidence and requires manual semantic review even when all
+mechanical checks pass.
 
 The longer Munich place-name preservation matrix is independently gated so it
 does not slow the normal live smoke suite. It checks every translation target

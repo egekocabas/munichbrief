@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -298,10 +299,52 @@ var privacyDetectors = []struct {
 	{label: "telephone number", expression: regexp.MustCompile(`(?:\+49|\b0)[\d ()/.-]{7,}\d\b`)},
 	{label: "date of birth", expression: regexp.MustCompile(`(?i)(?:geboren(?: am)?|geburtsdatum|born(?: on)?)\s*:?\s*\d{1,2}[./-]\d{1,2}[./-](?:19|20)?\d{2}\b`)},
 	{label: "exact age", expression: regexp.MustCompile(`(?i)\b\d{1,3}[- ]?(?:jährig(?:e[rsn]?)?|year[- ]old)\b`)},
-	{label: "precise street address", expression: regexp.MustCompile(`(?i)\b[[:alpha:]ÄÖÜäöüß-]+(?:straße|strasse|str\.|weg|platz|allee|gasse)\s+\d+[a-z]?\b`)},
 	{label: "vehicle registration", expression: regexp.MustCompile(`\b[A-ZÄÖÜ]{1,3}-[A-Z]{1,2}\s?\d{1,4}\b`)},
 	{label: "case number", expression: regexp.MustCompile(`(?i)(?:aktenzeichen|vorgangsnummer|case(?: number)?|reference)\s*:?\s*(?:[A-Z]{1,10}[-/]?)?\d[A-Z0-9/-]{3,}`)},
 	{label: "redaction marker", expression: regexp.MustCompile(`(?i)\[private detail omitted\]`)},
+}
+
+var (
+	preciseStreetAddressPattern   = regexp.MustCompile(`(?i)\b[[:alpha:]ÄÖÜäöüß-]+(?:straße|strasse|str\.|weg|platz|allee|gasse)\s+(\d+)([a-z]?)\b`)
+	localizedMonthAfterDayPattern = regexp.MustCompile(`(?i)^(?:[.,]\s*|\s+)(?:de\s+)?(?:` +
+		`january|february|march|april|may|june|july|august|september|october|november|december|` +
+		`januar|februar|märz|mai|juni|juli|oktober|dezember|` +
+		`ocak|şubat|mart|nisan|mayıs|haziran|temmuz|ağustos|eylül|ekim|kasım|aralık|` +
+		`siječnja|veljače|ožujka|travnja|svibnja|lipnja|srpnja|kolovoza|rujna|listopada|studenoga|prosinca|` +
+		`gennaio|febbraio|marzo|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre|` +
+		`січня|лютого|березня|квітня|травня|червня|липня|серпня|вересня|жовтня|листопада|грудня|` +
+		`januar|februar|mart|april|maj|juni|juli|august|septembar|oktobar|novembar|decembar|` +
+		`जनवरी|फ़रवरी|मार्च|अप्रैल|मई|जून|जुलाई|अगस्त|सितंबर|अक्टूबर|नवंबर|दिसंबर|` +
+		`enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|` +
+		`janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre|` +
+		`ιανουαρίου|φεβρουαρίου|μαρτίου|απριλίου|μαΐου|ιουνίου|ιουλίου|αυγούστου|σεπτεμβρίου|οκτωβρίου|νοεμβρίου|δεκεμβρίου|` +
+		`ianuarie|februarie|martie|aprilie|mai|iunie|iulie|august|septembrie|octombrie|noiembrie|decembrie|` +
+		`stycznia|lutego|marca|kwietnia|maja|czerwca|lipca|sierpnia|września|października|listopada|grudnia|` +
+		`января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря` +
+		`)(?:\s+de)?\s+\d{4}\b`)
+	eastAsianDateAfterYearPattern = regexp.MustCompile(`^年(?:1[0-2]|[1-9])月(?:3[01]|[12]\d|[1-9])日`)
+)
+
+func containsPreciseStreetAddress(value string) bool {
+	for _, indices := range preciseStreetAddressPattern.FindAllStringSubmatchIndex(value, -1) {
+		number, err := strconv.Atoi(value[indices[2]:indices[3]])
+		if err != nil {
+			return true
+		}
+		// A letter suffix is an address component, never part of a calendar day.
+		if indices[4] >= 0 && indices[4] != indices[5] {
+			return true
+		}
+		tail := value[indices[1]:]
+		if number >= 1 && number <= 31 && localizedMonthAfterDayPattern.MatchString(tail) {
+			continue
+		}
+		if number >= 1900 && number <= 2100 && eastAsianDateAfterYearPattern.MatchString(tail) {
+			continue
+		}
+		return true
+	}
+	return false
 }
 
 var sourceSensitiveDetectors = []*regexp.Regexp{

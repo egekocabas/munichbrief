@@ -1032,6 +1032,9 @@ func validatePublicText(value string) error {
 			return errorOf(ErrorPrivacy, "model output contains a possible %s", detector.label)
 		}
 	}
+	if containsPreciseStreetAddress(value) {
+		return errorOf(ErrorPrivacy, "model output contains a possible precise street address")
+	}
 	return nil
 }
 
