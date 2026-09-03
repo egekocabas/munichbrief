@@ -47,7 +47,7 @@ func TestRegisteredTranslationPromptsUseOnePlaceholderContract(t *testing.T) {
 		for _, expected := range []string{
 			"German (de-DE) to " + definition.TranslationName + " (" + definition.Tag.String() + ")",
 			`"title_` + fieldCode + `"`, `"summary_` + fieldCode + `"`, "presumption-of-innocence",
-			`__MB_PLACE_####__`, "same token can intentionally occur more than once", "Copy every token occurrence exactly", "natural target-language word order is allowed", "apostrophe-delimited grammatical suffix", "Preserve Markdown syntax and link URLs exactly",
+			`__MB_PLACE_####__`, "same token can intentionally occur more than once", "Copy every token occurrence exactly", "natural target-language word order is allowed", "apostrophe-delimited grammatical suffix", "Output plain text without Markdown or URLs",
 		} {
 			if !strings.Contains(rendered, expected) {
 				t.Errorf("%s unified translation prompt omitted %q", translation.Language, expected)

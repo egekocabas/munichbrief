@@ -339,7 +339,7 @@ func TestLiveOllamaMunichPlaceNamePreservationMatrix(t *testing.T) {
 		{
 			name:    "all requested place forms",
 			title:   "U-Bahn und S-Bahn in München",
-			summary: "Ingolstädter Straße, Milbertshofen, **Schwabing**, Ganghoferstraße, Sendling, [Ramersdorf-Perlach](https://munichbrief.de/en/incidents/717), [Schwabing-West](https://munichbrief.de/en/incidents/378?page=2), Oberhaching und Geiselgasteig werden als eigenständige Ortsangaben genannt.",
+			summary: "Ingolstädter Straße, Milbertshofen, Schwabing, Ganghoferstraße, Sendling, Ramersdorf-Perlach, Schwabing-West, Oberhaching und Geiselgasteig werden als eigenständige Ortsangaben genannt.",
 			protected: map[string][]string{
 				"U-Bahn":              {"U-Bahn"},
 				"S-Bahn":              {"S-Bahn"},

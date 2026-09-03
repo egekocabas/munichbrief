@@ -150,10 +150,10 @@ mechanical checks pass.
 The longer Munich place-name preservation matrix is independently gated so it
 does not slow the normal live smoke suite. It checks every translation target
 through the real placeholder wrapper with one dense request containing all 11
-requested forms: transit labels, streets, formatted and linked district names,
-municipalities, and hyphenated names. Every restored spelling must exactly
-match the NFC-normalized source, Markdown URLs must remain unchanged, and model
-output is not logged:
+requested forms: transit labels, streets, districts, municipalities, and
+hyphenated names. Every restored spelling must exactly match the NFC-normalized
+source, the result must remain plain text without URLs, and model output is not
+logged:
 
 ```bash
 MUNICHBRIEF_OLLAMA_PLACE_NAMES_LIVE_TEST=1 \

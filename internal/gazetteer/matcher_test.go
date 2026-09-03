@@ -20,10 +20,10 @@ func testMatcher(t *testing.T) *Matcher {
 	return matcher
 }
 
-func TestMatcherProtectsRequestedNamesMarkdownAndTransit(t *testing.T) {
+func TestMatcherProtectsRequestedNamesUnicodeAndTransit(t *testing.T) {
 	matcher := testMatcher(t)
-	title := "U-Bahn an der Ingolsta\u0308dter Straße in Milbertshofen und **Schwabing**"
-	summary := "S-Bahn, Ganghoferstraße, Sendling, [Ramersdorf-Perlach](https://munichbrief.de/en/incidents/717), [Schwabing-West](https://munichbrief.de/en/incidents/378?page=2), Oberhaching und Geiselgasteig."
+	title := "U-Bahn an der Ingolsta\u0308dter Straße in Milbertshofen und Schwabing"
+	summary := "S-Bahn, Ganghoferstraße, Sendling, Ramersdorf-Perlach, Schwabing-West, Oberhaching und Geiselgasteig."
 	protected, err := matcher.Protect(title, summary)
 	if err != nil {
 		t.Fatal(err)
@@ -31,14 +31,14 @@ func TestMatcherProtectsRequestedNamesMarkdownAndTransit(t *testing.T) {
 	if len(protected.Replacements) != 11 {
 		t.Fatalf("replacements = %d, want 11: %#v", len(protected.Replacements), protected.Replacements)
 	}
-	if !strings.Contains(protected.Summary, "[__MB_PLACE_") || !strings.Contains(protected.Summary, "](https://munichbrief.de/en/incidents/717)") {
-		t.Fatalf("Markdown link was not protected safely: %s", protected.Summary)
+	if strings.Count(protected.Title+protected.Summary, tokenPrefix) != 11 {
+		t.Fatalf("requested names were not all protected: %s / %s", protected.Title, protected.Summary)
 	}
 	restoredTitle, restoredSummary, err := Restore(protected, protected.Title, protected.Summary)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if restoredTitle != "U-Bahn an der Ingolstädter Straße in Milbertshofen und **Schwabing**" || restoredSummary != summary {
+	if restoredTitle != "U-Bahn an der Ingolstädter Straße in Milbertshofen und Schwabing" || restoredSummary != summary {
 		t.Fatalf("restore mismatch:\n%s\n%s", restoredTitle, restoredSummary)
 	}
 }
@@ -117,8 +117,8 @@ func TestRestoreRejectsMissingDuplicateMovedModifiedAndUnknownTokensButAllowsReo
 	if title, _, err := Restore(protected, "__MB_PLACE_0002__ und __MB_PLACE_0001__", protected.Summary); err != nil || title != "Sendling und Schwabing" {
 		t.Fatalf("Restore rejected target-language token reordering: title=%q err=%v", title, err)
 	}
-	if _, _, err := Restore(protected, "**"+protected.Title+"**", "["+protected.Summary+"](https://munichbrief.de/en/incidents/1)"); err != nil {
-		t.Fatalf("Restore rejected Markdown punctuation around intact tokens: %v", err)
+	if _, _, err := Restore(protected, "("+protected.Title+")", "\""+protected.Summary+"\""); err != nil {
+		t.Fatalf("Restore rejected punctuation around intact tokens: %v", err)
 	}
 	if title, summary, err := Restore(protected, "警方在__MB_PLACE_0001__和__MB_PLACE_0002__行动", "靠近__MB_PLACE_0003__的现场"); err != nil || title != "警方在Schwabing和Sendling行动" || summary != "靠近Oberhaching的现场" {
 		t.Fatalf("Restore rejected normal Han adjacency: title=%q summary=%q err=%v", title, summary, err)
@@ -157,7 +157,7 @@ func TestMatcherUsesUnicodeBoundariesAndContextForAmbiguousNames(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	protected, err := matcher.Protect("Die Haare", "Einsatz in **Haar**, in Au-pair und in Au sowie Schwabinger Straße, später in Schwabing.")
+	protected, err := matcher.Protect("Die Haare", "Einsatz in Haar, in Au-pair und in Au sowie Schwabinger Straße, später in Schwabing.")
 	if err != nil {
 		t.Fatal(err)
 	}

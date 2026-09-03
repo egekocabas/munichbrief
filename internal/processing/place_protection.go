@@ -48,17 +48,12 @@ func (g *protectedGenerator) GenerateStep(ctx context.Context, step StepDefiniti
 	if err != nil {
 		return StepOutput{}, "", errorOf(ErrorConfiguration, "protect translation place names: %v", err)
 	}
-	markdown := protectMarkdown(&protected)
 	protectedInput := input.clone()
 	protectedInput.Values["title_de"] = protected.Title
 	protectedInput.Values["summary_de"] = protected.Summary
 	output, model, err := g.inner.GenerateStep(ctx, step, protectedInput)
 	if err != nil {
 		return StepOutput{}, model, err
-	}
-	output.Values["title"], output.Values["summary"], err = markdown.restore(output.Values["title"], output.Values["summary"])
-	if err != nil {
-		return StepOutput{}, model, errorOf(ErrorOutput, "restore translation Markdown: %v", err)
 	}
 	title, summary, err := gazetteer.Restore(protected, output.Values["title"], output.Values["summary"])
 	if err != nil {

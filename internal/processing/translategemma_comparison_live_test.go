@@ -47,7 +47,7 @@ func TestLiveTranslateGemmaNativeAdapterComparison(t *testing.T) {
 	}
 	reportPath := os.Getenv("MUNICHBRIEF_TRANSLATEGEMMA_COMPARISON_REPORT")
 	if reportPath == "" {
-		reportPath = "/tmp/munichbrief-translategemma-comparison.json"
+		reportPath = "/tmp/munichbrief-translategemma-plain-text-comparison.json"
 	}
 
 	models := []string{
@@ -68,9 +68,9 @@ func TestLiveTranslateGemmaNativeAdapterComparison(t *testing.T) {
 			Summary: "Ein Tatverdächtiger soll an der Leopoldstraße in Schwabing-West die Scheibe eines geparkten Fahrzeugs beschädigt haben. Die Polizei nahm ihn vorläufig fest. Eine Verurteilung liegt nicht vor, und die Hintergründe werden weiterhin geprüft.",
 		},
 		{
-			Name:    "markdown-and-transit",
+			Name:    "transit-and-place-names",
 			Title:   "Störungen zwischen Hauptbahnhof und Ostbahnhof",
-			Summary: "Wegen eines Polizeieinsatzes fuhren mehrere S-Bahnen zwischen **Hauptbahnhof** und Ostbahnhof verspätet. Die U-Bahn war nicht betroffen. Weitere Hinweise nennt die Meldung zu [Ramersdorf-Perlach](https://munichbrief.de/de/incidents/717); zur Ursache machte die Polizei zunächst keine Angaben.",
+			Summary: "Wegen eines Polizeieinsatzes fuhren mehrere S-Bahnen zwischen Hauptbahnhof und Ostbahnhof verspätet. Die U-Bahn war nicht betroffen. In Ramersdorf-Perlach machte die Polizei zur Ursache zunächst keine Angaben.",
 		},
 	}
 
@@ -102,7 +102,6 @@ func TestLiveTranslateGemmaNativeAdapterComparison(t *testing.T) {
 				if protectErr != nil {
 					t.Fatal(protectErr)
 				}
-				markdown := protectMarkdown(&protected)
 				result.ProtectedTitle, result.ProtectedSummary = protected.Title, protected.Summary
 				started := time.Now()
 				if result.RawTitle == "" {
@@ -139,22 +138,17 @@ func TestLiveTranslateGemmaNativeAdapterComparison(t *testing.T) {
 				if validationErr := translationValidator(language)(protectedInput, &output); validationErr != nil {
 					result.Status, result.Error = "FAIL_MODEL_VALIDATION", validationErr.Error()
 				} else {
-					title, summary, markdownErr := markdown.restore(output.Values["title"], output.Values["summary"])
-					if markdownErr != nil {
-						result.Status, result.Error = "FAIL_MARKDOWN_RESTORE", markdownErr.Error()
+					title, summary, restoreErr := gazetteer.Restore(protected, output.Values["title"], output.Values["summary"])
+					if restoreErr != nil {
+						result.Status, result.Error = "FAIL_PLACE_RESTORE", restoreErr.Error()
 					} else {
-						title, summary, restoreErr := gazetteer.Restore(protected, title, summary)
-						if restoreErr != nil {
-							result.Status, result.Error = "FAIL_PLACE_RESTORE", restoreErr.Error()
+						result.RestoredTitle, result.RestoredSummary = title, summary
+						finalInput := StepInput{Values: map[string]string{"title_de": fixture.Title, "summary_de": fixture.Summary}}
+						finalOutput := StepOutput{Values: map[string]string{"title": title, "summary": summary}}
+						if finalErr := validateTranslation(finalInput, &finalOutput); finalErr != nil {
+							result.Status, result.Error = "FAIL_FINAL_VALIDATION", finalErr.Error()
 						} else {
-							result.RestoredTitle, result.RestoredSummary = title, summary
-							finalInput := StepInput{Values: map[string]string{"title_de": fixture.Title, "summary_de": fixture.Summary}}
-							finalOutput := StepOutput{Values: map[string]string{"title": title, "summary": summary}}
-							if finalErr := validateTranslation(finalInput, &finalOutput); finalErr != nil {
-								result.Status, result.Error = "FAIL_FINAL_VALIDATION", finalErr.Error()
-							} else {
-								result.Status, result.Error = "PASS", ""
-							}
+							result.Status, result.Error = "PASS", ""
 						}
 					}
 				}

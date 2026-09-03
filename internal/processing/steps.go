@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/url"
 	"regexp"
 	"sort"
 	"strconv"
@@ -757,16 +756,32 @@ func validateGermanPresentation(_ StepInput, output *StepOutput) error {
 	if err := normalizePrivacyFlags(&output.PrivacyFlags); err != nil {
 		return err
 	}
+	if err := validatePlainPresentation("title_de", output.TitleDE); err != nil {
+		return err
+	}
+	if err := validatePlainPresentation("summary_de", output.SummaryDE); err != nil {
+		return err
+	}
 	return validatePublicText(output.TitleDE + "\n" + output.SummaryDE)
 }
 
 var (
-	translationURLPattern          = regexp.MustCompile(`(?i)\b(?:https?://|www\.)[^\s)]+`)
-	translationPlaceTokenPattern   = regexp.MustCompile(`__MB_[A-Z_]+_[0-9]{4}__`)
-	translationNumberPattern       = regexp.MustCompile(`[0-9]+`)
-	translationBoldPattern         = regexp.MustCompile(`\*\*([^*\n]+)\*\*`)
-	translationMarkdownLinkPattern = regexp.MustCompile(`\[([^\]\n]*)\]\((https://[^)\s]+)\)`)
+	translationURLPattern        = regexp.MustCompile(`(?i)\b(?:https?://|www\.)[^\s)]+`)
+	translationPlaceTokenPattern = regexp.MustCompile(`__MB_[A-Z_]+_[0-9]{4}__`)
+	translationNumberPattern     = regexp.MustCompile(`[0-9]+`)
+	presentationMarkdownPattern  = regexp.MustCompile("(?m)(?:\\*\\*|__|`|^\\s{0,3}(?:#{1,6}\\s|>\\s|[-+*]\\s|[0-9]+\\.\\s)|!?\\[[^]\\n]+\\]\\([^)\\n]+\\))")
 )
+
+func validatePlainPresentation(field, value string) error {
+	if translationURLPattern.MatchString(value) {
+		return errorOf(ErrorOutput, "%s contains a URL; presentations must be plain text", field)
+	}
+	withoutPlaceholders := translationPlaceTokenPattern.ReplaceAllString(value, "")
+	if presentationMarkdownPattern.MatchString(withoutPlaceholders) {
+		return errorOf(ErrorOutput, "%s contains Markdown; presentations must be plain text", field)
+	}
+	return nil
+}
 
 func translationValidator(language string) func(StepInput, *StepOutput) error {
 	return func(input StepInput, output *StepOutput) error {
@@ -796,26 +811,17 @@ func validateTranslation(input StepInput, output *StepOutput) error {
 		{name: "title", source: input.Value("title_de"), translated: title},
 		{name: "summary", source: input.Value("summary_de"), translated: summary},
 	} {
-		sourceURLs := translationURLPattern.FindAllString(field.source, -1)
-		translatedURLs := translationURLPattern.FindAllString(field.translated, -1)
-		if !sameStringMultiset(sourceURLs, translatedURLs) {
-			return errorOf(ErrorPrivacy, "translated %s changed, added, or removed a web address", field.name)
+		if err := validatePlainPresentation("German "+field.name, field.source); err != nil {
+			return err
 		}
-		for _, rawURL := range sourceURLs {
-			parsed, err := url.Parse(rawURL)
-			if err != nil || parsed.Scheme != "https" || parsed.Hostname() != "munichbrief.de" || parsed.Port() != "" || parsed.User != nil {
-				return errorOf(ErrorPrivacy, "translated %s contains a non-public or third-party web address", field.name)
-			}
+		if err := validatePlainPresentation("translated "+field.name, field.translated); err != nil {
+			return err
 		}
 		if !sameTranslationNumbers(field.source, field.translated) {
 			return errorOf(ErrorOutput, "translated %s changed or omitted a number", field.name)
 		}
-		if !sameMarkdownStructure(field.source, field.translated) {
-			return errorOf(ErrorOutput, "translated %s changed Markdown structure", field.name)
-		}
 	}
-	publicText := translationURLPattern.ReplaceAllString(title+"\n"+summary, "")
-	return validatePublicText(publicText)
+	return validatePublicText(title + "\n" + summary)
 }
 
 func sameTranslationNumbers(source, translated string) bool {
@@ -862,30 +868,6 @@ func germanMonthNumber(value string) string {
 		}
 	}
 	return ""
-}
-
-func sameMarkdownStructure(source, translated string) bool {
-	if strings.Count(source, "**") != strings.Count(translated, "**") {
-		return false
-	}
-	protectedInBold := func(value string) []string {
-		var tokens []string
-		for _, match := range translationBoldPattern.FindAllStringSubmatch(value, -1) {
-			tokens = append(tokens, translationPlaceTokenPattern.FindAllString(match[1], -1)...)
-		}
-		return tokens
-	}
-	if !sameStringMultiset(protectedInBold(source), protectedInBold(translated)) {
-		return false
-	}
-	links := func(value string) []string {
-		var signatures []string
-		for _, match := range translationMarkdownLinkPattern.FindAllStringSubmatch(value, -1) {
-			signatures = append(signatures, match[2]+"\x00"+strings.Join(translationPlaceTokenPattern.FindAllString(match[1], -1), "\x00"))
-		}
-		return signatures
-	}
-	return sameStringMultiset(links(source), links(translated))
 }
 
 func sameStringMultiset(left, right []string) bool {

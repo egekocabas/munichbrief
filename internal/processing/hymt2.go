@@ -94,7 +94,7 @@ func hyMT2NativePrompt(sourceName, targetName, text string) string {
 		"### Task\n"+
 			"Translate the following text from %s into %s.\n\n"+
 			"### Strict Rules\n"+
-			"1. Output only the translated text. Do not add explanations, notes, headings, or commentary.\n"+
+			"1. Output only the translated plain text. Do not add explanations, notes, headings, commentary, Markdown, or URLs.\n"+
 			"2. Treat every token matching `__MB_[A-Z_]+_[0-9]{4}__` as an immutable placeholder. Copy every occurrence exactly, character-for-character, and preserve the same number of occurrences.\n"+
 			"3. Never translate, transliterate, inflect, decline, conjugate, modify, split, remove, duplicate, or replace a placeholder.\n"+
 			"4. When a placeholder contains an entity type such as `STREET`, `DISTRICT`, `TRAIN_STATION`, `COMMUTER_TRAIN`, or `SUBWAY_SYSTEM`, use that type only to understand the sentence and produce natural grammar around the placeholder. Do not alter the placeholder itself.\n"+

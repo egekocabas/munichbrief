@@ -120,8 +120,7 @@ Before persistence, a translation must preserve:
 
 - the exact protected-place token multiset and occurrence count in each output
   field, while allowing target-language word order;
-- URLs and supported Markdown decoration, reconstructed by application code
-  where the decoration surrounds a protected place;
+- plain-text output without Markdown or URLs;
 - numeric facts, with leading-zero and textual-month/numeric-month equivalence
   handled without accepting changed phone, speed, date, time, or unit values;
 - valid Unicode, NFC normalization, field limits, and the expected target
@@ -139,8 +138,8 @@ the decoding settings prescribed by each model when available. Deterministic
 settings remain preferable when the model documents them; otherwise repeat the
 same case to measure sampling stability. Start with difficult fixtures spanning
 repeated and reordered places, dates and times, emergency numbers and
-measurements, Markdown and URLs, non-Latin scripts, attribution, uncertainty,
-and legal framing. Only expand to the complete language matrix when a candidate
+measurements, non-Latin scripts, attribution, uncertainty, and legal framing.
+Only expand to the complete language matrix when a candidate
 improves editorial quality rather than merely its mechanical pass count.
 
 Checkpoint after every request. A transport interruption must stop the run and
@@ -221,6 +220,22 @@ transit grammar, weakened legal terms, altered exact times, and
 examination/interrogation errors. Sampling sometimes improved a repetition, but
 the observed legal and event-role changes prevent automatic publication in the
 tested target languages without further model or prompt work.
+
+### HY-MT2 supported-language summary screen on 2026-09-03
+
+A summary-only screening run covered the ten MunichBrief targets officially
+supported by HY-MT2: English, Turkish, Italian, Ukrainian, Chinese, Hindi,
+Spanish, French, Polish, and Russian. All ten saved responses preserved their
+typed placeholders, numbers, and target scripts. Spanish was the strongest
+editorial result; Ukrainian, Chinese, Hindi, and Russian retained grammatical
+or semantic problems requiring targeted evaluation.
+
+The first screening fixture included synthetic Markdown that reader summaries
+do not use. Its link-related observations are therefore excluded from the
+editorial verdict. The reusable fixture and checkpoint directory now use plain
+text and explicitly reject Markdown and URLs. Its changed configuration cannot
+reuse the earlier generated responses, and no replacement live calls were made
+as part of this correction.
 
 ## Bounded comparison on 2026-09-02/03
 

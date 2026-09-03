@@ -101,7 +101,6 @@ type typedPlaceholderFixture struct {
 type typedProtectedFixture struct {
 	Title, Summary string
 	Protected      gazetteer.Protected
-	Markdown       protectedMarkdown
 }
 
 var typedPlaceholderPattern = regexp.MustCompile(`__MB_[A-Z_]+_[0-9]{4}__`)
@@ -116,7 +115,7 @@ func TestLiveTranslateGemmaTypedPlaceholderComparison(t *testing.T) {
 	}
 	runDirectory := os.Getenv("MUNICHBRIEF_TYPED_PLACEHOLDER_EVAL_DIR")
 	if runDirectory == "" {
-		runDirectory = filepath.Join(evaluationRepositoryRoot(t), ".local", "translation-evaluations", "typed-placeholders-v1")
+		runDirectory = filepath.Join(evaluationRepositoryRoot(t), ".local", "translation-evaluations", "typed-placeholders-plain-text-v1")
 	}
 	if err := os.MkdirAll(runDirectory, 0o700); err != nil {
 		t.Fatal(err)
@@ -220,7 +219,7 @@ func TestLiveTranslateGemmaTypedPlaceholderComparison(t *testing.T) {
 func typedPlaceholderFixtures() []typedPlaceholderFixture {
 	return []typedPlaceholderFixture{
 		{Name: "transit-and-stations", Title: "Störungen zwischen Hauptbahnhof und Ostbahnhof", Summary: "Wegen eines Polizeieinsatzes fuhren mehrere S-Bahnen zwischen Hauptbahnhof und Ostbahnhof verspätet. Die U-Bahn war nicht betroffen."},
-		{Name: "street-district-markdown", Title: "Kontrolle in Milbertshofen", Summary: "Ein Audi wurde auf der **Ingolstädter Straße** in Milbertshofen kontrolliert. Weitere Hinweise nennt die Meldung zu [Ramersdorf-Perlach](https://munichbrief.de/de/incidents/717)."},
+		{Name: "street-and-district", Title: "Kontrolle in Milbertshofen", Summary: "Ein Audi wurde auf der Ingolstädter Straße in Milbertshofen kontrolliert. Die Ermittlungen in Ramersdorf-Perlach dauern an."},
 	}
 }
 
@@ -250,8 +249,7 @@ func protectTypedFixture(matcher *gazetteer.Matcher, fixture typedPlaceholderFix
 	if err != nil {
 		return typedProtectedFixture{}, err
 	}
-	markdown := protectMarkdown(&protected)
-	return typedProtectedFixture{Title: protected.Title, Summary: protected.Summary, Protected: protected, Markdown: markdown}, nil
+	return typedProtectedFixture{Title: protected.Title, Summary: protected.Summary, Protected: protected}, nil
 }
 
 func evaluateTypedPlaceholderResult(strategy, language string, fixture typedPlaceholderFixture, protected typedProtectedFixture, repetition int, titleField, summaryField typedPlaceholderField) typedPlaceholderResult {
@@ -264,12 +262,8 @@ func evaluateTypedPlaceholderResult(strategy, language string, fixture typedPlac
 		result.Status, result.Error = "FAIL_TARGET_SCRIPT", scriptErr.Error()
 		return result
 	}
-	title, summary, err := protected.Markdown.restore(titleField.RawOutput, summaryField.RawOutput)
-	if err != nil {
-		result.Status, result.Error = "FAIL_TOKEN_PRESERVATION", err.Error()
-		return result
-	}
-	result.RestoredTitle, result.RestoredSummary, err = gazetteer.Restore(protected.Protected, title, summary)
+	var err error
+	result.RestoredTitle, result.RestoredSummary, err = gazetteer.Restore(protected.Protected, titleField.RawOutput, summaryField.RawOutput)
 	if err != nil {
 		result.Status, result.Error = "FAIL_TOKEN_PRESERVATION", err.Error()
 		return result
@@ -533,10 +527,7 @@ func TestTypedPlaceholderStrategiesAndRestoration(t *testing.T) {
 			if protectErr != nil {
 				t.Fatal(protectErr)
 			}
-			title, summary, restoreErr := protected.Markdown.restore(protected.Title, protected.Summary)
-			if restoreErr == nil {
-				title, summary, restoreErr = gazetteer.Restore(protected.Protected, title, summary)
-			}
+			title, summary, restoreErr := gazetteer.Restore(protected.Protected, protected.Title, protected.Summary)
 			if restoreErr != nil {
 				t.Fatalf("strategy %s fixture %s did not restore: %v", strategy, fixture.Name, restoreErr)
 			}

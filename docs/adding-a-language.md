@@ -77,8 +77,9 @@ Munich-area names are detected from the separately refreshed gazetteer and
 replaced with opaque `__MB_PLACE_####__` tokens before the model request. The
 model must copy each token exactly once in the corresponding field; application
 code restores the original spelling. Smoke fixtures must cover streets,
-districts, stations, parks, municipalities, Markdown link labels, repeated
-names, Unicode boundaries, and the static `U-Bahn` and `S-Bahn` labels.
+districts, stations, parks, municipalities, repeated names, Unicode boundaries,
+and the static `U-Bahn` and `S-Bahn` labels. Titles and summaries are plain text;
+reject model-produced Markdown and URLs rather than storing them.
 Keep the existing title and summary limits and strict two-field JSON output.
 Generated fields are normalized to Unicode NFC before character-count
 validation and persistence. Tests should include decomposed accents and the

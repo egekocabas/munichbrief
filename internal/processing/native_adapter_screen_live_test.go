@@ -25,6 +25,7 @@ const (
 	nativeAdapterScreenFixtureFilter = "MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_FIXTURES"
 	nativeAdapterSmokeOptIn          = "MUNICHBRIEF_NATIVE_ADAPTER_SMOKE_LIVE_TEST"
 	nativeAdapterSmokeFilter         = "MUNICHBRIEF_NATIVE_ADAPTER_SMOKE_ADAPTER"
+	hyMT2LanguageScreenOptIn         = "MUNICHBRIEF_HYMT2_LANGUAGE_SCREEN_LIVE_TEST"
 	hyMT2ScreenModel                 = "hf.co/mradermacher/Hy-MT2-7B-GGUF:Q5_K_M"
 	seedXScreenModel                 = "hf.co/mradermacher/Seed-X-Instruct-7B-GGUF:Q5_K_M"
 )
@@ -94,7 +95,7 @@ type nativeAdapterScreenField struct {
 type nativeAdapterScreenChecks struct {
 	Placeholders string `json:"placeholders"`
 	Numbers      string `json:"numbers"`
-	Markdown     string `json:"markdown"`
+	PlainText    string `json:"plain_text"`
 	TargetScript string `json:"target_script"`
 	Restoration  string `json:"restoration"`
 	Final        string `json:"final_validation"`
@@ -140,12 +141,155 @@ type nativeAdapterScreenSnapshot struct {
 type nativeAdapterProtectedFixture struct {
 	Title, Summary string
 	Protected      gazetteer.Protected
-	Markdown       protectedMarkdown
 }
 
 type nativeAdapterFactory func(nativeAdapterScreenSpec, string) (evaluationTranslator, func(string) string, error)
 
 var nativeAdapterTokenPattern = regexp.MustCompile(`__MB_[A-Z_]+_[0-9]{4}__`)
+
+func TestLiveHyMT2SupportedReaderLanguageSummaryScreen(t *testing.T) {
+	if os.Getenv(hyMT2LanguageScreenOptIn) != "1" {
+		t.Skip("set " + hyMT2LanguageScreenOptIn + "=1")
+	}
+	baseURL := os.Getenv("MUNICHBRIEF_OLLAMA_BASE_URL")
+	if baseURL == "" {
+		baseURL = "http://127.0.0.1:11434"
+	}
+	runDirectory := os.Getenv("MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_DIR")
+	if runDirectory == "" {
+		runDirectory = filepath.Join(evaluationRepositoryRoot(t), ".local", "translation-evaluations", "hy-mt2-language-screen-plain-text-v1")
+	}
+	if err := os.MkdirAll(runDirectory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+
+	languages := []string{"en", "tr", "it", "uk", "zh", "hi", "es", "fr", "pl", "ru"}
+	fixture := nativeAdapterScreenFixture{
+		Name: "supported-language-plain-text-summary-screen",
+		Summary: "Nach Angaben der Polizei soll ein Mann am 29. August 2026 gegen 03:30 Uhr an der Ingolstädter Straße eine Frau leicht verletzt haben; sie wurde vor Ort medizinisch untersucht. " +
+			"Wegen des anschließenden Polizeieinsatzes fuhren S-Bahnen zwischen Hauptbahnhof und Ostbahnhof 45 Minuten verspätet, während die U-Bahn nicht betroffen war. " +
+			"Die Polizei bat Zeuginnen und Zeugen, sich bei der zuständigen Dienststelle zu melden.",
+	}
+	matcher, err := nativeAdapterScreenMatcher()
+	if err != nil {
+		t.Fatal(err)
+	}
+	protected, err := protectNativeAdapterFixture(matcher, fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest, err := ollamaModelDigest(context.Background(), baseURL, hyMT2ScreenModel)
+	if err != nil {
+		t.Fatalf("verify Hy-MT2 model identity: %v", err)
+	}
+	spec := nativeAdapterScreenSpec{
+		Adapter: "hy-mt2", Model: hyMT2ScreenModel, ModelDigest: digest, PromptVersion: "hy-mt2-structured-placeholder-v1",
+		Settings:  map[string]any{"temperature": 0.7, "top_p": 0.6, "top_k": 20, "repeat_penalty": 1.05, "num_predict": 4096, "num_ctx": 8192},
+		Languages: languages, Repetitions: 1, ContextSize: 8192,
+	}
+	config := nativeAdapterScreenConfig{Version: 1, Placeholder: "typed", Adapters: []nativeAdapterScreenSpec{spec}, Fixtures: []nativeAdapterScreenFixture{fixture}}
+	configHash := hashJSON(t, config)
+	ensureNativeAdapterScreenManifest(t, runDirectory, configHash, config)
+	state := loadNativeAdapterScreenSnapshot(t, runDirectory, configHash)
+
+	for _, language := range languages {
+		resultKey := nativeAdapterResultKey(spec.Adapter, language, fixture.Name, 1)
+		fieldKey := resultKey + "/summary"
+		field := state.Fields[fieldKey]
+		if field.State != "completed" {
+			if field.State == "running" {
+				field.State, field.Error, field.FinishedAt = "interrupted", "request was running when the evaluation resumed", time.Now().UTC()
+				recordNativeAdapterScreenField(t, runDirectory, &state, field)
+			}
+			adapter, prompt, adapterErr := liveNativeAdapterFactory(baseURL)(spec, language)
+			if adapterErr != nil {
+				t.Fatalf("construct Hy-MT2/%s adapter: %v", language, adapterErr)
+			}
+			promptText := prompt(protected.Summary)
+			field = nativeAdapterScreenField{
+				Key: fieldKey, Adapter: spec.Adapter, Language: language, Fixture: fixture.Name, FixtureHash: hashJSON(t, fixture), Repetition: 1,
+				Field: "summary", State: "running", Attempt: field.Attempt + 1, RequestedModel: spec.Model, ModelDigest: spec.ModelDigest,
+				PromptVersion: spec.PromptVersion, PromptHash: hashString(promptText), Settings: spec.Settings, Input: protected.Summary, StartedAt: time.Now().UTC(),
+			}
+			recordNativeAdapterScreenField(t, runDirectory, &state, field)
+			raw, returnedModel, generateErr := adapter.Translate(context.Background(), protected.Summary)
+			field.FinishedAt, field.ReturnedModel = time.Now().UTC(), returnedModel
+			field.DurationMS = field.FinishedAt.Sub(field.StartedAt).Milliseconds()
+			if generateErr != nil {
+				field.State, field.Error = "transport_failed", generateErr.Error()
+				recordNativeAdapterScreenField(t, runDirectory, &state, field)
+				t.Fatalf("Hy-MT2/%s failed (resume the same run): %v", language, generateErr)
+			}
+			field.State, field.RawOutput = "completed", raw
+			recordNativeAdapterScreenField(t, runDirectory, &state, field)
+			t.Logf("CALL language=%s duration=%s\n  raw_summary=%s", language, time.Duration(field.DurationMS)*time.Millisecond, raw)
+		}
+
+		result := evaluateHyMT2SummaryScreenResult(language, fixture, protected, field)
+		state.Results[resultKey] = result
+		writeNativeAdapterScreenSnapshot(t, runDirectory, state)
+		t.Logf("RESULT language=%s status=%s error=%s\n  restored_summary=%s", language, result.Status, result.Error, result.RestoredSummary)
+	}
+	t.Logf("REPORT directory=%s %s", runDirectory, summarizeNativeAdapterScreenResults(state.Results))
+}
+
+func evaluateHyMT2SummaryScreenResult(language string, fixture nativeAdapterScreenFixture, protected nativeAdapterProtectedFixture, field nativeAdapterScreenField) nativeAdapterScreenResult {
+	result := nativeAdapterScreenResult{
+		Key: nativeAdapterResultKey("hy-mt2", language, fixture.Name, 1), Adapter: "hy-mt2", Language: language, Fixture: fixture.Name, Repetition: 1,
+		Checks: pendingNativeAdapterChecks(), ManualReview: pendingNativeAdapterManualReview(),
+	}
+	if field.State != "completed" {
+		result.Status, result.Error = "FAIL_MODEL_OUTPUT", firstNonEmpty(field.Error, "summary did not complete")
+		return result
+	}
+	if !sameStringMultiset(nativeAdapterTokenPattern.FindAllString(protected.Summary, -1), nativeAdapterTokenPattern.FindAllString(field.RawOutput, -1)) {
+		result.Status, result.Error, result.Checks.Placeholders = "FAIL_TOKEN_PRESERVATION", "model changed, removed, added, or duplicated a typed placeholder", "fail"
+		return result
+	}
+	result.Checks.Placeholders = "pass"
+	if !sameTranslationNumbers(protected.Summary, field.RawOutput) {
+		result.Status, result.Error, result.Checks.Numbers = "FAIL_NUMBERS", "model changed, added, or removed a numeric fact", "fail"
+		return result
+	}
+	result.Checks.Numbers = "pass"
+	if err := validatePlainPresentation("protected German summary", protected.Summary); err != nil {
+		result.Status, result.Error, result.Checks.PlainText = "FAIL_PLAIN_TEXT", err.Error(), "fail"
+		return result
+	}
+	if err := validatePlainPresentation("translated summary", field.RawOutput); err != nil {
+		result.Status, result.Error, result.Checks.PlainText = "FAIL_PLAIN_TEXT", err.Error(), "fail"
+		return result
+	}
+	result.Checks.PlainText = "pass"
+	plainOutput := nativeAdapterTokenPattern.ReplaceAllString(field.RawOutput, "")
+	if err := validateTargetScript(language, plainOutput, plainOutput); err != nil {
+		result.Status, result.Error, result.Checks.TargetScript = "FAIL_TARGET_SCRIPT", err.Error(), "fail"
+		return result
+	}
+	result.Checks.TargetScript = "pass"
+	_, summary, err := gazetteer.Restore(protected.Protected, protected.Title, field.RawOutput)
+	if err != nil {
+		result.Status, result.Error, result.Checks.Restoration = "FAIL_RESTORATION", err.Error(), "fail"
+		return result
+	}
+	result.Checks.Restoration = "pass"
+	if summary == fixture.Summary {
+		result.Status, result.Error, result.Checks.Final = "FAIL_UNTRANSLATED", "model returned the German source unchanged", "fail"
+		return result
+	}
+	if err := normalizeLimitedField("translated summary", &summary, 600); err != nil {
+		result.Status, result.Error, result.Checks.Final = "FAIL_FINAL_VALIDATION", err.Error(), "fail"
+		return result
+	}
+	if !sameTranslationNumbers(fixture.Summary, summary) {
+		result.Status, result.Error, result.Checks.Final = "FAIL_FINAL_VALIDATION", "restored summary changed a number", "fail"
+		return result
+	}
+	result.Checks.Final = "pass"
+	result.RestoredSummary = summary
+	result.Status = "PASS_MECHANICAL_PENDING_REVIEW"
+	return result
+}
 
 func TestLiveNativeTranslationAdapterSmoke(t *testing.T) {
 	if os.Getenv(nativeAdapterSmokeOptIn) != "1" {
@@ -158,7 +302,7 @@ func TestLiveNativeTranslationAdapterSmoke(t *testing.T) {
 	fixture := nativeAdapterScreenFixture{
 		Name:    "adapter-contract-smoke",
 		Title:   "S-Bahn-Einsatz am Hauptbahnhof",
-		Summary: "Nach Angaben der Polizei soll am 29. August 2026 um 03:30 Uhr auf der **Ingolstädter Straße** ein Fahrzeug beschädigt worden sein. Die U-Bahn war nicht betroffen; Hinweise stehen bei [Schwabing-West](https://munichbrief.de/de/incidents/378?page=2).",
+		Summary: "Nach Angaben der Polizei soll am 29. August 2026 um 03:30 Uhr auf der Ingolstädter Straße ein Fahrzeug beschädigt worden sein. Die U-Bahn war nicht betroffen.",
 	}
 	matcher, err := nativeAdapterScreenMatcher()
 	if err != nil {
@@ -225,7 +369,7 @@ func TestLiveNativeTranslationAdapterScreen(t *testing.T) {
 	}
 	runDirectory := os.Getenv("MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_DIR")
 	if runDirectory == "" {
-		runDirectory = filepath.Join(evaluationRepositoryRoot(t), ".local", "translation-evaluations", "native-adapter-screen-v1")
+		runDirectory = filepath.Join(evaluationRepositoryRoot(t), ".local", "translation-evaluations", "native-adapter-screen-plain-text-v1")
 	}
 	if err := os.MkdirAll(runDirectory, 0o700); err != nil {
 		t.Fatal(err)
@@ -416,8 +560,8 @@ func nativeAdapterScreenFixtures() []nativeAdapterScreenFixture {
 			Summary: "Nach Angaben der Polizei soll ein Tatverdächtiger an der Leopoldstraße in Schwabing-West die Scheibe eines geparkten Fahrzeugs beschädigt haben. Ob er beteiligt war, ist noch unklar; eine Verurteilung liegt nicht vor und bis zu einer rechtskräftigen Verurteilung gilt die Unschuldsvermutung.",
 		},
 		{
-			Name: "numbers-causality-markdown", Title: "Einsatz an der Ganghoferstraße am 29. August 2026",
-			Summary: "Weil um 03:30 Uhr Rauch aus einem Keller an der **Ganghoferstraße** gemeldet wurde, sperrte die Polizei die Straße für 45 Minuten. Zwei Personen wurden untersucht; niemand wurde verletzt. Hinweise stehen bei [Ramersdorf-Perlach](https://munichbrief.de/de/incidents/717?page=2), in dringenden Fällen gilt die 110.",
+			Name: "numbers-causality-public-assistance", Title: "Einsatz an der Ganghoferstraße am 29. August 2026",
+			Summary: "Weil um 03:30 Uhr Rauch aus einem Keller an der Ganghoferstraße gemeldet wurde, sperrte die Polizei die Straße für 45 Minuten. Zwei Personen wurden untersucht; niemand wurde verletzt. In dringenden Fällen soll die 110 gewählt werden.",
 		},
 	}
 }
@@ -468,8 +612,7 @@ func protectNativeAdapterFixture(matcher *gazetteer.Matcher, fixture nativeAdapt
 	if err != nil {
 		return nativeAdapterProtectedFixture{}, err
 	}
-	markdown := protectMarkdown(&protected)
-	return nativeAdapterProtectedFixture{Title: protected.Title, Summary: protected.Summary, Protected: protected, Markdown: markdown}, nil
+	return nativeAdapterProtectedFixture{Title: protected.Title, Summary: protected.Summary, Protected: protected}, nil
 }
 
 func evaluateNativeAdapterScreenResult(adapter, language string, fixture nativeAdapterScreenFixture, protected nativeAdapterProtectedFixture, repetition int, titleField, summaryField nativeAdapterScreenField) nativeAdapterScreenResult {
@@ -492,20 +635,21 @@ func evaluateNativeAdapterScreenResult(adapter, language string, fixture nativeA
 		return result
 	}
 	result.Checks.Numbers = "pass"
-	if !sameMarkdownStructure(protected.Title, titleField.RawOutput) || !sameMarkdownStructure(protected.Summary, summaryField.RawOutput) {
-		result.Status, result.Error, result.Checks.Markdown = "FAIL_MARKDOWN", "model changed Markdown or a web address", "fail"
+	if err := validatePlainPresentation("translated title", titleField.RawOutput); err != nil {
+		result.Status, result.Error, result.Checks.PlainText = "FAIL_PLAIN_TEXT", err.Error(), "fail"
 		return result
 	}
-	result.Checks.Markdown = "pass"
+	if err := validatePlainPresentation("translated summary", summaryField.RawOutput); err != nil {
+		result.Status, result.Error, result.Checks.PlainText = "FAIL_PLAIN_TEXT", err.Error(), "fail"
+		return result
+	}
+	result.Checks.PlainText = "pass"
 	if err := validateTargetScript(language, nativeAdapterTokenPattern.ReplaceAllString(titleField.RawOutput, ""), nativeAdapterTokenPattern.ReplaceAllString(summaryField.RawOutput, "")); err != nil {
 		result.Status, result.Error, result.Checks.TargetScript = "FAIL_TARGET_SCRIPT", err.Error(), "fail"
 		return result
 	}
 	result.Checks.TargetScript = "pass"
-	title, summary, err := protected.Markdown.restore(titleField.RawOutput, summaryField.RawOutput)
-	if err == nil {
-		title, summary, err = gazetteer.Restore(protected.Protected, title, summary)
-	}
+	title, summary, err := gazetteer.Restore(protected.Protected, titleField.RawOutput, summaryField.RawOutput)
 	if err != nil {
 		result.Status, result.Error, result.Checks.Restoration = "FAIL_RESTORATION", err.Error(), "fail"
 		return result
@@ -525,7 +669,7 @@ func evaluateNativeAdapterScreenResult(adapter, language string, fixture nativeA
 }
 
 func pendingNativeAdapterChecks() nativeAdapterScreenChecks {
-	return nativeAdapterScreenChecks{Placeholders: "pending", Numbers: "pending", Markdown: "pending", TargetScript: "pending", Restoration: "pending", Final: "pending"}
+	return nativeAdapterScreenChecks{Placeholders: "pending", Numbers: "pending", PlainText: "pending", TargetScript: "pending", Restoration: "pending", Final: "pending"}
 }
 
 func pendingNativeAdapterManualReview() nativeAdapterManualReview {
@@ -669,10 +813,7 @@ func TestNativeAdapterScreenFixturesUseTypedPlaceholdersAndRestore(t *testing.T)
 		if !nativeAdapterTokenPattern.MatchString(protected.Title + protected.Summary) {
 			t.Fatalf("fixture %s contains no typed placeholder: %#v", fixture.Name, protected)
 		}
-		title, summary, err := protected.Markdown.restore(protected.Title, protected.Summary)
-		if err == nil {
-			title, summary, err = gazetteer.Restore(protected.Protected, title, summary)
-		}
+		title, summary, err := gazetteer.Restore(protected.Protected, protected.Title, protected.Summary)
 		if err != nil || title != fixture.Title || summary != fixture.Summary {
 			t.Fatalf("fixture %s restoration = %q / %q / %v", fixture.Name, title, summary, err)
 		}
@@ -705,8 +846,8 @@ func TestNativeAdapterScreenFiltersLanguagesAndFixtures(t *testing.T) {
 	if len(specs) != 2 || strings.Join(specs[0].Languages, ",") != "uk,ru" || strings.Join(specs[1].Languages, ",") != "uk" {
 		t.Fatalf("filtered languages = %#v", specs)
 	}
-	fixtures := filterNativeAdapterScreenFixtures(nativeAdapterScreenFixtures(), "numbers-causality-markdown")
-	if len(fixtures) != 1 || fixtures[0].Name != "numbers-causality-markdown" {
+	fixtures := filterNativeAdapterScreenFixtures(nativeAdapterScreenFixtures(), "numbers-causality-public-assistance")
+	if len(fixtures) != 1 || fixtures[0].Name != "numbers-causality-public-assistance" {
 		t.Fatalf("filtered fixtures = %#v", fixtures)
 	}
 	if filtered := filterNativeAdapterScreenLanguages(nativeAdapterScreenSpecs(), "unknown"); len(filtered) != 0 {
@@ -770,12 +911,12 @@ func TestNativeAdapterScreenAcceptsLocalizedDateAfterProtectedStreet(t *testing.
 		{
 			language: "uk",
 			title:    "Операція біля __MB_STREET_0001__ 29 серпня 2026 року",
-			summary:  "Оскільки о 03:30 було повідомлено про дим з підвалу на вулиці __MB_STREET_0001__, поліція перекрила цю вулицю на 45 хвилин. Було оглянуто двох осіб; ніхто не постраждав. Інформацію можна отримати у __MB_DISTRICT_0002__, у термінових випадках слід телефонувати на 110.",
+			summary:  "Оскільки о 03:30 було повідомлено про дим з підвалу на вулиці __MB_STREET_0001__, поліція перекрила цю вулицю на 45 хвилин. Було оглянуто двох осіб; ніхто не постраждав. У термінових випадках слід телефонувати за номером 110.",
 		},
 		{
 			language: "ru",
 			title:    "Экспедиция на __MB_STREET_0001__ 29 августа 2026 года",
-			summary:  "Поскольку около 03:30 был зафиксирован дым из подвала на улице __MB_STREET_0001__, полиция перекрыла дорогу на 45 минут. Были допрошены два человека; никто не пострадал. Информацию можно получить в __MB_DISTRICT_0002__, в чрезвычайных ситуациях следует звонить по номеру 110.",
+			summary:  "Поскольку около 03:30 был зафиксирован дым из подвала на улице __MB_STREET_0001__, полиция перекрыла дорогу на 45 минут. Были допрошены два человека; никто не пострадал. В чрезвычайных ситуациях следует звонить по номеру 110.",
 		},
 	}
 	for _, test := range tests {

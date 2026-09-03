@@ -69,5 +69,5 @@ context. Two-letter names such as `Au` also require location context by rule.
 
 Every occurrence receives a unique `__MB_PLACE_####__` token. The output is
 invalid if a token is missing, duplicated, moved between title and summary,
-reordered, inflected, modified, or invented. Markdown link labels may be
-protected; Markdown syntax and URLs stay unchanged.
+reordered, inflected, modified, or invented. Reader titles and summaries are
+plain text, so Markdown and URLs are rejected before persistence.

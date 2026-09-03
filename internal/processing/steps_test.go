@@ -432,6 +432,18 @@ func TestGermanPresentationValidatesPrivacyOnly(t *testing.T) {
 	}
 }
 
+func TestGermanPresentationRejectsURLsAndMarkdown(t *testing.T) {
+	step, _ := StepByKey(GermanPresentationStep)
+	for _, output := range []StepOutput{
+		{TitleDE: "**Titel**", SummaryDE: "Eine sachliche Zusammenfassung.", PrivacyStatus: "safe"},
+		{TitleDE: "Sachlicher Titel", SummaryDE: "Mehr unter https://example.com.", PrivacyStatus: "safe"},
+	} {
+		if err := ValidateStepOutput(step, StepInput{}, &output); KindOf(err) != ErrorOutput {
+			t.Fatalf("non-plain German presentation accepted: %#v, err=%v", output, err)
+		}
+	}
+}
+
 func TestEnglishTranslationReceivesOnlyDeclaredGermanPresentation(t *testing.T) {
 	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {
 		var payload chatRequest

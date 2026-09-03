@@ -55,14 +55,14 @@ func TestProtectedGeneratorRejectsDamagedTokens(t *testing.T) {
 	}
 }
 
-func TestProtectedGeneratorOwnsProtectedPlaceMarkdown(t *testing.T) {
+func TestProtectedGeneratorRestoresReorderedProtectedPlaces(t *testing.T) {
 	inner := &staticGenerator{output: StepOutput{Values: map[string]string{
 		"title":   "Between __MB_PLACE_0002__ and __MB_PLACE_0001__",
-		"summary": "See __MB_PLACE_0003__",
+		"summary": "Near __MB_PLACE_0003__",
 	}}}
 	protector := staticProtector{ready: true, value: gazetteer.Protected{
-		Title:   "Zwischen **__MB_PLACE_0001__** und __MB_PLACE_0002__",
-		Summary: "Siehe [__MB_PLACE_0003__](https://munichbrief.de/de/incidents/717)",
+		Title:   "Zwischen __MB_PLACE_0001__ und __MB_PLACE_0002__",
+		Summary: "Bei __MB_PLACE_0003__",
 		Replacements: []gazetteer.Replacement{
 			{Token: "__MB_PLACE_0001__", Original: "Hauptbahnhof", Field: "title"},
 			{Token: "__MB_PLACE_0002__", Original: "Ostbahnhof", Field: "title"},
@@ -71,28 +71,28 @@ func TestProtectedGeneratorOwnsProtectedPlaceMarkdown(t *testing.T) {
 	}}
 	generator := &protectedGenerator{inner: inner, protector: protector}
 	output, _, err := generator.GenerateStep(context.Background(), TranslationByLanguageMust(t, "en").Step, StepInput{Values: map[string]string{
-		"title_de":   "Zwischen **Hauptbahnhof** und Ostbahnhof",
-		"summary_de": "Siehe [Ramersdorf-Perlach](https://munichbrief.de/de/incidents/717)",
+		"title_de":   "Zwischen Hauptbahnhof und Ostbahnhof",
+		"summary_de": "Bei Ramersdorf-Perlach",
 	}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if inner.input.Value("title_de") != "Zwischen __MB_PLACE_0001__ und __MB_PLACE_0002__" || inner.input.Value("summary_de") != "Siehe __MB_PLACE_0003__" {
-		t.Fatalf("model still received protected Markdown: %#v", inner.input.Values)
+	if inner.input.Value("title_de") != protector.value.Title || inner.input.Value("summary_de") != protector.value.Summary {
+		t.Fatalf("model did not receive protected places: %#v", inner.input.Values)
 	}
-	if output.Values["title"] != "Between Ostbahnhof and **Hauptbahnhof**" || output.Values["summary"] != "See [Ramersdorf-Perlach](https://munichbrief.de/de/incidents/717)" {
-		t.Fatalf("programmatic Markdown restoration = %#v", output.Values)
+	if output.Values["title"] != "Between Ostbahnhof and Hauptbahnhof" || output.Values["summary"] != "Near Ramersdorf-Perlach" {
+		t.Fatalf("programmatic place restoration = %#v", output.Values)
 	}
 }
 
-func TestProtectedGeneratorOwnsTypedPlaceMarkdown(t *testing.T) {
+func TestProtectedGeneratorRestoresTypedPlaces(t *testing.T) {
 	inner := &staticGenerator{output: StepOutput{Values: map[string]string{
 		"title":   "At __MB_STREET_0001__",
 		"summary": "See __MB_DISTRICT_0002__",
 	}}}
 	protector := staticProtector{ready: true, value: gazetteer.Protected{
-		Title:   "An der **__MB_STREET_0001__**",
-		Summary: "Siehe [__MB_DISTRICT_0002__](https://munichbrief.de/de/incidents/717)",
+		Title:   "An der __MB_STREET_0001__",
+		Summary: "Bei __MB_DISTRICT_0002__",
 		Replacements: []gazetteer.Replacement{
 			{Token: "__MB_STREET_0001__", Original: "Ganghoferstraße", Field: "title", Kind: gazetteer.KindStreet},
 			{Token: "__MB_DISTRICT_0002__", Original: "Ramersdorf-Perlach", Field: "summary", Kind: gazetteer.KindDistrict},
@@ -100,17 +100,17 @@ func TestProtectedGeneratorOwnsTypedPlaceMarkdown(t *testing.T) {
 	}}
 	generator := &protectedGenerator{inner: inner, protector: protector}
 	output, _, err := generator.GenerateStep(context.Background(), TranslationByLanguageMust(t, "en").Step, StepInput{Values: map[string]string{
-		"title_de":   "An der **Ganghoferstraße**",
-		"summary_de": "Siehe [Ramersdorf-Perlach](https://munichbrief.de/de/incidents/717)",
+		"title_de":   "An der Ganghoferstraße",
+		"summary_de": "Bei Ramersdorf-Perlach",
 	}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if inner.input.Value("title_de") != "An der __MB_STREET_0001__" || inner.input.Value("summary_de") != "Siehe __MB_DISTRICT_0002__" {
-		t.Fatalf("model still received typed-place Markdown: %#v", inner.input.Values)
+	if inner.input.Value("title_de") != protector.value.Title || inner.input.Value("summary_de") != protector.value.Summary {
+		t.Fatalf("model did not receive typed places: %#v", inner.input.Values)
 	}
-	if output.Values["title"] != "At **Ganghoferstraße**" || output.Values["summary"] != "See [Ramersdorf-Perlach](https://munichbrief.de/de/incidents/717)" {
-		t.Fatalf("typed programmatic Markdown restoration = %#v", output.Values)
+	if output.Values["title"] != "At Ganghoferstraße" || output.Values["summary"] != "See Ramersdorf-Perlach" {
+		t.Fatalf("typed programmatic place restoration = %#v", output.Values)
 	}
 }
 
@@ -131,49 +131,44 @@ func TestTranslationProcessorPausesForTypedNilGazetteer(t *testing.T) {
 	}
 }
 
-func TestTranslationValidationAllowsOnlySameFieldSourceURLs(t *testing.T) {
-	input := StepInput{Values: map[string]string{
-		"title_de": "Titel", "summary_de": "[Schwabing](https://munichbrief.de/en/incidents/378?page=2)",
-	}}
-	valid := StepOutput{Values: map[string]string{"title": "Title", "summary": "[Schwabing](https://munichbrief.de/en/incidents/378?page=2)"}}
-	if err := validateTranslation(input, &valid); err != nil {
-		t.Fatalf("unchanged source URL rejected: %v", err)
-	}
-	reorderedInput := StepInput{Values: map[string]string{"title_de": "Titel", "summary_de": "[A](https://munichbrief.de/de/incidents/1) und [B](https://munichbrief.de/de/incidents/2)"}}
-	reorderedOutput := StepOutput{Values: map[string]string{"title": "Title", "summary": "[B](https://munichbrief.de/de/incidents/2) and [A](https://munichbrief.de/de/incidents/1)"}}
-	if err := validateTranslation(reorderedInput, &reorderedOutput); err != nil {
-		t.Fatalf("safe target-language link reordering rejected: %v", err)
-	}
+func TestTranslationValidationRejectsURLsAndMarkdown(t *testing.T) {
+	validInput := StepInput{Values: map[string]string{"title_de": "Titel", "summary_de": "Zusammenfassung"}}
 	for _, output := range []StepOutput{
-		{Values: map[string]string{"title": "https://munichbrief.de/en/incidents/378?page=2", "summary": "Schwabing"}},
-		{Values: map[string]string{"title": "Title", "summary": "https://example.com/added"}},
-		{Values: map[string]string{"title": "Title", "summary": "Schwabing"}},
+		{Values: map[string]string{"title": "https://munichbrief.de/en/incidents/378?page=2", "summary": "Summary"}},
+		{Values: map[string]string{"title": "Title", "summary": "See https://example.com/added"}},
+		{Values: map[string]string{"title": "**Title**", "summary": "Summary"}},
+		{Values: map[string]string{"title": "Title", "summary": "[Schwabing](https://munichbrief.de/en/incidents/378)"}},
+		{Values: map[string]string{"title": "Title", "summary": "`Summary`"}},
 	} {
-		if err := validateTranslation(input, &output); err == nil || KindOf(err) != ErrorPrivacy {
-			t.Fatalf("invalid translated URL accepted: %#v, err=%v", output.Values, err)
+		if err := validateTranslation(validInput, &output); err == nil || KindOf(err) != ErrorOutput {
+			t.Fatalf("non-plain translation accepted: %#v, err=%v", output.Values, err)
 		}
 	}
-	thirdPartyInput := StepInput{Values: map[string]string{"title_de": "Titel", "summary_de": "https://example.com/source"}}
-	thirdPartyOutput := StepOutput{Values: map[string]string{"title": "Title", "summary": "https://example.com/source"}}
-	if err := validateTranslation(thirdPartyInput, &thirdPartyOutput); err == nil || KindOf(err) != ErrorPrivacy {
-		t.Fatalf("third-party source URL accepted: %v", err)
+	for _, input := range []StepInput{
+		{Values: map[string]string{"title_de": "Titel", "summary_de": "https://example.com/source"}},
+		{Values: map[string]string{"title_de": "**Titel**", "summary_de": "Zusammenfassung"}},
+	} {
+		output := StepOutput{Values: map[string]string{"title": "Title", "summary": "Summary"}}
+		if err := validateTranslation(input, &output); err == nil || KindOf(err) != ErrorOutput {
+			t.Fatalf("non-plain German input accepted: %#v, err=%v", input.Values, err)
+		}
 	}
 }
 
-func TestTranslationValidationPreservesNumbersAndMarkdownStructure(t *testing.T) {
+func TestTranslationValidationPreservesNumbersWithPlaceholders(t *testing.T) {
 	input := StepInput{Values: map[string]string{
-		"title_de": "Einsatz 52", "summary_de": "Zwischen **__MB_PLACE_0001__** und __MB_PLACE_0002__: 04:40 Uhr. [__MB_PLACE_0003__](https://munichbrief.de/de/incidents/717)",
+		"title_de": "Einsatz 52", "summary_de": "Zwischen __MB_PLACE_0001__ und __MB_PLACE_0002__: 04:40 Uhr.",
 	}}
 	valid := StepOutput{Values: map[string]string{
-		"title": "Operation 52", "summary": "Between **__MB_PLACE_0001__** and __MB_PLACE_0002__ at 04:40. [__MB_PLACE_0003__](https://munichbrief.de/de/incidents/717)",
+		"title": "Operation 52", "summary": "Between __MB_PLACE_0001__ and __MB_PLACE_0002__ at 04:40.",
 	}}
 	if err := validateTranslation(input, &valid); err != nil {
 		t.Fatalf("valid structure rejected: %v", err)
 	}
 	invalid := []StepOutput{
 		{Values: map[string]string{"title": "Operation 53", "summary": valid.Values["summary"]}},
-		{Values: map[string]string{"title": "Operation 52", "summary": "Between **__MB_PLACE_0001__** and **__MB_PLACE_0002__** at 04:40. [__MB_PLACE_0003__](https://munichbrief.de/de/incidents/717)"}},
-		{Values: map[string]string{"title": "Operation 52", "summary": "Between **__MB_PLACE_0001__** and __MB_PLACE_0002__ at 04:40. __MB_PLACE_0003__ https://munichbrief.de/de/incidents/717"}},
+		{Values: map[string]string{"title": "Operation 52", "summary": "Between __MB_PLACE_0001__ and __MB_PLACE_0002__ at 05:40."}},
+		{Values: map[string]string{"title": "Operation 52", "summary": "Between __MB_PLACE_0001__ and __MB_PLACE_0002__."}},
 	}
 	for _, output := range invalid {
 		if err := validateTranslation(input, &output); err == nil {

@@ -147,7 +147,7 @@ func TestTemporarySixCaseAttempt2(t *testing.T) {
 							result.Validation = validateAttempt2Result(language, fixture, masked, output)
 							if len(result.Validation) == 0 {
 								result.Status = "PASS"
-								result.Validation = []string{"schema/length/NFC/control", "stable placeholder count/order/restoration", "numbers", "URL and Markdown structure", "target-script predominance", "non-identical translation"}
+								result.Validation = []string{"schema/length/NFC/control", "stable placeholder count/order/restoration", "numbers", "plain text without URLs", "target-script predominance", "non-identical translation"}
 							} else {
 								result.Status = "FAIL_FINAL_VALIDATION"
 							}
