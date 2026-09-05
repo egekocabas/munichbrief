@@ -154,8 +154,8 @@ comparison for the two experimental adapters. Each adapter must first pass
 `TestLiveNativeTranslationAdapterSmoke`; a failed adapter must be excluded
 instead of spending the larger call budget. The three fixtures isolate transit and repeated
 typed-place relationships; negation, attribution, uncertainty, and legal
-framing; and numbers, dates, causality, Markdown, and links. Title and summary
-are separate calls, as they are in the application.
+framing; and numbers, dates, causality, public-assistance wording, and plain-text
+output. Title and summary are separate calls, as they are in the application.
 
 HY-MT2 covers the English control plus Ukrainian, Hindi, and Russian with two
 repetitions at Tencent's sampling settings (48 field calls). Seed-X covers the

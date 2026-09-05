@@ -122,10 +122,12 @@ Before a translation request, the active gazetteer matcher replaces exact
 Munich-area streets, districts, neighbourhoods, municipalities, transit names,
 parks, squares, and landmarks with opaque tokens. It uses leftmost-longest
 Aho–Corasick matching plus Unicode word boundaries; ambiguous common nouns
-require location context. The model must return every token exactly once, in
-source order, in the same field, and without attaching an inflection. The
-application rejects missing, duplicated, moved, reordered, modified, or
-invented tokens and restores the exact NFC-normalized German spelling before
+require location context. Each unique spelling receives one stable token, which
+may occur repeatedly across the title and summary. The model must preserve the
+exact token occurrence count in each field; target-language word order and an
+apostrophe-delimited grammatical suffix are allowed while the token itself
+remains intact. The application rejects missing, duplicated, moved, modified,
+or invented tokens and restores the exact NFC-normalized German spelling before
 ordinary validation and persistence. If no valid generation is loaded,
 translation job claims pause while German processing, existing publications,
 and readiness continue.

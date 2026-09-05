@@ -67,7 +67,10 @@ fire noun `Brand` is excluded, while `Haar` requires preceding location
 context. Two-letter names such as `Au` also require location context by rule.
 `U-Bahn` and `S-Bahn` are always present as static protected entries.
 
-Every occurrence receives a unique `__MB_PLACE_####__` token. The output is
-invalid if a token is missing, duplicated, moved between title and summary,
-reordered, inflected, modified, or invented. Reader titles and summaries are
-plain text, so Markdown and URLs are rejected before persistence.
+Each unique normalized spelling receives a stable `__MB_PLACE_####__` token,
+which is reused for repeated occurrences. The output must preserve the exact
+occurrence count in each field, but may reorder intact tokens for natural target
+grammar and may place an apostrophe-delimited grammatical suffix after one. A
+missing, duplicated, field-moved, modified, or invented token is invalid. Reader
+titles and summaries are plain text, so Markdown and URLs are rejected before
+persistence.

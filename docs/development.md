@@ -147,6 +147,23 @@ codes with `MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_LANGUAGES` and fixture names with
 evaluation evidence and requires manual semantic review even when all
 mechanical checks pass.
 
+The smaller HY-MT2 plain-text screen sends one summary request for each of the
+ten supported MunichBrief targets (`en`, `tr`, `it`, `uk`, `zh`, `hi`, `es`,
+`fr`, `pl`, and `ru`). It uses its own configuration-bound checkpoint directory
+and is the preferred gate before expanding another full title-and-summary run:
+
+```bash
+MUNICHBRIEF_HYMT2_LANGUAGE_SCREEN_LIVE_TEST=1 \
+MUNICHBRIEF_OLLAMA_BASE_URL=http://127.0.0.1:11434 \
+go test -timeout 4h -run TestLiveHyMT2SupportedReaderLanguageSummaryScreen \
+  -v ./internal/processing
+```
+
+The screen records raw and restored output for manual editorial review and
+rejects Markdown or URLs. It resumes completed languages after interruption;
+set `MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_DIR` only when an explicit alternate
+checkpoint location is needed.
+
 The longer Munich place-name preservation matrix is independently gated so it
 does not slow the normal live smoke suite. It checks every translation target
 through the real placeholder wrapper with one dense request containing all 11
