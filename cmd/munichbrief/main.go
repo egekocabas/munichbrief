@@ -99,6 +99,13 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 	if err := database.EnsurePipelineSteps(ctx, processing.ModelSettingKeys(), time.Now()); err != nil {
 		return err
 	}
+	translationCodes := make([]string, 0, len(processing.RegisteredTranslations()))
+	for _, translation := range processing.RegisteredTranslations() {
+		translationCodes = append(translationCodes, translation.Language)
+	}
+	if err := database.EnsureTranslationLanguageSettings(ctx, translationCodes, processing.EnglishLanguage, time.Now()); err != nil {
+		return err
+	}
 
 	metrics := observability.NewMetrics(version, time.Now())
 	var gazetteerManager *gazetteer.Manager
@@ -190,7 +197,8 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 		PageSize: cfg.PageSize, SourceMode: cfg.SourceMode, PresentationMode: cfg.PresentationMode,
 		SecureCookies: cfg.SecureCookies,
 		AdminEnabled:  cfg.AdminEnabled, PublicHosts: cfg.PublicHosts, CanonicalOrigin: cfg.CanonicalOrigin, Processor: processor,
-		Build: build,
+		Gazetteer: gazetteerStore,
+		Build:     build,
 	})
 	if err != nil {
 		return err

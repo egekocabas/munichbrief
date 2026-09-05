@@ -74,9 +74,10 @@ The new prompt receives only the accepted privacy-safe German title and
 summary. The shared prompt preserves subjects, claims, uncertainty, and the
 presumption of innocence without adding explanations or source details.
 Munich-area names are detected from the separately refreshed gazetteer and
-replaced with opaque `__MB_PLACE_####__` tokens before the model request. The
-model must copy each token exactly once in the corresponding field; application
-code restores the original spelling. Smoke fixtures must cover streets,
+replaced with typed opaque tokens such as `__MB_STREET_0001__` and
+`__MB_TRAIN_STATION_0002__` before the model request. The model uses the type
+only as sentence context and must copy each token exactly once in the
+corresponding field; application code restores the original spelling. Smoke fixtures must cover streets,
 districts, stations, parks, municipalities, repeated names, Unicode boundaries,
 and the static `U-Bahn` and `S-Bahn` labels. Titles and summaries are plain text;
 reject model-produced Markdown and URLs rather than storing them.
@@ -155,8 +156,10 @@ Use this rollout order:
 1. Merge and reconcile the ingress prefix first. The old application safely
    returns 404 for the not-yet-registered language.
 2. Deploy the application image containing the registry, prompt, and catalog.
-3. Confirm the shared translation model is configured and available, review new
-   automatic translations, and check queue/failure metrics and logs.
+3. On `/admin/translations`, select a reviewed installed model and a supported
+   adapter for the language. Confirm the route is ready, review new automatic
+   translations, and check queue/failure metrics and logs. The choice affects
+   new jobs only; queued jobs retain their frozen route.
 4. From `/admin/translations`, review the new language's coverage and explicitly
    use **Queue unpublished** for current presentations only after quality
    review. Use **Rerun all** only when every existing success should be

@@ -1,0 +1,43 @@
+{{define "admin_gazetteer"}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>Gazetteer operations · MunichBrief Admin</title>
+  <script src="{{assetURL "theme.js"}}"></script>
+  <link rel="icon" href="{{assetURL "favicon.svg"}}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{assetURL "app.css"}}">
+</head>
+<body class="min-h-screen text-ink antialiased">
+  {{template "admin-header" "gazetteer"}}
+  <main class="page-shell py-8">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div class="max-w-3xl"><p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Translation safeguards</p><h1 class="mt-1 font-serif text-4xl font-bold tracking-tight">Place-name gazetteer</h1><p class="mt-3 text-muted">Operational metadata for the separately stored Munich place-name index. Source payloads and the complete name list are intentionally not rendered here.</p></div>
+      <p class="text-sm font-semibold text-muted">Updated <time datetime="{{.UpdatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime "en" .UpdatedAt}}</time></p>
+    </div>
+
+    {{if not .Enabled}}
+    <div class="mt-8 rounded-lg border border-dashed border-rule bg-paper px-6 py-12 text-center"><h2 class="font-serif text-2xl font-bold">Gazetteer is disabled</h2><p class="mt-2 text-sm text-muted">Live source mode enables the separate gazetteer database. Translation processing remains paused when place protection is unavailable.</p></div>
+    {{else}}
+    <section class="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Gazetteer status">
+      <article class="rounded-lg border border-rule bg-paper p-5"><p class="text-xs font-bold uppercase tracking-wider text-muted">Matcher</p><p class="mt-2 font-serif text-2xl font-bold {{if .Ready}}text-emerald-700{{else}}text-alert{{end}}">{{if .Ready}}Ready{{else}}Not ready{{end}}</p></article>
+      <article class="rounded-lg border border-rule bg-paper p-5"><p class="text-xs font-bold uppercase tracking-wider text-muted">Active generation</p><p class="mt-2 font-serif text-3xl font-bold tabular-nums">{{if .Snapshot.Status.ActiveGeneration}}#{{.Snapshot.Status.ActiveGeneration}}{{else}}—{{end}}</p><p class="mt-1 text-sm text-muted">{{.Snapshot.Status.EntryCount}} protected names</p></article>
+      <article class="rounded-lg border border-rule bg-paper p-5"><p class="text-xs font-bold uppercase tracking-wider text-muted">Last successful refresh</p><p class="mt-2 font-bold">{{if .Snapshot.Status.LastSuccess.IsZero}}Never{{else}}{{formatDateTime "en" .Snapshot.Status.LastSuccess}}{{end}}</p><p class="mt-1 text-sm text-muted">Last attempt: {{if .Snapshot.Status.LastAttempt.IsZero}}never{{else}}{{formatDateTime "en" .Snapshot.Status.LastAttempt}}{{end}}</p></article>
+      <article class="rounded-lg border border-rule bg-paper p-5"><p class="text-xs font-bold uppercase tracking-wider text-muted">Next scheduled refresh</p><p class="mt-2 font-bold">{{if .Snapshot.Status.NextRefresh.IsZero}}Not scheduled{{else}}{{formatDateTime "en" .Snapshot.Status.NextRefresh}}{{end}}</p><p class="mt-1 text-sm text-muted">The last successful generation stays active after a failed refresh.</p></article>
+    </section>
+
+    <section class="mt-10" aria-labelledby="gazetteer-sources-heading"><div class="flex flex-wrap items-end justify-between gap-3"><div><p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Provenance</p><h2 id="gazetteer-sources-heading" class="mt-1 font-serif text-2xl font-bold">Source health</h2></div><p class="text-sm text-muted">{{len .Snapshot.Sources}} sources recorded</p></div>
+      <div class="mt-4 overflow-x-auto rounded-lg border border-rule bg-paper"><table class="w-full border-collapse text-left text-sm"><thead class="border-b border-rule bg-newsprint/70 text-xs uppercase tracking-wider text-muted"><tr><th class="px-4 py-3">Source</th><th class="px-4 py-3">Active rows</th><th class="px-4 py-3">Last check</th><th class="px-4 py-3">Failures</th><th class="px-4 py-3">License and contract</th></tr></thead><tbody class="divide-y divide-rule/70">{{range .Snapshot.Sources}}<tr class="align-top"><td class="px-4 py-4"><strong>{{.DisplayName}}</strong><span class="mt-1 block font-mono text-xs text-muted">{{.Key}}</span><a class="mt-1 block break-all text-xs font-bold text-civic" href="{{.URL}}" rel="noreferrer">Source URL</a></td><td class="px-4 py-4 font-bold tabular-nums">{{.ActiveRowCount}}</td><td class="whitespace-nowrap px-4 py-4">{{if .LastChecked.IsZero}}Never{{else}}{{formatDateTime "en" .LastChecked}}{{end}}<span class="mt-1 block text-xs text-muted">Success: {{if .LastSuccess.IsZero}}never{{else}}{{formatDateTime "en" .LastSuccess}}{{end}}</span></td><td class="px-4 py-4 font-bold tabular-nums {{if .ConsecutiveFailures}}text-alert{{else}}text-emerald-700{{end}}">{{.ConsecutiveFailures}}</td><td class="max-w-md px-4 py-4"><strong>{{.License}}</strong><span class="mt-1 block text-xs text-muted">{{.Attribution}}</span><span class="mt-1 block break-all font-mono text-xs text-muted">contract {{if .ContractVersion}}{{.ContractVersion}}{{else}}unknown{{end}} · SHA-256 {{if .ContentHash}}{{.ContentHash}}{{else}}none{{end}}</span></td></tr>{{else}}<tr><td class="px-4 py-8 text-center text-muted" colspan="5">No source refresh has completed or failed yet.</td></tr>{{end}}</tbody></table></div>
+    </section>
+
+    <section class="mt-10 grid gap-6 xl:grid-cols-2">
+      <div><p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Retained audit</p><h2 class="mt-1 font-serif text-2xl font-bold">Generations</h2><p class="mt-2 text-sm text-muted">The active and most recent superseded generation are retained; older rebuildable generations are pruned.</p><div class="mt-4 grid gap-3">{{range .Snapshot.Generations}}<article class="rounded-lg border border-rule bg-paper p-4"><div class="flex items-center justify-between gap-3"><strong>Generation #{{.ID}}</strong><span class="rounded-full border border-rule px-2 py-1 text-xs font-bold uppercase">{{.Status}}</span></div><p class="mt-2 text-sm">{{.EntryCount}} entries · created {{formatDateTime "en" .CreatedAt}}</p><p class="mt-1 break-all font-mono text-xs text-muted">{{.AggregateHash}}</p></article>{{else}}<div class="rounded-lg border border-dashed border-rule bg-paper p-6 text-center text-muted">No generation has been activated.</div>{{end}}</div></div>
+      <div><p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Deterministic policy</p><h2 class="mt-1 font-serif text-2xl font-bold">Overrides</h2><p class="mt-2 text-sm text-muted">Ambiguous terms are excluded or require explicit Munich-area context before matching.</p><div class="mt-4 overflow-hidden rounded-lg border border-rule bg-paper"><table class="w-full border-collapse text-left text-sm"><thead class="border-b border-rule bg-newsprint/70 text-xs uppercase tracking-wider text-muted"><tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">Action</th><th class="px-4 py-3">Reason</th></tr></thead><tbody class="divide-y divide-rule/70">{{range .Snapshot.Overrides}}<tr><td class="px-4 py-3 font-bold">{{.Name}}</td><td class="px-4 py-3 font-mono text-xs">{{.Action}}</td><td class="px-4 py-3 text-muted">{{.Reason}}</td></tr>{{end}}</tbody></table></div></div>
+    </section>
+    {{end}}
+  </main>
+</body>
+</html>
+{{end}}

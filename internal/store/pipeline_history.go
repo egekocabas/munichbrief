@@ -60,7 +60,7 @@ func (s *Store) listPipelineHistoryEntries(ctx context.Context, sourceMode strin
 			j.step_key AS execution_key, '' AS request_kind,
 			j.status, '' AS status_reason, '' AS status_detail,
 			j.attempt_count, COALESCE(j.failure_kind,'') AS failure_kind,
-			j.model_identity, j.prompt_version
+			j.model_identity, '' AS adapter_key, j.prompt_version
 		FROM processing_step_jobs j
 		JOIN processing_cycle_items ci ON ci.id=j.cycle_item_id
 		JOIN processing_cycles c ON c.id=ci.cycle_id
@@ -72,7 +72,9 @@ func (s *Store) listPipelineHistoryEntries(ctx context.Context, sourceMode strin
 			'' AS step_key,post.processor_key,post.scope_key,
 			post.processor_key || '/' || post.scope_key AS execution_key,
 			post.request_kind,post.status,COALESCE(post.status_reason,''),COALESCE(post.status_detail,''),post.attempt_count,
-			COALESCE(post.failure_kind,'') AS failure_kind,post.model_identity,post.prompt_version
+			COALESCE(post.failure_kind,'') AS failure_kind,post.model_identity,
+			CASE WHEN post.processor_key='translation' THEN post.adapter_key ELSE '' END AS adapter_key,
+			post.prompt_version
 		FROM post_processing_jobs post
 		JOIN presentation_runs r ON r.id=post.presentation_run_id
 		JOIN incidents i ON i.id=r.incident_id
@@ -86,7 +88,7 @@ func (s *Store) listPipelineHistoryEntries(ctx context.Context, sourceMode strin
 	)
 	SELECT job_id, updated_at, kind, cycle_id, cycle_kind, cycle_status,
 		incident_id, step_key, processor_key, scope_key, execution_key, request_kind, status,status_reason,status_detail,attempt_count,
-		failure_kind, model_identity, prompt_version, kind_order
+		failure_kind, model_identity, adapter_key, prompt_version, kind_order
 	FROM history WHERE 1=1`
 	args := []any{sourceMode}
 	ascending := false
@@ -131,7 +133,7 @@ func (s *Store) listPipelineHistoryEntries(ctx context.Context, sourceMode strin
 			&entry.JobID, &updatedAt, &entry.Kind, &entry.CycleID, &entry.CycleKind,
 			&entry.CycleStatus, &entry.IncidentID, &entry.StepKey, &entry.ProcessorKey, &entry.ScopeKey, &entry.ExecutionKey,
 			&entry.RequestKind, &entry.Status, &entry.StatusReason, &entry.StatusDetail, &entry.AttemptCount, &entry.FailureKind,
-			&entry.ModelIdentity, &entry.PromptVersion, &kindOrder,
+			&entry.ModelIdentity, &entry.AdapterKey, &entry.PromptVersion, &kindOrder,
 		); err != nil {
 			return nil, err
 		}

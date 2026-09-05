@@ -44,6 +44,18 @@ and scope; follow
 [Adding a reader language](../../docs/adding-a-language.md) instead of adding
 worker or store branches.
 
+Each target also has a durable production route containing an installed model
+and adapter. `structured` uses the unified JSON contract;
+`translategemma` and `hy-mt2` use their documented user-only, plain-text
+contracts and send title and summary sequentially as separate requests. HY-MT2
+is offered only for targets in its official language table. All routes still
+pass through Gazetteer protection, restoration, target-script checks, and the
+same output validator. The model, adapter, and prompt are frozen with a queued
+job and included in its input hash and audit provenance.
+Because the language prompt version is also the durable version boundary for
+native adapter instructions, changing a native prompt's semantics requires
+bumping every affected translation scope before queueing new work.
+
 `steps.go` is the registry and validation boundary. A model response is not
 publishable merely because it matches JSON: field limits, allowed values,
 source grounding, and privacy checks must also pass. Prompts are immutable,

@@ -67,6 +67,8 @@ See [the development guide](docs/development.md) for live-source, Ollama, and
 complete validation commands.
 See [Adding a reader language](docs/adding-a-language.md) for the registry,
 translation, discovery, and deployment workflow.
+See [Pre-merge translation testing](docs/pre-merge-translation-testing.md) for
+the model-routing, live-matrix, and native-review release gate.
 
 ## How it works
 

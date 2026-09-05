@@ -73,6 +73,7 @@ type PostProcessingPlan struct {
 	ScopeKey      string
 	PromptVersion string
 	Model         string
+	AdapterKey    string
 	InputKinds    []string
 }
 
@@ -104,6 +105,7 @@ type PostProcessingJob struct {
 	ScopeKey          string
 	RequestKind       string
 	ModelIdentity     string
+	AdapterKey        string
 	PromptVersion     string
 	InputHash         string
 	AttemptCount      int
@@ -223,6 +225,7 @@ type PipelineHistoryEntry struct {
 	AttemptCount  int
 	FailureKind   string
 	ModelIdentity string
+	AdapterKey    string
 	PromptVersion string
 }
 

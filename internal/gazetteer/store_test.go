@@ -33,6 +33,19 @@ func TestStoreActivatesAndRetainsARebuildableGeneration(t *testing.T) {
 	if err != nil || overrides["Brand"] != "exclude" || overrides["Haar"] != "context" {
 		t.Fatalf("Overrides() = %#v, err=%v", overrides, err)
 	}
+	admin, err := store.AdminSnapshot(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if admin.Status.ActiveGeneration != id || len(admin.Sources) != 1 || admin.Sources[0].Key != "official" || admin.Sources[0].ActiveRowCount != 1 {
+		t.Fatalf("admin sources = %#v", admin)
+	}
+	if len(admin.Generations) != 1 || admin.Generations[0].ID != id || admin.Generations[0].EntryCount != 1 || admin.Generations[0].Status != "active" {
+		t.Fatalf("admin generations = %#v", admin.Generations)
+	}
+	if len(admin.Overrides) != 2 || admin.Overrides[0].Name != "Brand" || admin.Overrides[1].Name != "Haar" {
+		t.Fatalf("admin overrides = %#v", admin.Overrides)
+	}
 }
 
 func TestStoreUpdatesSourceMetadataWhenGenerationContentIsUnchanged(t *testing.T) {

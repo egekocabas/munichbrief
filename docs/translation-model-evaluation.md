@@ -17,15 +17,15 @@ target-language translation. The supported text input context is 2K tokens.
 The GGUF models inspected through Ollama expose a generic Gemma 3 string-message
 template. Ollama's `/api/chat` string content cannot carry the structured
 language-code properties consumed by Google's original template. The
-experimental `TranslateGemmaNativeAdapter` therefore expands Google's official
+`TranslateGemmaNativeAdapter` therefore expands Google's official
 plain-text instruction in application code, sends one protected field per
 request, requests plain output without a JSON schema, disables sampling, and
 leaves restoration and validation to application code.
 
-This adapter is experimental and is not selected by production routing. The
-existing general-LLM translation step remains active until a controlled
-evaluation demonstrates that the native adapter improves both fidelity and
-language quality.
+The adapter is an explicit production routing option, but it is never selected
+automatically. Operators choose it per language only after controlled
+evaluation demonstrates acceptable fidelity and language quality. Unconfigured
+upgrades retain structured-chat behavior.
 
 Primary references:
 
@@ -44,7 +44,7 @@ not assume that a third-party GGUF retained Google's structured chat template.
 ## Hy-MT2 request contract
 
 Tencent's Hy-MT2 instructions require full language names in English prompts,
-not BCP-47 tags or bare language codes. The experimental `HyMT2NativeAdapter`
+not BCP-47 tags or bare language codes. The `HyMT2NativeAdapter`
 therefore maps MunichBrief's canonical German source and each supported reader
 language to Tencent's exact English label. This matters for Chinese: the website
 registry calls it `Simplified Chinese`, while Hy-MT2's supported-language table
@@ -63,10 +63,10 @@ after the source-data heading. The adapter applies Tencent's recommended
 
 Of MunichBrief's registered translated languages, Hy-MT2 officially supports
 English, Turkish, Italian, Ukrainian, Chinese, Hindi, Spanish, French, Polish,
-and Russian. It does not list Croatian, Bosnian, Greek, or Romanian; the adapter
-rejects those targets instead of attempting an undocumented fallback. It is not
-selected by production routing and requires live quality evaluation after the
-local GGUF download completes.
+and Russian. It does not list Croatian, Bosnian, Greek, or Romanian; production
+routing rejects those targets instead of attempting an undocumented fallback.
+The adapter is available as an explicit per-language choice but has no automatic
+default and still requires live and native quality review.
 
 Primary references:
 
@@ -150,7 +150,7 @@ as reader content.
 ## HY-MT2 and Seed-X critical screen
 
 The opt-in `TestLiveNativeTranslationAdapterScreen` defines a 72-field-call
-comparison for the two experimental adapters. Each adapter must first pass
+comparison for the two native adapters. Each adapter must first pass
 `TestLiveNativeTranslationAdapterSmoke`; a failed adapter must be excluded
 instead of spending the larger call budget. The three fixtures isolate transit and repeated
 typed-place relationships; negation, attribution, uncertainty, and legal
@@ -172,8 +172,9 @@ result records individual mechanical checks and leaves semantic relationships,
 transit terminology, negation and uncertainty, attribution and legal framing,
 additions and omissions, and grammar explicitly pending for human review.
 
-This screen is test-only. It does not enable typed placeholders in production,
-choose per-language models, or alter jobs, persistence, routes, or deployment.
+This screen is test-only. Production uses the same typed-placeholder boundary,
+but the screen does not choose per-language models or alter settings, jobs,
+routes, persistence, or deployment.
 
 ### Adapter smoke gate on 2026-09-03
 

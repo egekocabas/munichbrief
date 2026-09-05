@@ -13,7 +13,8 @@ File ownership is intentionally narrow:
 
 - `server.go`: dependencies, template loading, and route registration
 - `public.go` and `discovery.go`: public pages and crawler metadata
-- `admin.go`: review pages and mutation handlers
+- `admin.go`, `admin_translations.go`, and `admin_gazetteer.go`: review pages,
+  per-language routing, bounded Gazetteer operations, and mutation handlers
 - `middleware.go`: host/path boundary, request metadata, and security headers
 - `localization.go`: embedded message lookup and pluralization
 - `templates/`, `assets/`, and `static/`: embedded UI sources and generated files

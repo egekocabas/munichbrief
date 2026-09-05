@@ -112,8 +112,12 @@ to the immutable original metadata category when no verification has succeeded.
 
 Translation scopes are generated from registered languages. Each language owns
 an immutable prompt version, schema, validator, generator, and enablement
-cutover, while all languages share one preferred translation model and one
-registry-driven prompt template. English, Turkish,
+cutover. A durable per-language route selects an exact installed model and one
+of the adapters supported for that target: structured chat, TranslateGemma's
+native contract, or HY-MT2's native contract. Title and summary remain separate
+requests for native adapters. The model, adapter, and prompt are frozen into
+each job and remain visible in audit history; changing a preference affects
+only future work. English, Turkish,
 Croatian, Italian, Ukrainian, Bosnian, Simplified Chinese, Hindi, Spanish,
 French, Greek, Romanian, Polish, and Russian each receive only the accepted
 German title and summary.
@@ -139,6 +143,11 @@ and a versioned parser contract, so source or parsing changes force a complete
 download. Any source or matcher failure leaves the last successful generation
 active. The database is rebuildable and is not part of the incident database
 backup.
+
+The protected `/admin/gazetteer` page exposes bounded source health, the active
+entry count, refresh timing, source contracts and hashes, retained generations,
+and deterministic overrides. It deliberately does not load or render the full
+name set or downloaded payloads.
 
 Application code localizes metadata labels. Each step declares its ordered
 input kinds; the worker passes only those values and hashes the actual inputs
@@ -213,7 +222,8 @@ The v2 migration records an automatic-scheduling cutover. Each registered
 processor scope also has a persisted enablement time. The public-assistance
 scope begins automatic work only for presentations completed after its first
 deployment-time registration; operators use the admin “process all” action for
-older presentations, with no automatic historical backfill or schema migration.
+older presentations, with no automatic historical backfill or operator-run
+data migration.
 Existing translation and category-verification attempts are migrated into
 unified jobs and named values for audit, including imported and superseded
 records, but only complete current

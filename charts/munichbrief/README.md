@@ -58,8 +58,9 @@ matching NetworkPolicy egress. The legacy chart key `networkPolicy.pi8` is kept
 for compatibility; it controls the explicit Ollama CIDR and port allowlist.
 
 Fresh databases have no preferred models. Enable the protected admin view,
-select one installed model for every registered pipeline step, and then allow
-scheduled or manual cycles.
+select one installed model for every canonical pipeline step, and select an
+installed model plus supported adapter for every reader language on
+`/admin/translations` before allowing scheduled or manual cycles.
 
 Administration requires the LAN ingress plus exactly one of
 `admin.basicAuthSecret` or `admin.basicAuthMiddleware`. The chart never creates

@@ -33,6 +33,14 @@ func (p *protectedGeneratorProvider) StepGenerator(model string) (StepGenerator,
 	return &protectedGenerator{inner: inner, protector: p.protector}, nil
 }
 
+func (p *protectedGeneratorProvider) StepGeneratorFor(model, adapter string) (StepGenerator, error) {
+	inner, err := stepGeneratorFor(p.inner, model, adapter)
+	if err != nil {
+		return nil, err
+	}
+	return &protectedGenerator{inner: inner, protector: p.protector}, nil
+}
+
 type protectedGenerator struct {
 	inner     StepGenerator
 	protector TranslationProtector

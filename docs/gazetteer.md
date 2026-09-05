@@ -57,6 +57,12 @@ Use `munichbrief gazetteer status` without network access or
 `munichbrief gazetteer refresh` for a one-shot refresh. The database is
 rebuildable and deliberately excluded from incident backups.
 
+The protected `/admin/gazetteer` page provides an RSS-history-style operational
+view of matcher readiness, refresh timing, active counts, source failures and
+contracts, retained generations, and overrides. It uses bounded metadata
+queries and intentionally does not expose downloaded payloads or the complete
+active name list.
+
 ## Matching contract
 
 Matching is exact and case-sensitive, uses leftmost-longest Aho–Corasick
@@ -67,8 +73,11 @@ fire noun `Brand` is excluded, while `Haar` requires preceding location
 context. Two-letter names such as `Au` also require location context by rule.
 `U-Bahn` and `S-Bahn` are always present as static protected entries.
 
-Each unique normalized spelling receives a stable `__MB_PLACE_####__` token,
-which is reused for repeated occurrences. The output must preserve the exact
+Each unique normalized spelling receives a stable typed token such as
+`__MB_STREET_####__`, `__MB_DISTRICT_####__`, or
+`__MB_TRAIN_STATION_####__`, which is reused for repeated occurrences. The
+type gives the model grammatical context without exposing or changing the
+hidden name. The output must preserve the exact
 occurrence count in each field, but may reorder intact tokens for natural target
 grammar and may place an apostrophe-delimited grammatical suffix after one. A
 missing, duplicated, field-moved, modified, or invented token is invalid. Reader

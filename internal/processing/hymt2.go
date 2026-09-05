@@ -27,8 +27,8 @@ var hyMT2LanguageNames = map[string]string{
 }
 
 // HyMT2NativeAdapter follows Tencent's user-only translation contract and
-// recommended 1.8B/7B sampling parameters. It remains separate from production
-// routing while its translation quality and placeholder handling are evaluated.
+// recommended 1.8B/7B sampling parameters. Production routing selects it only
+// through a durable setting for an officially supported target language.
 type HyMT2NativeAdapter struct {
 	client            *OllamaClient
 	sourceName        string

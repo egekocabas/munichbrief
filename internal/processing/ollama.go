@@ -69,6 +69,19 @@ func (p *OllamaGeneratorProvider) StepGenerator(model string) (StepGenerator, er
 	return NewOllamaClient(p.baseURL, model, p.timeout, p.contextSize, p.baseClient)
 }
 
+func (p *OllamaGeneratorProvider) StepGeneratorFor(model, adapter string) (StepGenerator, error) {
+	if strings.TrimSpace(model) == "" {
+		return nil, errors.New("ollama model is required")
+	}
+	if adapter == "" || adapter == TranslationAdapterStructured {
+		return p.StepGenerator(model)
+	}
+	if adapter != TranslationAdapterTranslateGemma && adapter != TranslationAdapterHyMT2 {
+		return nil, fmt.Errorf("unknown translation adapter %q", adapter)
+	}
+	return &nativeTranslationStepGenerator{provider: p, model: strings.TrimSpace(model), adapter: adapter}, nil
+}
+
 // OllamaClient calls one model and treats every response as untrusted until the
 // registered step's schema and validator both accept it.
 type OllamaClient struct {

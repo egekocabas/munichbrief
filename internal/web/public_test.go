@@ -685,7 +685,7 @@ func TestPublicHostUsesFailClosedPresentationAndRejectsAdmin(t *testing.T) {
 			}
 
 			for _, route := range []struct{ method, path string }{
-				{http.MethodGet, "/admin"}, {http.MethodGet, "/admin/translations"}, {http.MethodGet, "/admin/verifications"}, {http.MethodGet, "/admin/rss-history"}, {http.MethodGet, "/admin/history"},
+				{http.MethodGet, "/admin"}, {http.MethodGet, "/admin/translations"}, {http.MethodGet, "/admin/verifications"}, {http.MethodGet, "/admin/rss-history"}, {http.MethodGet, "/admin/gazetteer"}, {http.MethodGet, "/admin/history"},
 				{http.MethodPost, "/api/admin/ai/process-all-now"}, {http.MethodPost, "/api/admin/ai/translations/process"},
 				{http.MethodPost, "/api/admin/ai/automatic-processing"}, {http.MethodPost, "/api/admin/ai/cancel-all"}, {http.MethodGet, "/private"},
 			} {

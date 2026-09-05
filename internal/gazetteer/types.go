@@ -67,3 +67,39 @@ type RefreshResult struct {
 	NotModified  bool
 	Duration     time.Duration
 }
+
+type SourceStatus struct {
+	Key                 string
+	DisplayName         string
+	URL                 string
+	License             string
+	Attribution         string
+	ContentHash         string
+	ContractVersion     string
+	LastChecked         time.Time
+	LastSuccess         time.Time
+	ConsecutiveFailures int
+	ActiveRowCount      int
+}
+
+type GenerationStatus struct {
+	ID            int64
+	Status        string
+	AggregateHash string
+	CreatedAt     time.Time
+	ActivatedAt   time.Time
+	EntryCount    int
+}
+
+type OverrideStatus struct {
+	Name   string
+	Action string
+	Reason string
+}
+
+type AdminSnapshot struct {
+	Status      Status
+	Sources     []SourceStatus
+	Generations []GenerationStatus
+	Overrides   []OverrideStatus
+}

@@ -66,13 +66,8 @@ func (s *Server) adminTranslationsPage(response http.ResponseWriter, request *ht
 		Filters:           append([]adminTranslationFilterView(nil), adminTranslationFilters...),
 		UpdatedAt:         time.Now().In(s.location),
 	}
-	if translationProcessor != nil && translationProcessor.PreferredAvailable {
-		data.PreferredTranslationModel = translationProcessor.Preferred
-	}
-	for _, model := range models.Models {
-		data.TranslationModels = append(data.TranslationModels, adminTranslationModelOption{Value: model, Selected: model == data.PreferredTranslationModel})
-	}
 	data.TranslationActionsAvailable = data.translationActionsAvailable()
+	routes := adminTranslationRoutes(translationProcessor, models.Models)
 	displayNames := make(map[string]string, len(languages))
 	for _, language := range languages {
 		displayNames[language.Code] = language.DisplayName
@@ -87,6 +82,7 @@ func (s *Server) adminTranslationsPage(response http.ResponseWriter, request *ht
 			DisplayName:           displayNames[item.Language],
 			CoveragePercent:       percent,
 			ManageURL:             adminTranslationsLanguageURL(item.Language, store.AdminTranslationsUnpublished, 1),
+			Route:                 routes[item.Language],
 		})
 	}
 
@@ -96,7 +92,7 @@ func (s *Server) adminTranslationsPage(response http.ResponseWriter, request *ht
 			http.Error(response, "incident must be a positive integer", http.StatusBadRequest)
 			return
 		}
-		if err := s.populateAdminTranslationIncident(request, &data, incidentID, languages); err != nil {
+		if err := s.populateAdminTranslationIncident(request, &data, incidentID, languages, routes); err != nil {
 			if errors.Is(err, store.ErrNotFound) {
 				http.NotFound(response, request)
 				return
@@ -133,6 +129,7 @@ func (s *Server) adminTranslationsPage(response http.ResponseWriter, request *ht
 		selected := adminTranslationLanguagePage{
 			Language: language, Filter: filter, FilterLabel: adminTranslationFilterLabel(filter), Page: page,
 			TotalPages: totalPages, Total: total, HasPrevious: page > 1, HasNext: page < totalPages,
+			Route: routes[languageCode],
 		}
 		selected.PreviousURL = adminTranslationsLanguageURL(languageCode, filter, page-1)
 		selected.NextURL = adminTranslationsLanguageURL(languageCode, filter, page+1)
@@ -162,7 +159,7 @@ func (s *Server) adminTranslationsPage(response http.ResponseWriter, request *ht
 	}
 }
 
-func (s *Server) populateAdminTranslationIncident(request *http.Request, data *adminTranslationsPage, incidentID int64, languages []readerLanguage) error {
+func (s *Server) populateAdminTranslationIncident(request *http.Request, data *adminTranslationsPage, incidentID int64, languages []readerLanguage, routes map[string]adminTranslationRouteView) error {
 	record, err := s.store.GetPresentationIncident(request.Context(), incidentID, store.PresentationScope{Language: s.canonicalLanguage().Code})
 	if err != nil {
 		return err
@@ -187,6 +184,7 @@ func (s *Server) populateAdminTranslationIncident(request *http.Request, data *a
 			Published:        translation.Title != "" && translation.Summary != "",
 			StatusLabel:      adminTranslationAttemptLabel(translation.Status, translation.StatusReason, translation.Attempts),
 			CanProcess:       data.translationActionsAvailable() && translation.Status != "pending" && translation.Status != "running",
+			Route:            routes[language.Code],
 		})
 	}
 	data.SelectedIncident = &view
@@ -211,6 +209,10 @@ func (s *Server) processTranslations(response http.ResponseWriter, request *http
 		return
 	}
 	model := strings.TrimSpace(request.PostForm.Get("model"))
+	adapter := strings.TrimSpace(request.PostForm.Get("adapter"))
+	if adapter == "" {
+		adapter = processing.TranslationAdapterStructured
+	}
 	models, err := s.options.Processor.ModelStatus(request.Context())
 	if err != nil {
 		s.internalError(response, request, "read translation model status", err)
@@ -225,12 +227,17 @@ func (s *Server) processTranslations(response http.ResponseWriter, request *http
 		http.Error(response, "selected Ollama model is unavailable", http.StatusServiceUnavailable)
 		return
 	}
+	if !processing.TranslationAdapterSupports(adapter, languageCode) {
+		http.Error(response, "selected translation adapter does not support this language", http.StatusBadRequest)
+		return
+	}
 
 	action := strings.TrimSpace(request.PostForm.Get("action"))
 	processingRequest := processing.PostProcessingRequest{
 		ProcessorKey: processing.TranslationModelStep,
 		ScopeKeys:    []string{languageCode},
 		Model:        model,
+		AdapterKey:   adapter,
 	}
 	switch action {
 	case "incident":
@@ -266,6 +273,44 @@ func (s *Server) processTranslations(response http.ResponseWriter, request *http
 	query.Set("queued", strconv.Itoa(queued))
 	query.Set("queued_action", action)
 	query.Set("queued_language", languageCode)
+	target.RawQuery = query.Encode()
+	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
+}
+
+func (s *Server) updateTranslationPreference(response http.ResponseWriter, request *http.Request) {
+	if !s.preparePostProcessingMutation(response, request, "translation preference") {
+		return
+	}
+	languageCode := strings.TrimSpace(request.PostForm.Get("language"))
+	language, registered := s.languageByCode(languageCode)
+	if !registered || language.Canonical {
+		http.Error(response, "language must be a registered translation language", http.StatusBadRequest)
+		return
+	}
+	model := strings.TrimSpace(request.PostForm.Get("model"))
+	adapter := strings.TrimSpace(request.PostForm.Get("adapter"))
+	if !processing.TranslationAdapterSupports(adapter, languageCode) {
+		http.Error(response, "selected translation adapter does not support this language", http.StatusBadRequest)
+		return
+	}
+	if err := s.options.Processor.SetTranslationLanguageSetting(request.Context(), languageCode, model, adapter); err != nil {
+		if errors.Is(err, processing.ErrModelUnavailable) {
+			http.Error(response, "selected Ollama model is unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		if errors.Is(err, store.ErrNotFound) {
+			http.Error(response, "translation language or adapter is unavailable", http.StatusBadRequest)
+			return
+		}
+		s.internalError(response, request, "update translation preference", err)
+		return
+	}
+	target := &url.URL{Path: "/admin/translations"}
+	if strings.TrimSpace(request.PostForm.Get("return_language")) == languageCode {
+		target, _ = url.Parse(adminTranslationsLanguageURL(languageCode, store.AdminTranslationsUnpublished, 1))
+	}
+	query := target.Query()
+	query.Set("preference_language", languageCode)
 	target.RawQuery = query.Encode()
 	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
 }
@@ -313,6 +358,39 @@ func translationProcessorStatus(models processing.PipelineModelStatus) *processi
 	return nil
 }
 
+func adminTranslationRoutes(processor *processing.PostProcessorModelStatus, models []string) map[string]adminTranslationRouteView {
+	routes := make(map[string]adminTranslationRouteView)
+	if processor == nil {
+		return routes
+	}
+	for _, scope := range processor.Scopes {
+		route := adminTranslationRouteView{
+			PreferredModel: scope.PreferredModel,
+			AdapterKey:     scope.AdapterKey,
+			Available:      scope.PreferredAvailable,
+		}
+		preferredListed := false
+		for _, model := range models {
+			selected := model == scope.PreferredModel
+			preferredListed = preferredListed || selected
+			route.Models = append(route.Models, adminTranslationModelOption{Value: model, Selected: selected})
+		}
+		if scope.PreferredModel != "" && !preferredListed {
+			// Keep an unavailable configured identity visible and selected instead
+			// of letting the browser silently select another installed model.
+			route.Models = append([]adminTranslationModelOption{{Value: scope.PreferredModel, Selected: true}}, route.Models...)
+		}
+		for _, adapter := range processing.TranslationAdapterOptions(scope.Key) {
+			route.Adapters = append(route.Adapters, adminTranslationAdapterOption{Value: adapter.Key, Label: adapter.DisplayName, Selected: adapter.Key == scope.AdapterKey})
+			if adapter.Key == scope.AdapterKey {
+				route.AdapterLabel = adapter.DisplayName
+			}
+		}
+		routes[scope.Key] = route
+	}
+	return routes
+}
+
 func translatedLanguageCodes(languages []readerLanguage) []string {
 	codes := make([]string, 0, len(languages))
 	for _, language := range languages {
@@ -351,6 +429,17 @@ func adminTranslationAttemptLabel(status, reason string, attempts int) string {
 }
 
 func (data *adminTranslationsPage) setNotice(query url.Values) {
+	if language := query.Get("preference_language"); language != "" {
+		label := language
+		for _, item := range data.Languages {
+			if item.Language == language {
+				label = item.DisplayName
+				break
+			}
+		}
+		data.Notice = fmt.Sprintf("Preferred translation model and adapter updated for %s. New jobs will use this route; queued jobs remain frozen.", label)
+		return
+	}
 	queued, ok := nonNegativeQueryIntValues(query, "queued")
 	if !ok {
 		return
@@ -366,7 +455,7 @@ func (data *adminTranslationsPage) setNotice(query url.Values) {
 }
 
 func (data adminTranslationsPage) translationActionsAvailable() bool {
-	return data.ProcessingEnabled && data.TranslationModel != nil && data.TranslationModel.Manual && data.Models.CatalogAvailable && len(data.TranslationModels) > 0
+	return data.ProcessingEnabled && data.TranslationModel != nil && data.TranslationModel.Manual && data.Models.CatalogAvailable && len(data.Models.Models) > 0
 }
 
 func nonNegativeQueryIntValues(query url.Values, key string) (int, bool) {
@@ -386,8 +475,6 @@ type adminTranslationsPage struct {
 	Models                      processing.PipelineModelStatus
 	TranslationModel            *processing.PostProcessorModelStatus
 	TranslationActionsAvailable bool
-	PreferredTranslationModel   string
-	TranslationModels           []adminTranslationModelOption
 	Notice                      string
 	NoticeIsWarning             bool
 	UpdatedAt                   time.Time
@@ -398,11 +485,27 @@ type adminTranslationModelOption struct {
 	Selected bool
 }
 
+type adminTranslationAdapterOption struct {
+	Value    string
+	Label    string
+	Selected bool
+}
+
+type adminTranslationRouteView struct {
+	PreferredModel string
+	AdapterKey     string
+	AdapterLabel   string
+	Available      bool
+	Models         []adminTranslationModelOption
+	Adapters       []adminTranslationAdapterOption
+}
+
 type adminLanguageCoverageView struct {
 	store.AdminLanguageCoverage
 	DisplayName     string
 	CoveragePercent int
 	ManageURL       string
+	Route           adminTranslationRouteView
 }
 
 type adminTranslationFilterView struct {
@@ -424,6 +527,7 @@ type adminTranslationLanguagePage struct {
 	NextURL     string
 	HasPrevious bool
 	HasNext     bool
+	Route       adminTranslationRouteView
 }
 
 type adminTranslationIncidentView struct {
@@ -446,4 +550,5 @@ type adminTranslationDetailView struct {
 	Published   bool
 	StatusLabel string
 	CanProcess  bool
+	Route       adminTranslationRouteView
 }

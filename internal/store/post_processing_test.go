@@ -397,6 +397,20 @@ func TestPostProcessingSkipsAndDeduplicatesUnavailableRequiredInput(t *testing.T
 	}
 }
 
+func TestPostProcessingInputHashKeepsStructuredCompatibilityAndSeparatesNativeAdapters(t *testing.T) {
+	values := map[string]string{"title_de": "Titel", "summary_de": "Zusammenfassung."}
+	kinds := []string{"title_de", "summary_de"}
+	legacy := HashPipelineInput("processor", "translation", "scope", "en", "title_de", "Titel", "summary_de", "Zusammenfassung.", "prompt-v1", "model:4b")
+	structured := postProcessingInputHash("translation", "en", kinds, values, "prompt-v1", "model:4b", "structured")
+	native := postProcessingInputHash("translation", "en", kinds, values, "prompt-v1", "model:4b", "hy-mt2")
+	if structured != legacy {
+		t.Fatalf("structured hash = %q, want legacy %q", structured, legacy)
+	}
+	if native == structured {
+		t.Fatal("native adapter did not affect input hash")
+	}
+}
+
 func TestPostProcessingClaimSkipsInputThatBecameUnavailable(t *testing.T) {
 	ctx := context.Background()
 	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "post-processing-late-skip.db"))

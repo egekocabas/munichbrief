@@ -14,7 +14,8 @@ import (
 // TranslateGemmaNativeAdapter expands Google's official text-translation chat
 // template for GGUF runtimes whose generic string-message API cannot carry the
 // source_lang_code and target_lang_code properties used by the original model.
-// It intentionally remains separate from production routing while evaluated.
+// Production routing selects it explicitly through a durable per-language
+// adapter setting; unconfigured upgrades retain structured-chat behavior.
 type TranslateGemmaNativeAdapter struct {
 	client         *OllamaClient
 	source, target langregistry.Definition

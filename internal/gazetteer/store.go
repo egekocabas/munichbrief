@@ -143,6 +143,80 @@ func (s *Store) ActiveEntries(ctx context.Context) ([]Entry, error) {
 	return entries, rows.Err()
 }
 
+// AdminSnapshot returns bounded operational metadata without exposing or
+// loading the potentially large active name set.
+func (s *Store) AdminSnapshot(ctx context.Context) (AdminSnapshot, error) {
+	status, err := s.Status(ctx)
+	if err != nil {
+		return AdminSnapshot{}, err
+	}
+	snapshot := AdminSnapshot{Status: status}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT source.source_key,source.display_name,source.source_url,source.license,source.attribution,
+			source.content_sha256,source.contract_version,COALESCE(source.last_checked_at,''),
+			COALESCE(source.last_success_at,''),source.consecutive_failures,
+			COALESCE(active.row_count,0)
+		FROM gazetteer_sources source
+		LEFT JOIN gazetteer_generation_sources active ON active.source_key=source.source_key
+			AND active.generation_id=(SELECT active_generation_id FROM gazetteer_state WHERE singleton=1)
+		ORDER BY source.source_key
+		LIMIT 100`)
+	if err != nil {
+		return AdminSnapshot{}, err
+	}
+	for rows.Next() {
+		var source SourceStatus
+		var checked, success string
+		if err := rows.Scan(&source.Key, &source.DisplayName, &source.URL, &source.License, &source.Attribution, &source.ContentHash, &source.ContractVersion, &checked, &success, &source.ConsecutiveFailures, &source.ActiveRowCount); err != nil {
+			rows.Close()
+			return AdminSnapshot{}, err
+		}
+		source.LastChecked, source.LastSuccess = parseTime(checked), parseTime(success)
+		snapshot.Sources = append(snapshot.Sources, source)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return AdminSnapshot{}, err
+	}
+	if err := rows.Close(); err != nil {
+		return AdminSnapshot{}, err
+	}
+	rows, err = s.db.QueryContext(ctx, `SELECT id,status,aggregate_sha256,created_at,COALESCE(activated_at,''),entry_count FROM gazetteer_generations ORDER BY id DESC LIMIT 20`)
+	if err != nil {
+		return AdminSnapshot{}, err
+	}
+	for rows.Next() {
+		var generation GenerationStatus
+		var created, activated string
+		if err := rows.Scan(&generation.ID, &generation.Status, &generation.AggregateHash, &created, &activated, &generation.EntryCount); err != nil {
+			rows.Close()
+			return AdminSnapshot{}, err
+		}
+		generation.CreatedAt, generation.ActivatedAt = parseTime(created), parseTime(activated)
+		snapshot.Generations = append(snapshot.Generations, generation)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return AdminSnapshot{}, err
+	}
+	if err := rows.Close(); err != nil {
+		return AdminSnapshot{}, err
+	}
+	rows, err = s.db.QueryContext(ctx, `SELECT normalized_value,action,reason FROM gazetteer_overrides ORDER BY normalized_value LIMIT 200`)
+	if err != nil {
+		return AdminSnapshot{}, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var override OverrideStatus
+		if err := rows.Scan(&override.Name, &override.Action, &override.Reason); err != nil {
+			return AdminSnapshot{}, err
+		}
+		snapshot.Overrides = append(snapshot.Overrides, override)
+	}
+	return snapshot, rows.Err()
+}
+
 func (s *Store) SourceValidators(ctx context.Context, key string) (etag, modified, hash, sourceURL, contractVersion string, err error) {
 	err = s.db.QueryRowContext(ctx, `SELECT etag, last_modified, content_sha256, source_url, contract_version FROM gazetteer_sources WHERE source_key = ?`, key).Scan(&etag, &modified, &hash, &sourceURL, &contractVersion)
 	if errors.Is(err, sql.ErrNoRows) {

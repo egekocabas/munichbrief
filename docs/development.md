@@ -110,7 +110,7 @@ See [Translation model evaluation](translation-model-evaluation.md) for the
 official TranslateGemma request contract, the native-adapter boundary, separate
 structural/editorial scoring, and the bounded comparison protocol.
 
-The HY-MT2 and Seed-X critical screen is separately gated and never changes
+The HY-MT2 and Seed-X critical screen is separately gated and never mutates
 production model routing. It verifies both installed model identities before
 generation, always uses typed placeholders, sends titles and summaries as
 separate requests, and checkpoints every field under `.local/` so the same run
@@ -146,6 +146,10 @@ codes with `MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_LANGUAGES` and fixture names with
 `MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_FIXTURES`. Generated output remains local
 evaluation evidence and requires manual semantic review even when all
 mechanical checks pass.
+
+The complete release gate, resumable six-fixture matrix, per-language report,
+and native-review requirements are in
+[Pre-merge translation testing](pre-merge-translation-testing.md).
 
 The smaller HY-MT2 plain-text screen sends one summary request for each of the
 ten supported MunichBrief targets (`en`, `tr`, `it`, `uk`, `zh`, `hi`, `es`,

@@ -98,13 +98,15 @@ can be requested immediately afterward; automatic eligibility is rediscovered
 only after the master switch is enabled again.
 
 The protected admin dashboard stores one preferred model for each canonical
-step and each registered post-processor. Translation scopes share their
-processor model setting. Fresh
-databases start unconfigured; upgraded databases migrate the former German
-preference to both canonical steps and rename the former English preference to
-the shared translation setting. A missing public-assistance, category, or
-translation model pauses only that independent processor without pausing German
-processing or another processor. The dashboard
+step and ordinary registered post-processor. `/admin/translations` stores an
+independent model and adapter for every reader language. Fresh databases start
+unconfigured; on upgrade, only the pre-existing English target inherits the
+former shared translation model under the structured adapter. Newly registered
+languages remain paused until an operator chooses a reviewed route, and later
+startup checks never overwrite that choice. New jobs freeze the route, while
+queued jobs do not change when a preference changes. A missing public-assistance, category, or
+language-specific translation model pauses only that independent processor
+without pausing German processing or another processor. The dashboard
 displays the automatic v2 and registered processor-scope cutovers. The server refreshes Ollama's
 `/api/tags` every 30 seconds; scheduled processing pauses until all required
 models are installed, while priority manual cycles retain their per-step model
@@ -158,6 +160,9 @@ entry count, and refresh duration. Source responses and errors are logged
 without downloaded payloads. The fixed sources are Landeshauptstadt München –
 GeodatenService (`dl-de/by-2.0`), GeoNames (`CC BY 4.0`), and OpenStreetMap
 contributors (`ODbL 1.0`). Public HTTPS egress must remain enabled for refresh.
+The protected `/admin/gazetteer` view shows the same operational state plus
+bounded source provenance, retained generations, and overrides; it never shows
+the complete name set or source payloads.
 
 `review` presentation mode displays stored German source text and processing
 states and is intended for local fixture development. `public` mode fails closed: it
@@ -221,13 +226,16 @@ replacement-warning count.
 Language drill-down filters are `all`, `published`, `unpublished`,
 `never_queued`, `active`, and `attention`. Incident drill-down shows the German
 canonical presentation plus each registered language's effective output,
-published provenance, latest attempt, and retry action. **Queue unpublished**
+published model/adapter/prompt provenance, latest-attempt provenance, and retry
+action. The overview stores one preferred installed model and supported adapter
+per language; unavailable routes are visibly paused. **Queue unpublished**
 transactionally queues current German presentations that have no publishable
 translation, excluding active and already-published work. **Rerun all** creates
 manual replacements for every eligible presentation except active work. Both
-bulk actions and an incident retry require an installed model and an explicit
-confirmation; they bypass the automatic-processing switch and cutover without
-changing either. Historical work is therefore always an operator decision.
+bulk actions and an incident retry require an installed model, supported
+adapter, and explicit confirmation; they bypass the automatic-processing switch
+and cutover without changing either. Historical work is therefore always an
+operator decision.
 
 The translation operations region refreshes from its current URL every five
 seconds, preserving its filter, page, incident view, and scroll position. It

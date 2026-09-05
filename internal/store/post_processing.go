@@ -261,7 +261,7 @@ func queuePostProcessingTx(ctx context.Context, tx *sql.Tx, runID, incidentID in
 		return false, err
 	}
 	formatted := formatTime(now.UTC())
-	inputHash := postProcessingInputHash(plan.ProcessorKey, plan.ScopeKey, plan.InputKinds, values, plan.PromptVersion, plan.Model)
+	inputHash := postProcessingInputHash(plan.ProcessorKey, plan.ScopeKey, plan.InputKinds, values, plan.PromptVersion, plan.Model, plan.AdapterKey)
 	if _, err := tx.ExecContext(ctx, `UPDATE post_processing_jobs SET status='superseded',completed_at=?,updated_at=?
 		WHERE status='pending' AND processor_key=? AND scope_key=? AND presentation_run_id IN (
 			SELECT older.id FROM presentation_runs older
@@ -283,17 +283,17 @@ func queuePostProcessingTx(ctx context.Context, tx *sql.Tx, runID, incidentID in
 	if unavailableKind != "" {
 		_, err = tx.ExecContext(ctx, `INSERT INTO post_processing_jobs(
 			presentation_run_id,processor_key,scope_key,request_kind,status,status_reason,status_detail,
-			model_identity,prompt_version,input_hash,completed_at,created_at,updated_at
-		) VALUES(?,?,?,?,'skipped',?,?,?,?,?,?,?,?)`, runID, plan.ProcessorKey, plan.ScopeKey, requestKind,
-			PostProcessingStatusReasonMissingInput, unavailableKind, plan.Model, plan.PromptVersion, inputHash, formatted, formatted, formatted)
+			model_identity,adapter_key,prompt_version,input_hash,completed_at,created_at,updated_at
+		) VALUES(?,?,?,?,'skipped',?,?,?,?,?,?,?,?,?)`, runID, plan.ProcessorKey, plan.ScopeKey, requestKind,
+			PostProcessingStatusReasonMissingInput, unavailableKind, plan.Model, normalizedAdapterKey(plan.AdapterKey), plan.PromptVersion, inputHash, formatted, formatted, formatted)
 		if err != nil {
 			return false, fmt.Errorf("record skipped %s/%s: %w", plan.ProcessorKey, plan.ScopeKey, err)
 		}
 		return false, nil
 	}
 	_, err = tx.ExecContext(ctx, `INSERT INTO post_processing_jobs(
-		presentation_run_id,processor_key,scope_key,request_kind,status,model_identity,prompt_version,input_hash,created_at,updated_at
-	) VALUES(?,?,?,?,'pending',?,?,?,?,?)`, runID, plan.ProcessorKey, plan.ScopeKey, requestKind, plan.Model, plan.PromptVersion, inputHash, formatted, formatted)
+		presentation_run_id,processor_key,scope_key,request_kind,status,model_identity,adapter_key,prompt_version,input_hash,created_at,updated_at
+	) VALUES(?,?,?,?,'pending',?,?,?,?,?,?)`, runID, plan.ProcessorKey, plan.ScopeKey, requestKind, plan.Model, normalizedAdapterKey(plan.AdapterKey), plan.PromptVersion, inputHash, formatted, formatted)
 	if err != nil {
 		return false, fmt.Errorf("queue %s/%s: %w", plan.ProcessorKey, plan.ScopeKey, err)
 	}
@@ -317,12 +317,22 @@ func validatePostProcessingPlan(plan PostProcessingPlan) error {
 	return nil
 }
 
-func postProcessingInputHash(processorKey, scopeKey string, kinds []string, values map[string]string, promptVersion, model string) string {
+func normalizedAdapterKey(adapter string) string {
+	if adapter = strings.TrimSpace(adapter); adapter != "" {
+		return adapter
+	}
+	return "structured"
+}
+
+func postProcessingInputHash(processorKey, scopeKey string, kinds []string, values map[string]string, promptVersion, model, adapter string) string {
 	hashParts := []string{"processor", processorKey, "scope", scopeKey}
 	for _, kind := range kinds {
 		hashParts = append(hashParts, kind, values[kind])
 	}
 	hashParts = append(hashParts, promptVersion, model)
+	if adapter = normalizedAdapterKey(adapter); adapter != "structured" {
+		hashParts = append(hashParts, "adapter", adapter)
+	}
 	return HashPipelineInput(hashParts...)
 }
 
@@ -421,14 +431,14 @@ func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string,
 	}
 	var job PostProcessingJob
 	err = tx.QueryRowContext(ctx, `SELECT job.id,job.presentation_run_id,r.incident_id,job.processor_key,job.scope_key,job.request_kind,
-		job.model_identity,job.prompt_version,job.input_hash,job.attempt_count
+		job.model_identity,job.adapter_key,job.prompt_version,job.input_hash,job.attempt_count
 		FROM post_processing_jobs job JOIN presentation_runs r ON r.id=job.presentation_run_id
 		JOIN incidents i ON i.id=r.incident_id AND i.content_hash=r.source_hash
 		WHERE job.processor_key=? AND job.status='pending' AND (job.next_retry_at IS NULL OR job.next_retry_at<=?)
 		AND (job.request_kind='manual' OR (? AND (SELECT automatic_processing_enabled FROM ai_runtime_control WHERE id=1)=1))`+blockedCondition+`
 		ORDER BY CASE job.request_kind WHEN 'manual' THEN 0 WHEN 'scheduled' THEN 1 ELSE 2 END,job.created_at,job.id LIMIT 1`, args...).Scan(
 		&job.ID, &job.PresentationRunID, &job.IncidentID, &job.ProcessorKey, &job.ScopeKey, &job.RequestKind,
-		&job.ModelIdentity, &job.PromptVersion, &job.InputHash, &job.AttemptCount,
+		&job.ModelIdentity, &job.AdapterKey, &job.PromptVersion, &job.InputHash, &job.AttemptCount,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		if err := tx.Commit(); err != nil {
@@ -452,7 +462,7 @@ func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string,
 			return PostProcessingJob{}, false, fmt.Errorf("load claimed post-processing inputs: %w", err)
 		}
 		if unavailableKind != "" {
-			inputHash := postProcessingInputHash(job.ProcessorKey, job.ScopeKey, contract.InputKinds, job.InputValues, job.PromptVersion, job.ModelIdentity)
+			inputHash := postProcessingInputHash(job.ProcessorKey, job.ScopeKey, contract.InputKinds, job.InputValues, job.PromptVersion, job.ModelIdentity, job.AdapterKey)
 			result, err := tx.ExecContext(ctx, `UPDATE post_processing_jobs SET status='skipped',status_reason=?,status_detail=?,input_hash=?,
 				next_retry_at=NULL,failure_kind=NULL,error_message=NULL,completed_at=?,updated_at=? WHERE id=? AND status='pending'`,
 				PostProcessingStatusReasonMissingInput, unavailableKind, inputHash, formatted, formatted, job.ID)
@@ -580,7 +590,7 @@ func (s *Store) RecoverPostProcessing(ctx context.Context, now time.Time) error 
 // CyclePostProcessingPlans returns the concrete processor scopes frozen for a
 // manual or continuation cycle.
 func (s *Store) CyclePostProcessingPlans(ctx context.Context, cycleID int64) ([]PostProcessingPlan, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT processor_key,scope_key,model_identity,prompt_version FROM cycle_post_processing_plans WHERE cycle_id=? ORDER BY processor_key,scope_key`, cycleID)
+	rows, err := s.db.QueryContext(ctx, `SELECT processor_key,scope_key,model_identity,adapter_key,prompt_version FROM cycle_post_processing_plans WHERE cycle_id=? ORDER BY processor_key,scope_key`, cycleID)
 	if err != nil {
 		return nil, err
 	}
@@ -588,7 +598,7 @@ func (s *Store) CyclePostProcessingPlans(ctx context.Context, cycleID int64) ([]
 	var plans []PostProcessingPlan
 	for rows.Next() {
 		var plan PostProcessingPlan
-		if err := rows.Scan(&plan.ProcessorKey, &plan.ScopeKey, &plan.Model, &plan.PromptVersion); err != nil {
+		if err := rows.Scan(&plan.ProcessorKey, &plan.ScopeKey, &plan.Model, &plan.AdapterKey, &plan.PromptVersion); err != nil {
 			return nil, err
 		}
 		plans = append(plans, plan)

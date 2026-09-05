@@ -25,6 +25,7 @@ type pipelineTestProvider struct {
 	fail            func(string, int) error
 	generate        func(StepDefinition, StepInput) (StepOutput, bool)
 	generateContext func(context.Context, StepDefinition, StepInput) (StepOutput, bool, error)
+	adapters        map[string][]string
 }
 
 type testModelCatalog struct{ snapshot ModelCatalogSnapshot }
@@ -93,9 +94,14 @@ func (p *pipelineTestProvider) StepGenerator(model string) (StepGenerator, error
 	return pipelineTestGenerator{model: model, provider: p}, nil
 }
 
+func (p *pipelineTestProvider) StepGeneratorFor(model, adapter string) (StepGenerator, error) {
+	return pipelineTestGenerator{model: model, provider: p, adapter: adapter}, nil
+}
+
 type pipelineTestGenerator struct {
 	model    string
 	provider *pipelineTestProvider
+	adapter  string
 }
 
 func (g pipelineTestGenerator) ModelIdentity() string { return g.model }
@@ -107,6 +113,12 @@ func (g pipelineTestGenerator) GenerateStep(ctx context.Context, step StepDefini
 		g.provider.calls = make(map[string]int)
 	}
 	g.provider.calls[step.Key]++
+	if g.adapter != "" {
+		if g.provider.adapters == nil {
+			g.provider.adapters = make(map[string][]string)
+		}
+		g.provider.adapters[step.Key] = append(g.provider.adapters[step.Key], g.adapter)
+	}
 	call := g.provider.calls[step.Key]
 	var failure error
 	if g.provider.fail != nil {
@@ -670,12 +682,36 @@ func TestAutomaticProcessingDisableFinishesCurrentPostProcessingOnly(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
+	settings, err := database.TranslationLanguageSettings(ctx)
+	if err != nil || len(settings) == 0 {
+		t.Fatalf("translation settings were not initialized: %#v/%v", settings, err)
+	}
+	for _, setting := range settings {
+		wantModel := ""
+		if setting.LanguageCode == EnglishLanguage {
+			wantModel = "translate:4b"
+		}
+		if setting.PreferredModel != wantModel || setting.AdapterKey != TranslationAdapterStructured {
+			t.Fatalf("initialized translation setting = %#v", setting)
+		}
+	}
+	configured, err := worker.configuredTranslationPlans(ctx, nil)
+	if err != nil || len(configured) != 1 || configured[0].ScopeKey != EnglishLanguage {
+		t.Fatalf("configured translation plans = %#v/%v", configured, err)
+	}
 	done := make(chan struct{})
 	go func() {
 		worker.processAvailable(ctx)
 		close(done)
 	}()
-	<-started
+	select {
+	case <-started:
+	case <-done:
+		status, statusErr := worker.Status(ctx)
+		t.Fatalf("worker completed before claiming English translation: %#v/%v", status.Queue.PostProcessing, statusErr)
+	case <-time.After(2 * time.Second):
+		t.Fatal("worker did not reach English translation")
+	}
 	if err := worker.SetAutomaticProcessing(ctx, false); err != nil {
 		t.Fatal(err)
 	}
@@ -730,6 +766,7 @@ func TestPipelineWorkerGroupsModelsFreezesTargetsAndStartsNextCycle(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
+	configureAllTestTranslationRoutes(t, ctx, worker, "translate:4b")
 	worker.processAvailable(ctx)
 
 	provider.mu.Lock()
@@ -788,6 +825,7 @@ func TestPipelineWorkerPrioritizesPublicAssistanceThenCategoryBeforeTranslation(
 	if err != nil {
 		t.Fatal(err)
 	}
+	configureAllTestTranslationRoutes(t, ctx, worker, "translate:4b")
 	worker.processAvailable(ctx)
 	provider.mu.Lock()
 	events := append([]string(nil), provider.events...)
@@ -1167,6 +1205,84 @@ func TestMissingTranslationModelDoesNotBlockCanonicalGerman(t *testing.T) {
 	}
 }
 
+func TestPerLanguageTranslationRoutesAreValidatedAndFrozenIntoManualCycles(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "translation-routes.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 9, 6, 10, 0, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "one")
+	if err := database.EnsurePipelineSteps(ctx, ModelSettingKeys(), now); err != nil {
+		t.Fatal(err)
+	}
+	for _, step := range []string{IncidentMetadataStep, GermanPresentationStep} {
+		if err := database.SetPipelineStepModel(ctx, step, "qwen:4b", now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	models := []string{"hy-mt2:7b", "new-model:12b", "qwen:4b", "translategemma:12b"}
+	worker, err := NewPipelineWorker(database, &pipelineTestProvider{}, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: models, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := worker.SetTranslationLanguageSetting(ctx, "en", "hy-mt2:7b", TranslationAdapterHyMT2); err != nil {
+		t.Fatal(err)
+	}
+	if err := worker.SetTranslationLanguageSetting(ctx, "ro", "translategemma:12b", TranslationAdapterTranslateGemma); err != nil {
+		t.Fatal(err)
+	}
+	if err := worker.SetTranslationLanguageSetting(ctx, "ro", "hy-mt2:7b", TranslationAdapterHyMT2); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("unsupported Romanian route error = %v", err)
+	}
+	if err := worker.SetTranslationLanguageSetting(ctx, "en", "missing:7b", TranslationAdapterHyMT2); !errors.Is(err, ErrModelUnavailable) {
+		t.Fatalf("missing model error = %v", err)
+	}
+	if err := worker.SetPreferredStepModel(ctx, TranslationModelStep, "hy-mt2:7b"); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("shared translation setting error = %v", err)
+	}
+
+	result, err := worker.RequestNow(ctx, "fixture", map[string]string{
+		IncidentMetadataStep: "qwen:4b", GermanPresentationStep: "qwen:4b", TranslationModelStep: "configured",
+	}, nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plans, err := database.CyclePostProcessingPlans(ctx, result.CycleID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plans) != 2 || plans[0].ScopeKey != "en" || plans[0].Model != "hy-mt2:7b" || plans[0].AdapterKey != TranslationAdapterHyMT2 || plans[1].ScopeKey != "ro" || plans[1].Model != "translategemma:12b" || plans[1].AdapterKey != TranslationAdapterTranslateGemma {
+		t.Fatalf("frozen translation plans = %#v", plans)
+	}
+	if err := worker.SetTranslationLanguageSetting(ctx, "en", "new-model:12b", TranslationAdapterTranslateGemma); err != nil {
+		t.Fatal(err)
+	}
+	frozen, err := database.CyclePostProcessingPlans(ctx, result.CycleID)
+	if err != nil || frozen[0].Model != "hy-mt2:7b" || frozen[0].AdapterKey != TranslationAdapterHyMT2 {
+		t.Fatalf("queued route changed after preference update: %#v/%v", frozen, err)
+	}
+
+	status, err := worker.ModelStatus(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	translationStatus := status.PostProcessors[len(status.PostProcessors)-1]
+	if !translationStatus.PerScopeSettings || translationStatus.PreferredAvailable {
+		t.Fatalf("translation aggregate status = %#v", translationStatus)
+	}
+	foundEnglish := false
+	for _, scope := range translationStatus.Scopes {
+		if scope.Key == "en" {
+			foundEnglish = scope.PreferredAvailable && scope.PreferredModel == "new-model:12b" && scope.AdapterKey == TranslationAdapterTranslateGemma
+		}
+	}
+	if !foundEnglish {
+		t.Fatalf("English route status = %#v", translationStatus.Scopes)
+	}
+}
+
 func TestCanonicalWorkPreemptsTranslationsAtJobBoundaries(t *testing.T) {
 	ctx := context.Background()
 	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "canonical-preemption.db"))
@@ -1190,6 +1306,7 @@ func TestCanonicalWorkPreemptsTranslationsAtJobBoundaries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	configureAllTestTranslationRoutes(t, ctx, worker, "translate:4b")
 	worker.processAvailable(ctx)
 
 	provider.mu.Lock()
@@ -1518,6 +1635,15 @@ func TestTranslationTransientFailureBacksOffFailedModel(t *testing.T) {
 func pipelineTestModels() map[string]string {
 	return map[string]string{
 		IncidentMetadataStep: "qwen:4b", GermanPresentationStep: "qwen:4b", TranslationModelStep: "translate:4b",
+	}
+}
+
+func configureAllTestTranslationRoutes(t *testing.T, ctx context.Context, worker *PipelineWorker, model string) {
+	t.Helper()
+	for _, translation := range RegisteredTranslations() {
+		if err := worker.SetTranslationLanguageSetting(ctx, translation.Language, model, TranslationAdapterStructured); err != nil {
+			t.Fatalf("configure %s translation route: %v", translation.Language, err)
+		}
 	}
 }
 

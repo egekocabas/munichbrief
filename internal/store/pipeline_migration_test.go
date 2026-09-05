@@ -87,6 +87,9 @@ func TestUnifiedPostProcessingMigrationPreservesAuditAndCutsReadersToV2(t *testi
 	if _, err := raw.Exec(`UPDATE translation_language_cutovers SET automatic_after='2026-08-29T07:00:00Z'; UPDATE category_verification_cutover SET automatic_after='2026-08-29T07:30:00Z'; INSERT INTO processing_cycles(id,kind,source_mode,status,active_step,window_authorized,translation_model_identity,category_verification_model_identity,created_at,updated_at) VALUES(50,'manual','fixture','succeeded',2,1,'translate:4b','verify:4b','2026-08-29T08:00:00Z','2026-08-29T08:00:00Z')`); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := raw.Exec(`UPDATE ai_step_settings SET preferred_model='translate:4b' WHERE step_key='translation'`); err != nil {
+		t.Fatal(err)
+	}
 	if err := raw.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -96,6 +99,9 @@ func TestUnifiedPostProcessingMigrationPreservesAuditAndCutsReadersToV2(t *testi
 		t.Fatal(err)
 	}
 	defer database.Close()
+	if err := database.EnsureTranslationLanguageSettings(ctx, []string{"en", "uk"}, "en", time.Date(2026, 8, 29, 9, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatal(err)
+	}
 	var jobs, values, plans int
 	if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM post_processing_jobs`).Scan(&jobs); err != nil || jobs != 13 {
 		t.Fatalf("migrated jobs = %d, err=%v", jobs, err)
@@ -105,6 +111,16 @@ func TestUnifiedPostProcessingMigrationPreservesAuditAndCutsReadersToV2(t *testi
 	}
 	if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM cycle_post_processing_plans WHERE cycle_id=50`).Scan(&plans); err != nil || plans != 2 {
 		t.Fatalf("migrated cycle plans = %d, err=%v", plans, err)
+	}
+	for _, table := range []string{"post_processing_jobs", "cycle_post_processing_plans"} {
+		var nonStructured int
+		if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM `+table+` WHERE adapter_key <> 'structured'`).Scan(&nonStructured); err != nil || nonStructured != 0 {
+			t.Fatalf("migrated %s adapters = %d/%v, want only structured", table, nonStructured, err)
+		}
+	}
+	settings, err := database.TranslationLanguageSettings(ctx)
+	if err != nil || len(settings) != 2 || settings[0].PreferredModel != "translate:4b" || settings[0].AdapterKey != "structured" || settings[1].PreferredModel != "" || settings[1].AdapterKey != "structured" {
+		t.Fatalf("migrated translation settings = %#v/%v", settings, err)
 	}
 	for processor, want := range map[string]string{"translation": "2026-08-29T07:00:00Z", "category_verification": "2026-08-29T07:30:00Z"} {
 		var automaticAfter string

@@ -9,12 +9,14 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
 	"testing"
 
+	"github.com/egekocabas/munichbrief/internal/gazetteer"
 	"github.com/egekocabas/munichbrief/internal/processing"
 	"github.com/egekocabas/munichbrief/internal/source"
 	"github.com/egekocabas/munichbrief/internal/store"
@@ -31,6 +33,7 @@ func TestAdminIsDisabledByDefault(t *testing.T) {
 		{method: http.MethodGet, path: "/admin/rss-history"},
 		{method: http.MethodGet, path: "/admin/rss-history/1"},
 		{method: http.MethodGet, path: "/admin/rss-history/1/documents/1?fragment=1"},
+		{method: http.MethodGet, path: "/admin/gazetteer"},
 		{method: http.MethodGet, path: "/admin/history"},
 		{method: http.MethodPost, path: "/api/admin/ai/process-all-now"},
 		{method: http.MethodPost, path: "/api/admin/ai/translations/process"},
@@ -40,6 +43,48 @@ func TestAdminIsDisabledByDefault(t *testing.T) {
 		if response.Code != http.StatusNotFound {
 			t.Errorf("%s %s status = %d, want 404", test.method, test.path, response.Code)
 		}
+	}
+}
+
+func TestAdminGazetteerShowsBoundedOperationalStatus(t *testing.T) {
+	ctx := context.Background()
+	gazetteerStore, err := gazetteer.Open(ctx, filepath.Join(t.TempDir(), "gazetteer.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { gazetteerStore.Close() })
+	now := time.Date(2026, time.September, 6, 8, 0, 0, 0, time.UTC)
+	definition := gazetteer.SourceDefinition{Key: "official", DisplayName: "Official Munich places", URL: "https://example.test/places", License: "Data licence", Attribution: "City of Munich"}
+	entry := gazetteer.Entry{Name: "Schwabing", Kind: gazetteer.KindNeighbourhood, Priority: 10, Sources: []gazetteer.EntrySource{{Key: "official", ExternalID: "1", Kind: gazetteer.KindNeighbourhood}}}
+	if _, changed, err := gazetteerStore.Activate(ctx, []gazetteer.SourceSnapshot{{Definition: definition, ContentHash: "source-hash", FetchedAt: now, Entries: []gazetteer.Entry{entry}}}, []gazetteer.Entry{entry}, "aggregate-hash", now, now.Add(24*time.Hour)); err != nil || !changed {
+		t.Fatalf("activate gazetteer = changed:%v err:%v", changed, err)
+	}
+	database := fixtureStore(t)
+	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "review", AdminEnabled: true,
+		Processor: fakeProcessingRequester{database: database}, Gazetteer: gazetteerStore,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := httptest.NewRecorder()
+	server.Handler().ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/admin/gazetteer", nil))
+	for _, expected := range []string{"Gazetteer operations", "Place-name gazetteer", "Ready", "1 protected names", "Official Munich places", "City of Munich", "aggregate-hash", "Source payloads and the complete name list are intentionally not rendered"} {
+		if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), expected) {
+			t.Errorf("gazetteer admin = %d, missing %q", response.Code, expected)
+		}
+	}
+	if strings.Contains(response.Body.String(), "Schwabing") {
+		t.Error("gazetteer admin rendered the active name set")
+	}
+	if response.Header().Get("Cache-Control") != "private, no-store" || response.Header().Get("X-Robots-Tag") != "noindex, nofollow, noarchive" {
+		t.Fatalf("gazetteer headers = %#v", response.Header())
+	}
+
+	disabled := httptest.NewRecorder()
+	adminTestServer(t, database, nil).Handler().ServeHTTP(disabled, httptest.NewRequest(http.MethodGet, "/admin/gazetteer", nil))
+	if disabled.Code != http.StatusOK || !strings.Contains(disabled.Body.String(), "Gazetteer is disabled") {
+		t.Fatalf("disabled gazetteer = %d/%q", disabled.Code, disabled.Body.String())
 	}
 }
 
@@ -62,7 +107,7 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	if page.Code != http.StatusOK || page.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("admin page = %d/%q", page.Code, page.Header().Get("Cache-Control"))
 	}
-	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", "Installed and ready", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/post-processing/process", "/api/admin/ai/automatic-processing", "/api/admin/ai/cancel-all", "Cancel all unfinished work", "/api/admin/ai/status", "/admin/rss-history", "RSS history", "/admin/history", "Pipeline history", "Open reader", "View full history", "Confirm AI request", staticAssets["theme.js"].path, "data-theme-toggle", staticAssets["admin.js"].path, "Active stage", "Canonical pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover", "Independent post-processing queues", "Post-processing only", "All registered languages", "Translations only", "Category verification only"} {
+	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", "Installed and ready", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/post-processing/process", "/api/admin/ai/automatic-processing", "/api/admin/ai/cancel-all", "Cancel all unfinished work", "/api/admin/ai/status", "/admin/rss-history", "RSS history", "/admin/history", "Pipeline history", "Open reader", "View full history", "Confirm AI request", staticAssets["theme.js"].path, "data-theme-toggle", staticAssets["admin.js"].path, "Active stage", "Canonical pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover", "Independent post-processing queues", "Post-processing only", "Configure translation routes", "Category verification only"} {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("admin page does not contain %q", expected)
 		}
@@ -87,8 +132,8 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	}
 	translationsOnly := httptest.NewRecorder()
 	handler.ServeHTTP(translationsOnly, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=translation&scope=all&target=all&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
-	if translationsOnly.Code != http.StatusSeeOther || !strings.Contains(translationsOnly.Header().Get("Location"), "post_processing_queued=0") || !strings.Contains(translationsOnly.Header().Get("Location"), "processor=translation") {
-		t.Fatalf("all-language focused processing = %d/%q", translationsOnly.Code, translationsOnly.Header().Get("Location"))
+	if translationsOnly.Code != http.StatusBadRequest || !strings.Contains(translationsOnly.Body.String(), "translations page") {
+		t.Fatalf("generic translation processing = %d/%q", translationsOnly.Code, translationsOnly.Body.String())
 	}
 	categoryOnly := httptest.NewRecorder()
 	handler.ServeHTTP(categoryOnly, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=category_verification&scope=default&target=all&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
@@ -107,8 +152,8 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	}
 	invalidModel := httptest.NewRecorder()
 	handler.ServeHTTP(invalidModel, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=translation&scope=en&target=all&model=missing%3A4b"))
-	if invalidModel.Code != http.StatusServiceUnavailable {
-		t.Fatalf("unavailable focused model = %d, want 503", invalidModel.Code)
+	if invalidModel.Code != http.StatusBadRequest {
+		t.Fatalf("generic translation model = %d, want 400", invalidModel.Code)
 	}
 	unexpectedIncident := httptest.NewRecorder()
 	handler.ServeHTTP(unexpectedIncident, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=translation&scope=en&target=all&incident_id=1&model=qwen3.5%3A4b"))
@@ -412,8 +457,8 @@ func TestAdminRetriesPostProcessingAndRejectsRemovedBackfillRoutes(t *testing.T)
 		t.Fatalf("unconfirmed translation retry = %d", unconfirmed.Code)
 	}
 	retry := httptest.NewRecorder()
-	handler.ServeHTTP(retry, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=translation&scope=en&target=incident&incident_id="+formatID(records[0].ID)+"&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
-	if retry.Code != http.StatusSeeOther || !strings.Contains(retry.Header().Get("Location"), "post_processing_queued=1") {
+	handler.ServeHTTP(retry, formRequest(http.MethodPost, "/api/admin/ai/translations/process", "confirmed=true&language=en&action=incident&incident_id="+formatID(records[0].ID)+"&model=qwen3.5%3A4b&adapter=structured&return_incident="+formatID(records[0].ID)))
+	if retry.Code != http.StatusSeeOther || !strings.Contains(retry.Header().Get("Location"), "queued=1") {
 		t.Fatalf("translation retry = %d/%q", retry.Code, retry.Header().Get("Location"))
 	}
 	backfill := httptest.NewRecorder()
@@ -549,6 +594,13 @@ func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
 func TestAdminTranslationOperationsOverviewDrilldownsAndActions(t *testing.T) {
 	t.Parallel()
 	database := fixtureStore(t)
+	translationCodes := make([]string, 0, len(processing.RegisteredTranslations()))
+	for _, translation := range processing.RegisteredTranslations() {
+		translationCodes = append(translationCodes, translation.Language)
+	}
+	if err := database.EnsureTranslationLanguageSettings(context.Background(), translationCodes, processing.EnglishLanguage, time.Now()); err != nil {
+		t.Fatal(err)
+	}
 	now := time.Date(2026, time.August, 31, 10, 0, 0, 0, time.UTC)
 	presentation := testPresentation{
 		TitleDE: "Übersetzungsübersicht", SummaryDE: "Deutsche Zusammenfassung.",
@@ -584,7 +636,7 @@ func TestAdminTranslationOperationsOverviewDrilldownsAndActions(t *testing.T) {
 	handler.ServeHTTP(overview, httptest.NewRequest(http.MethodGet, "/admin/translations", nil))
 	for _, expected := range []string{
 		"Translation operations", "Current source incidents", "Published German", "German canonical backlog",
-		"English", "1 / 1", "100%", "Manage", "Attention can overlap published", "1 retained replacement warning", "data-translation-operations",
+		"English", "1 / 1", "100%", "Manage", "Preferred route", "Structured chat (general LLM)", "HY-MT2 native", "Attention can overlap published", "1 retained replacement warning", "data-translation-operations",
 		"data-translation-poll-interval=\"5000\"", "/admin/history", "aria-current=\"page\"",
 	} {
 		if overview.Code != http.StatusOK || !strings.Contains(overview.Body.String(), expected) {
@@ -646,9 +698,9 @@ func TestAdminTranslationOperationsOverviewDrilldownsAndActions(t *testing.T) {
 		selection processing.PostProcessingSelection
 		incident  bool
 	}{
-		{body: "confirmed=true&language=en&model=qwen3.5%3A4b&action=unpublished&return_status=unpublished", selection: processing.PostProcessingSelectionUnpublished},
-		{body: "confirmed=true&language=en&model=qwen3.5%3A4b&action=all&return_status=all", selection: processing.PostProcessingSelectionAll},
-		{body: "confirmed=true&language=en&model=qwen3.5%3A4b&action=incident&incident_id=" + formatID(job.IncidentID) + "&return_incident=" + formatID(job.IncidentID), selection: processing.PostProcessingSelectionAll, incident: true},
+		{body: "confirmed=true&language=en&model=qwen3.5%3A4b&adapter=hy-mt2&action=unpublished&return_status=unpublished", selection: processing.PostProcessingSelectionUnpublished},
+		{body: "confirmed=true&language=en&model=qwen3.5%3A4b&adapter=hy-mt2&action=all&return_status=all", selection: processing.PostProcessingSelectionAll},
+		{body: "confirmed=true&language=en&model=qwen3.5%3A4b&adapter=hy-mt2&action=incident&incident_id=" + formatID(job.IncidentID) + "&return_incident=" + formatID(job.IncidentID), selection: processing.PostProcessingSelectionAll, incident: true},
 	}
 	for index, test := range actions {
 		response := httptest.NewRecorder()
@@ -657,9 +709,29 @@ func TestAdminTranslationOperationsOverviewDrilldownsAndActions(t *testing.T) {
 			t.Fatalf("translation action %d = %d/%q", index, response.Code, response.Header().Get("Location"))
 		}
 		request := received[index]
-		if request.ProcessorKey != processing.TranslationModelStep || len(request.ScopeKeys) != 1 || request.ScopeKeys[0] != "en" || request.Selection != test.selection || (request.IncidentID != nil) != test.incident {
+		if request.ProcessorKey != processing.TranslationModelStep || len(request.ScopeKeys) != 1 || request.ScopeKeys[0] != "en" || request.AdapterKey != processing.TranslationAdapterHyMT2 || request.Selection != test.selection || (request.IncidentID != nil) != test.incident {
 			t.Errorf("translation action %d request = %#v", index, request)
 		}
+	}
+
+	preference := httptest.NewRecorder()
+	handler.ServeHTTP(preference, formRequest(http.MethodPost, "/api/admin/ai/translations/preference", "confirmed=true&language=en&model=granite4%3A3b&adapter=hy-mt2&return_language=en"))
+	if preference.Code != http.StatusSeeOther || !strings.Contains(preference.Header().Get("Location"), "preference_language=en") {
+		t.Fatalf("translation preference = %d/%q", preference.Code, preference.Header().Get("Location"))
+	}
+	settings, err := database.TranslationLanguageSettings(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, setting := range settings {
+		if setting.LanguageCode == "en" && (setting.PreferredModel != "granite4:3b" || setting.AdapterKey != processing.TranslationAdapterHyMT2) {
+			t.Fatalf("saved English preference = %#v", setting)
+		}
+	}
+	preferenceNotice := httptest.NewRecorder()
+	handler.ServeHTTP(preferenceNotice, httptest.NewRequest(http.MethodGet, preference.Header().Get("Location"), nil))
+	if preferenceNotice.Code != http.StatusOK || !strings.Contains(preferenceNotice.Body.String(), "Preferred translation model and adapter updated for English") {
+		t.Fatalf("translation preference notice = %d/%q", preferenceNotice.Code, preferenceNotice.Body.String())
 	}
 
 	notice := httptest.NewRecorder()
@@ -679,6 +751,7 @@ func TestAdminTranslationOperationsOverviewDrilldownsAndActions(t *testing.T) {
 		{name: "missing incident", body: "confirmed=true&language=en&model=qwen3.5%3A4b&action=incident&incident_id=zero", want: http.StatusBadRequest},
 		{name: "incident on all", body: "confirmed=true&language=en&model=qwen3.5%3A4b&action=all&incident_id=1", want: http.StatusBadRequest},
 		{name: "model", body: "confirmed=true&language=en&model=missing%3A4b&action=all", want: http.StatusServiceUnavailable},
+		{name: "unsupported adapter", body: "confirmed=true&language=ro&model=qwen3.5%3A4b&adapter=hy-mt2&action=all", want: http.StatusBadRequest},
 	} {
 		response := httptest.NewRecorder()
 		handler.ServeHTTP(response, formRequest(http.MethodPost, "/api/admin/ai/translations/process", test.body))
@@ -803,8 +876,7 @@ func TestAdminTranslationActionsRequireManualProcessorAndExplicitFallbackModel(t
 			CatalogAvailable: true,
 			Models:           []string{"fallback:4b"},
 		},
-		TranslationModel:  processor,
-		TranslationModels: []adminTranslationModelOption{{Value: "fallback:4b"}},
+		TranslationModel: processor,
 	}
 	data.TranslationActionsAvailable = data.translationActionsAvailable()
 	if !data.TranslationActionsAvailable {
@@ -827,6 +899,16 @@ func TestAdminTranslationActionsRequireManualProcessorAndExplicitFallbackModel(t
 	}
 	if count := strings.Count(output.String(), "Choose installed model"); count != 2 {
 		t.Fatalf("fallback model prompts = %d, want two bulk-action prompts", count)
+	}
+}
+
+func TestAdminTranslationRoutesKeepUnavailablePreferredModelVisible(t *testing.T) {
+	processor := &processing.PostProcessorModelStatus{Scopes: []processing.PostProcessorScopeStatus{{
+		Key: "en", PreferredModel: "missing:12b", AdapterKey: processing.TranslationAdapterStructured,
+	}}}
+	route := adminTranslationRoutes(processor, []string{"installed:4b"})["en"]
+	if len(route.Models) != 2 || route.Models[0].Value != "missing:12b" || !route.Models[0].Selected || route.Models[1].Selected {
+		t.Fatalf("unavailable preferred route = %#v", route)
 	}
 }
 
@@ -955,7 +1037,7 @@ func TestAdminPipelineHistoryCombinesCanonicalAndPostProcessingJobs(t *testing.T
 	if completed, err := database.AdvancePipelineCycle(ctx, cycle, len(plans), requestedAt); err != nil || !completed.Completed {
 		t.Fatalf("complete history cycle = %#v/%v", completed, err)
 	}
-	translationPlan := store.PostProcessingPlan{ProcessorKey: "translation", ScopeKey: "en", PromptVersion: "incident-translation-en-v1", Model: "translategemma:4b", InputKinds: []string{"title_de", "summary_de"}}
+	translationPlan := store.PostProcessingPlan{ProcessorKey: "translation", ScopeKey: "en", PromptVersion: "incident-translation-en-v1", Model: "translategemma:4b", AdapterKey: processing.TranslationAdapterTranslateGemma, InputKinds: []string{"title_de", "summary_de"}}
 	if queued, err := database.QueuePostProcessingForRun(ctx, german.PresentationRunID, []store.PostProcessingPlan{translationPlan}, "manual", false, requestedAt); err != nil || queued != 1 {
 		t.Fatalf("queue history translation = %d/%v", queued, err)
 	}
@@ -992,7 +1074,7 @@ func TestAdminPipelineHistoryCombinesCanonicalAndPostProcessingJobs(t *testing.T
 	if first.Code != http.StatusOK || first.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("pipeline history = %d/%q", first.Code, first.Header().Get("Cache-Control"))
 	}
-	for _, expected := range []string{"Pipeline history", "Open reader", `aria-current="page"`, "2 job states shown", "category_verification/default", "post-processing · manual", "qwen3.5:4b", "translation/en", "translategemma:4b", "Older →", `data-pipeline-history`, `data-history-poll-interval="2000"`, staticAssets["admin.js"].path} {
+	for _, expected := range []string{"Pipeline history", "Open reader", `aria-current="page"`, "2 job states shown", "category_verification/default", "post-processing · manual", "qwen3.5:4b", "translation/en", "translategemma:4b", "adapter translategemma", "Older →", `data-pipeline-history`, `data-history-poll-interval="2000"`, staticAssets["admin.js"].path} {
 		if !strings.Contains(first.Body.String(), expected) {
 			t.Errorf("pipeline history does not contain %q", expected)
 		}

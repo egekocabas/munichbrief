@@ -444,6 +444,10 @@ func (s *Server) processPostProcessing(response http.ResponseWriter, request *ht
 		http.Error(response, "unsupported post-processing processor", http.StatusBadRequest)
 		return
 	}
+	if selected.PerScopeSettings {
+		http.Error(response, "use the translations page for per-language processing", http.StatusBadRequest)
+		return
+	}
 	modelAvailable := false
 	for _, available := range models.Models {
 		modelAvailable = modelAvailable || available == model
