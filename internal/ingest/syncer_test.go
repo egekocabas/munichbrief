@@ -18,6 +18,7 @@ import (
 
 type fakeLiveClient struct {
 	feedResults      []source.FeedResult
+	feedError        error
 	feedCalls        int
 	article          []byte
 	articleError     error
@@ -29,6 +30,9 @@ type fakeLiveClient struct {
 func (f *fakeLiveClient) FetchFeed(_ context.Context, etag, lastModified string) (source.FeedResult, error) {
 	f.receivedETag = etag
 	f.receivedModified = lastModified
+	if f.feedError != nil {
+		return source.FeedResult{}, f.feedError
+	}
 	result := f.feedResults[f.feedCalls]
 	f.feedCalls++
 	return result, nil
@@ -96,14 +100,42 @@ func TestSyncerIngestsSevenDayWindowAndUsesConditionalState(t *testing.T) {
 	if client.receivedETag != `"feed-v1"` || client.receivedModified == "" {
 		t.Errorf("conditional state = %q/%q", client.receivedETag, client.receivedModified)
 	}
+	history, err := database.ListRSSSyncHistory(ctx, 10, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(history.Entries) != 2 || history.Entries[0].Status != "succeeded" || !history.Entries[0].NotModified || history.Entries[1].FeedDocuments != 3 || history.Entries[1].Fetched != 2 {
+		t.Fatalf("RSS sync history = %#v", history)
+	}
 	logText := logs.String()
-	for _, expected := range []string{"RSS synchronization started", "RSS feed request started", "RSS feed response received", "press release request started", "press release response received", "press release processed and stored", "duration_seconds="} {
+	for _, expected := range []string{"RSS synchronization started", "rss_attempt_id=", "RSS feed request started", "RSS feed response received", "press release request started", "press release response received", "press release processed and stored", "duration_seconds="} {
 		if !strings.Contains(logText, expected) {
 			t.Errorf("ingestion lifecycle logs do not contain %q: %s", expected, logText)
 		}
 	}
 	if strings.Contains(logText, "Body text.") {
 		t.Fatalf("ingestion lifecycle logs contain press release body text: %s", logText)
+	}
+}
+
+func TestSyncerPersistsFailedRSSAttempt(t *testing.T) {
+	ctx := context.Background()
+	database := testStore(t)
+	now := time.Date(2026, time.August, 22, 10, 0, 0, 0, time.FixedZone("CEST", 2*60*60))
+	client := &fakeLiveClient{feedError: errors.New("upstream unavailable")}
+	syncer, err := NewSyncer(database, client, 6*time.Hour, func() time.Time { return now }, discardLogger())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := syncer.Sync(ctx); err == nil {
+		t.Fatal("Sync() error = nil, want feed failure")
+	}
+	history, err := database.ListRSSSyncHistory(ctx, 10, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(history.Entries) != 1 || history.Entries[0].Status != "failed" || history.Entries[0].ErrorMessage != "upstream unavailable" || history.Entries[0].CompletedAt == nil {
+		t.Fatalf("failed RSS sync history = %#v", history)
 	}
 }
 
