@@ -475,6 +475,10 @@ func (w *PipelineWorker) processAvailable(ctx context.Context) {
 			if processed || w.suspendDisabledAutomaticCycle(ctx, cycle) {
 				continue
 			}
+			// Retry waits do not finish a canonical cycle. Keep post-processing
+			// queued until the cycle completes instead of filling those waits.
+			w.publishSnapshot(ctx)
+			return
 		}
 
 		processedPostJob := false
@@ -880,7 +884,7 @@ func (w *PipelineWorker) handlePostProcessingFailure(ctx context.Context, job st
 	}
 	if kind == ErrorTransient || kind == ErrorConfiguration {
 		if retryAt != nil {
-			w.openCircuit(job.ProcessorKey, job.ModelIdentity, *retryAt)
+			w.openFailureCircuit(job.ProcessorKey, job.ModelIdentity, kind, *retryAt)
 		}
 	}
 	if w.observer != nil {
@@ -931,7 +935,7 @@ func (w *PipelineWorker) handleJobFailure(ctx context.Context, job store.Pipelin
 	if kind == ErrorTransient || kind == ErrorConfiguration {
 		w.setAvailable(false)
 		if retryAt != nil {
-			w.openCircuit(job.StepKey, job.ModelIdentity, *retryAt)
+			w.openFailureCircuit(job.StepKey, job.ModelIdentity, kind, *retryAt)
 		}
 	}
 	if w.observer != nil {
@@ -946,24 +950,38 @@ func pipelineCircuitKey(step, model string) string { return step + "\x00" + mode
 func (w *PipelineWorker) circuitOpen(step, model string, now time.Time) bool {
 	w.mu.RLock()
 	until := w.circuits[pipelineCircuitKey(step, model)]
+	modelUntil := w.circuits[pipelineCircuitKey("", model)]
 	w.mu.RUnlock()
-	return now.Before(until)
+	return now.Before(until) || now.Before(modelUntil)
 }
 
-// blockedModels returns models for one independent processor whose systemic
-// failure backoff is still active. Other manual overrides remain claimable.
+// blockedModels includes shared model outages and processor-specific configuration
+// failures. Other models remain claimable without consuming blocked jobs' attempts.
 func (w *PipelineWorker) blockedModels(step string, now time.Time) []string {
-	prefix := step + "\x00"
 	w.mu.RLock()
-	models := make([]string, 0, len(w.circuits))
+	blocked := make(map[string]bool)
 	for key, until := range w.circuits {
-		if strings.HasPrefix(key, prefix) && now.Before(until) {
-			models = append(models, strings.TrimPrefix(key, prefix))
+		owner, model, found := strings.Cut(key, "\x00")
+		if found && (owner == "" || owner == step) && now.Before(until) {
+			blocked[model] = true
 		}
 	}
 	w.mu.RUnlock()
+	models := make([]string, 0, len(blocked))
+	for model := range blocked {
+		models = append(models, model)
+	}
 	sort.Strings(models)
 	return models
+}
+
+func (w *PipelineWorker) openFailureCircuit(step, model string, kind ErrorKind, until time.Time) {
+	// A transient provider failure affects every consumer of this model. Prompt
+	// and other configuration failures remain local to their processing step.
+	if kind == ErrorTransient {
+		step = ""
+	}
+	w.openCircuit(step, model, until)
 }
 
 func (w *PipelineWorker) openCircuit(step, model string, until time.Time) {

@@ -1513,3 +1513,88 @@ func insertWorkerDocument(t *testing.T, ctx context.Context, database *store.Sto
 		t.Fatal(err)
 	}
 }
+
+func TestSharedModelTransientFailureDefersOtherConsumers(t *testing.T) {
+	for _, failedStep := range []string{GermanPresentationStep, PublicAssistanceVerificationStep} {
+		t.Run(failedStep, func(t *testing.T) {
+			ctx := context.Background()
+			database, err := store.Open(ctx, filepath.Join(t.TempDir(), "shared-outage.db"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer database.Close()
+			now := time.Date(2026, 9, 5, 20, 0, 0, 0, time.UTC)
+			insertWorkerDocument(t, ctx, database, now, "one")
+			insertWorkerDocument(t, ctx, database, now, "two")
+			if err := database.EnsurePipelineSteps(ctx, ModelSettingKeys(), now); err != nil {
+				t.Fatal(err)
+			}
+			models := pipelineTestModels()
+			models[PublicAssistanceVerificationStep] = "qwen:4b"
+			models[CategoryVerificationStep] = "qwen:4b"
+			for step, model := range models {
+				if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
+					t.Fatal(err)
+				}
+			}
+			provider := &pipelineTestProvider{fail: func(step string, call int) error {
+				if step == failedStep && ((step == GermanPresentationStep && call == 2) || (step == PublicAssistanceVerificationStep && call == 1)) {
+					return errorOf(ErrorTransient, "synthetic connection refused")
+				}
+				return nil
+			}}
+			worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+			if err != nil {
+				t.Fatal(err)
+			}
+			worker.processAvailable(ctx)
+			worker.processAvailable(ctx)
+			if provider.callCount(CategoryVerificationStep) != 0 {
+				t.Fatal("category called the model during a shared outage")
+			}
+			wantAssistance := 0
+			if failedStep == PublicAssistanceVerificationStep {
+				wantAssistance = 1
+			}
+			if provider.callCount(PublicAssistanceVerificationStep) != wantAssistance {
+				t.Fatal("assistance called the model during a shared outage")
+			}
+			if failedStep == GermanPresentationStep {
+				if provider.callCount(EnglishTranslationStep) != 0 {
+					t.Fatal("post-processing ran before the canonical cycle finished")
+				}
+			} else if provider.callCount(EnglishTranslationStep) == 0 {
+				t.Fatal("shared outage blocked a different model after canonical completion")
+			}
+			if !worker.circuitOpen(IncidentMetadataStep, "qwen:4b", now) {
+				t.Fatal("shared outage did not block canonical claims")
+			}
+			snapshot, err := database.PipelineSnapshot(ctx, "fixture", StepKeys(), nil, now)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, stats := range snapshot.PostProcessing {
+				if stats.ProcessorKey == CategoryVerificationStep && (stats.Pending == 0 || stats.Retrying != 0) {
+					t.Fatalf("unattempted category jobs consumed retries: %#v", stats)
+				}
+			}
+			now = now.Add(time.Minute)
+			worker.processAvailable(ctx)
+			if provider.callCount(CategoryVerificationStep) != 2 || provider.callCount(EnglishTranslationStep) != 2 {
+				t.Fatal("jobs did not resume after shared cooldown")
+			}
+		})
+	}
+}
+
+func TestConfigurationCircuitRemainsLocalToStep(t *testing.T) {
+	now := time.Now()
+	worker := &PipelineWorker{circuits: make(map[string]time.Time)}
+	worker.openFailureCircuit(CategoryVerificationStep, "shared-model", ErrorConfiguration, now.Add(time.Minute))
+	if !worker.circuitOpen(CategoryVerificationStep, "shared-model", now) {
+		t.Fatal("configuration circuit missing")
+	}
+	if worker.circuitOpen(GermanPresentationStep, "shared-model", now) || len(worker.blockedModels(PublicAssistanceVerificationStep, now)) != 0 {
+		t.Fatal("configuration failure blocked other consumers")
+	}
+}
