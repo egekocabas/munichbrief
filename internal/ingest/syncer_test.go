@@ -39,7 +39,7 @@ func (f *fakeLiveClient) FetchArticle(context.Context, string) ([]byte, error) {
 	return f.article, f.articleError
 }
 
-func TestSyncerIngestsThreeDayWindowAndUsesConditionalState(t *testing.T) {
+func TestSyncerIngestsSevenDayWindowAndUsesConditionalState(t *testing.T) {
 	ctx := context.Background()
 	database := testStore(t)
 	now := time.Date(2026, time.August, 22, 10, 0, 0, 0, time.FixedZone("CEST", 2*60*60))
@@ -50,7 +50,8 @@ func TestSyncerIngestsThreeDayWindowAndUsesConditionalState(t *testing.T) {
 				LastModified: "Sat, 22 Aug 2026 07:00:00 GMT",
 				Documents: []domain.SourceDocument{
 					testDocument("107500", now.Add(-time.Hour)),
-					testDocument("107400", now.AddDate(0, 0, -3)),
+					testDocument("107400", now.AddDate(0, 0, -6)),
+					testDocument("107300", now.AddDate(0, 0, -7)),
 				},
 			},
 			{NotModified: true},
@@ -68,14 +69,19 @@ func TestSyncerIngestsThreeDayWindowAndUsesConditionalState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("first Sync() error = %v", err)
 	}
-	if first.Discovered != 1 || first.Fetched != 1 || first.ArticleFailures != 0 {
+	if first.Discovered != 2 || first.Fetched != 2 || first.ArticleFailures != 0 {
 		t.Fatalf("first result = %#v", first)
+	}
+	wantWindowStart := time.Date(2026, time.August, 16, 0, 0, 0, 0, first.WindowStart.Location())
+	wantWindowEnd := time.Date(2026, time.August, 23, 0, 0, 0, 0, first.WindowEnd.Location())
+	if !first.WindowStart.Equal(wantWindowStart) || !first.WindowEnd.Equal(wantWindowEnd) {
+		t.Fatalf("window = %v to %v, want %v to %v", first.WindowStart, first.WindowEnd, wantWindowStart, wantWindowEnd)
 	}
 	entries, total, err := database.ListTimelineEntries(ctx, 20, 0, "live")
 	if err != nil {
 		t.Fatalf("ListTimelineEntries() error = %v", err)
 	}
-	if total != 1 || len(entries) != 1 || entries[0].Number != "1300" {
+	if total != 2 || len(entries) != 2 || entries[0].Number != "1300" || entries[1].Number != "1300" {
 		t.Fatalf("timeline entries = %#v, total %d", entries, total)
 	}
 
@@ -84,7 +90,7 @@ func TestSyncerIngestsThreeDayWindowAndUsesConditionalState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("second Sync() error = %v", err)
 	}
-	if !second.NotModified || client.articleCalls != 1 {
+	if !second.NotModified || client.articleCalls != 2 {
 		t.Fatalf("second result = %#v, article calls = %d", second, client.articleCalls)
 	}
 	if client.receivedETag != `"feed-v1"` || client.receivedModified == "" {

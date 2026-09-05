@@ -75,7 +75,7 @@ func NewSyncer(repository Repository, client source.LiveClient, refreshAfter tim
 	}, nil
 }
 
-// Sync fetches the rolling three-day source window and persists each document
+// Sync fetches the rolling seven-day source window and persists each document
 // independently, allowing one malformed or unavailable article to be retried.
 func (s *Syncer) Sync(ctx context.Context) (Result, error) {
 	s.mu.Lock()
@@ -83,7 +83,7 @@ func (s *Syncer) Sync(ctx context.Context) (Result, error) {
 
 	now := s.clock()
 	syncStartedAt := time.Now()
-	start, end := s.threeDayWindow(now)
+	start, end := s.sevenDayWindow(now)
 	result := Result{WindowStart: start, WindowEnd: end}
 	s.logger.Info("RSS synchronization started", "window_start", start, "window_end", end)
 
@@ -223,10 +223,10 @@ func durationAttributes(startedAt, completedAt time.Time) []any {
 	}
 }
 
-func (s *Syncer) threeDayWindow(value time.Time) (time.Time, time.Time) {
+func (s *Syncer) sevenDayWindow(value time.Time) (time.Time, time.Time) {
 	local := value.In(s.location)
 	today := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, s.location)
-	start := today.AddDate(0, 0, -2)
+	start := today.AddDate(0, 0, -6)
 	end := today.AddDate(0, 0, 1)
 	return start, end
 }

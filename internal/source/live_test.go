@@ -172,6 +172,21 @@ func TestHTTPClientInterpretsBerlinTimezoneAbbreviation(t *testing.T) {
 	}
 }
 
+func TestHTTPClientAcceptsUnpaddedPublicationDay(t *testing.T) {
+	client := testHTTPClient(t, roundTripFunc(func(*http.Request) (*http.Response, error) {
+		t.Fatal("transport should not be called")
+		return nil, nil
+	}), 4096, 4096)
+	parsed, err := client.parsePublicationTime("Fri, 4 Sep 2026 12:53:00")
+	if err != nil {
+		t.Fatalf("parsePublicationTime() error = %v", err)
+	}
+	want := time.Date(2026, time.September, 4, 12, 53, 0, 0, client.location)
+	if !parsed.Equal(want) {
+		t.Fatalf("publication time = %v, want %v", parsed, want)
+	}
+}
+
 func TestHTTPClientRejectsOversizedArticle(t *testing.T) {
 	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {
 		return response(request, http.StatusOK, "text/html", strings.NewReader(strings.Repeat("x", 128))), nil
