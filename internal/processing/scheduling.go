@@ -3,6 +3,7 @@ package processing
 import "time"
 
 const contentMaxAttempts = 3
+const maxRetryDelay = 5 * time.Minute
 
 // Schedule defines the daily processing window in its configured location.
 // Windows whose start is after their end cross midnight.
@@ -27,17 +28,17 @@ func (s Schedule) Allows(value time.Time) bool {
 }
 
 func transientRetryDelay(attempt int) time.Duration {
-	delays := []time.Duration{30 * time.Second, 2 * time.Minute, 10 * time.Minute, 30 * time.Minute, time.Hour, 2 * time.Hour}
+	delays := []time.Duration{30 * time.Second, 2 * time.Minute, maxRetryDelay}
 	return delayAt(delays, attempt)
 }
 
 func configurationRetryDelay(attempt int) time.Duration {
-	delays := []time.Duration{10 * time.Minute, 30 * time.Minute, time.Hour}
+	delays := []time.Duration{maxRetryDelay}
 	return delayAt(delays, attempt)
 }
 
 func contentRetryDelay(attempt int) time.Duration {
-	delays := []time.Duration{time.Minute, 10 * time.Minute, time.Hour}
+	delays := []time.Duration{time.Minute, maxRetryDelay}
 	return delayAt(delays, attempt)
 }
 
@@ -51,8 +52,8 @@ func delayAt(delays []time.Duration, attempt int) time.Duration {
 	return delays[attempt-1]
 }
 
-// jitter deterministically varies endpoint-wide retries by no more than 20%.
+// jitter varies AI retry delays by up to 20%, with a hard five-minute cap.
 func jitter(delay time.Duration, jobID int64, attempt int) time.Duration {
 	percentage := (jobID*31+int64(attempt)*17)%41 - 20
-	return delay + time.Duration(int64(delay)*percentage/100)
+	return min(maxRetryDelay, delay+time.Duration(int64(delay)*percentage/100))
 }

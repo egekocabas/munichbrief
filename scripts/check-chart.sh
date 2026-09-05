@@ -32,7 +32,7 @@ required_patterns=(
   'MUNICHBRIEF_AI_ENABLED: "false"'
   'MUNICHBRIEF_AI_IMMEDIATE: "false"'
   'MUNICHBRIEF_AI_WINDOW: "03:00-08:00"'
-  'MUNICHBRIEF_AI_TIMEOUT: "10m"'
+  'MUNICHBRIEF_AI_TIMEOUT: "15m"'
   'host: "brief.example.com"'
 )
 

@@ -22,7 +22,7 @@ const (
 	defaultAIEnabled    = false
 	defaultOllamaURL    = "http://127.0.0.1:11434"
 	defaultAIInterval   = 5 * time.Second
-	defaultAITimeout    = 10 * time.Minute
+	defaultAITimeout    = 15 * time.Minute
 	defaultAIContext    = 8192
 	defaultAIImmediate  = false
 	defaultAIWindow     = "03:00-08:00"

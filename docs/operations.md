@@ -322,3 +322,14 @@ writers on the PVC; `ReadWriteOnce` still permits multiple pods on one node.
   updates remain owned by the deployment repository.
 - GitOps reconciles the merged desired state. Application CI does not receive a
   kubeconfig or deploy directly to a cluster.
+
+### AI request timeout and retry delays
+
+AI requests default to a 15-minute timeout (`MUNICHBRIEF_AI_TIMEOUT`, or
+`application.aiTimeout` in Helm). Transient retries start at 30 seconds, then
+2 minutes, then 5 minutes. Configuration retries use 5 minutes; output and
+privacy retries start at 1 minute and then use 5 minutes, retaining the existing
+three-attempt review limit. Jitter never extends an AI retry delay past 5 minutes.
+Existing persisted retry timestamps remain unchanged; the cap applies when the
+next failure is recorded. Queue ordering and canonical-cycle completion can
+still delay when an eligible retry actually runs.
