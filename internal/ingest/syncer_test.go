@@ -18,6 +18,7 @@ import (
 
 type fakeLiveClient struct {
 	feedResults      []source.FeedResult
+	feedError        error
 	feedCalls        int
 	article          []byte
 	articleError     error
@@ -29,6 +30,9 @@ type fakeLiveClient struct {
 func (f *fakeLiveClient) FetchFeed(_ context.Context, etag, lastModified string) (source.FeedResult, error) {
 	f.receivedETag = etag
 	f.receivedModified = lastModified
+	if f.feedError != nil {
+		return source.FeedResult{}, f.feedError
+	}
 	result := f.feedResults[f.feedCalls]
 	f.feedCalls++
 	return result, nil
@@ -39,7 +43,7 @@ func (f *fakeLiveClient) FetchArticle(context.Context, string) ([]byte, error) {
 	return f.article, f.articleError
 }
 
-func TestSyncerIngestsThreeDayWindowAndUsesConditionalState(t *testing.T) {
+func TestSyncerIngestsSevenDayWindowAndUsesConditionalState(t *testing.T) {
 	ctx := context.Background()
 	database := testStore(t)
 	now := time.Date(2026, time.August, 22, 10, 0, 0, 0, time.FixedZone("CEST", 2*60*60))
@@ -50,7 +54,8 @@ func TestSyncerIngestsThreeDayWindowAndUsesConditionalState(t *testing.T) {
 				LastModified: "Sat, 22 Aug 2026 07:00:00 GMT",
 				Documents: []domain.SourceDocument{
 					testDocument("107500", now.Add(-time.Hour)),
-					testDocument("107400", now.AddDate(0, 0, -3)),
+					testDocument("107400", now.AddDate(0, 0, -6)),
+					testDocument("107300", now.AddDate(0, 0, -7)),
 				},
 			},
 			{NotModified: true},
@@ -68,14 +73,19 @@ func TestSyncerIngestsThreeDayWindowAndUsesConditionalState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("first Sync() error = %v", err)
 	}
-	if first.Discovered != 1 || first.Fetched != 1 || first.ArticleFailures != 0 {
+	if first.Discovered != 2 || first.Fetched != 2 || first.ArticleFailures != 0 {
 		t.Fatalf("first result = %#v", first)
+	}
+	wantWindowStart := time.Date(2026, time.August, 16, 0, 0, 0, 0, first.WindowStart.Location())
+	wantWindowEnd := time.Date(2026, time.August, 23, 0, 0, 0, 0, first.WindowEnd.Location())
+	if !first.WindowStart.Equal(wantWindowStart) || !first.WindowEnd.Equal(wantWindowEnd) {
+		t.Fatalf("window = %v to %v, want %v to %v", first.WindowStart, first.WindowEnd, wantWindowStart, wantWindowEnd)
 	}
 	entries, total, err := database.ListTimelineEntries(ctx, 20, 0, "live")
 	if err != nil {
 		t.Fatalf("ListTimelineEntries() error = %v", err)
 	}
-	if total != 1 || len(entries) != 1 || entries[0].Number != "1300" {
+	if total != 2 || len(entries) != 2 || entries[0].Number != "1300" || entries[1].Number != "1300" {
 		t.Fatalf("timeline entries = %#v, total %d", entries, total)
 	}
 
@@ -84,20 +94,48 @@ func TestSyncerIngestsThreeDayWindowAndUsesConditionalState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("second Sync() error = %v", err)
 	}
-	if !second.NotModified || client.articleCalls != 1 {
+	if !second.NotModified || client.articleCalls != 2 {
 		t.Fatalf("second result = %#v, article calls = %d", second, client.articleCalls)
 	}
 	if client.receivedETag != `"feed-v1"` || client.receivedModified == "" {
 		t.Errorf("conditional state = %q/%q", client.receivedETag, client.receivedModified)
 	}
+	history, err := database.ListRSSSyncHistory(ctx, 10, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(history.Entries) != 2 || history.Entries[0].Status != "succeeded" || !history.Entries[0].NotModified || history.Entries[1].FeedDocuments != 3 || history.Entries[1].Fetched != 2 {
+		t.Fatalf("RSS sync history = %#v", history)
+	}
 	logText := logs.String()
-	for _, expected := range []string{"RSS synchronization started", "RSS feed request started", "RSS feed response received", "press release request started", "press release response received", "press release processed and stored", "duration_seconds="} {
+	for _, expected := range []string{"RSS synchronization started", "rss_attempt_id=", "RSS feed request started", "RSS feed response received", "press release request started", "press release response received", "press release processed and stored", "duration_seconds="} {
 		if !strings.Contains(logText, expected) {
 			t.Errorf("ingestion lifecycle logs do not contain %q: %s", expected, logText)
 		}
 	}
 	if strings.Contains(logText, "Body text.") {
 		t.Fatalf("ingestion lifecycle logs contain press release body text: %s", logText)
+	}
+}
+
+func TestSyncerPersistsFailedRSSAttempt(t *testing.T) {
+	ctx := context.Background()
+	database := testStore(t)
+	now := time.Date(2026, time.August, 22, 10, 0, 0, 0, time.FixedZone("CEST", 2*60*60))
+	client := &fakeLiveClient{feedError: errors.New("upstream unavailable")}
+	syncer, err := NewSyncer(database, client, 6*time.Hour, func() time.Time { return now }, discardLogger())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := syncer.Sync(ctx); err == nil {
+		t.Fatal("Sync() error = nil, want feed failure")
+	}
+	history, err := database.ListRSSSyncHistory(ctx, 10, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(history.Entries) != 1 || history.Entries[0].Status != "failed" || history.Entries[0].ErrorMessage != "upstream unavailable" || history.Entries[0].CompletedAt == nil {
+		t.Fatalf("failed RSS sync history = %#v", history)
 	}
 }
 

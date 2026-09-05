@@ -17,9 +17,9 @@ import (
 // Repository captures the atomic persistence operations needed by a source sync.
 type Repository interface {
 	GetSyncState(context.Context) (store.SyncState, error)
-	RecordSyncAttempt(context.Context, time.Time) error
-	RecordSyncSuccess(context.Context, string, string, time.Time, string) error
-	RecordSyncFailure(context.Context, time.Time, error) error
+	RecordSyncAttempt(context.Context, time.Time, time.Time, time.Time) (int64, error)
+	RecordSyncSuccess(context.Context, int64, string, string, time.Time, store.SyncRunResult) error
+	RecordSyncFailure(context.Context, int64, time.Time, store.SyncRunResult, error) error
 	UpsertSourceMetadata(context.Context, []domain.SourceDocument, time.Time) error
 	ListDocumentsForFetch(context.Context, time.Time, time.Time, time.Time, bool) ([]store.SourceDocumentRecord, error)
 	ReplaceDocumentIncidents(context.Context, int64, string, []domain.Incident, time.Time) error
@@ -40,6 +40,7 @@ type Syncer struct {
 // Result summarizes one synchronization attempt for logs and metrics.
 type Result struct {
 	NotModified     bool
+	FeedDocuments   int
 	Discovered      int
 	Fetched         int
 	ArticleFailures int
@@ -75,7 +76,7 @@ func NewSyncer(repository Repository, client source.LiveClient, refreshAfter tim
 	}, nil
 }
 
-// Sync fetches the rolling three-day source window and persists each document
+// Sync fetches the rolling seven-day source window and persists each document
 // independently, allowing one malformed or unavailable article to be retried.
 func (s *Syncer) Sync(ctx context.Context) (Result, error) {
 	s.mu.Lock()
@@ -83,24 +84,26 @@ func (s *Syncer) Sync(ctx context.Context) (Result, error) {
 
 	now := s.clock()
 	syncStartedAt := time.Now()
-	start, end := s.threeDayWindow(now)
+	start, end := s.sevenDayWindow(now)
 	result := Result{WindowStart: start, WindowEnd: end}
-	s.logger.Info("RSS synchronization started", "window_start", start, "window_end", end)
 
-	state, err := s.repository.GetSyncState(ctx)
+	attemptID, err := s.repository.RecordSyncAttempt(ctx, now, start, end)
 	if err != nil {
 		return result, err
 	}
-	if err := s.repository.RecordSyncAttempt(ctx, now); err != nil {
-		return result, err
+	logger := s.logger.With("rss_attempt_id", attemptID)
+	logger.Info("RSS synchronization started", "window_start", start, "window_end", end)
+	state, err := s.repository.GetSyncState(ctx)
+	if err != nil {
+		return result, s.fail(ctx, attemptID, now, syncStartedAt, result, err)
 	}
 
 	feedStartedAt := time.Now()
-	s.logger.Info("RSS feed request started", "conditional", state.ETag != "" || state.LastModified != "")
+	logger.Info("RSS feed request started", "conditional", state.ETag != "" || state.LastModified != "")
 	feed, err := s.client.FetchFeed(ctx, state.ETag, state.LastModified)
 	if err != nil {
-		s.logger.Warn("RSS feed request failed", durationAttributes(feedStartedAt, time.Now())...)
-		return result, s.fail(ctx, now, err)
+		logger.Warn("RSS feed request failed", durationAttributes(feedStartedAt, time.Now())...)
+		return result, s.fail(ctx, attemptID, now, syncStartedAt, result, err)
 	}
 	feedAttributes := []any{
 		"not_modified", feed.NotModified,
@@ -108,8 +111,9 @@ func (s *Syncer) Sync(ctx context.Context) (Result, error) {
 		"skipped", feed.Skipped,
 	}
 	feedAttributes = append(feedAttributes, durationAttributes(feedStartedAt, time.Now())...)
-	s.logger.Info("RSS feed response received", feedAttributes...)
+	logger.Info("RSS feed response received", feedAttributes...)
 	result.NotModified = feed.NotModified
+	result.FeedDocuments = len(feed.Documents)
 	result.Skipped = feed.Skipped
 
 	if !feed.NotModified {
@@ -121,18 +125,18 @@ func (s *Syncer) Sync(ctx context.Context) (Result, error) {
 		}
 		result.Discovered = len(inWindow)
 		if err := s.repository.UpsertSourceMetadata(ctx, inWindow, now); err != nil {
-			return result, s.fail(ctx, now, err)
+			return result, s.fail(ctx, attemptID, now, syncStartedAt, result, err)
 		}
 	}
 
 	forceRefresh := feedChanged(state, feed)
 	documents, err := s.repository.ListDocumentsForFetch(ctx, start, end, now.Add(-s.refreshAfter), forceRefresh)
 	if err != nil {
-		return result, s.fail(ctx, now, err)
+		return result, s.fail(ctx, attemptID, now, syncStartedAt, result, err)
 	}
 	for _, document := range documents {
 		articleStartedAt := time.Now()
-		s.logger.Info("press release request started",
+		logger.Info("press release request started",
 			"document_id", document.ID,
 			"external_id", document.ExternalID,
 			"source_url", document.SourceURL,
@@ -142,11 +146,11 @@ func (s *Syncer) Sync(ctx context.Context) (Result, error) {
 		if fetchErr != nil {
 			attributes := []any{"document_id", document.ID, "external_id", document.ExternalID, "failure_kind", "fetch"}
 			attributes = append(attributes, durationAttributes(articleStartedAt, time.Now())...)
-			s.logger.Warn("press release request failed", attributes...)
+			logger.Warn("press release request failed", attributes...)
 			result.FetchFailures++
 			result.ArticleFailures++
 			if markErr := s.repository.MarkDocumentFetchFailed(ctx, document.ID, now, fetchErr); markErr != nil {
-				return result, s.fail(ctx, now, errors.Join(fetchErr, markErr))
+				return result, s.fail(ctx, attemptID, now, syncStartedAt, result, errors.Join(fetchErr, markErr))
 			}
 			continue
 		}
@@ -157,21 +161,21 @@ func (s *Syncer) Sync(ctx context.Context) (Result, error) {
 			"response_bytes", len(contents),
 		}
 		responseAttributes = append(responseAttributes, durationAttributes(articleStartedAt, responseAt)...)
-		s.logger.Info("press release response received", responseAttributes...)
+		logger.Info("press release response received", responseAttributes...)
 		parsed, err := parser.ParsePoliceRelease(contents)
 		if err != nil {
 			attributes := []any{"document_id", document.ID, "external_id", document.ExternalID, "failure_kind", "parse"}
 			attributes = append(attributes, durationAttributes(articleStartedAt, time.Now())...)
-			s.logger.Warn("press release processing failed", attributes...)
+			logger.Warn("press release processing failed", attributes...)
 			result.ParserFailures++
 			result.ArticleFailures++
 			if markErr := s.repository.MarkDocumentFetchFailed(ctx, document.ID, now, err); markErr != nil {
-				return result, s.fail(ctx, now, errors.Join(err, markErr))
+				return result, s.fail(ctx, attemptID, now, syncStartedAt, result, errors.Join(err, markErr))
 			}
 			continue
 		}
 		if err := s.repository.ReplaceDocumentIncidents(ctx, document.ID, parsed.SourceHash, parsed.Incidents, now); err != nil {
-			return result, s.fail(ctx, now, err)
+			return result, s.fail(ctx, attemptID, now, syncStartedAt, result, err)
 		}
 		attributes := []any{
 			"document_id", document.ID,
@@ -179,7 +183,7 @@ func (s *Syncer) Sync(ctx context.Context) (Result, error) {
 			"incidents", len(parsed.Incidents),
 		}
 		attributes = append(attributes, durationAttributes(articleStartedAt, time.Now())...)
-		s.logger.Info("press release processed and stored", attributes...)
+		logger.Info("press release processed and stored", attributes...)
 		result.Fetched++
 	}
 
@@ -191,15 +195,10 @@ func (s *Syncer) Sync(ctx context.Context) (Result, error) {
 	if lastModified == "" {
 		lastModified = state.LastModified
 	}
-	resultText := fmt.Sprintf(
-		"not_modified=%t discovered=%d fetched=%d article_failures=%d skipped=%d",
-		result.NotModified,
-		result.Discovered,
-		result.Fetched,
-		result.ArticleFailures,
-		result.Skipped,
-	)
-	if err := s.repository.RecordSyncSuccess(ctx, etag, lastModified, now, resultText); err != nil {
+	elapsed := time.Since(syncStartedAt)
+	completedAt := now.Add(elapsed)
+	outcome := syncRunResult(result, elapsed)
+	if err := s.repository.RecordSyncSuccess(ctx, attemptID, etag, lastModified, completedAt, outcome); err != nil {
 		return result, err
 	}
 	syncAttributes := []any{
@@ -211,7 +210,7 @@ func (s *Syncer) Sync(ctx context.Context) (Result, error) {
 		"skipped", result.Skipped,
 	}
 	syncAttributes = append(syncAttributes, durationAttributes(syncStartedAt, time.Now())...)
-	s.logger.Info("RSS synchronization completed", syncAttributes...)
+	logger.Info("RSS synchronization completed", syncAttributes...)
 	return result, nil
 }
 
@@ -223,19 +222,44 @@ func durationAttributes(startedAt, completedAt time.Time) []any {
 	}
 }
 
-func (s *Syncer) threeDayWindow(value time.Time) (time.Time, time.Time) {
+func (s *Syncer) sevenDayWindow(value time.Time) (time.Time, time.Time) {
 	local := value.In(s.location)
 	today := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, s.location)
-	start := today.AddDate(0, 0, -2)
+	start := today.AddDate(0, 0, -6)
 	end := today.AddDate(0, 0, 1)
 	return start, end
 }
 
-func (s *Syncer) fail(ctx context.Context, failedAt time.Time, syncError error) error {
-	if recordError := s.repository.RecordSyncFailure(ctx, failedAt, syncError); recordError != nil {
+func (s *Syncer) fail(ctx context.Context, attemptID int64, attemptedAt, startedAt time.Time, result Result, syncError error) error {
+	elapsed := time.Since(startedAt)
+	failedAt := attemptedAt.Add(elapsed)
+	if recordError := s.repository.RecordSyncFailure(ctx, attemptID, failedAt, syncRunResult(result, elapsed), syncError); recordError != nil {
 		return errors.Join(syncError, recordError)
 	}
 	return syncError
+}
+
+func syncRunResult(result Result, elapsed time.Duration) store.SyncRunResult {
+	return store.SyncRunResult{
+		NotModified:     result.NotModified,
+		FeedDocuments:   result.FeedDocuments,
+		Discovered:      result.Discovered,
+		Fetched:         result.Fetched,
+		FetchFailures:   result.FetchFailures,
+		ParserFailures:  result.ParserFailures,
+		Skipped:         result.Skipped,
+		DurationSeconds: elapsed.Seconds(),
+		Summary: fmt.Sprintf(
+			"not_modified=%t documents=%d discovered=%d fetched=%d fetch_failures=%d parser_failures=%d skipped=%d",
+			result.NotModified,
+			result.FeedDocuments,
+			result.Discovered,
+			result.Fetched,
+			result.FetchFailures,
+			result.ParserFailures,
+			result.Skipped,
+		),
+	}
 }
 
 func feedChanged(previous store.SyncState, current source.FeedResult) bool {

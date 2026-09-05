@@ -102,6 +102,17 @@ Completed stages include both a human-readable `duration` and numeric
 `duration_seconds`. Source bodies, prompts, generated text, and model responses
 are deliberately excluded.
 
+Every live RSS synchronization also creates a durable database history row
+before contacting the source and completes it with the feed document count,
+conditional-response state, seven-day window count, fetched and skipped totals,
+separate fetch and parser failures, duration, and a sanitized terminal error.
+The protected `/admin/rss-history` page shows this history in stable,
+reverse-chronological cursor pages. Starting the next check marks any prior
+`running` row as a failed interruption, while the active row remains visible
+during the current check. History begins with the first sync after migration
+014; the previous single-row synchronization state remains the source for
+request validators and last-success metrics.
+
 `review` presentation mode displays stored German source text and processing
 states and is intended for local fixture development. `public` mode fails closed: it
 lists only incidents with a privacy-safe presentation from the active source

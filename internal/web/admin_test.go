@@ -27,6 +27,7 @@ func TestAdminIsDisabledByDefault(t *testing.T) {
 	}{
 		{method: http.MethodGet, path: "/admin"},
 		{method: http.MethodGet, path: "/admin/translations"},
+		{method: http.MethodGet, path: "/admin/rss-history"},
 		{method: http.MethodGet, path: "/admin/history"},
 		{method: http.MethodPost, path: "/api/admin/ai/process-all-now"},
 		{method: http.MethodPost, path: "/api/admin/ai/translations/process"},
@@ -57,7 +58,7 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	if page.Code != http.StatusOK || page.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("admin page = %d/%q", page.Code, page.Header().Get("Cache-Control"))
 	}
-	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", "Installed and ready", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/post-processing/process", "/api/admin/ai/automatic-processing", "/api/admin/ai/cancel-all", "Cancel all unfinished work", "/api/admin/ai/status", "/admin/history", "Pipeline history", "Open reader", "View full history", "Confirm AI request", staticAssets["theme.js"].path, "data-theme-toggle", staticAssets["admin.js"].path, "Active stage", "Canonical pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover", "Independent post-processing queues", "Post-processing only", "All registered languages", "Translations only", "Category verification only"} {
+	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", "Installed and ready", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/post-processing/process", "/api/admin/ai/automatic-processing", "/api/admin/ai/cancel-all", "Cancel all unfinished work", "/api/admin/ai/status", "/admin/rss-history", "RSS history", "/admin/history", "Pipeline history", "Open reader", "View full history", "Confirm AI request", staticAssets["theme.js"].path, "data-theme-toggle", staticAssets["admin.js"].path, "Active stage", "Canonical pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover", "Independent post-processing queues", "Post-processing only", "All registered languages", "Translations only", "Category verification only"} {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("admin page does not contain %q", expected)
 		}
@@ -811,6 +812,83 @@ func TestAdminTranslationActionsRequireManualProcessorAndExplicitFallbackModel(t
 	}
 	if count := strings.Count(output.String(), "Choose installed model"); count != 2 {
 		t.Fatalf("fallback model prompts = %d, want two bulk-action prompts", count)
+	}
+}
+
+func TestAdminRSSHistoryShowsDurableChecksAndCursorPagination(t *testing.T) {
+	ctx := context.Background()
+	database := fixtureStore(t)
+	startedAt := time.Date(2026, time.September, 5, 6, 0, 0, 0, time.UTC)
+	windowStart := startedAt.Add(-6 * 24 * time.Hour)
+	windowEnd := startedAt.Add(24 * time.Hour)
+
+	succeededID, err := database.RecordSyncAttempt(ctx, startedAt, windowStart, windowEnd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := database.RecordSyncSuccess(ctx, succeededID, `"feed-v1"`, "modified", startedAt.Add(time.Second), store.SyncRunResult{
+		FeedDocuments: 6, Discovered: 6, Fetched: 6, DurationSeconds: 0.75,
+		Summary: "not_modified=false documents=6 discovered=6 fetched=6 fetch_failures=0 parser_failures=0 skipped=0",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	failedAt := startedAt.Add(time.Hour)
+	failedID, err := database.RecordSyncAttempt(ctx, failedAt, windowStart, windowEnd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := database.RecordSyncFailure(ctx, failedID, failedAt.Add(time.Second), store.SyncRunResult{FeedDocuments: 6, Fetched: 2, FetchFailures: 1, DurationSeconds: 1.25}, errors.New("upstream <timeout>")); err != nil {
+		t.Fatal(err)
+	}
+
+	runningAt := startedAt.Add(2 * time.Hour)
+	if _, err := database.RecordSyncAttempt(ctx, runningAt, windowStart, windowEnd); err != nil {
+		t.Fatal(err)
+	}
+
+	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
+		PageSize: 2, SourceMode: "fixture", PresentationMode: "review", AdminEnabled: true,
+		Processor: fakeProcessingRequester{database: database},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := server.Handler()
+	first := httptest.NewRecorder()
+	handler.ServeHTTP(first, httptest.NewRequest(http.MethodGet, "/admin/rss-history", nil))
+	if first.Code != http.StatusOK || first.Header().Get("Cache-Control") != "private, no-store" {
+		t.Fatalf("RSS history = %d/%q", first.Code, first.Header().Get("Cache-Control"))
+	}
+	for _, expected := range []string{
+		"RSS synchronization history", "2 checks shown", "RSS history", `aria-current="page"`,
+		"In progress", "upstream &lt;timeout&gt;", "Fetched 2", "Fetch failures 1", "Older →",
+		`data-rss-history`, `data-history-poll-interval="5000"`, staticAssets["admin.js"].path,
+	} {
+		if !strings.Contains(first.Body.String(), expected) {
+			t.Errorf("RSS history does not contain %q", expected)
+		}
+	}
+	match := regexp.MustCompile(`href="(/admin/rss-history\?before=[^"]+)"`).FindStringSubmatch(first.Body.String())
+	if len(match) != 2 {
+		t.Fatalf("RSS history has no older cursor: %s", first.Body.String())
+	}
+
+	older := httptest.NewRecorder()
+	handler.ServeHTTP(older, httptest.NewRequest(http.MethodGet, match[1], nil))
+	if older.Code != http.StatusOK || !strings.Contains(older.Body.String(), "← Newer") || !strings.Contains(older.Body.String(), "6 documents") || !strings.Contains(older.Body.String(), "Fetched 6") || !strings.Contains(older.Body.String(), "0.750s") || !strings.Contains(older.Body.String(), "2026-08-30") || !strings.Contains(older.Body.String(), "2026-09-06") {
+		t.Fatalf("older RSS history = %d/%q", older.Code, older.Body.String())
+	}
+
+	for _, target := range []string{
+		"/admin/rss-history?before=not-a-cursor",
+		match[1] + "&after=not-a-cursor",
+	} {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, target, nil))
+		if response.Code != http.StatusBadRequest {
+			t.Errorf("GET %s status = %d, want 400", target, response.Code)
+		}
 	}
 }
 

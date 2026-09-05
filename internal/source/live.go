@@ -271,14 +271,17 @@ func (c *HTTPClient) validateArticleURL(raw string) (string, string, error) {
 }
 
 func (c *HTTPClient) parsePublicationTime(raw string) (time.Time, error) {
-	if parsed, err := time.Parse(time.RFC1123Z, raw); err == nil {
-		return parsed, nil
-	}
-	if parsed, err := time.ParseInLocation(time.RFC1123, raw, c.location); err == nil {
-		return parsed, nil
-	}
-	if parsed, err := time.ParseInLocation("Mon, 02 Jan 2006 15:04:05", raw, c.location); err == nil {
-		return parsed, nil
+	for _, layout := range []string{
+		time.RFC1123Z,
+		"Mon, 2 Jan 2006 15:04:05 -0700",
+		time.RFC1123,
+		"Mon, 2 Jan 2006 15:04:05 MST",
+		"Mon, 02 Jan 2006 15:04:05",
+		"Mon, 2 Jan 2006 15:04:05",
+	} {
+		if parsed, err := time.ParseInLocation(layout, raw, c.location); err == nil {
+			return parsed, nil
+		}
 	}
 	return time.Time{}, fmt.Errorf("unsupported feed publication time %q", raw)
 }

@@ -269,7 +269,7 @@
 })();
 
 (() => {
-  const history = document.querySelector("[data-pipeline-history]");
+  const history = document.querySelector("[data-pipeline-history], [data-rss-history]");
   if (!(history instanceof HTMLElement)) return;
 
   const interval = Number(history.dataset.historyPollInterval) || 2000;

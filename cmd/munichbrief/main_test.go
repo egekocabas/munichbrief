@@ -189,7 +189,11 @@ func TestRestoreFeedSuccessMetricUsesPersistedState(t *testing.T) {
 	}
 	defer database.Close()
 	succeededAt := time.Unix(1234, 0)
-	if err := database.RecordSyncSuccess(ctx, "etag", "modified", succeededAt, "ok"); err != nil {
+	attemptID, err := database.RecordSyncAttempt(ctx, succeededAt, succeededAt.Add(-6*24*time.Hour), succeededAt.Add(24*time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := database.RecordSyncSuccess(ctx, attemptID, "etag", "modified", succeededAt, store.SyncRunResult{Summary: "ok"}); err != nil {
 		t.Fatal(err)
 	}
 

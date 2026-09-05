@@ -124,6 +124,12 @@ func TestUnifiedPostProcessingMigrationPreservesAuditAndCutsReadersToV2(t *testi
 			t.Fatalf("index %s = %d/%v", index, count, err)
 		}
 	}
+	for kind, name := range map[string]string{"table": "rss_sync_history", "index": "rss_sync_history_source_started_idx"} {
+		var count int
+		if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM sqlite_master WHERE type=? AND name=?`, kind, name).Scan(&count); err != nil || count != 1 {
+			t.Fatalf("RSS history %s %s = %d/%v", kind, name, count, err)
+		}
+	}
 	for _, column := range []string{"translation_model_identity", "category_verification_model_identity"} {
 		var count int
 		if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM pragma_table_info('processing_cycles') WHERE name=?`, column).Scan(&count); err != nil || count != 0 {

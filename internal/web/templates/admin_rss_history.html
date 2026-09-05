@@ -1,0 +1,60 @@
+{{define "admin_rss_history"}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>RSS history · MunichBrief Admin</title>
+  <script src="{{assetURL "theme.js"}}"></script>
+  <link rel="icon" href="{{assetURL "favicon.svg"}}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{assetURL "app.css"}}">
+  <script defer src="{{assetURL "admin.js"}}"></script>
+</head>
+<body class="min-h-screen text-ink antialiased">
+  {{template "admin-header" "rss-history"}}
+  <main class="page-shell py-8" data-rss-history data-history-poll-interval="5000">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div class="max-w-3xl">
+        <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Source operations</p>
+        <h1 class="mt-1 font-serif text-4xl font-bold tracking-tight">RSS synchronization history</h1>
+        <p class="mt-3 text-muted">Durable checks of the official feed and its seven-day ingestion window. Feed and article contents are excluded; failure messages are sanitized.</p>
+      </div>
+      <p class="text-sm font-semibold text-muted">{{len .Entries}} checks shown</p>
+    </div>
+
+    {{if .Entries}}
+    <div class="mt-8 overflow-x-auto rounded-lg border border-rule bg-paper">
+      <table class="w-full border-collapse text-left text-sm">
+        <thead class="border-b border-rule bg-newsprint/70 text-xs uppercase tracking-wider text-muted">
+          <tr><th class="px-4 py-3">Started</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Feed</th><th class="px-4 py-3">Articles</th><th class="px-4 py-3">Window</th><th class="px-4 py-3">Diagnostic</th></tr>
+        </thead>
+        <tbody class="divide-y divide-rule/70">
+          {{range .Entries}}
+          <tr class="align-top">
+            <td class="whitespace-nowrap px-4 py-4"><strong>Check #{{.ID}}</strong><time class="mt-1 block text-xs text-muted" datetime="{{.StartedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime "en" .StartedAt}}</time></td>
+            <td class="whitespace-nowrap px-4 py-4"><strong class="{{if eq .Status "failed"}}text-alert{{else if or (eq .Status "running") (gt .FetchFailures 0) (gt .ParserFailures 0) (gt .Skipped 0)}}text-amber-700{{else}}text-emerald-700{{end}}">{{if eq .Status "failed"}}Failed{{else if eq .Status "running"}}Running{{else if or (gt .FetchFailures 0) (gt .ParserFailures 0) (gt .Skipped 0)}}Succeeded with warnings{{else}}Succeeded{{end}}</strong><span class="mt-1 block text-xs text-muted">{{if eq .Status "running"}}In progress{{else}}{{printf "%.3f" .DurationSeconds}}s{{end}}</span></td>
+            <td class="whitespace-nowrap px-4 py-4">{{if and (eq .Status "succeeded") .NotModified}}<strong>Not modified</strong><span class="mt-1 block text-xs text-muted">No feed body returned</span>{{else}}<strong>{{.FeedDocuments}} documents</strong><span class="mt-1 block text-xs text-muted">{{if eq .Status "succeeded"}}Modified · {{.Discovered}} in window{{else if eq .Status "failed"}}Incomplete outcome{{else}}Awaiting response{{end}} · skipped {{.Skipped}}</span>{{end}}</td>
+            <td class="whitespace-nowrap px-4 py-4"><strong>Fetched {{.Fetched}}</strong><span class="mt-1 block text-xs text-muted">Fetch failures {{.FetchFailures}} · parser failures {{.ParserFailures}}</span></td>
+            <td class="whitespace-nowrap px-4 py-4"><time datetime="{{.WindowStart.Format "2006-01-02T15:04:05Z07:00"}}">{{formatISODate .WindowStart}}</time><span class="mx-1 text-muted">–</span><time datetime="{{.WindowEnd.Format "2006-01-02T15:04:05Z07:00"}}">{{formatISODate .WindowEnd}}</time><span class="mt-1 block text-xs text-muted">Europe/Berlin · end exclusive</span></td>
+            <td class="max-w-md px-4 py-4 text-xs"><span class="font-mono">{{if .ErrorMessage}}{{.ErrorMessage}}{{else if eq .Status "running"}}Awaiting completion{{else}}No terminal error{{end}}</span></td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+    <nav class="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-4 border-t border-rule pt-5 text-sm text-muted" aria-label="RSS synchronization history pages">
+      {{if .HasNewer}}<a class="font-bold text-civic no-underline hover:text-civic-dark" href="{{.NewerURL}}">← Newer</a>{{else}}<span></span>{{end}}
+      <span>Ordered by check start</span>
+      {{if .HasOlder}}<a class="justify-self-end font-bold text-civic no-underline hover:text-civic-dark" href="{{.OlderURL}}">Older →</a>{{end}}
+    </nav>
+    {{else}}
+    <div class="mt-8 rounded-lg border border-dashed border-rule bg-paper px-6 py-12 text-center">
+      <h2 class="font-serif text-2xl font-bold">No RSS checks recorded yet</h2>
+      <p class="mt-2 text-sm text-muted">History begins with the first live synchronization after this database migration.</p>
+    </div>
+    {{end}}
+  </main>
+</body>
+</html>
+{{end}}

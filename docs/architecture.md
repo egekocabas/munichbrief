@@ -39,6 +39,15 @@ documents retain request validators and fetch state. Incidents retain the
 parsed German source fields and content hash used to invalidate derived output
 when the source changes.
 
+The current conditional-request state remains a single row per source, while
+each RSS check has its own durable operational history row. The history records
+its seven-day window, safe aggregate outcomes, duration, and sanitized failure
+detail without retaining another copy of feed or article content. Starting an
+attempt is committed before the source request, so a process interruption
+remains visible to operators instead of disappearing. The next attempt marks
+any abandoned running row as a failed interruption before inserting its own
+running record.
+
 ## Processing pipeline
 
 Canonical AI work is persisted as a frozen cycle with ordered steps. The

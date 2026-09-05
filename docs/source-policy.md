@@ -14,8 +14,9 @@ Live discovery uses the dedicated Munich Police RSS feed:
 <https://www.polizei.bayern.de/rss/polizeiprasidium-munchen.xml>
 
 The feed is a rolling discovery window rather than a historical archive. The
-application fetches only article URLs explicitly present in that feed. It does
-not crawl the general press listing or archive.
+application ingests feed entries from the current Berlin calendar day and the
+six preceding days. It fetches only article URLs explicitly present in that
+feed and does not crawl the general press listing or archive.
 
 Requests are low-rate and identifiable. Article URLs must use HTTPS on the
 expected Bavarian Police host, redirects remain same-origin, and response time,

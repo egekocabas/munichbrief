@@ -37,6 +37,9 @@ var adminSharedTemplate string
 //go:embed templates/admin_history.html
 var adminHistoryTemplate string
 
+//go:embed templates/admin_rss_history.html
+var adminRSSHistoryTemplate string
+
 //go:embed templates/admin_translations.html
 var adminTranslationsTemplate string
 
@@ -80,6 +83,7 @@ type incidentStore interface {
 	ListAdminCategoryVerifications(context.Context, []int64) ([]store.AdminCategoryVerification, error)
 	ListAdminPublicAssistanceVerifications(context.Context, []int64) ([]store.AdminPublicAssistanceVerification, error)
 	ListPipelineHistory(context.Context, string, int, *store.PipelineHistoryCursor, *store.PipelineHistoryCursor) (store.PipelineHistoryPage, error)
+	ListRSSSyncHistory(context.Context, int, *store.RSSSyncHistoryCursor, *store.RSSSyncHistoryCursor) (store.RSSSyncHistoryPage, error)
 	Ready(context.Context) error
 }
 
@@ -131,6 +135,7 @@ type Server struct {
 	aboutTemplate              *template.Template
 	adminTemplate              *template.Template
 	adminHistoryTemplate       *template.Template
+	adminRSSHistoryTemplate    *template.Template
 	adminTranslationsTemplate  *template.Template
 	adminVerificationsTemplate *template.Template
 	socialCards                *socialCardRenderer
@@ -195,6 +200,9 @@ func newWithLanguages(database incidentStore, logger *slog.Logger, options Optio
 		"formatDateTime": func(language string, value time.Time) string {
 			return formatDateTimeFor(definitions, language, value.In(location))
 		},
+		"formatISODate": func(value time.Time) string {
+			return value.In(location).Format("2006-01-02")
+		},
 		"incidentURL":                incidentURL,
 		"postProcessingStatusReason": postProcessingStatusReasonLabel,
 		"pipelineStatusLabel":        pipelineStatusLabel,
@@ -222,6 +230,10 @@ func newWithLanguages(database incidentStore, logger *slog.Logger, options Optio
 	if err != nil {
 		return nil, fmt.Errorf("parse admin history template: %w", err)
 	}
+	adminRSSHistory, err := template.New("admin_rss_history").Funcs(functions).Parse(adminSharedTemplate + adminRSSHistoryTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("parse admin RSS history template: %w", err)
+	}
 	adminTranslations, err := template.New("admin_translations").Funcs(functions).Parse(adminSharedTemplate + adminTranslationsTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("parse admin translations template: %w", err)
@@ -234,7 +246,7 @@ func newWithLanguages(database incidentStore, logger *slog.Logger, options Optio
 	if err != nil {
 		return nil, fmt.Errorf("initialize social card renderer: %w", err)
 	}
-	return &Server{store: database, logger: logger, options: options, location: location, languages: definitions, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, adminTemplate: admin, adminHistoryTemplate: adminHistory, adminTranslationsTemplate: adminTranslations, adminVerificationsTemplate: adminVerifications, socialCards: socialCards}, nil
+	return &Server{store: database, logger: logger, options: options, location: location, languages: definitions, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, adminTemplate: admin, adminHistoryTemplate: adminHistory, adminRSSHistoryTemplate: adminRSSHistory, adminTranslationsTemplate: adminTranslations, adminVerificationsTemplate: adminVerifications, socialCards: socialCards}, nil
 }
 
 // Handler returns the complete public and optional review route tree.
@@ -261,6 +273,7 @@ func (s *Server) Handler() http.Handler {
 		mux.HandleFunc("GET /admin", s.admin)
 		mux.HandleFunc("GET /admin/translations", s.adminTranslationsPage)
 		mux.HandleFunc("GET /admin/verifications", s.adminVerificationsPage)
+		mux.HandleFunc("GET /admin/rss-history", s.adminRSSHistory)
 		mux.HandleFunc("GET /admin/history", s.adminHistory)
 		mux.HandleFunc("GET /api/admin/ai/status", s.pipelineStatus)
 		mux.HandleFunc("POST /api/admin/ai/process-now", s.processIncidentNow)
