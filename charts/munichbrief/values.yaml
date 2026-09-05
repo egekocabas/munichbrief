@@ -28,7 +28,7 @@ application:
   aiWindow: "03:00-08:00"
   ollamaBaseURL: http://127.0.0.1:11434
   aiInterval: 5s
-  aiTimeout: 10m
+  aiTimeout: 15m
   aiContextSize: 8192
   existingSecret: ""
 
