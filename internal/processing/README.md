@@ -9,6 +9,11 @@ stages:
    then creates the canonical privacy-safe German presentation.
 
 After stage 2 succeeds, the German presentation is complete and publishable.
+Post-processing jobs are queued at that point, but execution waits until the
+active canonical cycle finishes all its stages, including retry waits. All
+provider calls remain sequential. Transient failures share a cooldown across
+canonical steps and post-processors using the same model; configuration failures
+remain local to their step.
 Independent work is registered in `PostProcessorRegistry`. Each processor
 declares its key, display metadata, priority, model setting, scopes, immutable
 step definitions, inputs, named outputs, automatic/manual capabilities, and
