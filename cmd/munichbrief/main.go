@@ -99,11 +99,7 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 	if err := database.EnsurePipelineSteps(ctx, processing.ModelSettingKeys(), time.Now()); err != nil {
 		return err
 	}
-	translationCodes := make([]string, 0, len(processing.RegisteredTranslations()))
-	for _, translation := range processing.RegisteredTranslations() {
-		translationCodes = append(translationCodes, translation.Language)
-	}
-	if err := database.EnsureTranslationLanguageSettings(ctx, translationCodes, processing.EnglishLanguage, time.Now()); err != nil {
+	if err := database.EnsureTranslationLanguageSettings(ctx, registeredTranslationCodes(), processing.EnglishLanguage, time.Now()); err != nil {
 		return err
 	}
 
@@ -292,6 +288,9 @@ func runAIProcess(ctx context.Context, logger *slog.Logger, cfg config.Config, a
 		return err
 	}
 	defer database.Close()
+	if err := database.EnsureTranslationLanguageSettings(ctx, registeredTranslationCodes(), processing.EnglishLanguage, time.Now()); err != nil {
+		return err
+	}
 	models, err := database.PreferredPipelineModels(ctx, processing.StepKeys())
 	if err != nil {
 		return err
@@ -305,9 +304,38 @@ func runAIProcess(ctx context.Context, logger *slog.Logger, cfg config.Config, a
 		selectedID = incidentID
 	}
 	registry := processing.DefaultPostProcessorRegistry()
-	postModels, _ := database.PreferredPipelineModels(ctx, registry.ModelSettingKeys())
+	postModels, postModelsErr := database.PreferredPipelineModels(ctx, registry.ModelSettingKeys())
+	if postModelsErr != nil && !errors.Is(postModelsErr, store.ErrPipelineUnconfigured) {
+		return postModelsErr
+	}
+	translationSettings, err := database.TranslationLanguageSettings(ctx)
+	if err != nil {
+		return err
+	}
+	translationByCode := make(map[string]store.TranslationLanguageSetting, len(translationSettings))
+	for _, setting := range translationSettings {
+		translationByCode[setting.LanguageCode] = setting
+	}
 	var postPlans []store.PostProcessingPlan
 	for _, definition := range registry.Definitions() {
+		if definition.Key == processing.TranslationModelStep {
+			for _, scope := range definition.Scopes {
+				setting := translationByCode[scope.Key]
+				if setting.PreferredModel == "" {
+					continue
+				}
+				if !processing.TranslationAdapterSupports(setting.AdapterKey, setting.LanguageCode) {
+					return fmt.Errorf("translation route %s uses unsupported adapter %q", setting.LanguageCode, setting.AdapterKey)
+				}
+				languagePlans, planErr := registry.Plans(definition.Key, []string{scope.Key}, setting.PreferredModel)
+				if planErr != nil {
+					return planErr
+				}
+				languagePlans[0].AdapterKey = setting.AdapterKey
+				postPlans = append(postPlans, languagePlans[0])
+			}
+			continue
+		}
 		model := postModels[definition.ModelSettingKey]
 		if model == "" {
 			continue
@@ -327,6 +355,15 @@ func runAIProcess(ctx context.Context, logger *slog.Logger, cfg config.Config, a
 		"cycle_id", result.CycleID,
 	)
 	return nil
+}
+
+func registeredTranslationCodes() []string {
+	translations := processing.RegisteredTranslations()
+	codes := make([]string, 0, len(translations))
+	for _, translation := range translations {
+		codes = append(codes, translation.Language)
+	}
+	return codes
 }
 
 func runMigrate(ctx context.Context, logger *slog.Logger, cfg config.Config) error {

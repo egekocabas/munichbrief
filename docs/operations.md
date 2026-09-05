@@ -75,6 +75,8 @@ only this window. The CLI still requires the deployment-level
 `MUNICHBRIEF_AI_ENABLED=true` gate. Processing remains sequential and retains
 privacy validation, the circuit breaker, and normal retry delays. A command-line
 request is picked up by the running server on its next idle worker check.
+Each request freezes the configured model and adapter for every enabled reader
+language; languages without a selected model remain paused.
 
 The protected admin dashboard also has a durable automatic-processing master
 switch. Disabling it overrides an open window for scheduled canonical work and

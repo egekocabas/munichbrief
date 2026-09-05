@@ -23,7 +23,7 @@
       const incidentInput = document.getElementById(incidentInputID);
       if (incidentInput instanceof HTMLInputElement) message += ` Incident ID: ${incidentInput.value}.`;
     }
-    const selections = [...form.querySelectorAll('select[name="scope"], select[name="model"], select[name^="model_"]')]
+    const selections = [...form.querySelectorAll('select[name="scope"], select[name="model"], select[name^="model_"], select[name="adapter"]')]
       .filter((field) => field instanceof HTMLSelectElement && field.value)
       .map((field) => {
         const label = field.labels?.[0]?.textContent?.trim() || field.name.replace("model_", "").replaceAll("_", " ");

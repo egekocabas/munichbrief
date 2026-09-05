@@ -325,7 +325,10 @@ func manualRequestKeyTx(ctx context.Context, tx *sql.Tx, sourceMode, condition s
 		fmt.Fprintf(hash, "\x00%s\x00%d\x00%s\x00%s", step.Key, step.Order, step.PromptVersion, step.Model)
 	}
 	for _, plan := range postPlans {
-		fmt.Fprintf(hash, "\x00post\x00%s\x00%s\x00%s\x00%s\x00%s", plan.ProcessorKey, plan.ScopeKey, plan.PromptVersion, plan.Model, normalizedAdapterKey(plan.AdapterKey))
+		fmt.Fprintf(hash, "\x00post\x00%s\x00%s\x00%s\x00%s", plan.ProcessorKey, plan.ScopeKey, plan.PromptVersion, plan.Model)
+		if adapter := normalizedAdapterKey(plan.AdapterKey); adapter != "structured" {
+			fmt.Fprintf(hash, "\x00adapter\x00%s", adapter)
+		}
 	}
 	rows, err := tx.QueryContext(ctx, `SELECT i.id, i.content_hash FROM incidents i JOIN source_documents d ON d.id=i.source_document_id WHERE `+condition+` ORDER BY i.id`, args...)
 	if err != nil {

@@ -149,15 +149,21 @@ func TestManualCyclesCoalesceExactDuplicatesAndSupersedeQueuedAutomaticWork(t *t
 	if err != nil || duplicate.CycleID != first.CycleID || duplicate.Requested != 0 || duplicate.Current != 1 {
 		t.Fatalf("duplicate manual request = %#v/%v, first=%#v", duplicate, err, first)
 	}
+	explicitStructured := append([]PostProcessingPlan(nil), postPlans...)
+	explicitStructured[0].AdapterKey = "structured"
+	structuredDuplicate, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, explicitStructured, nil, true, now.Add(3*time.Second))
+	if err != nil || structuredDuplicate.CycleID != first.CycleID || structuredDuplicate.Requested != 0 || structuredDuplicate.Current != 1 {
+		t.Fatalf("explicit structured duplicate = %#v/%v, first=%#v", structuredDuplicate, err, first)
+	}
 	differentAdapter := append([]PostProcessingPlan(nil), postPlans...)
 	differentAdapter[0].AdapterKey = "hy-mt2"
-	adapterRequest, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, differentAdapter, nil, true, now.Add(3*time.Second))
+	adapterRequest, err := database.CreateManualPipelineCycle(ctx, "fixture", plans, differentAdapter, nil, true, now.Add(4*time.Second))
 	if err != nil || adapterRequest.CycleID == first.CycleID {
 		t.Fatalf("different-adapter manual request = %#v/%v", adapterRequest, err)
 	}
 	different := append([]PipelineStepPlan(nil), plans...)
 	different[1].Model = "other-translate:4b"
-	separate, err := database.CreateManualPipelineCycle(ctx, "fixture", different, postPlans, nil, true, now.Add(4*time.Second))
+	separate, err := database.CreateManualPipelineCycle(ctx, "fixture", different, postPlans, nil, true, now.Add(5*time.Second))
 	if err != nil || separate.CycleID == first.CycleID {
 		t.Fatalf("different-model manual request = %#v/%v", separate, err)
 	}

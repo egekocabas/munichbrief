@@ -778,6 +778,11 @@ func TestAdminTranslationOperationsOverviewDrilldownsAndActions(t *testing.T) {
 	if oversized.Code != http.StatusBadRequest {
 		t.Errorf("oversized translation mutation = %d, want 400", oversized.Code)
 	}
+	adminScript := httptest.NewRecorder()
+	handler.ServeHTTP(adminScript, httptest.NewRequest(http.MethodGet, staticAssets["admin.js"].path, nil))
+	if adminScript.Code != http.StatusOK || !strings.Contains(adminScript.Body.String(), `select[name="adapter"]`) {
+		t.Error("translation confirmation does not show the selected adapter")
+	}
 }
 
 func TestAdminTranslationOperationsTemplateScalesToTenLanguages(t *testing.T) {
