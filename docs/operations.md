@@ -45,10 +45,11 @@ immediately; registered post-processing jobs enter a unified durable queue.
 Only complete current `incident-pipeline-v2` presentations are selectable.
 Incidents with only v1, imported, or legacy output are unprocessed and remain
 hidden publicly until v2 completes.
-The five-second AI interval is an idle queue check, while the ten-minute AI
-timeout bounds a single Ollama request. Unless immediate mode is enabled, new
-Ollama requests start only during the configured Europe/Berlin processing
-window; a frozen canonical cycle is allowed to finish after the window closes.
+The default fifteen-second AI interval is an idle queue check; manual actions
+wake the worker immediately, and available jobs run without an interval between
+them. The fifteen-minute AI timeout bounds a single Ollama request.
+Unless immediate mode is enabled, new Ollama requests start only during the
+configured Europe/Berlin processing window; a frozen canonical cycle is allowed to finish after the window closes.
 When its final German result completes outside the window, scheduled
 post-processing discovery waits for the next open window rather than creating
 new automatic jobs immediately. Continuation cycles retain scheduled

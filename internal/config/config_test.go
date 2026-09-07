@@ -51,6 +51,9 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.AIEnabled || cfg.AIContextSize != defaultAIContext {
 		t.Errorf("AI defaults = enabled:%t context:%d", cfg.AIEnabled, cfg.AIContextSize)
 	}
+	if cfg.AIInterval != 15*time.Second {
+		t.Errorf("AIInterval = %s, want 15s", cfg.AIInterval)
+	}
 	if cfg.AITimeout != 15*time.Minute {
 		t.Errorf("AITimeout = %s, want 15m", cfg.AITimeout)
 	}

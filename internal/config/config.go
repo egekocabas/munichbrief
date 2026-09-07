@@ -21,7 +21,7 @@ const (
 	defaultRefreshAfter = 6 * time.Hour
 	defaultAIEnabled    = false
 	defaultOllamaURL    = "http://127.0.0.1:11434"
-	defaultAIInterval   = 5 * time.Second
+	defaultAIInterval   = 15 * time.Second
 	defaultAITimeout    = 15 * time.Minute
 	defaultAIContext    = 8192
 	defaultAIImmediate  = false

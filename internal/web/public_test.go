@@ -19,6 +19,7 @@ import (
 )
 
 func TestTimelineAndDetailRenderFixtureData(t *testing.T) {
+	t.Parallel()
 	database := fixtureStore(t)
 	server := testServer(t, database)
 	handler := server.Handler()
@@ -84,6 +85,7 @@ func TestTimelineAndDetailRenderFixtureData(t *testing.T) {
 }
 
 func TestReaderFooterShowsBuildProvenance(t *testing.T) {
+	t.Parallel()
 	database := fixtureStore(t)
 	commit := "28c9a1265115c07d46e61fa26bd489e07acf95c4"
 	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), Options{
@@ -113,6 +115,7 @@ func TestReaderFooterShowsBuildProvenance(t *testing.T) {
 }
 
 func TestReaderFooterShowsDevelopmentBuildPlaceholder(t *testing.T) {
+	t.Parallel()
 	database := fixtureStore(t)
 	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
@@ -143,6 +146,7 @@ func TestReaderFooterShowsDevelopmentBuildPlaceholder(t *testing.T) {
 }
 
 func TestTemplatesEscapeIncidentContent(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	database := openTestStore(t)
 
@@ -194,6 +198,7 @@ func TestTemplatesEscapeIncidentContent(t *testing.T) {
 }
 
 func TestTimelineAndDetailRenderAIContentWithProvenance(t *testing.T) {
+	t.Parallel()
 	database := fixtureStore(t)
 	generatedAt := time.Date(2026, time.August, 23, 9, 0, 0, 0, time.UTC)
 	presentation := testPresentation{
@@ -286,6 +291,7 @@ func TestTimelineAndDetailRenderAIContentWithProvenance(t *testing.T) {
 }
 
 func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	database := fixtureStore(t)
 	records, _, err := database.ListIncidents(ctx, 1, 0)
@@ -512,6 +518,7 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 }
 
 func TestIncidentTimeFormattingSupportsClockDateAndDayPart(t *testing.T) {
+	t.Parallel()
 	server := testServer(t, fixtureStore(t))
 	cases := []struct {
 		name, language, expected string
@@ -531,6 +538,7 @@ func TestIncidentTimeFormattingSupportsClockDateAndDayPart(t *testing.T) {
 }
 
 func TestLiveTimelineFallbackAndIncidentAttribution(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	database := openTestStore(t)
 	now := time.Date(2026, time.August, 22, 10, 0, 0, 0, time.UTC)
@@ -610,6 +618,7 @@ func TestLiveTimelineFallbackAndIncidentAttribution(t *testing.T) {
 }
 
 func TestUnknownIncidentReturnsNotFound(t *testing.T) {
+	t.Parallel()
 	recorder := httptest.NewRecorder()
 	testServer(t, fixtureStore(t)).Handler().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/en/incidents/9999", nil))
 	if recorder.Code != http.StatusNotFound {
@@ -618,6 +627,7 @@ func TestUnknownIncidentReturnsNotFound(t *testing.T) {
 }
 
 func TestPublicHostUsesFailClosedPresentationAndRejectsAdmin(t *testing.T) {
+	t.Parallel()
 	database := fixtureStore(t)
 	presentation := testPresentation{
 		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
@@ -680,6 +690,7 @@ func TestPublicHostUsesFailClosedPresentationAndRejectsAdmin(t *testing.T) {
 }
 
 func TestLocalizedRoutesAndLanguagePreference(t *testing.T) {
+	t.Parallel()
 	database := fixtureStore(t)
 	handler := testServer(t, database).Handler()
 
@@ -776,6 +787,7 @@ func TestLocalizedRoutesAndLanguagePreference(t *testing.T) {
 }
 
 func TestLocalizedProcessingStateLabels(t *testing.T) {
+	t.Parallel()
 	server := testServer(t, fixtureStore(t))
 	for _, test := range []struct {
 		record   store.IncidentRecord
@@ -796,6 +808,7 @@ func TestLocalizedProcessingStateLabels(t *testing.T) {
 }
 
 func TestTranslationCatalogsAreCompleteAndPluralized(t *testing.T) {
+	t.Parallel()
 	translations, err := newLocalization(langregistry.Registered())
 	if err != nil {
 		t.Fatal(err)
@@ -838,6 +851,7 @@ func TestTranslationCatalogsAreCompleteAndPluralized(t *testing.T) {
 }
 
 func TestReaderLanguageRegistryMatchesTranslationDefinitions(t *testing.T) {
+	t.Parallel()
 	definitions := langregistry.Registered()
 	if err := validateReaderLanguageDefinitions(definitions); err != nil {
 		t.Fatal(err)
@@ -848,6 +862,7 @@ func TestReaderLanguageRegistryMatchesTranslationDefinitions(t *testing.T) {
 }
 
 func TestPublicModeHidesUnprocessedStaleAndOriginalContent(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	database := fixtureStore(t)
 	records, _, err := database.ListIncidents(ctx, 20, 0)

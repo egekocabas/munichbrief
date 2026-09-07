@@ -9,7 +9,7 @@ import (
 
 func TestPipelineSnapshotSeparatesActiveWaitingWorkAndNewCandidates(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "pipeline-status.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "pipeline-status.db"))
 	if err != nil {
 		t.Fatal(err)
 	}

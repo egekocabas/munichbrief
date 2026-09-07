@@ -10,7 +10,7 @@ import (
 
 func TestPipelineStepSettingsValidateAndPersistModels(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "settings.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "settings.db"))
 	if err != nil {
 		t.Fatal(err)
 	}

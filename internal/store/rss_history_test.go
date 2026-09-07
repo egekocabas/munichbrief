@@ -10,7 +10,7 @@ import (
 
 func TestRSSSyncHistoryPersistsOutcomesAndPaginatesWithStableCursors(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "rss-history.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "rss-history.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +92,7 @@ func TestRSSSyncHistoryPersistsOutcomesAndPaginatesWithStableCursors(t *testing.
 
 func TestStartingRSSSyncClosesAnInterruptedAttempt(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "rss-interruption.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "rss-interruption.db"))
 	if err != nil {
 		t.Fatal(err)
 	}

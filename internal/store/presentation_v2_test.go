@@ -10,7 +10,7 @@ import (
 
 func TestPresentationSelectionRequiresCompleteCurrentV2(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "presentation-order.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "presentation-order.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +67,7 @@ func TestPresentationSelectionRequiresCompleteCurrentV2(t *testing.T) {
 
 func TestPresentationSelectionSupportsArbitraryTranslationScope(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "presentation-language-scope.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "presentation-language-scope.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +109,7 @@ func TestPresentationSelectionSupportsArbitraryTranslationScope(t *testing.T) {
 	}
 }
 
-func insertCompletedPresentationRun(t *testing.T, ctx context.Context, database *Store, incidentID int64, sourceHash, pipelineVersion string, completed time.Time, values map[string]string) int64 {
+func insertCompletedPresentationRun(t testing.TB, ctx context.Context, database *Store, incidentID int64, sourceHash, pipelineVersion string, completed time.Time, values map[string]string) int64 {
 	t.Helper()
 	result, err := database.db.ExecContext(ctx, `INSERT INTO presentation_runs(incident_id,source_hash,pipeline_version,status,legacy,created_at,completed_at) VALUES(?,?,?,'complete',0,?,?)`, incidentID, sourceHash, pipelineVersion, formatTime(completed.Add(-time.Minute)), formatTime(completed))
 	if err != nil {

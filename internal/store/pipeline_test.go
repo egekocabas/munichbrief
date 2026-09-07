@@ -15,7 +15,7 @@ func testPipelinePlans() []PipelineStepPlan {
 	}
 }
 
-func insertPipelineDocuments(t *testing.T, ctx context.Context, database *Store, now time.Time, ids ...string) {
+func insertPipelineDocuments(t testing.TB, ctx context.Context, database *Store, now time.Time, ids ...string) {
 	t.Helper()
 	if _, err := database.db.ExecContext(ctx, `UPDATE pipeline_cutovers SET scheduled_after='1970-01-01T00:00:00Z' WHERE pipeline_version=?`, PipelineVersion); err != nil {
 		t.Fatal(err)

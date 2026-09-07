@@ -9,7 +9,7 @@ import (
 
 func TestPipelineHistoryCombinesCanonicalAndPostProcessingJobsWithStableCursors(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "pipeline-history.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "pipeline-history.db"))
 	if err != nil {
 		t.Fatal(err)
 	}

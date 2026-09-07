@@ -15,6 +15,7 @@ import (
 )
 
 func TestAIDisclosureVisibilityAndAssets(t *testing.T) {
+	t.Parallel()
 	database := fixtureStore(t)
 	handler := testServer(t, database).Handler()
 
@@ -98,6 +99,7 @@ func TestAIDisclosureVisibilityAndAssets(t *testing.T) {
 }
 
 func TestAIDisclosureAcknowledgementCookieAndRedirect(t *testing.T) {
+	t.Parallel()
 	database := fixtureStore(t)
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	server, err := NewWithOptions(database, logger, Options{
@@ -155,6 +157,7 @@ func TestAIDisclosureAcknowledgementCookieAndRedirect(t *testing.T) {
 }
 
 func TestAIGeneratedLabelsHTMLMarkdownAndSocialCard(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	database := fixtureStore(t)
 	incidentID := completeDisclosureTestPresentation(t, ctx, database)
@@ -246,6 +249,7 @@ func TestAIGeneratedLabelsHTMLMarkdownAndSocialCard(t *testing.T) {
 }
 
 func TestPublicModeDoesNotForceDisclosurePreview(t *testing.T) {
+	t.Parallel()
 	database := fixtureStore(t)
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	server, err := NewWithOptions(database, logger, Options{

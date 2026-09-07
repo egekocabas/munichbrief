@@ -162,13 +162,30 @@ func (s *Store) queuePostProcessingForAll(ctx context.Context, sourceMode string
 			cutover = ` AND julianday(r.completed_at)>julianday((SELECT automatic_after FROM post_processing_scopes WHERE processor_key=? AND scope_key=?))`
 			args = append(args, plan.ProcessorKey, plan.ScopeKey)
 		}
+		// Satisfied runs need no input loading or hashing. Keep runs with older
+		// pending jobs eligible so queuePostProcessingTx still supersedes those
+		// jobs, even when the newest run already has active or successful work.
+		unsatisfied := ""
+		if !force {
+			unsatisfied = ` AND (NOT EXISTS (
+				SELECT 1 FROM post_processing_jobs job
+				WHERE job.presentation_run_id=r.id AND job.processor_key=? AND job.scope_key=?
+				AND job.status IN ('pending','running','succeeded')
+			) OR EXISTS (
+				SELECT 1 FROM presentation_runs older JOIN post_processing_jobs job ON job.presentation_run_id=older.id
+				WHERE older.id<>r.id AND older.incident_id=r.incident_id AND older.source_hash=r.source_hash
+				AND older.pipeline_version=? AND older.legacy=0
+				AND job.processor_key=? AND job.scope_key=? AND job.status='pending'
+			))`
+			args = append(args, plan.ProcessorKey, plan.ScopeKey, PipelineVersion, plan.ProcessorKey, plan.ScopeKey)
+		}
 		query := `SELECT r.id,r.incident_id,r.source_hash FROM presentation_runs r
 			JOIN incidents i ON i.id=r.incident_id JOIN source_documents d ON d.id=i.source_document_id
 			WHERE ` + condition + ` AND r.source_hash=i.content_hash AND r.status='complete' AND r.pipeline_version=? AND r.legacy=0
 			AND r.id=(SELECT candidate.id FROM presentation_runs candidate
 				WHERE candidate.incident_id=i.id AND candidate.source_hash=i.content_hash AND candidate.status='complete'
 				AND candidate.pipeline_version='` + PipelineVersion + `' AND candidate.legacy=0
-				ORDER BY candidate.completed_at DESC,candidate.id DESC LIMIT 1)` + cutover + ` ORDER BY r.completed_at,r.id`
+				ORDER BY candidate.completed_at DESC,candidate.id DESC LIMIT 1)` + cutover + unsatisfied + ` ORDER BY r.completed_at,r.id`
 		rows, err := tx.QueryContext(ctx, query, args...)
 		if err != nil {
 			return 0, err
