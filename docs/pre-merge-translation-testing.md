@@ -143,7 +143,7 @@ manifest and result report.
 
 | Language | Candidate | Structural | Meaning/readability | Repeats | Decision / open issue | Next action |
 | --- | --- | --- | --- | --- | --- | --- |
-| English | HY-MT2 | A-F: 6/6; revised D-F: 3/3 | A-C acceptable with caveats; focused guidance fixed all D-F meaning errors | Not run with revised prompt | Final stability check pending | Discuss, then repeat A/B with revised prompt: four calls |
+| English | HY-MT2 | Final protocol: 8/8 pairs | Accurate/readable on assistant review; minor A/B wording caveats | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Spanish A-C |
 | Spanish | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After English |
 | French | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Spanish |
 | Italian | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After French |
@@ -281,8 +281,29 @@ English A-F is now ready for the final A/B repetition under the revised prompt.
 Because A/B were generated before the guidance change, the repetition must make
 four new calls under the new identity rather than reusing those responses.
 
-**Next proposed batch: revised-prompt English A/B repetition, four native calls,
-after discussion.**
+## English final A/B repetition and decision: 2026-09-08
+
+Completed exactly four sequential revised-prompt calls for A/B repetition in
+**5m12s**, with no retry or transport failure. Zero-call replay reused, validated,
+and persisted all four responses.
+
+| Fixture | Structural | Meaning/readability | Stability finding |
+| --- | --- | --- | --- |
+| A repeat | Pass | Pass with minor style caveat | Improved medical precision, S-Bahnen agreement, and police-contact wording; “lightly injured” remains understandable but less idiomatic than “slightly injured” |
+| B repeat | Pass | Pass with minor legal-wording caveat | Identical to the earlier acceptable output; “final judgment” remains broader than “final conviction” without reversing the presumption-of-innocence safeguard |
+
+Both pairs preserve typed placeholders, numbers, attribution, uncertainty,
+negation, roles, causality, medical examination, and legal meaning. The focused
+guidance did not regress A/B. It does not address any term in C, so C's existing
+accepted result remains part of this bounded decision rather than adding calls
+outside the agreed repetition batch; this is recorded as an evidence limitation.
+
+Final assistant decision: **English is acceptable on this sample**. The eight
+protocol positions (A-F plus A/B repetition) pass structural checks and the
+accurate-and-readable threshold after the focused D-F correction. Minor wording
+caveats remain. This is neither native approval nor a guarantee for unseen text.
+
+**Next proposed batch: Spanish A-C, six native calls, after discussion.**
 
 ## References
 
