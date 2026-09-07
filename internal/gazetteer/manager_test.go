@@ -43,6 +43,14 @@ func TestManagerKeepsLastGenerationWhenRefreshFails(t *testing.T) {
 	if _, err := manager.Refresh(ctx); err != nil || !manager.Ready() {
 		t.Fatalf("initial refresh err=%v ready=%v", err, manager.Ready())
 	}
+	protected, err := manager.Protect("Einsatz an der Ganghoferstraße", "Die Ganghoferstraße blieb gesperrt.")
+	if err != nil || !strings.Contains(protected.Title, "__MB_STREET_") || !strings.Contains(protected.Summary, "__MB_STREET_") {
+		t.Fatalf("production protection must use typed streets: %#v / %v", protected, err)
+	}
+	title, summary, err := Restore(protected, protected.Title, protected.Summary)
+	if err != nil || title != "Einsatz an der Ganghoferstraße" || summary != "Die Ganghoferstraße blieb gesperrt." {
+		t.Fatalf("typed production roundtrip = %q / %q / %v", title, summary, err)
+	}
 
 	status = http.StatusBadGateway
 	if _, err := manager.Refresh(ctx); err == nil {

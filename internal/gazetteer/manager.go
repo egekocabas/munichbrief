@@ -73,7 +73,7 @@ func (m *Manager) Protect(title, summary string) (Protected, error) {
 	if m == nil || !m.ready.Load() {
 		return Protected{}, errors.New("gazetteer is not ready")
 	}
-	return m.matcher.Load().Protect(title, summary)
+	return m.matcher.Load().ProtectWithOptions(title, summary, ProtectionOptions{Mode: ProtectionTyped})
 }
 
 func (m *Manager) Refresh(ctx context.Context) (RefreshResult, error) {

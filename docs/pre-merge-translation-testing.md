@@ -1,103 +1,198 @@
-# Pre-merge translation testing
+# Translation readiness: HY-MT2 first, then remaining languages
 
-This document is the release gate for the reader-language pull request. The
-application can preserve structure and place names deterministically, but those
-checks cannot approve meaning, grammar, legal framing, or publication quality.
-Do not merge the language change until every item below is recorded in the pull
-request and the native-review items are complete.
+Agreed 2026-09-08 for PR #55. This roadmap supersedes earlier future-work
+recommendations in [Translation model evaluation](translation-model-evaluation.md)
+and PR comments. Preserve their evidence, harnesses, and checkpoints.
 
-## Freeze the candidate routes
+## Acceptance and stopping points
 
-For every translated reader language, record:
+Aim for accurate, readable translations. Minor grammar/style issues are allowed;
+changed facts, missing negation, misleading legal meaning, or unreadable output
+are not. Mechanical acceptance does not establish meaning. Inspect every output,
+record assistant assessment separately from fluent/native review, and seek
+targeted help for uncertain consequential wording.
 
-- the exact Ollama model name and resolved digest;
-- the adapter (`structured`, `translategemma`, or `hy-mt2`), prompt version,
-  context size, and generation settings;
-- whether the adapter officially supports the source and target language;
-- the model artifact, parameter size, and quantization;
-- the reviewer and review date.
+Complete a decision for every language; failed languages may remain unconfigured
+and paused when the PR merges. Stop after the initial four-call checkpoint and
+after every language to discuss results before advancing. Merge and deployment
+remain separate decisions.
 
-Configure these routes on the protected `/admin/translations` page only after
-the candidate passes evaluation. A route change affects new jobs only: queued
-jobs retain their frozen model, adapter, and prompt. Mechanical scores alone
-must not select a production default.
+## Step 1: prepare the production test path
 
-## Deterministic checks
+- [x] Production Gazetteer protection uses typed placeholders; explicit opaque
+  mode remains for historical experiments.
+- [x] Keep HY-MT2 prompt/settings unchanged for the baseline. Effective context:
+  HY-MT2 8192; TranslateGemma 2048. Record actual requests and model digests.
+- [x] Exercise the protected provider and queued worker in disposable incident
+  databases, including restoration, validation, persistence, and route provenance.
+- [x] Use test-only recording/replay HTTP transport to capture responses before
+  validation and resume completed requests without regenerating them.
+- [x] Pin rendered request hashes, model digest, fixtures, frozen Gazetteer
+  generation/content, code identity, and revision. A changed prompt must invalidate
+  reuse even when the human-readable version name is unchanged.
+- [x] Select language, fixture, repetition, and maximum new calls independently.
+- [x] Test typed production requests, separate native fields, interrupted-summary
+  resume, identity mismatch rejection, rejected-output capture, and persisted
+  successful/failed jobs. Never weaken validators to improve scores.
+- [x] Correct the PR description: per-language routes, typed protection,
+  plain-text model output, and incident migration 016.
 
-Run the complete non-networked validation suite in
-[Development](development.md), including race tests, documentation checks,
-frontend regeneration, Helm rendering, and application builds. In addition,
-verify:
+Native adapters translate title and summary separately and sequentially.
+Romanian's existing Qwen structured adapter returns both in one request; test
+that production behavior without another adapter.
 
-- registry order, language negotiation, cookies, dates, plural categories,
-  catalogs, metadata, hreflang, sitemap, Markdown routes, and social cards;
-- NFC normalization and representative Latin, Han, Devanagari, Greek, and
-  Cyrillic characters;
-- adapter request contracts, separate title and summary calls, exact model and
-  adapter persistence, immutable queued-job routing, and audit provenance;
-- exact typed-placeholder occurrence counts, field ownership, restoration,
-  number preservation, plain-text output, target script, and title/summary
-  limits;
-- Gazetteer source bounds, source contracts, generation activation and
-  fallback, matcher construction, overrides, and the protected admin status
-  page;
-- the translations admin page at narrow and desktop widths, including a
-  missing model, unsupported adapter, active job, failed replacement, and
-  retained successful publication.
+## Step 2: freeze six incidents
 
-## Resumable live matrix
+Freeze the entire pack before tuning. Store downloaded text, model outputs,
+databases, and checkpoints under ignored `.local/translation-evaluations/`.
+Commit only synthetic fixtures, aggregate findings, and reproducibility guidance.
 
-Live tests are opt-in and must use a disposable database and checkpoint
-directory. Use three privacy-minimised current MunichBrief German summaries and
-three artificial edge cases. The six fixtures together must cover:
+| Fixture | Coverage |
+| --- | --- |
+| A | Current plain-text transit/allegation summary plus title: street, stations, S-Bahnen/U-Bahn, attribution, uncertainty, medical examination, date/time/duration, witness request |
+| B | Allegation versus established fact, unresolved involvement, no conviction, presumption of innocence, repeated names |
+| C | Exact versus approximate time, date, duration, 110, speed/measurement, explicit medical examination versus police questioning, negation, causality |
+| D-F | Three frozen public German MunichBrief incidents across different domains, ordinary/longer prose and varied entities |
 
-- transit, streets, districts, neighbourhoods, municipalities, landmarks,
-  repeated names, and target-language word-order changes;
-- dates, exact times, telephone numbers, speeds, measurements, and causality;
-- attribution, uncertainty, negation, allegations, examination/questioning,
-  public-assistance wording, and the presumption of innocence;
-- short and near-limit titles, multi-sentence summaries, Unicode punctuation,
-  and all target scripts.
+Record a source-fact checklist: who did what, where, when, uncertainty, and
+relationships. Do not demand one interpretation of ambiguous German. Preflight
+plain text, field limits, and Gazetteer matches. Fix genuine source/parser/override
+gaps separately from prompting. No sentence segmentation, generated Markdown,
+old exhaustive spelling matrix, or unrelated model comparison.
 
-Send title and summary as separate sequential calls through the same
-production provider, Gazetteer protection, adapter, restoration, validation,
-and persistence path used by the worker. Checkpoint the manifest before the
-first request and append one durable event after every field call. Resume only
-when the model digest, prompt, settings, fixture hashes, language set, and
-adapter still match. A transport interruption is not a model failure.
+## Step 3: HY-MT2
 
-Do not commit downloaded police text, raw model output, checkpoints, test
-databases, or generated translations. It is acceptable to commit anonymized
-fixture structure and aggregated findings.
+Model: `hf.co/mradermacher/Hy-MT2-7B-GGUF:Q5_K_M`; adapter: `hy-mt2`.
 
-## Review and report
+1. Translate A's title and summary into English, then Ukrainian: **four calls**.
+   Inspect outputs and persisted results, report, and stop. Shared integration
+   failure blocks expansion; Ukrainian-only quality failure gets focused work.
+2. Complete languages in order: **English, Spanish, French, Italian, Polish,
+   Turkish, Ukrainian, Chinese, Hindi, Russian**.
+3. Per language, inspect A-C first. If materially accurate, run D-F, then repeat
+   A and B once. Report and stop for discussion before advancing.
 
-Publish one table with a row per language and separate columns for structural
-passes, semantic passes, fluent/native review, open failures, model, adapter,
-and digest. Inspect every output, including outputs that passed mechanically.
-A fluent reviewer must approve:
+Normal budget: eight pairs / 16 native calls per language, 160 calls across ten.
+Identical initial calls count toward the pack. Run across separate sessions.
+Historical timing ranged from about one minute per field to three minutes per
+summary; estimate the next batch using current measured calls.
 
-- natural grammar and idiom;
-- exact facts, actors, relationships, dates, times, and numbers;
-- neutral police terminology, attribution, uncertainty, allegations, and the
-  presumption of innocence;
-- AI disclosure, privacy, source attribution, navigation, and metadata copy.
+Classify infrastructure, deterministic-validation, meaning, and readability
+failures separately. Fix proven validation bugs with regression tests; revalidate
+saved responses offline first. Allow at most two focused prompt-revision rounds
+per language. Test failures first, then complete the pack under the revised
+prompt. Preserve every attempt; do not retry until a lucky pass. Prefer short,
+general language-specific terminology/context guidance for local issues.
+Shared prompt changes require affected languages to be reassessed. Pause
+persistent material failures and continue only after discussing the result.
 
-Any failed or pending native review keeps that language route unapproved. The
-application may retain an unconfigured language without blocking canonical
-German processing; automatic translation for that language remains paused.
+## Step 4: remaining languages
 
-## Operational release checks
+Start after all ten HY-MT2 targets have an evaluation decision.
 
-Before merge, confirm the public ingress repository already permits every new
-language prefix. Before deployment, back up the incident database, confirm the
-Gazetteer has a healthy active generation, confirm every approved model is
-installed, and recheck the per-language routes in `/admin/translations`. On an
-upgrade from the shared translation setting, deploy with automatic processing
-disabled, review or replace the inherited English `structured` route, configure
-each newly registered language, and enable the worker only after all intended
-routes report ready.
-Registration creates automatic work only for future presentations and does not
-backfill history. Queue unpublished historical translations explicitly after
-review, then monitor per-language coverage, failures, queue age, model capacity,
-and Gazetteer refresh health.
+| Languages | Starting candidate | Adapter |
+| --- | --- | --- |
+| Croatian, Bosnian, Greek | `hf.co/mradermacher/translategemma-12b-it-GGUF:Q3_K_S` | `translategemma` |
+| Romanian | `hf.co/bartowski/Qwen_Qwen3.5-9B-GGUF:Q3_K_M` | `structured` |
+
+Verify installed artifact, language-code support, template, and available memory.
+First run Croatian A's two fields as a loading/translation gate. Record loading
+time, request duration, completion, and memory evidence. The Q3_K_S artifact is
+about 5.6 GB; runtime fit on the Pi is unproven. Prior IQ3 evidence does not
+qualify Q3_K_S. Stop and report loading failure or repeated Ollama restarts.
+
+Use the same eight-pair protocol, one language at a time. Romanian needs eight
+structured requests; distinguish requests from field counts. Seed-X remains
+excluded after its placeholder failure. Further fallback models need a separate
+decision after reporting the selected candidate.
+
+## Step 5: decisions and release evidence
+
+- **Acceptable on this sample:** final eight pairs pass structure, preserve
+  material facts/legal meaning, and are understandable; minor style/grammar
+  issues allowed. This small sample is not a quality guarantee.
+- **Needs focused work:** an identified next test within the two-round limit.
+- **Paused:** unresolved material errors, unreadability, uncertain critical
+  meaning, or hardware failure. Leave the route unconfigured.
+
+After every call durably save input, raw response, restored output when available,
+timing, identity, checks, and attempt status. Keep manual review in a separate
+record never overwritten by resume. Transport interruptions are not model scores.
+Update the table and report after each language before continuing. Exact model
+names above plus resolved digests belong in the run manifest and result report.
+
+| Language | Candidate | Structural | Meaning/readability | Repeats | Decision / open issue | Next action |
+| --- | --- | --- | --- | --- | --- | --- |
+| English | HY-MT2 | A: 1/1 pair | Usable gate; minor wording/grammar caveats | Not run | Full qualification pending | Discuss, then B/C: four calls |
+| Spanish | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After English |
+| French | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Spanish |
+| Italian | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After French |
+| Polish | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Italian |
+| Turkish | HY-MT2 | Not run | Pending | Pending | Historical grammar/redundancy | After Polish |
+| Ukrainian | HY-MT2 | A: 1/1 pair | Allegation wording ambiguous | Not run | Needs focused work; unapproved | Focused review when Ukrainian is reached |
+| Chinese | HY-MT2 | Not run | Pending | Pending | Historical semantic errors | After Ukrainian |
+| Hindi | HY-MT2 | Not run | Pending | Pending | Historical legal/role errors | After Chinese |
+| Russian | HY-MT2 | Not run | Pending | Pending | Historical legal/role errors | After Hindi |
+| Croatian | TranslateGemma Q3_K_S | Not run | Pending | Pending | Runtime fit unknown | After HY-MT2 decisions |
+| Bosnian | TranslateGemma Q3_K_S | Not run | Pending | Pending | Runtime fit/quality unknown | After Croatian |
+| Greek | TranslateGemma Q3_K_S | Not run | Pending | Pending | Runtime fit/quality unknown | After Bosnian |
+| Romanian | Qwen 9B | Not run | Pending | Pending | Older baseline only | After Greek |
+
+Before merge: review reader catalogs (especially disclosure, attribution, legal
+copy), run the full non-Docker [development suite](development.md), verify admin,
+upgrade migration, retained publications, and paused-language behavior using
+disposable data/recorded responses. Confirm `homelab-infra` permits all public
+prefixes. Update the PR with actual qualified routes, paused languages, evidence,
+and limitations.
+
+During later rollout configure only approved routes, explicitly review inherited
+English settings, verify Gazetteer/model readiness, preserve future-only cutovers,
+and keep historical backfill an operator action. No Docker; no automatic merge
+or deployment.
+
+## Four-call checkpoint: 2026-09-08
+
+Completed exactly four HY-MT2 calls (English A title/summary, then Ukrainian A
+title/summary) in **7m43s**, with no transport failure or generation retry.
+Both pairs passed placeholder counts, numbers, plain text, target script,
+restoration, and final production validation, and were persisted with the
+expected model/adapter/prompt provenance in isolated databases.
+Replaying those actual responses through the worker used zero new generation
+calls and preserved the separate manual review records.
+
+Model digest:
+`24acc0f002f8c874f34e8b3e22da236405f7c3a47ae9d62d3744cf3c5b4bd693`.
+Code-content identity:
+`80038b4cabbc2a586f6bb858ee38c139e45271d6cec211036bb568e2693ac6ff`.
+The initial test invocation omitted explicit VCS stamping; its manifest records
+revision as unknown. The exact source-content hash was captured before inference,
+and separate local provenance records parent revision `95965a2` with worktree
+changes. Documented future commands use `-buildvcs=true`.
+
+English retained the principal facts, allegation, negation, and transit roles.
+Minor caveats: plural agreement, medical examination broadened to medical
+attention, and contact wording broadened from the responsible police station
+to relevant authorities. This is promising under the agreed readability bar,
+not full-language approval.
+
+Ukrainian retained names, numeric facts, medical examination, and transit roles.
+Its phrasing of the alleged injury is ambiguous between reported allegation
+and expected/obligatory action. That consequential uncertainty needs focused
+wording review; no native approval or full semantic pass is claimed.
+
+The frozen real Gazetteer has 12,136 names. Its station labels are generic
+TRANSIT, unlike the older handcrafted TRAIN_STATION fixture. Garching-Hochbrück
+also resolves to TRANSIT; review that contextual ambiguity before fixture E.
+Real fixtures D-F use public incidents 1021, 1023, and 1024. Incident 1022 was
+excluded for contradictory German source wording, not a translation failure.
+
+Raw requests, outputs, source checklists, isolated databases, and separate manual
+review records remain in `.local/translation-evaluations/readiness-v1/`.
+No further live batch has started. **Next proposed batch: English B/C, four
+native calls, after discussion.**
+
+## References
+
+- [Tencent HY-MT2 contract](https://huggingface.co/tencent/Hy-MT2-7B)
+- [Google TranslateGemma contract](https://huggingface.co/google/translategemma-12b-it)
+- [Q3_K_S artifact](https://huggingface.co/mradermacher/translategemma-12b-it-GGUF)

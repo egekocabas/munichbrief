@@ -1,5 +1,13 @@
 # Translation model evaluation
 
+Current roadmap: [Translation readiness](pre-merge-translation-testing.md).
+The dated experiments below are historical evidence, not current approvals.
+Their future-work recommendations are superseded by that roadmap. Production
+uses typed Gazetteer protection and durable per-language model/adapter settings.
+Stored model output is plain text; older Markdown experiments do not describe
+the current contract. The next Croatian/Bosnian/Greek candidate is TranslateGemma
+12B Q3_K_S, whose runtime fit and quality must be measured separately from IQ3.
+
 MunichBrief treats structural safety, semantic fidelity, and target-language
 quality as separate acceptance dimensions. A structurally valid model response
 is not evidence that its translation is accurate or publishable.

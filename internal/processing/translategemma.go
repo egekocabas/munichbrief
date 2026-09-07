@@ -21,6 +21,8 @@ type TranslateGemmaNativeAdapter struct {
 	source, target langregistry.Definition
 }
 
+const translateGemmaContextLimit = 2048
+
 func NewTranslateGemmaNativeAdapter(baseURL, model, targetCode string, timeout time.Duration, contextSize int, baseClient *http.Client) (*TranslateGemmaNativeAdapter, error) {
 	definitions := langregistry.Registered()
 	if err := langregistry.Validate(definitions); err != nil {
@@ -31,7 +33,7 @@ func NewTranslateGemmaNativeAdapter(baseURL, model, targetCode string, timeout t
 	if !found || target.Canonical {
 		return nil, errors.New("TranslateGemma native adapter requires a translated target language")
 	}
-	client, err := NewOllamaClient(baseURL, model, timeout, contextSize, baseClient)
+	client, err := NewOllamaClient(baseURL, model, timeout, min(contextSize, translateGemmaContextLimit), baseClient)
 	if err != nil {
 		return nil, err
 	}

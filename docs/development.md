@@ -147,14 +147,54 @@ codes with `MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_LANGUAGES` and fixture names with
 evaluation evidence and requires manual semantic review even when all
 mechanical checks pass.
 
-The complete release gate, resumable six-fixture matrix, per-language report,
-and native-review requirements are in
+The current release gate, resumable six-fixture matrix, per-language report,
+and review criteria are in
 [Pre-merge translation testing](pre-merge-translation-testing.md).
+
+The production-worker readiness harness is the current evaluation entry point.
+It requires an isolated directory containing a refreshed `gazetteer.db` and
+`real-fixtures.json`: an array of three objects with IDs `D`, `E`, and `F`,
+`title`, `summary`, `source` URL, a `facts` string array, and a `places` string
+array. Synthetic A-C are defined in the harness. Freeze all six before running.
+Do not copy an operational incident database into the evaluation directory.
+
+```bash
+MUNICHBRIEF_READINESS_LIVE_TEST=1 \
+MUNICHBRIEF_READINESS_DIR=.local/translation-evaluations/readiness-v1 \
+MUNICHBRIEF_OLLAMA_BASE_URL=http://127.0.0.1:11434 \
+MUNICHBRIEF_READINESS_LANGUAGES=en,uk \
+MUNICHBRIEF_READINESS_FIXTURES=A \
+MUNICHBRIEF_READINESS_REPETITIONS=1 \
+MUNICHBRIEF_READINESS_MAX_NEW_CALLS=4 \
+go test -buildvcs=true -count=1 -timeout 70m -run '^TestLiveTranslationReadiness$' \
+  -v ./internal/processing
+```
+
+Language/fixture/repetition selections and the new-call budget do not invalidate
+completed requests. Select one language for later stages: A-C first, then D-F,
+then A-B with repetition 2. Set `MUNICHBRIEF_READINESS_ADAPTER` to `hy-mt2`
+(default), `translategemma`, or `structured` for the roadmap's fixed candidates.
+Set the new-call limit to zero to revalidate recorded responses without inference
+(the installed digest is still verified). A transport interruption stops the run;
+rerun the same command to replay saved fields and finish only missing calls.
+
+The manifest pins code-content identity, revision provenance, model digest,
+fixtures, and Gazetteer generation/content. Rendered request bodies are checked
+before both replay and generation. Code/model/source changes require a new
+directory; documentation-only commits do not invalidate identical requests.
+Append-only `requests.jsonl` retains every attempt, including rejected raw
+responses. Separate per-case databases and result files retain worker outcomes;
+`*-review.json` is initialized once and never overwritten by resume. An incomplete
+final event is retained separately before repairing its append boundary. Completed
+invalid model responses are replayed, not silently replaced by another attempt.
+
+The older native-adapter and summary screens below remain historical comparison
+tools. They are not substitutes for the queued-worker readiness harness.
 
 The smaller HY-MT2 plain-text screen sends one summary request for each of the
 ten supported MunichBrief targets (`en`, `tr`, `it`, `uk`, `zh`, `hi`, `es`,
 `fr`, `pl`, and `ru`). It uses its own configuration-bound checkpoint directory
-and is the preferred gate before expanding another full title-and-summary run:
+and remains available for reproducing the older summary-only comparison:
 
 ```bash
 MUNICHBRIEF_HYMT2_LANGUAGE_SCREEN_LIVE_TEST=1 \

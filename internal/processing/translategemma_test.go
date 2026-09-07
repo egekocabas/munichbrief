@@ -20,6 +20,9 @@ func TestTranslateGemmaNativeAdapterUsesOfficialPlainTextPrompt(t *testing.T) {
 		if len(payload.Format) != 0 || len(payload.Messages) != 1 || payload.Messages[0].Role != "user" {
 			t.Fatalf("native request unexpectedly used schema or multiple roles: %#v", payload)
 		}
+		if payload.Options.NumCtx != 2048 {
+			t.Fatalf("TranslateGemma context = %d, want 2048", payload.Options.NumCtx)
+		}
 		prompt := payload.Messages[0].Content
 		for _, expected := range []string{"German (de) to Turkish (tr)", "Produce only the Turkish translation", ":\n\n\nEinsatz am __MB_PLACE_0001__"} {
 			if !strings.Contains(prompt, expected) {
@@ -33,7 +36,7 @@ func TestTranslateGemmaNativeAdapterUsesOfficialPlainTextPrompt(t *testing.T) {
 		_ = json.NewEncoder(&response).Encode(chatResponse{Model: "translategemma:test", Done: true, Message: chatMessage{Role: "assistant", Content: "__MB_PLACE_0001__ konumundaki olay"}})
 		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(response.Bytes()))}, nil
 	})
-	adapter, err := NewTranslateGemmaNativeAdapter("http://ollama.test:11434", "translategemma:test", "tr", time.Second, 2048, &http.Client{Transport: transport})
+	adapter, err := NewTranslateGemmaNativeAdapter("http://ollama.test:11434", "translategemma:test", "tr", time.Second, 8192, &http.Client{Transport: transport})
 	if err != nil {
 		t.Fatal(err)
 	}
