@@ -137,3 +137,14 @@ func TestParsePoliceReleaseDropsScriptText(t *testing.T) {
 		t.Fatalf("body = %q, want script text removed", result.Incidents[0].BodyDE)
 	}
 }
+
+func TestExtractedTextSurvivesUnsupportedIncidentStructure(t *testing.T) {
+	parsed, err := ParsePoliceRelease([]byte(`<section class="bp-template bp-presse"><h1>Synthetic release</h1><div>Unnumbered <strong>source</strong> text.</div><ul><li>First detail</li><li>Second detail</li></ul><script>secretScript()</script><style>secretStyle</style></section>`))
+	if !errors.Is(err, ErrNoIncidents) {
+		t.Fatalf("error=%v", err)
+	}
+	want := "Synthetic release\n\nUnnumbered source text.\n\nFirst detail\n\nSecond detail"
+	if parsed.ExtractedText != want {
+		t.Fatalf("extracted=%q want %q", parsed.ExtractedText, want)
+	}
+}

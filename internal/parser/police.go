@@ -21,8 +21,9 @@ var (
 // ParsedRelease contains the normalized incidents and a deterministic hash of
 // their content, not of incidental source markup.
 type ParsedRelease struct {
-	SourceHash string
-	Incidents  []domain.Incident
+	ExtractedText string
+	SourceHash    string
+	Incidents     []domain.Incident
 }
 
 type block struct {
@@ -52,6 +53,7 @@ func ParsePoliceRelease(contents []byte) (ParsedRelease, error) {
 
 	var blocks []block
 	collectBlocks(releaseContent, &blocks)
+	extractedText := extractReleaseText(releaseContent)
 	var incidents []domain.Incident
 	var current *domain.Incident
 	var bodyBlocks []string
@@ -92,15 +94,16 @@ func ParsePoliceRelease(contents []byte) (ParsedRelease, error) {
 	finishCurrent()
 
 	if len(incidents) == 0 {
-		return ParsedRelease{}, ErrNoIncidents
+		return ParsedRelease{ExtractedText: extractedText}, ErrNoIncidents
 	}
 	incidentHashes := make([]string, 0, len(incidents))
 	for _, incident := range incidents {
 		incidentHashes = append(incidentHashes, incident.ContentHash)
 	}
 	return ParsedRelease{
-		SourceHash: hash(incidentHashes...),
-		Incidents:  incidents,
+		ExtractedText: extractedText,
+		SourceHash:    hash(incidentHashes...),
+		Incidents:     incidents,
 	}, nil
 }
 
@@ -195,4 +198,45 @@ func hasClasses(node *html.Node, required ...string) bool {
 func hash(parts ...string) string {
 	digest := sha256.Sum256([]byte(strings.Join(parts, "\x00")))
 	return fmt.Sprintf("%x", digest[:])
+}
+
+// extractReleaseText preserves readable source content, including structures the
+// incident parser may not recognize, without retaining markup or executable text.
+func extractReleaseText(root *html.Node) string {
+	var parts []string
+	var current strings.Builder
+	flush := func() {
+		if text := normalizeText(current.String()); text != "" {
+			parts = append(parts, text)
+		}
+		current.Reset()
+	}
+	var walk func(*html.Node)
+	walk = func(node *html.Node) {
+		if node.Type == html.ElementNode && (node.Data == "script" || node.Data == "style" || node.Data == "noscript") {
+			return
+		}
+		boundary := false
+		if node.Type == html.ElementNode {
+			switch node.Data {
+			case "p", "div", "section", "article", "header", "footer", "h1", "h2", "h3", "h4", "h5", "h6", "li", "ul", "ol", "blockquote", "pre", "tr", "td", "th", "br":
+				boundary = true
+			}
+		}
+		if boundary {
+			flush()
+		}
+		if node.Type == html.TextNode {
+			current.WriteString(node.Data)
+		}
+		for child := node.FirstChild; child != nil; child = child.NextSibling {
+			walk(child)
+		}
+		if boundary {
+			flush()
+		}
+	}
+	walk(root)
+	flush()
+	return strings.Join(parts, "\n\n")
 }

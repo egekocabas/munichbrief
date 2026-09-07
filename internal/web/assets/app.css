@@ -281,3 +281,11 @@
     animation-iteration-count: 1 !important;
   }
 }
+
+/* Keep expanded source text within the visible table viewport on small screens. */
+.rss-history-table {
+  container-type: inline-size;
+}
+.rss-history-table .rss-check-details {
+  width: calc(100cqw - 2rem);
+}

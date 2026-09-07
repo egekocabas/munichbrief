@@ -289,9 +289,41 @@
       const response = await fetch(window.location.href, {headers: {Accept: "text/html"}, cache: "no-store"});
       if (!response.ok) throw new Error(`status ${response.status}`);
       const parsedDocument = new DOMParser().parseFromString(await response.text(), "text/html");
-      const nextHistory = parsedDocument.querySelector("[data-pipeline-history]");
+      const nextHistory = parsedDocument.querySelector("[data-pipeline-history], [data-rss-history]");
       if (!(nextHistory instanceof HTMLElement)) throw new Error("history content missing");
-      if (history.innerHTML !== nextHistory.innerHTML) history.replaceChildren(...nextHistory.childNodes);
+      if (history.innerHTML !== nextHistory.innerHTML) {
+        if (history.matches("[data-rss-history]")) {
+          const focused = document.activeElement;
+          const scrollX = window.scrollX;
+          const scrollY = window.scrollY;
+          const tableScroll = history.querySelector(".rss-history-table")?.scrollLeft || 0;
+          // Reuse existing detail nodes: polling must not discard loaded snapshots.
+          for (const row of history.querySelectorAll("[data-rss-row]")) {
+            const id = row.dataset.rssRow;
+            const nextRow = nextHistory.querySelector(`[data-rss-row="${id}"]`);
+            const panel = history.querySelector(`#rss-check-${id}`);
+            if (nextRow) {
+              for (let i = 1; i < row.cells.length; i += 1) {
+                if (!row.cells[i].contains(focused) && row.cells[i].innerHTML !== nextRow.cells[i].innerHTML) {
+                  row.cells[i].replaceChildren(...nextRow.cells[i].childNodes);
+                }
+              }
+              nextRow.replaceWith(row);
+              nextHistory.querySelector(`#rss-check-${id}`)?.replaceWith(panel);
+            } else if (panel && (!panel.hidden || row.contains(focused))) {
+              // Keep a check being read even when a new check pushes it off the page.
+              nextHistory.querySelector("tbody")?.append(row, panel);
+            }
+          }
+          history.replaceChildren(...nextHistory.childNodes);
+          const table = history.querySelector(".rss-history-table");
+          if (table) table.scrollLeft = tableScroll;
+          if (focused instanceof HTMLElement && focused.isConnected) focused.focus({preventScroll: true});
+          window.scrollTo(scrollX, scrollY);
+        } else {
+          history.replaceChildren(...nextHistory.childNodes);
+        }
+      }
       failures = 0;
       schedule(interval);
     } catch (_error) {
@@ -351,6 +383,7 @@ const initializeOperationsRefresh = ({regionSelector, intervalAttribute, connect
       if (!(nextRegion instanceof HTMLElement)) throw new Error(`${contentLabel} content missing`);
       const scrollX = window.scrollX;
       const scrollY = window.scrollY;
+          const tableScroll = history.querySelector(".rss-history-table")?.scrollLeft || 0;
       region.replaceChildren(...nextRegion.childNodes);
       window.scrollTo(scrollX, scrollY);
       failures = 0;
@@ -384,4 +417,39 @@ initializeOperationsRefresh({
   intervalAttribute: "verificationPollInterval",
   connectionSelector: "[data-verification-connection]",
   contentLabel: "verification operations",
+});
+
+
+// Anchors provide full-page navigation without JavaScript; enhanced navigation
+// loads protected HTML fragments only when a check/document is expanded.
+document.addEventListener("click", async (event) => {
+  const toggle = event.target.closest?.("[data-rss-toggle]");
+  if (!toggle || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  const panel = document.getElementById(toggle.getAttribute("aria-controls"));
+  if (!panel) return;
+  event.preventDefault();
+  const open = toggle.getAttribute("aria-expanded") !== "true";
+  toggle.setAttribute("aria-expanded", String(open));
+  panel.hidden = !open;
+  if (!open || panel.dataset.loading === "true") return;
+  // Reopening refreshes running checks while preserving a loaded panel when closed.
+  const content = panel.matches("[data-rss-content]") ? panel : panel.querySelector("[data-rss-content]");
+  if (!content) return;
+  panel.dataset.loading = "true";
+  content.setAttribute("aria-busy", "true");
+  if (!panel.dataset.loaded) content.textContent = "Loading details…";
+  try {
+    const url = new URL(toggle.href);
+    url.searchParams.set("fragment", "1");
+    const response = await fetch(url, {headers: {Accept: "text/html"}, cache: "no-store"});
+    if (!response.ok) throw new Error("Details request failed");
+    const html = new DOMParser().parseFromString(await response.text(), "text/html");
+    content.replaceChildren(...html.body.childNodes);
+    panel.dataset.loaded = "true";
+  } catch (_error) {
+    if (!panel.dataset.loaded) content.textContent = "Could not load details. Close and reopen to retry, or open the details link in a new tab.";
+  } finally {
+    panel.dataset.loading = "false";
+    content.removeAttribute("aria-busy");
+  }
 });

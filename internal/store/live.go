@@ -51,22 +51,29 @@ type SyncRunResult struct {
 // RSSSyncHistoryEntry is one durable RSS synchronization attempt shown in the
 // protected operations UI.
 type RSSSyncHistoryEntry struct {
-	ID              int64
-	StartedAt       time.Time
-	CompletedAt     *time.Time
-	WindowStart     time.Time
-	WindowEnd       time.Time
-	Status          string
-	NotModified     bool
-	FeedDocuments   int
-	Discovered      int
-	Fetched         int
-	FetchFailures   int
-	ParserFailures  int
-	Skipped         int
-	DurationSeconds float64
-	Summary         string
-	ErrorMessage    string
+	ID                int64
+	StartedAt         time.Time
+	CompletedAt       *time.Time
+	WindowStart       time.Time
+	WindowEnd         time.Time
+	Status            string
+	NotModified       bool
+	FeedDocuments     int
+	Discovered        int
+	Fetched           int
+	FetchFailures     int
+	ParserFailures    int
+	Skipped           int
+	DurationSeconds   float64
+	Summary           string
+	ErrorMessage      string
+	DetailsRecorded   bool
+	NewDocuments      int
+	ExistingDocuments int
+	Inserted          int
+	Updated           int
+	Unchanged         int
+	Removed           int
 }
 
 // RSSSyncHistoryCursor identifies a stable boundary in reverse-chronological
@@ -90,6 +97,17 @@ func (s *Store) UpsertSourceMetadata(ctx context.Context, documents []domain.Sou
 	}
 	defer tx.Rollback()
 
+	if err := upsertSourceMetadata(ctx, tx, documents, observedAt); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit source metadata ingestion: %w", err)
+	}
+	return nil
+}
+
+func upsertSourceMetadata(ctx context.Context, tx *sql.Tx, documents []domain.SourceDocument, observedAt time.Time) error {
 	now := formatTime(observedAt.UTC())
 	for _, document := range documents {
 		if _, err := tx.ExecContext(ctx, `
@@ -123,9 +141,6 @@ func (s *Store) UpsertSourceMetadata(ctx context.Context, documents []domain.Sou
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit source metadata ingestion: %w", err)
-	}
 	return nil
 }
 
@@ -205,6 +220,17 @@ func (s *Store) ReplaceDocumentIncidents(ctx context.Context, documentID int64, 
 	}
 	defer tx.Rollback()
 
+	if err := replaceDocumentIncidents(ctx, tx, documentID, sourceHash, incidents, fetchedAt); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit incident replacement: %w", err)
+	}
+	return nil
+}
+
+func replaceDocumentIncidents(ctx context.Context, tx *sql.Tx, documentID int64, sourceHash string, incidents []domain.Incident, fetchedAt time.Time) error {
 	now := formatTime(fetchedAt.UTC())
 	result, err := tx.ExecContext(ctx, `
 		UPDATE source_documents
@@ -245,9 +271,6 @@ func (s *Store) ReplaceDocumentIncidents(ctx context.Context, documentID int64, 
 		return fmt.Errorf("remove stale parsed incidents: %w", err)
 	}
 
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit incident replacement: %w", err)
-	}
 	return nil
 }
 
@@ -302,6 +325,9 @@ func (s *Store) RecordSyncAttempt(ctx context.Context, attemptedAt, windowStart,
 	}
 	defer tx.Rollback()
 	formattedAttempt := formatTime(attemptedAt.UTC())
+	if _, err := tx.ExecContext(ctx, `UPDATE rss_sync_documents SET fetch_status='interrupted' WHERE fetch_status='pending' AND check_id IN (SELECT id FROM rss_sync_history WHERE source_name=? AND status='running')`, syncSourceName); err != nil {
+		return 0, err
+	}
 	if _, err := tx.ExecContext(ctx, `
 		UPDATE rss_sync_history
 		SET completed_at=?,status='failed',
@@ -320,8 +346,8 @@ func (s *Store) RecordSyncAttempt(ctx context.Context, attemptedAt, windowStart,
 		return 0, fmt.Errorf("record sync attempt state: %w", err)
 	}
 	result, err := tx.ExecContext(ctx, `
-		INSERT INTO rss_sync_history(source_name,started_at,window_start,window_end,status)
-		VALUES(?,?,?,?,'running')`,
+		INSERT INTO rss_sync_history(source_name,started_at,window_start,window_end,status,details_recorded)
+		VALUES(?,?,?,?,'running',1)`,
 		syncSourceName,
 		formattedAttempt,
 		formatTime(windowStart.UTC()),
@@ -402,6 +428,9 @@ func (s *Store) RecordSyncFailure(ctx context.Context, attemptID int64, failedAt
 	}
 	defer tx.Rollback()
 	errorMessage := sanitizedError(syncError)
+	if _, err := tx.ExecContext(ctx, `UPDATE rss_sync_documents SET fetch_status='interrupted' WHERE check_id=? AND fetch_status='pending'`, attemptID); err != nil {
+		return err
+	}
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO sync_state(source_name, last_attempt_at, result)
 		VALUES (?, ?, ?)
@@ -412,7 +441,7 @@ func (s *Store) RecordSyncFailure(ctx context.Context, attemptID int64, failedAt
 		return fmt.Errorf("record sync failure state: %w", err)
 	}
 	result, err := tx.ExecContext(ctx, `
-		UPDATE rss_sync_history SET completed_at=?,status='failed',not_modified=NULL,
+		UPDATE rss_sync_history SET completed_at=?,status='failed',
 			feed_documents=?,discovered=?,fetched=?,fetch_failures=?,parser_failures=?,skipped=?,
 			duration_seconds=?,summary=?,error_message=?
 		WHERE id=? AND source_name=? AND status='running'`,
@@ -479,7 +508,13 @@ func (s *Store) ListRSSSyncHistory(ctx context.Context, limit int, before, after
 func (s *Store) listRSSSyncHistoryEntries(ctx context.Context, limit int, before, after *RSSSyncHistoryCursor) ([]RSSSyncHistoryEntry, error) {
 	query := `SELECT id,started_at,completed_at,window_start,window_end,status,not_modified,
 		feed_documents,discovered,fetched,fetch_failures,parser_failures,skipped,
-		duration_seconds,summary,COALESCE(error_message,'')
+		duration_seconds,summary,COALESCE(error_message,''),details_recorded,
+		(SELECT COUNT(*) FROM rss_sync_documents d WHERE d.check_id=rss_sync_history.id AND in_window=1 AND existed=0),
+		(SELECT COUNT(*) FROM rss_sync_documents d WHERE d.check_id=rss_sync_history.id AND in_window=1 AND existed=1),
+		(SELECT COALESCE(SUM(inserted),0) FROM rss_sync_documents d WHERE d.check_id=rss_sync_history.id),
+		(SELECT COALESCE(SUM(updated),0) FROM rss_sync_documents d WHERE d.check_id=rss_sync_history.id),
+		(SELECT COALESCE(SUM(unchanged),0) FROM rss_sync_documents d WHERE d.check_id=rss_sync_history.id),
+		(SELECT COALESCE(SUM(removed),0) FROM rss_sync_documents d WHERE d.check_id=rss_sync_history.id)
 		FROM rss_sync_history WHERE source_name=?`
 	args := []any{syncSourceName}
 	ascending := false
@@ -528,6 +563,13 @@ func (s *Store) listRSSSyncHistoryEntries(ctx context.Context, limit int, before
 			&entry.DurationSeconds,
 			&entry.Summary,
 			&entry.ErrorMessage,
+			&entry.DetailsRecorded,
+			&entry.NewDocuments,
+			&entry.ExistingDocuments,
+			&entry.Inserted,
+			&entry.Updated,
+			&entry.Unchanged,
+			&entry.Removed,
 		); err != nil {
 			return nil, fmt.Errorf("scan RSS sync history: %w", err)
 		}

@@ -18,27 +18,29 @@
       <div class="max-w-3xl">
         <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Source operations</p>
         <h1 class="mt-1 font-serif text-4xl font-bold tracking-tight">RSS synchronization history</h1>
-        <p class="mt-3 text-muted">Durable checks of the official feed and its seven-day ingestion window. Feed and article contents are excluded; failure messages are sanitized.</p>
+        <p class="mt-3 text-muted">Durable checks of the official feed and its seven-day ingestion window. Expand a check for document outcomes and retained extracted text. Counts describe database changes at that check; failure messages are sanitized.</p>
       </div>
       <p class="text-sm font-semibold text-muted">{{len .Entries}} checks shown</p>
     </div>
 
     {{if .Entries}}
-    <div class="mt-8 overflow-x-auto rounded-lg border border-rule bg-paper">
+    <div class="rss-history-table mt-8 overflow-x-auto rounded-lg border border-rule bg-paper">
       <table class="w-full border-collapse text-left text-sm">
         <thead class="border-b border-rule bg-newsprint/70 text-xs uppercase tracking-wider text-muted">
-          <tr><th class="px-4 py-3">Started</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Feed</th><th class="px-4 py-3">Articles</th><th class="px-4 py-3">Window</th><th class="px-4 py-3">Diagnostic</th></tr>
+          <tr><th class="px-4 py-3">Started</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Feed</th><th class="px-4 py-3">Articles</th><th class="px-4 py-3">Database outcomes</th><th class="px-4 py-3">Window</th><th class="px-4 py-3">Diagnostic</th></tr>
         </thead>
         <tbody class="divide-y divide-rule/70">
           {{range .Entries}}
-          <tr class="align-top">
-            <td class="whitespace-nowrap px-4 py-4"><strong>Check #{{.ID}}</strong><time class="mt-1 block text-xs text-muted" datetime="{{.StartedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime "en" .StartedAt}}</time></td>
+          <tr class="align-top" data-rss-row="{{.ID}}">
+            <td class="whitespace-nowrap px-4 py-4"><a id="rss-toggle-{{.ID}}" class="font-bold text-civic" href="/admin/rss-history/{{.ID}}" data-rss-toggle aria-expanded="false" aria-controls="rss-check-{{.ID}}">Check #{{.ID}} · Details</a><time class="mt-1 block text-xs text-muted" datetime="{{.StartedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime "en" .StartedAt}}</time></td>
             <td class="whitespace-nowrap px-4 py-4"><strong class="{{if eq .Status "failed"}}text-alert{{else if or (eq .Status "running") (gt .FetchFailures 0) (gt .ParserFailures 0) (gt .Skipped 0)}}text-amber-700{{else}}text-emerald-700{{end}}">{{if eq .Status "failed"}}Failed{{else if eq .Status "running"}}Running{{else if or (gt .FetchFailures 0) (gt .ParserFailures 0) (gt .Skipped 0)}}Succeeded with warnings{{else}}Succeeded{{end}}</strong><span class="mt-1 block text-xs text-muted">{{if eq .Status "running"}}In progress{{else}}{{printf "%.3f" .DurationSeconds}}s{{end}}</span></td>
-            <td class="whitespace-nowrap px-4 py-4">{{if and (eq .Status "succeeded") .NotModified}}<strong>Not modified</strong><span class="mt-1 block text-xs text-muted">No feed body returned</span>{{else}}<strong>{{.FeedDocuments}} documents</strong><span class="mt-1 block text-xs text-muted">{{if eq .Status "succeeded"}}Modified · {{.Discovered}} in window{{else if eq .Status "failed"}}Incomplete outcome{{else}}Awaiting response{{end}} · skipped {{.Skipped}}</span>{{end}}</td>
-            <td class="whitespace-nowrap px-4 py-4"><strong>Fetched {{.Fetched}}</strong><span class="mt-1 block text-xs text-muted">Fetch failures {{.FetchFailures}} · parser failures {{.ParserFailures}}</span></td>
+            <td class="whitespace-nowrap px-4 py-4">{{if .NotModified}}<strong>Not modified</strong><span class="mt-1 block text-xs text-muted">No feed body returned</span>{{else}}<strong>{{.FeedDocuments}} documents</strong><span class="mt-1 block text-xs text-muted">{{if eq .Status "succeeded"}}Modified · {{.Discovered}} in window{{else if eq .Status "failed"}}Incomplete outcome{{else}}Awaiting response{{end}} · skipped {{.Skipped}}</span>{{end}}</td>
+            <td class="whitespace-nowrap px-4 py-4"><strong>Parsed and stored {{.Fetched}}</strong><span class="mt-1 block text-xs text-muted">Fetch failures {{.FetchFailures}} · parser failures {{.ParserFailures}}</span></td>
+            <td class="min-w-48 px-4 py-4">{{if .DetailsRecorded}}<strong class="block">Documents: {{.NewDocuments}} new · {{.ExistingDocuments}} existing</strong><span class="mt-1 block text-xs text-muted">Incidents: {{.Inserted}} inserted · {{.Updated}} updated · {{.Unchanged}} unchanged{{if .Removed}} · {{.Removed}} removed{{end}}</span>{{if eq .Status "running"}}<span class="text-xs text-muted">Partial · in progress</span>{{else if eq .Status "failed"}}<span class="text-xs text-muted">Partial · check failed</span>{{end}}{{else}}<strong>—</strong><span class="block text-xs text-muted">Details not recorded</span>{{end}}</td>
             <td class="whitespace-nowrap px-4 py-4"><time datetime="{{.WindowStart.Format "2006-01-02T15:04:05Z07:00"}}">{{formatISODate .WindowStart}}</time><span class="mx-1 text-muted">–</span><time datetime="{{.WindowEnd.Format "2006-01-02T15:04:05Z07:00"}}">{{formatISODate .WindowEnd}}</time><span class="mt-1 block text-xs text-muted">Europe/Berlin · end exclusive</span></td>
             <td class="max-w-md px-4 py-4 text-xs"><span class="font-mono">{{if .ErrorMessage}}{{.ErrorMessage}}{{else if eq .Status "running"}}Awaiting completion{{else}}No terminal error{{end}}</span></td>
           </tr>
+          <tr id="rss-check-{{.ID}}" hidden><td colspan="7" class="px-4 py-4 bg-newsprint/70" data-rss-content></td></tr>
           {{end}}
         </tbody>
       </table>
@@ -57,4 +59,46 @@
   </main>
 </body>
 </html>
+{{end}}
+
+{{define "rss_details_page"}}
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><title>Fetch details · MunichBrief Admin</title><script src="{{assetURL "theme.js"}}"></script><link rel="stylesheet" href="{{assetURL "app.css"}}"><script defer src="{{assetURL "admin.js"}}"></script></head>
+<body class="min-h-screen text-ink antialiased">{{template "admin-header" "rss-history"}}<main class="page-shell py-8"><a class="font-bold text-civic" href="/admin/rss-history">← RSS history</a><div class="mt-5">{{if .Document}}{{template "rss_document_details" .}}{{else}}{{template "rss_check_details" .}}{{end}}</div></main></body></html>
+{{end}}
+
+{{define "rss_check_details"}}
+<section class="rss-check-details" aria-label="Check {{.Check.ID}} details">
+<h2 class="font-serif text-2xl font-bold">Check #{{.Check.ID}} · {{.Check.Status}}</h2>
+<p class="mt-2 text-sm text-muted">Document and incident outcomes below describe this check, not the current database. {{if eq .Check.Status "running"}}Results are still being recorded.{{else if eq .Check.Status "failed"}}Results are incomplete because this check failed.{{end}}</p>
+{{if not .Check.Recorded}}<p class="mt-4">Details not recorded for this older check. Historical contents and database outcomes cannot be reconstructed.</p>{{else}}
+{{range .Check.Documents}}
+<article class="mt-4 rounded-lg border border-rule bg-paper p-4">
+<h3 class="font-bold">{{.Title}}</h3>
+<p class="mt-1 break-words text-sm"><a class="text-civic" href="{{.SourceURL}}" target="_blank" rel="noopener noreferrer">Official source ↗</a> · {{.PublishedAt}} · External ID {{.ExternalID}}{{if .DocumentID}} · Document #{{.DocumentID}}{{end}}</p>
+<p class="mt-2 text-sm"><strong>{{if .InWindow}}{{if .Existed}}Existing document{{else}}New document{{end}}{{else}}Outside ingestion window{{end}}</strong> · {{rssFetchLabel .FetchStatus}}{{if .FetchReason}} · {{rssFetchLabel .FetchReason}}{{end}}{{if not .FromFeed}} · Selected from database for refresh/retry{{end}}</p>
+{{if eq .FetchStatus "stored"}}<p class="mt-1 text-sm">Incidents: {{.Inserted}} inserted · {{.Updated}} updated · {{.Unchanged}} unchanged · {{.Removed}} removed</p>{{end}}
+{{if .ErrorMessage}}<p class="mt-2 text-sm text-alert">{{.ErrorMessage}}</p>{{end}}
+<a class="mt-3 inline-block font-bold text-civic" id="rss-document-toggle-{{.ID}}" href="/admin/rss-history/{{.CheckID}}/documents/{{.ID}}" data-rss-toggle aria-expanded="false" aria-controls="rss-document-{{.ID}}">Source text and parsed result</a>
+<div id="rss-document-{{.ID}}" hidden data-rss-content class="mt-4"></div>
+</article>
+{{else}}<p class="mt-4">{{if eq .Check.Status "succeeded"}}No document observations or fetches recorded for this check. An unchanged feed can return no documents.{{else}}No document details recorded yet for this incomplete check.{{end}}</p>{{end}}
+{{if .NextURL}}<a class="mt-4 inline-block font-bold text-civic" href="{{.NextURL}}">More documents →</a>{{end}}
+{{end}}
+</section>
+{{end}}
+
+{{define "rss_document_details"}}
+{{with .Document}}
+<section aria-label="Document snapshot">
+<h2 class="font-serif text-xl font-bold">{{.Title}}</h2>
+<p class="mt-2 text-sm text-muted">Snapshot from check #{{.CheckID}} · {{rssFetchLabel .FetchStatus}}. Extracted German text before incident splitting; raw HTML is not retained.</p>
+{{if .ErrorMessage}}<p class="mt-2 text-sm text-alert">{{.ErrorMessage}}</p>{{end}}
+<div class="mt-4 grid gap-5 lg:grid-cols-2">
+<section class="min-w-0"><h3 class="font-bold">Original extracted text</h3>{{if .ExtractedText}}<pre class="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-rule bg-paper p-4 font-sans text-sm" lang="de" tabindex="0">{{.ExtractedText}}</pre>{{else}}<p class="mt-2 text-sm text-muted">Text unavailable: {{if eq .FetchStatus "fetch_failed"}}the article request failed.{{else if eq .FetchStatus "parse_failed"}}the release content could not be extracted.{{else if eq .FetchStatus "outside_window"}}this document was outside the ingestion window.{{else if eq .FetchStatus "not_needed"}}no article fetch was needed.{{else if eq .FetchStatus "pending"}}the fetch has not completed.{{else if eq .FetchStatus "interrupted"}}the check was interrupted.{{else}}no extracted text was recorded.{{end}}</p>{{end}}</section>
+<section class="min-w-0"><h3 class="font-bold">Parsed incidents</h3>
+{{range .Incidents}}<div class="mt-2 rounded-lg border border-rule bg-paper p-4" lang="de"><h4 class="font-bold">{{.Number}}. {{.TitleDE}}</h4><p class="text-xs text-muted">Position {{.Position}}</p><pre class="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words font-sans text-sm" tabindex="0">{{.BodyDE}}</pre></div>{{else}}<p class="mt-2 text-sm text-muted">No parsed result recorded.</p>{{end}}
+</section></div>
+{{if .Outcomes}}<h3 class="mt-4 font-bold">Database outcomes at this check</h3><ul class="mt-2 text-sm">{{range .Outcomes}}<li>Position {{.Position}} · Incident {{.Number}} · Database ID #{{.IncidentID}} · <strong>{{.Status}}</strong></li>{{end}}</ul>{{else if .Incidents}}<p class="mt-4 text-sm">Parsed output was not committed to the database.</p>{{end}}
+</section>
+{{end}}
 {{end}}
