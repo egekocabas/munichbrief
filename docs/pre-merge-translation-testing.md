@@ -143,7 +143,7 @@ manifest and result report.
 
 | Language | Candidate | Structural | Meaning/readability | Repeats | Decision / open issue | Next action |
 | --- | --- | --- | --- | --- | --- | --- |
-| English | HY-MT2 | A: 1/1 pair | Usable gate; minor wording/grammar caveats | Not run | Full qualification pending | Discuss, then B/C: four calls |
+| English | HY-MT2 | A-C: 3/3 pairs | B/C accurate and readable; A has minor wording/grammar caveats | Not run | Expansion pending | Discuss, then D-F: six calls |
 | Spanish | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After English |
 | French | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Spanish |
 | Italian | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After French |
@@ -208,8 +208,27 @@ excluded for contradictory German source wording, not a translation failure.
 
 Raw requests, outputs, source checklists, isolated databases, and separate manual
 review records remain in `.local/translation-evaluations/readiness-v1/`.
-No further live batch has started. **Next proposed batch: English B/C, four
-native calls, after discussion.**
+
+## English B/C bounded batch: 2026-09-08
+
+Completed exactly four sequential HY-MT2 calls for English B and C (separate
+title and summary) in **4m33s**, with no retry or transport failure. Both pairs
+passed typed-placeholder, numeric, plain-text, restoration, final validation,
+and queued-worker persistence checks using adapter `hy-mt2` and prompt
+`incident-translation-en-v3`.
+
+| Fixture | Structural | Meaning/readability | Caveat |
+| --- | --- | --- | --- |
+| B: legal meaning | Pass | Acceptable for expansion | “Final judgment” is broader than “final conviction,” but allegation, uncertain involvement, no conviction, presumption of innocence, and witness request remain intact |
+| C: precise facts and roles | Pass | Acceptable for expansion | No consequential issue found; exact/approximate times, numbers, causality, examination/questioning roles, injury negation, and 110 remain intact |
+
+All place occurrences were restored, all results were persisted with the expected
+model/adapter/prompt provenance, and the ignored durable records contain exact
+requests, raw responses, timings, checks, and separate assistant review. This is
+not native approval. English A-C now passes the agreed screening threshold;
+D-F and the A/B repetition remain required for a full sample decision.
+
+**Next proposed batch: English D-F, six native calls, after discussion.**
 
 ## References
 
