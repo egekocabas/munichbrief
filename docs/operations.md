@@ -114,6 +114,29 @@ during the current check. History begins with the first sync after migration
 014; the previous single-row synchronization state remains the source for
 request validators and last-success metrics.
 
+After migration 015, each check also records document observations and fetch
+outcomes. The table shows distinct in-window new/existing documents (including
+existing articles selected for retry/refresh) and inserted/updated/unchanged
+incident counts. “Parsed and stored” counts articles whose parsing and database
+writes succeeded. Expand a check, then a document, for its extracted German
+text, parser output, and database outcomes at that time. Detail pages support
+cursor pagination and work without JavaScript; polling preserves open panels.
+Reopen a panel to refresh its details while a check is running.
+
+Document identity uses the existing source URL; incident identity uses the
+existing source-document/position pair. These counts describe storage changes,
+not semantic matching across reports. Out-of-window feed documents are listed
+separately, and malformed/discarded feed entries retain only the source client's
+aggregate skipped count. A 304 response can still produce article retries.
+Older checks show “Details not recorded” and unknown counts rather than inferred
+historical results. Interrupted checks retain completed document outcomes.
+
+Extracted text and parsed results are immutable snapshots shared by content hash.
+History does not read mutable incident text. Raw HTML is never retained, and
+snapshots are served only through protected admin routes with no-store headers.
+Snapshots have no automatic expiry and increase database/backup storage; see
+[retention policy](source-policy.md#retention).
+
 `review` presentation mode displays stored German source text and processing
 states and is intended for local fixture development. `public` mode fails closed: it
 lists only incidents with a privacy-safe presentation from the active source

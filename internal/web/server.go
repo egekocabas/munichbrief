@@ -84,6 +84,8 @@ type incidentStore interface {
 	ListAdminPublicAssistanceVerifications(context.Context, []int64) ([]store.AdminPublicAssistanceVerification, error)
 	ListPipelineHistory(context.Context, string, int, *store.PipelineHistoryCursor, *store.PipelineHistoryCursor) (store.PipelineHistoryPage, error)
 	ListRSSSyncHistory(context.Context, int, *store.RSSSyncHistoryCursor, *store.RSSSyncHistoryCursor) (store.RSSSyncHistoryPage, error)
+	RSSCheckDetails(context.Context, int64, int, int64) (store.RSSCheckDetails, error)
+	RSSDocumentSnapshot(context.Context, int64, int64) (store.RSSDocumentDetail, error)
 	Ready(context.Context) error
 }
 
@@ -193,6 +195,7 @@ func newWithLanguages(database incidentStore, logger *slog.Logger, options Optio
 		return nil, fmt.Errorf("initialize localization: %w", err)
 	}
 	functions := template.FuncMap{
+		"rssFetchLabel":        rssFetchLabel,
 		"assetURL":             assetURL,
 		"aiLabelAssetURL":      selectedAIGeneratedAssetURL,
 		"aiLabelLightAssetURL": selectedAILightThemeAssetURL,
@@ -274,6 +277,8 @@ func (s *Server) Handler() http.Handler {
 		mux.HandleFunc("GET /admin/translations", s.adminTranslationsPage)
 		mux.HandleFunc("GET /admin/verifications", s.adminVerificationsPage)
 		mux.HandleFunc("GET /admin/rss-history", s.adminRSSHistory)
+		mux.HandleFunc("GET /admin/rss-history/{id}", s.adminRSSDetails)
+		mux.HandleFunc("GET /admin/rss-history/{id}/documents/{document}", s.adminRSSDetails)
 		mux.HandleFunc("GET /admin/history", s.adminHistory)
 		mux.HandleFunc("GET /api/admin/ai/status", s.pipelineStatus)
 		mux.HandleFunc("POST /api/admin/ai/process-now", s.processIncidentNow)

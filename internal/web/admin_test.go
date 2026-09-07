@@ -29,6 +29,8 @@ func TestAdminIsDisabledByDefault(t *testing.T) {
 		{method: http.MethodGet, path: "/admin"},
 		{method: http.MethodGet, path: "/admin/translations"},
 		{method: http.MethodGet, path: "/admin/rss-history"},
+		{method: http.MethodGet, path: "/admin/rss-history/1"},
+		{method: http.MethodGet, path: "/admin/rss-history/1/documents/1?fragment=1"},
 		{method: http.MethodGet, path: "/admin/history"},
 		{method: http.MethodPost, path: "/api/admin/ai/process-all-now"},
 		{method: http.MethodPost, path: "/api/admin/ai/translations/process"},
@@ -876,7 +878,7 @@ func TestAdminRSSHistoryShowsDurableChecksAndCursorPagination(t *testing.T) {
 	}
 	for _, expected := range []string{
 		"RSS synchronization history", "2 checks shown", "RSS history", `aria-current="page"`,
-		"In progress", "upstream &lt;timeout&gt;", "Fetched 2", "Fetch failures 1", "Older →",
+		"In progress", "upstream &lt;timeout&gt;", "Parsed and stored 2", "Fetch failures 1", "Older →",
 		`data-rss-history`, `data-history-poll-interval="5000"`, staticAssets["admin.js"].path,
 	} {
 		if !strings.Contains(first.Body.String(), expected) {
@@ -890,7 +892,7 @@ func TestAdminRSSHistoryShowsDurableChecksAndCursorPagination(t *testing.T) {
 
 	older := httptest.NewRecorder()
 	handler.ServeHTTP(older, httptest.NewRequest(http.MethodGet, match[1], nil))
-	if older.Code != http.StatusOK || !strings.Contains(older.Body.String(), "← Newer") || !strings.Contains(older.Body.String(), "6 documents") || !strings.Contains(older.Body.String(), "Fetched 6") || !strings.Contains(older.Body.String(), "0.750s") || !strings.Contains(older.Body.String(), "2026-08-30") || !strings.Contains(older.Body.String(), "2026-09-06") {
+	if older.Code != http.StatusOK || !strings.Contains(older.Body.String(), "← Newer") || !strings.Contains(older.Body.String(), "6 documents") || !strings.Contains(older.Body.String(), "Parsed and stored 6") || !strings.Contains(older.Body.String(), "0.750s") || !strings.Contains(older.Body.String(), "2026-08-30") || !strings.Contains(older.Body.String(), "2026-09-06") {
 		t.Fatalf("older RSS history = %d/%q", older.Code, older.Body.String())
 	}
 

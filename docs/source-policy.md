@@ -79,6 +79,14 @@ automatic deletion deadline. This supports source-change detection, quality
 review, and reproducible processing, but it is an explicit temporary policy,
 not a conclusion that indefinite retention is legally appropriate.
 
+RSS checks recorded after migration 015 additionally retain the extracted
+release text before incident splitting and immutable parsed-output snapshots,
+including extracted text from failed parses when available. Identical snapshots
+are reused across checks by content hash. Raw HTML is not stored. These records
+are protected operational data, excluded from public pages and logs, and have
+no automatic expiry. Future deletion policies must cover historical snapshots
+as well as current incidents and backups.
+
 Any deletion, anonymization, or review schedule requires deliberate product,
 legal, and operator approval. Database backups contain the same sensitive
 material and require equivalent access controls and lifecycle management.

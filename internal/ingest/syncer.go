@@ -20,10 +20,12 @@ type Repository interface {
 	RecordSyncAttempt(context.Context, time.Time, time.Time, time.Time) (int64, error)
 	RecordSyncSuccess(context.Context, int64, string, string, time.Time, store.SyncRunResult) error
 	RecordSyncFailure(context.Context, int64, time.Time, store.SyncRunResult, error) error
-	UpsertSourceMetadata(context.Context, []domain.SourceDocument, time.Time) error
+	ObserveRSSDocuments(context.Context, int64, []domain.SourceDocument, time.Time, time.Time, time.Time) error
+	QueueRSSFetches(context.Context, int64, []store.SourceDocumentRecord, bool) error
+	RecordRSSFeedProgress(context.Context, int64, store.SyncRunResult) error
 	ListDocumentsForFetch(context.Context, time.Time, time.Time, time.Time, bool) ([]store.SourceDocumentRecord, error)
-	ReplaceDocumentIncidents(context.Context, int64, string, []domain.Incident, time.Time) error
-	MarkDocumentFetchFailed(context.Context, int64, time.Time, error) error
+	StoreRSSFetch(context.Context, int64, int64, parser.ParsedRelease, time.Time) error
+	FailRSSFetch(context.Context, int64, int64, string, parser.ParsedRelease, time.Time, error) error
 }
 
 // Syncer serializes conditional feed refreshes and article parsing.
@@ -124,14 +126,21 @@ func (s *Syncer) Sync(ctx context.Context) (Result, error) {
 			}
 		}
 		result.Discovered = len(inWindow)
-		if err := s.repository.UpsertSourceMetadata(ctx, inWindow, now); err != nil {
+		if err := s.repository.ObserveRSSDocuments(ctx, attemptID, feed.Documents, now, start, end); err != nil {
 			return result, s.fail(ctx, attemptID, now, syncStartedAt, result, err)
 		}
+	}
+
+	if err := s.repository.RecordRSSFeedProgress(ctx, attemptID, syncRunResult(result, time.Since(syncStartedAt))); err != nil {
+		return result, s.fail(ctx, attemptID, now, syncStartedAt, result, err)
 	}
 
 	forceRefresh := feedChanged(state, feed)
 	documents, err := s.repository.ListDocumentsForFetch(ctx, start, end, now.Add(-s.refreshAfter), forceRefresh)
 	if err != nil {
+		return result, s.fail(ctx, attemptID, now, syncStartedAt, result, err)
+	}
+	if err := s.repository.QueueRSSFetches(ctx, attemptID, documents, forceRefresh); err != nil {
 		return result, s.fail(ctx, attemptID, now, syncStartedAt, result, err)
 	}
 	for _, document := range documents {
@@ -149,7 +158,7 @@ func (s *Syncer) Sync(ctx context.Context) (Result, error) {
 			logger.Warn("press release request failed", attributes...)
 			result.FetchFailures++
 			result.ArticleFailures++
-			if markErr := s.repository.MarkDocumentFetchFailed(ctx, document.ID, now, fetchErr); markErr != nil {
+			if markErr := s.repository.FailRSSFetch(ctx, attemptID, document.ID, "fetch_failed", parser.ParsedRelease{}, now, fetchErr); markErr != nil {
 				return result, s.fail(ctx, attemptID, now, syncStartedAt, result, errors.Join(fetchErr, markErr))
 			}
 			continue
@@ -169,12 +178,14 @@ func (s *Syncer) Sync(ctx context.Context) (Result, error) {
 			logger.Warn("press release processing failed", attributes...)
 			result.ParserFailures++
 			result.ArticleFailures++
-			if markErr := s.repository.MarkDocumentFetchFailed(ctx, document.ID, now, err); markErr != nil {
+			if markErr := s.repository.FailRSSFetch(ctx, attemptID, document.ID, "parse_failed", parsed, now, err); markErr != nil {
 				return result, s.fail(ctx, attemptID, now, syncStartedAt, result, errors.Join(err, markErr))
 			}
 			continue
 		}
-		if err := s.repository.ReplaceDocumentIncidents(ctx, document.ID, parsed.SourceHash, parsed.Incidents, now); err != nil {
+		if err := s.repository.StoreRSSFetch(ctx, attemptID, document.ID, parsed, now); err != nil {
+			markErr := s.repository.FailRSSFetch(ctx, attemptID, document.ID, "storage_failed", parsed, now, err)
+			err = errors.Join(err, markErr)
 			return result, s.fail(ctx, attemptID, now, syncStartedAt, result, err)
 		}
 		attributes := []any{

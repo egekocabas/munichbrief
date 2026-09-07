@@ -281,3 +281,40 @@ func testDocument(id string, publishedAt time.Time) domain.SourceDocument {
 		FeedFingerprint: "feed-" + id,
 	}
 }
+
+func TestRSSHistoryRecordsRetryAfterNotModifiedFeed(t *testing.T) {
+	ctx := context.Background()
+	db := testStore(t)
+	now := time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)
+	client := &fakeLiveClient{feedResults: []source.FeedResult{{Documents: []domain.SourceDocument{testDocument("synthetic-retry", now)}}, {NotModified: true}}, articleError: errors.New("synthetic fetch failure")}
+	syncer, err := NewSyncer(db, client, time.Hour, func() time.Time { return now }, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := syncer.Sync(ctx); err != nil {
+		t.Fatal(err)
+	}
+	client.articleError = nil
+	client.article = []byte(`<section class="bp-template bp-presse"><h2>1. Synthetic retry</h2><p>Recovered text</p></section>`)
+	now = now.Add(time.Minute)
+	result, err := syncer.Sync(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	history, err := db.ListRSSSyncHistory(ctx, 10, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	latest := history.Entries[0]
+	if !result.NotModified || latest.NewDocuments != 0 || latest.ExistingDocuments != 1 || latest.Inserted != 1 || latest.Fetched != 1 {
+		t.Fatalf("retry=%+v %+v", result, latest)
+	}
+	details, err := db.RSSCheckDetails(ctx, latest.ID, 10, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := details.Documents[0]
+	if d.FromFeed || d.FetchReason != "retry" || !d.Existed || d.FetchStatus != "stored" {
+		t.Fatalf("retry detail=%+v", d)
+	}
+}
