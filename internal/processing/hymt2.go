@@ -26,6 +26,10 @@ var hyMT2LanguageNames = map[string]string{
 	"ug": "Uyghur", "yue": "Cantonese",
 }
 
+var hyMT2LanguageGuidance = map[string]string{
+	"en": "Keep neutral German person labels neutral: do not translate ‘Betroffener’ or ‘Betroffene’ as ‘victim’ unless the source explicitly identifies a victim. Preserve explicit medical and police-control meaning: ‘stationär in ein Krankenhaus gebracht’ means admitted to hospital as an inpatient, and ‘Anhaltesignale’ in a police-control context means police stop signals or orders, not road stop signs.",
+}
+
 // HyMT2NativeAdapter follows Tencent's user-only translation contract and
 // recommended 1.8B/7B sampling parameters. Production routing selects it only
 // through a durable setting for an officially supported target language.
@@ -33,6 +37,7 @@ type HyMT2NativeAdapter struct {
 	client            *OllamaClient
 	sourceName        string
 	targetName        string
+	targetGuidance    string
 	generationOptions chatOptions
 }
 
@@ -59,9 +64,10 @@ func NewHyMT2NativeAdapter(baseURL, model, targetCode string, timeout time.Durat
 		return nil, err
 	}
 	return &HyMT2NativeAdapter{
-		client:     client,
-		sourceName: sourceName,
-		targetName: targetName,
+		client:         client,
+		sourceName:     sourceName,
+		targetName:     targetName,
+		targetGuidance: hyMT2LanguageGuidance[target.Code],
 		generationOptions: chatOptions{
 			Temperature:   0.7,
 			TopP:          0.6,
@@ -78,7 +84,7 @@ func (a *HyMT2NativeAdapter) Translate(ctx context.Context, text string) (string
 	if text == "" {
 		return "", "", errorOf(ErrorOutput, "Hy-MT2 native input is empty")
 	}
-	content, model, err := a.client.chatWithOptions(ctx, true, "", hyMT2NativePrompt(a.sourceName, a.targetName, text), nil, a.generationOptions)
+	content, model, err := a.client.chatWithOptions(ctx, true, "", hyMT2NativePrompt(a.sourceName, a.targetName, a.targetGuidance, text), nil, a.generationOptions)
 	if err != nil {
 		return "", model, err
 	}
@@ -89,7 +95,11 @@ func (a *HyMT2NativeAdapter) Translate(ctx context.Context, text string) (string
 	return content, model, nil
 }
 
-func hyMT2NativePrompt(sourceName, targetName, text string) string {
+func hyMT2NativePrompt(sourceName, targetName, guidance, text string) string {
+	guidance = strings.TrimSpace(guidance)
+	if guidance != "" {
+		guidance = "8. Target-language guidance: " + guidance + "\n"
+	}
 	return fmt.Sprintf(
 		"### Task\n"+
 			"Translate the following text from %s into %s.\n\n"+
@@ -100,8 +110,9 @@ func hyMT2NativePrompt(sourceName, targetName, text string) string {
 			"4. When a placeholder contains an entity type such as `STREET`, `DISTRICT`, `TRAIN_STATION`, `COMMUTER_TRAIN`, or `SUBWAY_SYSTEM`, use that type only to understand the sentence and produce natural grammar around the placeholder. Do not alter the placeholder itself.\n"+
 			"5. If the target language would normally require changing the hidden entity, restructure the surrounding sentence so the placeholder remains unchanged.\n"+
 			"6. Preserve the original meaning, tone, factual details, numbers, dates, times, negation, uncertainty, attribution, and relationships. Do not add or infer information.\n"+
-			"7. Produce natural, fluent %s rather than a word-for-word translation.\n\n"+
+			"7. Produce natural, fluent %s rather than a word-for-word translation.\n"+
+			"%s\n"+
 			"### Source Data\n%s",
-		sourceName, targetName, targetName, strings.TrimSpace(text),
+		sourceName, targetName, targetName, guidance, strings.TrimSpace(text),
 	)
 }

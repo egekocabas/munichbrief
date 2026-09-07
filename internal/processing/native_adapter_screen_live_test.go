@@ -590,7 +590,9 @@ func liveNativeAdapterFactory(baseURL string) nativeAdapterFactory {
 			if !ok {
 				return nil, nil, fmt.Errorf("Hy-MT2 prompt language %q is unsupported", language)
 			}
-			return adapter, func(text string) string { return hyMT2NativePrompt(hyMT2LanguageNames["de"], target, text) }, nil
+			return adapter, func(text string) string {
+				return hyMT2NativePrompt(hyMT2LanguageNames["de"], target, hyMT2LanguageGuidance[language], text)
+			}, nil
 		case "seed-x":
 			adapter, err := NewSeedXNativeAdapter(baseURL, spec.Model, language, 15*time.Minute, spec.ContextSize, nil)
 			if err != nil {

@@ -77,6 +77,25 @@ func TestHyMT2NativeAdapterMapsEverySupportedReaderLanguage(t *testing.T) {
 	}
 }
 
+func TestHyMT2NativeAdapterAddsOnlyConfiguredTargetGuidance(t *testing.T) {
+	english := hyMT2NativePrompt("German", "English", hyMT2LanguageGuidance["en"], "Quelle")
+	for _, expected := range []string{"neutral German person labels", "admitted to hospital as an inpatient", "police stop signals or orders"} {
+		if !strings.Contains(english, expected) {
+			t.Errorf("English guidance omitted %q: %s", expected, english)
+		}
+	}
+	if !strings.HasSuffix(english, "### Source Data\nQuelle") {
+		t.Fatalf("English source boundary changed: %q", english)
+	}
+	spanish := hyMT2NativePrompt("German", "Spanish", hyMT2LanguageGuidance["es"], "Quelle")
+	if strings.Contains(spanish, "Target-language guidance") || strings.Contains(spanish, "Betroffene") {
+		t.Fatalf("English guidance leaked into Spanish prompt: %q", spanish)
+	}
+	if !strings.Contains(spanish, "7. Produce natural, fluent Spanish rather than a word-for-word translation.\n\n### Source Data\nQuelle") {
+		t.Fatalf("fallback prompt structure changed: %q", spanish)
+	}
+}
+
 func TestHyMT2NativeAdapterRejectsUnsupportedReaderLanguages(t *testing.T) {
 	for _, code := range []string{"hr", "bs", "el", "ro"} {
 		t.Run(code, func(t *testing.T) {
