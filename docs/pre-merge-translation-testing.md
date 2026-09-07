@@ -143,7 +143,7 @@ manifest and result report.
 
 | Language | Candidate | Structural | Meaning/readability | Repeats | Decision / open issue | Next action |
 | --- | --- | --- | --- | --- | --- | --- |
-| English | HY-MT2 | A-C: 3/3 pairs | B/C accurate and readable; A has minor wording/grammar caveats | Not run | Expansion pending | Discuss, then D-F: six calls |
+| English | HY-MT2 | A-F: 6/6 after D time-format fix | A-C acceptable with caveats; D-F each has a material meaning error | Not run | Needs focused work | Discuss general English guidance; rerun D-F failures first |
 | Spanish | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After English |
 | French | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Spanish |
 | Italian | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After French |
@@ -228,7 +228,31 @@ requests, raw responses, timings, checks, and separate assistant review. This is
 not native approval. English A-C now passes the agreed screening threshold;
 D-F and the A/B repetition remain required for a full sample decision.
 
-**Next proposed batch: English D-F, six native calls, after discussion.**
+## English D-F bounded batch: 2026-09-08
+
+Completed exactly six sequential HY-MT2 calls for real English fixtures D-F in
+**3m51s**, with no retry or transport failure. Zero-call replay reused all six
+saved responses. The initial mechanical result was 2/3 pairs: D converted
+`20:00` to equivalent `8 p.m.`, which the number validator incorrectly rejected.
+A narrow validator correction now recognizes equivalent 24-hour/12-hour clock
+expressions while rejecting wrong hours, wrong meridiem, and added times. The
+exact recorded D conversion passes offline after the fix; no model response was
+regenerated.
+
+| Fixture | Structural | Meaning/readability | Material issue |
+| --- | --- | --- | --- |
+| D: dispute/threat | Pass after offline validator fix | Fail | Neutral `der Betroffene` became “the victim,” who was then described as arrested |
+| E: bus/e-bike collision | Pass | Fail | `stationär` became “for treatment,” omitting inpatient admission |
+| F: police evasion/collision | Pass | Fail | Police `Anhaltesignale` became road “stop signs,” changing the ignored signal and its relationship to the police control |
+
+All three outputs are readable and preserve most facts, but the role assignment,
+medical detail, and police-signal relationship are material under the agreed
+accuracy standard. English therefore **needs focused work** and is not ready for
+the A/B repetition. Discuss one short, general English guidance revision, then
+test D-F first; preserve this initial attempt and do not retry for a lucky pass.
+
+**Next proposed step: discuss the focused English guidance; make no further live
+calls until agreed.**
 
 ## References
 

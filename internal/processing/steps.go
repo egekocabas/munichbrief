@@ -769,6 +769,8 @@ var (
 	translationURLPattern        = regexp.MustCompile(`(?i)\b(?:https?://|www\.)[^\s)]+`)
 	translationPlaceTokenPattern = regexp.MustCompile(`__MB_[A-Z_]+_[0-9]{4}__`)
 	translationNumberPattern     = regexp.MustCompile(`[0-9]+`)
+	translation24HourPattern     = regexp.MustCompile(`\b([01]?[0-9]|2[0-3]):([0-5][0-9])\b`)
+	translation12HourPattern     = regexp.MustCompile(`(?i)\b(1[0-2]|0?[1-9])(?::([0-5][0-9]))?\s*([ap])\.?\s*m\.?`)
 	presentationMarkdownPattern  = regexp.MustCompile("(?m)(?:\\*\\*|__|`|^\\s{0,3}(?:#{1,6}\\s|>\\s|[-+*]\\s|[0-9]+\\.\\s)|!?\\[[^]\\n]+\\]\\([^)\\n]+\\))")
 )
 
@@ -825,6 +827,7 @@ func validateTranslation(input StepInput, output *StepOutput) error {
 }
 
 func sameTranslationNumbers(source, translated string) bool {
+	source, translated = removeEquivalentTwelveHourTimes(source, translated)
 	normalize := func(value string) []string {
 		value = translationURLPattern.ReplaceAllString(value, "")
 		value = translationPlaceTokenPattern.ReplaceAllString(value, "")
@@ -854,6 +857,62 @@ func sameTranslationNumbers(source, translated string) bool {
 		}
 	}
 	return strings.Join(sourceNumbers, "\x00") == strings.Join(translatedNumbers, "\x00")
+}
+
+type translationClock struct {
+	start, end int
+	minutes    int
+}
+
+func removeEquivalentTwelveHourTimes(source, translated string) (string, string) {
+	sourceClocks := translation24HourPattern.FindAllStringSubmatchIndex(source, -1)
+	translatedClocks := translation12HourPattern.FindAllStringSubmatchIndex(translated, -1)
+	if len(sourceClocks) == 0 || len(translatedClocks) == 0 {
+		return source, translated
+	}
+	sourceMatches := make([]translationClock, 0, len(sourceClocks))
+	for _, match := range sourceClocks {
+		hour, _ := strconv.Atoi(source[match[2]:match[3]])
+		minute, _ := strconv.Atoi(source[match[4]:match[5]])
+		sourceMatches = append(sourceMatches, translationClock{start: match[0], end: match[1], minutes: hour*60 + minute})
+	}
+	translatedMatches := make([]translationClock, 0, len(translatedClocks))
+	for _, match := range translatedClocks {
+		hour, _ := strconv.Atoi(translated[match[2]:match[3]])
+		minute := 0
+		if match[4] >= 0 {
+			minute, _ = strconv.Atoi(translated[match[4]:match[5]])
+		}
+		if hour == 12 {
+			hour = 0
+		}
+		if strings.EqualFold(translated[match[6]:match[7]], "p") {
+			hour += 12
+		}
+		translatedMatches = append(translatedMatches, translationClock{start: match[0], end: match[1], minutes: hour*60 + minute})
+	}
+	used := make([]bool, len(translatedMatches))
+	var sourceRemove, translatedRemove []translationClock
+	for _, candidate := range sourceMatches {
+		for index, translatedCandidate := range translatedMatches {
+			if !used[index] && candidate.minutes == translatedCandidate.minutes {
+				used[index] = true
+				sourceRemove = append(sourceRemove, candidate)
+				translatedRemove = append(translatedRemove, translatedCandidate)
+				break
+			}
+		}
+	}
+	blank := func(value string, matches []translationClock) string {
+		result := []byte(value)
+		for _, match := range matches {
+			for index := match.start; index < match.end; index++ {
+				result[index] = ' '
+			}
+		}
+		return string(result)
+	}
+	return blank(source, sourceRemove), blank(translated, translatedRemove)
 }
 
 func germanMonthNumber(value string) string {

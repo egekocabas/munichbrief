@@ -183,6 +183,7 @@ func TestTranslationValidationAcceptsEquivalentLocalizedNumberFormatting(t *test
 	}}
 	for _, summary := range []string{
 		"On 30 August 2026 at 4:40, emergency number 110 was called.",
+		"On 30 August 2026 at 4:40 a.m., emergency number 110 was called.",
 		"2026年8月30日4:40，拨打了110。",
 	} {
 		output := StepOutput{Values: map[string]string{"title": "Title", "summary": summary}}
@@ -198,6 +199,32 @@ func TestTranslationValidationAcceptsEquivalentLocalizedNumberFormatting(t *test
 	addedMonthNumber := StepOutput{Values: map[string]string{"title": "Title", "summary": "Incident at Augustinerstraße 8"}}
 	if err := validateTranslation(nonMonth, &addedMonthNumber); err == nil {
 		t.Fatal("month substring authorized an added number")
+	}
+
+	twelveHourInput := StepInput{Values: map[string]string{
+		"title_de": "Titel", "summary_de": "Am Freitag gegen 20:00 Uhr begann der Einsatz.",
+	}}
+	validTwelveHour := StepOutput{Values: map[string]string{
+		"title": "Title", "summary": "The operation began on Friday at around 8 p.m.",
+	}}
+	if err := validateTranslation(twelveHourInput, &validTwelveHour); err != nil {
+		t.Fatalf("equivalent 12-hour time rejected: %v", err)
+	}
+	if !sameTranslationNumbers(
+		"Am Freitagabend gegen 20:00 Uhr in __MB_MUNICIPALITY_0001__ kam es zu einem Streit.",
+		"On Friday evening around 8 p.m. in __MB_MUNICIPALITY_0001__, a dispute broke out.",
+	) {
+		t.Fatal("recorded English fixture D time conversion was rejected")
+	}
+	for _, summary := range []string{
+		"The operation began on Friday at around 8 a.m.",
+		"The operation began on Friday at around 9 p.m.",
+		"The operation began on Friday at around 8 p.m. and ended at 9 p.m.",
+	} {
+		output := StepOutput{Values: map[string]string{"title": "Title", "summary": summary}}
+		if err := validateTranslation(twelveHourInput, &output); err == nil {
+			t.Fatalf("changed or added 12-hour time accepted for %q", summary)
+		}
 	}
 }
 
