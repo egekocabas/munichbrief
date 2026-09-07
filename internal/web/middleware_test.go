@@ -11,6 +11,7 @@ import (
 )
 
 func TestAboutHealthReadinessAndRequestHeaders(t *testing.T) {
+	t.Parallel()
 	database := fixtureStore(t)
 	handler := testServer(t, database).Handler()
 
@@ -127,6 +128,7 @@ func TestAboutHealthReadinessAndRequestHeaders(t *testing.T) {
 }
 
 func TestReadinessFailsOnlyWhenDatabaseIsUnavailable(t *testing.T) {
+	t.Parallel()
 	database := fixtureStore(t)
 	handler := testServer(t, database).Handler()
 	if err := database.Close(); err != nil {

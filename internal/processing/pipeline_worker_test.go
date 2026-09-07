@@ -170,7 +170,7 @@ func (g pipelineTestGenerator) GenerateStep(ctx context.Context, step StepDefini
 
 func TestAutomaticProcessingDisableFinishesCurrentRequestAndSuspendsCycle(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-automatic-control.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "worker-automatic-control.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,7 +233,7 @@ func TestAutomaticProcessingDisableFinishesCurrentRequestAndSuspendsCycle(t *tes
 
 func TestAutomaticProcessingDisableSuspendsCycleAfterCurrentRequestFails(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-automatic-failure-control.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "worker-automatic-failure-control.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -286,7 +286,7 @@ func TestAutomaticProcessingDisableSuspendsCycleAfterCurrentRequestFails(t *test
 
 func TestCancelAllInterruptsCurrentRequestWithoutRetryFailure(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-cancel-all.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "worker-cancel-all.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -342,7 +342,7 @@ func TestCancelAllInterruptsCurrentRequestWithoutRetryFailure(t *testing.T) {
 
 func TestCancelAllInterruptsCurrentPostProcessingRequestWithoutRetryFailure(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-cancel-all-post.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "worker-cancel-all-post.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -407,7 +407,7 @@ func TestCancelAllInterruptsCurrentPostProcessingRequestWithoutRetryFailure(t *t
 
 func TestManualSubmissionIsLinearizedBeforeConcurrentCancelAll(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-cancel-manual-race.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "worker-cancel-manual-race.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -452,7 +452,7 @@ func TestManualSubmissionIsLinearizedBeforeConcurrentCancelAll(t *testing.T) {
 
 func TestCancelWinningBeforeCanonicalFailureBookkeepingIsNotAProcessingFailure(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-cancel-validation-race.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "worker-cancel-validation-race.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -497,7 +497,7 @@ func TestCancelWinningBeforeCanonicalFailureBookkeepingIsNotAProcessingFailure(t
 
 func TestCancelWinningBeforePostProcessingFailureBookkeepingIsNotAProcessingFailure(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-cancel-post-validation-race.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "worker-cancel-post-validation-race.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -550,7 +550,7 @@ func TestCancelWinningBeforePostProcessingFailureBookkeepingIsNotAProcessingFail
 
 func TestProviderCanceledWithoutWorkerCancellationRetriesCanonicalJob(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-provider-canceled-canonical.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "worker-provider-canceled-canonical.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -588,7 +588,7 @@ func TestProviderCanceledWithoutWorkerCancellationRetriesCanonicalJob(t *testing
 
 func TestProviderCanceledWithoutWorkerCancellationRetriesPostProcessingJob(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-provider-canceled-post.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "worker-provider-canceled-post.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -639,7 +639,7 @@ func TestProviderCanceledWithoutWorkerCancellationRetriesPostProcessingJob(t *te
 
 func TestAutomaticProcessingDisableFinishesCurrentPostProcessingOnly(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-post-control.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "worker-post-control.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -702,7 +702,7 @@ func (p *pipelineTestProvider) callCount(step string) int {
 
 func TestPipelineWorkerGroupsModelsFreezesTargetsAndStartsNextCycle(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "worker.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -752,7 +752,7 @@ func TestPipelineWorkerGroupsModelsFreezesTargetsAndStartsNextCycle(t *testing.T
 
 func TestPipelineWorkerPrioritizesPublicAssistanceThenCategoryBeforeTranslation(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-category-priority.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "worker-category-priority.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -813,7 +813,7 @@ func TestPipelineWorkerPrioritizesPublicAssistanceThenCategoryBeforeTranslation(
 
 func TestInjectedPostProcessorUsesGenericSchedulingManualExecutionStatusAndHistory(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-injected-processor.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "worker-injected-processor.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -904,7 +904,7 @@ func TestInjectedPostProcessorUsesGenericSchedulingManualExecutionStatusAndHisto
 
 func TestPipelineWorkerRequestsFocusedPostProcessing(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "worker-focused-post-processing.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "worker-focused-post-processing.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -958,7 +958,7 @@ func TestPipelineWorkerRequestsFocusedPostProcessing(t *testing.T) {
 
 func TestPipelineWorkerFinishesAuthorizedCycleAfterWindowButDoesNotStartAnother(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "window.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "window.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1027,7 +1027,7 @@ func TestContinuationPostProcessingRetainsAutomaticWindowAndRequestKind(t *testi
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := context.Background()
-			database, err := store.Open(ctx, filepath.Join(t.TempDir(), "continuation-post-window.db"))
+			database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "continuation-post-window.db"))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1085,7 +1085,7 @@ func TestContinuationPostProcessingRetainsAutomaticWindowAndRequestKind(t *testi
 
 func TestPipelineWorkerDoesNotCallModelsWhileRequiredStepIsUnset(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "unset.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "unset.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1109,7 +1109,7 @@ func TestPipelineWorkerDoesNotCallModelsWhileRequiredStepIsUnset(t *testing.T) {
 
 func TestMissingTranslationModelDoesNotBlockCanonicalGerman(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "canonical-without-translation.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "canonical-without-translation.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1154,7 +1154,7 @@ func TestMissingTranslationModelDoesNotBlockCanonicalGerman(t *testing.T) {
 
 func TestCanonicalWorkPreemptsTranslationsAtJobBoundaries(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "canonical-preemption.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "canonical-preemption.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1193,7 +1193,7 @@ func TestCanonicalWorkPreemptsTranslationsAtJobBoundaries(t *testing.T) {
 
 func TestTranslationFailureDoesNotChangeCanonicalCompletion(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "translation-failure.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "translation-failure.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1248,7 +1248,7 @@ func TestTranslationFailureDoesNotChangeCanonicalCompletion(t *testing.T) {
 
 func TestPublicAssistanceVerificationFailureDoesNotBlockOtherProcessors(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "public-assistance-failure.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "public-assistance-failure.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1314,7 +1314,7 @@ func TestPublicAssistanceVerificationFailureDoesNotBlockOtherProcessors(t *testi
 
 func TestPipelineWorkerRetriesPrivacyFailurePerStepThenRequiresReview(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "privacy-retry.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "privacy-retry.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1359,7 +1359,7 @@ func TestPipelineWorkerRetriesPrivacyFailurePerStepThenRequiresReview(t *testing
 
 func TestPipelineWorkerFailsClosedWhenMetadataRemainsInvalid(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "metadata-retry.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "metadata-retry.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1404,7 +1404,7 @@ func TestPipelineWorkerFailsClosedWhenMetadataRemainsInvalid(t *testing.T) {
 
 func TestPipelineWorkerTransientFailureOpensPerStepModelCircuit(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "circuit.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "circuit.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1450,7 +1450,7 @@ func TestPipelineWorkerTransientFailureOpensPerStepModelCircuit(t *testing.T) {
 
 func TestTranslationTransientFailureBacksOffFailedModel(t *testing.T) {
 	ctx := context.Background()
-	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "translation-circuit.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "translation-circuit.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1518,7 +1518,7 @@ func TestSharedModelTransientFailureDefersOtherConsumers(t *testing.T) {
 	for _, failedStep := range []string{GermanPresentationStep, PublicAssistanceVerificationStep} {
 		t.Run(failedStep, func(t *testing.T) {
 			ctx := context.Background()
-			database, err := store.Open(ctx, filepath.Join(t.TempDir(), "shared-outage.db"))
+			database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "shared-outage.db"))
 			if err != nil {
 				t.Fatal(err)
 			}

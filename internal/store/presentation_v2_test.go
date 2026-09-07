@@ -10,7 +10,7 @@ import (
 
 func TestPresentationSelectionRequiresCompleteCurrentV2(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "presentation-order.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "presentation-order.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +67,7 @@ func TestPresentationSelectionRequiresCompleteCurrentV2(t *testing.T) {
 
 func TestPresentationSelectionSupportsArbitraryTranslationScope(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "presentation-language-scope.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "presentation-language-scope.db"))
 	if err != nil {
 		t.Fatal(err)
 	}

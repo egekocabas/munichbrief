@@ -39,7 +39,7 @@ func TestAIControlDefaultsEnabledAndPersists(t *testing.T) {
 
 func TestAutomaticControlGatesScheduledButNotManualCanonicalWork(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "ai-control-canonical.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "ai-control-canonical.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +79,7 @@ func TestAutomaticControlGatesScheduledButNotManualCanonicalWork(t *testing.T) {
 
 func TestReenabledAutomaticControlResumesFrozenCycleOutsideWindow(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "ai-control-resume.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "ai-control-resume.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func TestReenabledAutomaticControlResumesFrozenCycleOutsideWindow(t *testing.T) 
 
 func TestCanceledAutomaticWorkIsRediscoveredAfterReenable(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "ai-control-rediscovery.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "ai-control-rediscovery.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +134,7 @@ func TestCanceledAutomaticWorkIsRediscoveredAfterReenable(t *testing.T) {
 
 func TestAutomaticControlGatesScheduledPostProcessingClaimsAndDiscovery(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "ai-control-post.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "ai-control-post.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,7 +171,7 @@ func TestAutomaticControlGatesScheduledPostProcessingClaimsAndDiscovery(t *testi
 
 func TestStartupRecoveryWhileDisabledRequeuesWithoutRestartingAutomaticWork(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "ai-control-disabled-recovery.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "ai-control-disabled-recovery.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -231,7 +231,7 @@ func TestStartupRecoveryWhileDisabledRequeuesWithoutRestartingAutomaticWork(t *t
 
 func TestCancelAllAIWorkIsAtomicAuditableAndIdempotent(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "cancel-all.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "cancel-all.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -305,7 +305,7 @@ func TestCancelAllAIWorkIsAtomicAuditableAndIdempotent(t *testing.T) {
 
 func TestCancelAllPreservesCanonicalAndPostProcessingCompletionsThatCommitFirst(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "cancel-all-completion-first.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "cancel-all-completion-first.db"))
 	if err != nil {
 		t.Fatal(err)
 	}

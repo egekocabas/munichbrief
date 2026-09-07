@@ -158,6 +158,19 @@ grep -F -- 'path: /pt-br' /tmp/munichbrief-multilingual.yaml
 docker build --build-arg VERSION=local -t munichbrief:local .
 ```
 
+CI restores Go module and build caches from the latest compatible revision and
+saves newly compiled code, including race builds, under a revision-specific key.
+A cold cache still needs a full compile; cached test results retain Go's normal
+input-based invalidation.
+
+Store, processing, and web tests copy an empty migrated SQLite snapshot into a
+separate temporary database for each test. Migration, initial-default, backup,
+and reopen tests continue to exercise fresh or persisted databases directly.
+Web tests run in parallel with independent handlers and database connections.
+To compare execution times without reusing test results, run
+`go test -race -count=1 ./...`; use `-shuffle=on -parallel=2` to check isolation
+under a different execution order and concurrency limit.
+
 Routine unit tests remain offline. A contribution that requires network access
 in the default suite is not acceptable. See [the internal package map](../internal/README.md)
 and [repository check notes](../scripts/README.md) when deciding where new tests

@@ -21,6 +21,7 @@ import (
 )
 
 func TestAdminIsDisabledByDefault(t *testing.T) {
+	t.Parallel()
 	handler := testServer(t, fixtureStore(t)).Handler()
 	for _, test := range []struct {
 		method, path string
@@ -41,6 +42,7 @@ func TestAdminIsDisabledByDefault(t *testing.T) {
 }
 
 func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	database := fixtureStore(t)
 	if err := database.EnsurePostProcessingScopes(ctx, processing.DefaultPostProcessorRegistry().StoreScopes(), time.Now()); err != nil {
@@ -207,6 +209,7 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 }
 
 func TestAdminControlsAutomaticProcessingAndCancelsAllWork(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	database := fixtureStore(t)
 	handler := adminTestServer(t, database, nil).Handler()
@@ -260,6 +263,7 @@ func TestAdminControlsAutomaticProcessingAndCancelsAllWork(t *testing.T) {
 }
 
 func TestAdminUsesInjectedPostProcessorMetadataWithoutHandlerBranches(t *testing.T) {
+	t.Parallel()
 	database := fixtureStore(t)
 	status := processing.PipelineModelStatus{
 		Steps:            defaultTestStepStatus("qwen3.5:4b"),
@@ -308,6 +312,7 @@ func TestAdminUsesInjectedPostProcessorMetadataWithoutHandlerBranches(t *testing
 }
 
 func TestAdminProcessingReturnsUnavailableWhenAIIsDisabled(t *testing.T) {
+	t.Parallel()
 	database := fixtureStore(t)
 	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review",
@@ -345,6 +350,7 @@ func TestAdminProcessingReturnsUnavailableWhenAIIsDisabled(t *testing.T) {
 }
 
 func TestAdminRetriesPostProcessingAndRejectsRemovedBackfillRoutes(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	database := fixtureStore(t)
 	records, _, err := database.ListIncidents(ctx, 1, 0)
@@ -431,6 +437,7 @@ func TestAdminRetriesPostProcessingAndRejectsRemovedBackfillRoutes(t *testing.T)
 }
 
 func TestAdminDistinguishesUnavailableAndMissingPreferredModels(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct {
 		name, expected string
 		status         processing.PipelineModelStatus
@@ -457,6 +464,7 @@ func TestAdminDistinguishesUnavailableAndMissingPreferredModels(t *testing.T) {
 }
 
 func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	database := fixtureStore(t)
 	presentation := testPresentation{
@@ -537,6 +545,7 @@ func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
 }
 
 func TestAdminTranslationOperationsOverviewDrilldownsAndActions(t *testing.T) {
+	t.Parallel()
 	database := fixtureStore(t)
 	now := time.Date(2026, time.August, 31, 10, 0, 0, 0, time.UTC)
 	presentation := testPresentation{
@@ -697,6 +706,7 @@ func TestAdminTranslationOperationsOverviewDrilldownsAndActions(t *testing.T) {
 }
 
 func TestAdminTranslationOperationsTemplateScalesToTenLanguages(t *testing.T) {
+	t.Parallel()
 	server := adminTestServer(t, fixtureStore(t), nil)
 	data := adminTranslationsPage{UpdatedAt: time.Date(2026, time.August, 31, 12, 0, 0, 0, time.UTC)}
 	for index := 1; index <= 10; index++ {
@@ -723,6 +733,7 @@ func TestAdminTranslationOperationsTemplateScalesToTenLanguages(t *testing.T) {
 }
 
 func TestAdminTranslationAutoRefreshContract(t *testing.T) {
+	t.Parallel()
 	script := string(adminScript)
 	for _, expected := range []string{
 		`[data-translation-operations]`, `window.location.href`, `document.hidden`,
@@ -736,6 +747,7 @@ func TestAdminTranslationAutoRefreshContract(t *testing.T) {
 }
 
 func TestAdminProcessingControlsRespectStrictStylePolicy(t *testing.T) {
+	t.Parallel()
 	script := string(adminScript)
 	for _, expected := range []string{
 		`new URL(form.getAttribute("action") || window.location.href, window.location.href)`,
@@ -781,6 +793,7 @@ func TestAdminProcessingControlsRespectStrictStylePolicy(t *testing.T) {
 }
 
 func TestAdminTranslationActionsRequireManualProcessorAndExplicitFallbackModel(t *testing.T) {
+	t.Parallel()
 	processor := &processing.PostProcessorModelStatus{Key: processing.TranslationModelStep, Manual: true}
 	data := adminTranslationsPage{
 		ProcessingEnabled: true,
@@ -816,6 +829,7 @@ func TestAdminTranslationActionsRequireManualProcessorAndExplicitFallbackModel(t
 }
 
 func TestAdminRSSHistoryShowsDurableChecksAndCursorPagination(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	database := fixtureStore(t)
 	startedAt := time.Date(2026, time.September, 5, 6, 0, 0, 0, time.UTC)
@@ -893,6 +907,7 @@ func TestAdminRSSHistoryShowsDurableChecksAndCursorPagination(t *testing.T) {
 }
 
 func TestAdminPipelineHistoryCombinesCanonicalAndPostProcessingJobs(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	database := fixtureStore(t)
 	records, _, err := database.ListIncidents(ctx, 1, 0)
@@ -1017,6 +1032,7 @@ func TestAdminPipelineHistoryCombinesCanonicalAndPostProcessingJobs(t *testing.T
 }
 
 func TestAdminShowsPublicAssistanceVerificationControlsAndSafeHistory(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	database := fixtureStore(t)
 	now := time.Date(2026, time.August, 29, 16, 0, 0, 0, time.UTC)
@@ -1078,6 +1094,7 @@ func TestAdminShowsPublicAssistanceVerificationControlsAndSafeHistory(t *testing
 }
 
 func TestAdminVerificationOperationsShowsRetainedResultAndProtectedFailureDetail(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	database := fixtureStore(t)
 	now := time.Date(2026, time.August, 31, 18, 0, 0, 0, time.UTC)
@@ -1194,6 +1211,7 @@ func TestAdminVerificationOperationsShowsRetainedResultAndProtectedFailureDetail
 }
 
 func TestAdminVerificationOperationsDiscoversFutureRegisteredVerifier(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	database := fixtureStore(t)
 	now := time.Date(2026, time.September, 1, 9, 0, 0, 0, time.UTC)
@@ -1265,6 +1283,7 @@ func TestAdminVerificationOperationsDiscoversFutureRegisteredVerifier(t *testing
 }
 
 func TestAdminShowsUnavailableSourceVerificationAsSkipped(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	database := fixtureStore(t)
 	now := time.Date(2026, time.August, 29, 16, 30, 0, 0, time.UTC)
@@ -1349,6 +1368,7 @@ func TestAdminShowsUnavailableSourceVerificationAsSkipped(t *testing.T) {
 }
 
 func TestAdminTranslationLabelKeepsCurrentFailureVisibleWithPreviousSuccess(t *testing.T) {
+	t.Parallel()
 	translation := store.AdminTranslation{Model: "translate:4b", Status: "failed", FailureKind: "output"}
 	if label := adminTranslationLabel(translation); label != "Failed · previous success retained" {
 		t.Fatalf("retained translation label = %q", label)
@@ -1356,6 +1376,7 @@ func TestAdminTranslationLabelKeepsCurrentFailureVisibleWithPreviousSuccess(t *t
 }
 
 func TestVisiblePostProcessingModelDistinguishesZeroAttemptSkip(t *testing.T) {
+	t.Parallel()
 	model := "verify:4b"
 	if visible := visiblePostProcessingModel(model, "skipped", 0, nil); visible != "" {
 		t.Fatalf("zero-attempt skipped model = %q", visible)
@@ -1370,6 +1391,7 @@ func TestVisiblePostProcessingModelDistinguishesZeroAttemptSkip(t *testing.T) {
 }
 
 func TestAdminReportsStoreErrors(t *testing.T) {
+	t.Parallel()
 	database := fixtureStore(t)
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	retryServer, err := NewWithOptions(database, logger, Options{

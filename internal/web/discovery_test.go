@@ -39,6 +39,7 @@ func publicDiscoveryRequest(method, target string) *http.Request {
 }
 
 func TestRobotsAdvertisesCrawlAndContentUsePolicy(t *testing.T) {
+	t.Parallel()
 	server, _ := publicDiscoveryServer(t, fixtureStore(t), testPresentation{
 		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
 		TitleEN: "Safe title", SummaryEN: "Safe summary.",
@@ -66,6 +67,7 @@ func TestRobotsAdvertisesCrawlAndContentUsePolicy(t *testing.T) {
 }
 
 func TestSitemapContainsOnlyCanonicalPublicDocuments(t *testing.T) {
+	t.Parallel()
 	server, job := publicDiscoveryServer(t, fixtureStore(t), testPresentation{
 		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
 		TitleEN: "Safe title", SummaryEN: "Safe summary.",
@@ -116,6 +118,7 @@ func TestSitemapContainsOnlyCanonicalPublicDocuments(t *testing.T) {
 }
 
 func TestCanonicalIncidentModifiedTimeMatchesSuccessfulPresentation(t *testing.T) {
+	t.Parallel()
 	database := fixtureStore(t)
 	server, job := publicDiscoveryServer(t, database, testPresentation{
 		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
@@ -135,6 +138,7 @@ func TestCanonicalIncidentModifiedTimeMatchesSuccessfulPresentation(t *testing.T
 }
 
 func TestSyntheticReaderLanguageDrivesRoutesNegotiationAndSEO(t *testing.T) {
+	t.Parallel()
 	server, job := publicDiscoveryServer(t, fixtureStore(t), testPresentation{
 		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
 		TitleEN: "Safe title", SummaryEN: "Safe summary.",
@@ -196,6 +200,7 @@ func TestSyntheticReaderLanguageDrivesRoutesNegotiationAndSEO(t *testing.T) {
 }
 
 func TestPublicDocumentsExposeCanonicalAndAlternateLinks(t *testing.T) {
+	t.Parallel()
 	database := fixtureStore(t)
 	server, job := publicDiscoveryServer(t, database, testPresentation{
 		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
@@ -313,6 +318,7 @@ func decodeStructuredData(t *testing.T, document string) map[string]any {
 }
 
 func TestTimelinePaginationPublishesPrevAndNextLinks(t *testing.T) {
+	t.Parallel()
 	server := adminTestServer(t, fixtureStore(t), []string{"munichbrief.egekocabas.com", "munichbrief.de"})
 	request := englishRequest(http.MethodGet, "/en?page=2", nil)
 	request.Host = "munichbrief.internal.example"
@@ -330,6 +336,7 @@ func TestTimelinePaginationPublishesPrevAndNextLinks(t *testing.T) {
 }
 
 func TestPublicMarkdownNegotiationPreservesPrivacyBoundary(t *testing.T) {
+	t.Parallel()
 	database := fixtureStore(t)
 	records, _, err := database.ListIncidents(context.Background(), 1, 0)
 	if err != nil {
@@ -389,6 +396,7 @@ func TestPublicMarkdownNegotiationPreservesPrivacyBoundary(t *testing.T) {
 }
 
 func TestCanonicalOriginMustMatchPublicHost(t *testing.T) {
+	t.Parallel()
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	for _, options := range []Options{
 		{PageSize: 20, SourceMode: "fixture", PresentationMode: "public", PublicHosts: []string{"munichbrief.de"}},

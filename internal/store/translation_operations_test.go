@@ -9,7 +9,7 @@ import (
 
 func TestAdminTranslationOperationsSeparatePublicationFromLatestAttempt(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "translation-operations.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "translation-operations.db"))
 	if err != nil {
 		t.Fatal(err)
 	}

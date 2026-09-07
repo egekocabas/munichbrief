@@ -14,6 +14,7 @@ import (
 )
 
 func TestSocialCardsRenderURLSpecificPNGResponses(t *testing.T) {
+	t.Parallel()
 	server, job := publicDiscoveryServer(t, fixtureStore(t), testPresentation{
 		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
 		TitleEN: "Safe title", SummaryEN: "Safe summary.",
@@ -61,6 +62,7 @@ func TestSocialCardsRenderURLSpecificPNGResponses(t *testing.T) {
 }
 
 func TestSocialCardCacheIdentityChangesAfterCategoryCorrection(t *testing.T) {
+	t.Parallel()
 	renderer, err := newSocialCardRenderer()
 	if err != nil {
 		t.Fatal(err)
@@ -74,6 +76,7 @@ func TestSocialCardCacheIdentityChangesAfterCategoryCorrection(t *testing.T) {
 }
 
 func TestSocialCardRendererIsShared(t *testing.T) {
+	t.Parallel()
 	first, err := newSocialCardRenderer()
 	if err != nil {
 		t.Fatal(err)
@@ -88,6 +91,7 @@ func TestSocialCardRendererIsShared(t *testing.T) {
 }
 
 func TestSocialCardTextStaysInsideSkySafeArea(t *testing.T) {
+	t.Parallel()
 	const longestPublishedTitle = "Verkehrsunfall am Mittleren Ring verursacht längere Sperrungen während des Berufsverkehrs."
 	if length := utf8.RuneCountInString(longestPublishedTitle); length != 90 {
 		t.Fatalf("longest published title fixture has %d characters, want 90", length)

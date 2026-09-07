@@ -14,7 +14,7 @@ func testPostProcessingContract(scope, promptVersion string, outputKinds []strin
 
 func TestPostProcessingGenericLifecycleKeepsSuccessfulValueDuringForcedReplacement(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "post-processing.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "post-processing.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +109,7 @@ func TestPostProcessingGenericLifecycleKeepsSuccessfulValueDuringForcedReplaceme
 
 func TestPostProcessingQueueStatsExplainAutomaticRetryWaits(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "post-processing-retry-stats.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "post-processing-retry-stats.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,7 +180,7 @@ func TestPostProcessingQueueStatsExplainAutomaticRetryWaits(t *testing.T) {
 
 func TestPostProcessingReadersRequireCompleteSuccessesAcrossProcessors(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "post-processing-complete-readers.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "post-processing-complete-readers.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -267,7 +267,7 @@ func TestPostProcessingReadersRequireCompleteSuccessesAcrossProcessors(t *testin
 
 func TestPostProcessingRetryRecoveryAndTransactionalCompletion(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "post-processing-recovery.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "post-processing-recovery.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -338,7 +338,7 @@ func TestPostProcessingRetryRecoveryAndTransactionalCompletion(t *testing.T) {
 
 func TestPostProcessingSkipsAndDeduplicatesUnavailableRequiredInput(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "post-processing-source.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "post-processing-source.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -399,7 +399,7 @@ func TestPostProcessingSkipsAndDeduplicatesUnavailableRequiredInput(t *testing.T
 
 func TestPostProcessingClaimSkipsInputThatBecameUnavailable(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "post-processing-late-skip.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "post-processing-late-skip.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -453,7 +453,7 @@ func TestPostProcessingClaimSkipsInputThatBecameUnavailable(t *testing.T) {
 
 func TestPostProcessingSkipsAnyUnavailableDeclaredInput(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "post-processing-generic-skip.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "post-processing-generic-skip.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -481,7 +481,7 @@ func TestPostProcessingSkipsAnyUnavailableDeclaredInput(t *testing.T) {
 
 func TestPostProcessingClaimsStalePromptWithoutMaterializingCurrentInputs(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "post-processing-stale-prompt.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "post-processing-stale-prompt.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -517,7 +517,7 @@ func TestPostProcessingClaimsStalePromptWithoutMaterializingCurrentInputs(t *tes
 
 func TestPublicAssistanceVerificationKeepsLatestSuccessfulResult(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "public-assistance-selection.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "public-assistance-selection.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -632,7 +632,7 @@ func TestPublicAssistanceVerificationKeepsLatestSuccessfulResult(t *testing.T) {
 
 func TestPublicAssistanceVerificationCutoverRequiresManualHistoricalBackfill(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "public-assistance-cutover.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "public-assistance-cutover.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -679,7 +679,7 @@ func TestPublicAssistanceVerificationCutoverRequiresManualHistoricalBackfill(t *
 
 func TestGenericAdminVerificationSelectionSupportsAnotherProcessor(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "generic-verification-selection.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "generic-verification-selection.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -768,7 +768,7 @@ func TestGenericAdminVerificationSelectionSupportsAnotherProcessor(t *testing.T)
 
 func TestEnsurePostProcessingScopesIsAtomic(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "post-processing-scopes.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "post-processing-scopes.db"))
 	if err != nil {
 		t.Fatal(err)
 	}

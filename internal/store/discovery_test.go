@@ -14,7 +14,7 @@ import (
 func discoveryFixture(t testing.TB, count int) (*Store, time.Time, PostProcessingPlan, []int64) {
 	t.Helper()
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "discovery.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "discovery.db"))
 	if err != nil {
 		t.Fatal(err)
 	}

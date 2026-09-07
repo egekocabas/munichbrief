@@ -11,7 +11,7 @@ import (
 
 func TestPipelineFreezesTargetsGroupsStepsAndStartsNextCycleImmediately(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "pipeline.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "pipeline.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +111,7 @@ func TestPipelineFreezesTargetsGroupsStepsAndStartsNextCycleImmediately(t *testi
 
 func TestManualCyclesCoalesceExactDuplicatesAndSupersedeQueuedAutomaticWork(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "manual-priority.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "manual-priority.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +159,7 @@ func TestManualCyclesCoalesceExactDuplicatesAndSupersedeQueuedAutomaticWork(t *t
 
 func TestManualRequestDoesNotInterruptHealthyRunningScheduledCycle(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "healthy-priority.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "healthy-priority.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,7 +185,7 @@ func TestManualRequestDoesNotInterruptHealthyRunningScheduledCycle(t *testing.T)
 
 func TestBlockedContinuationReleasesLeaseToLaterManualCycle(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "continuation-manual-priority.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "continuation-manual-priority.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -242,7 +242,7 @@ func TestBlockedContinuationReleasesLeaseToLaterManualCycle(t *testing.T) {
 
 func TestPipelineRecoveryAndSourceRevisionSupersession(t *testing.T) {
 	ctx := context.Background()
-	database, err := Open(ctx, filepath.Join(t.TempDir(), "recover-supersede.db"))
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "recover-supersede.db"))
 	if err != nil {
 		t.Fatal(err)
 	}

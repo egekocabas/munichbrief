@@ -40,6 +40,8 @@ func createMigratedTestDatabase() ([]byte, error) {
 	return os.ReadFile(path)
 }
 
+// Each parallel web test owns its database file and connection; only the
+// immutable migrated bytes are shared.
 func openTestStore(t *testing.T) *store.Store {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "munichbrief.db")
