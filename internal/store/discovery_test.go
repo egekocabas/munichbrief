@@ -109,6 +109,84 @@ func TestSatisfiedDiscoveryStillSupersedesOlderPendingJobs(t *testing.T) {
 	}
 }
 
+func TestDiscoveryFiltersOnlySatisfiedProcessorScope(t *testing.T) {
+	for _, state := range []string{"pending", "running", "succeeded", "failed", "needs_review", "superseded", "skipped"} {
+		t.Run(state, func(t *testing.T) {
+			ctx := context.Background()
+			database, now, plan, runs := discoveryFixture(t, 1)
+			if _, err := database.db.ExecContext(ctx, `UPDATE post_processing_jobs SET status=?,status_reason=CASE WHEN ?='skipped' THEN ? ELSE NULL END WHERE presentation_run_id=?`, state, state, PostProcessingStatusReasonMissingInput, runs[0]); err != nil {
+				t.Fatal(err)
+			}
+			want := 1
+			if state == "pending" || state == "running" || state == "succeeded" {
+				want = 0
+			}
+			if queued, err := database.QueuePostProcessingForAll(ctx, "fixture", []PostProcessingPlan{plan}, false, now); err != nil || queued != want {
+				t.Fatalf("discovery with %s job = %d/%v, want %d", state, queued, err, want)
+			}
+			// Success or active work in English must not hide a missing scope or
+			// a different processor that happens to share the same scope key.
+			for _, scope := range []PostProcessingScope{{ProcessorKey: "translation", ScopeKey: "fr"}, {ProcessorKey: "verification", ScopeKey: "en"}} {
+				if err := database.EnsurePostProcessingScopes(ctx, []PostProcessingScope{scope}, now.Add(-time.Hour)); err != nil {
+					t.Fatal(err)
+				}
+				other := plan
+				other.ProcessorKey, other.ScopeKey = scope.ProcessorKey, scope.ScopeKey
+				if queued, err := database.QueuePostProcessingForAll(ctx, "fixture", []PostProcessingPlan{other}, false, now); err != nil || queued != 1 {
+					t.Fatalf("discovery for %s/%s = %d/%v", other.ProcessorKey, other.ScopeKey, queued, err)
+				}
+			}
+		})
+	}
+}
+
+func TestDiscoveryRechecksSkippedInputsAndAllowsForcedReplacement(t *testing.T) {
+	ctx := context.Background()
+	database, now, plan, runs := discoveryFixture(t, 1)
+	runID := runs[0]
+	if _, err := database.db.ExecContext(ctx, `DELETE FROM post_processing_jobs WHERE presentation_run_id=?`, runID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.db.ExecContext(ctx, `UPDATE presentation_values SET value='' WHERE presentation_run_id=? AND kind='summary_de'`, runID); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		if queued, err := database.QueuePostProcessingForAll(ctx, "fixture", []PostProcessingPlan{plan}, false, now); err != nil || queued != 0 {
+			t.Fatalf("discovery with missing input = %d/%v", queued, err)
+		}
+	}
+	var skipped int
+	if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM post_processing_jobs WHERE presentation_run_id=? AND status='skipped'`, runID).Scan(&skipped); err != nil || skipped != 1 {
+		t.Fatalf("deduplicated skipped jobs = %d/%v", skipped, err)
+	}
+	if _, err := database.db.ExecContext(ctx, `UPDATE presentation_values SET value='Restored synthetic summary.' WHERE presentation_run_id=? AND kind='summary_de'`, runID); err != nil {
+		t.Fatal(err)
+	}
+	if queued, err := database.QueuePostProcessingForAll(ctx, "fixture", []PostProcessingPlan{plan}, false, now); err != nil || queued != 1 {
+		t.Fatalf("discovery after input repair = %d/%v", queued, err)
+	}
+	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract(plan.ScopeKey, plan.PromptVersion, []string{"title", "summary"}, plan.InputKinds...), true, nil, now)
+	if err != nil || !found {
+		t.Fatalf("claim repaired job = %t/%v", found, err)
+	}
+	if err := database.CompletePostProcessingJob(ctx, job, []PipelineValue{{Kind: "title", Value: "Synthetic title"}, {Kind: "summary", Value: "Synthetic summary."}}, plan.Model, job.InputHash, now); err != nil {
+		t.Fatal(err)
+	}
+	if queued, err := database.QueuePostProcessingForAll(ctx, "fixture", []PostProcessingPlan{plan}, false, now); err != nil || queued != 0 {
+		t.Fatalf("discovery after success = %d/%v", queued, err)
+	}
+	if err := database.SetAutomaticProcessing(ctx, false, now); err != nil {
+		t.Fatal(err)
+	}
+	if queued, err := database.QueuePostProcessingForAll(ctx, "fixture", []PostProcessingPlan{plan}, true, now); err != nil || queued != 1 {
+		t.Fatalf("forced replacement with automatic work disabled = %d/%v", queued, err)
+	}
+	job, found, err = database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract(plan.ScopeKey, plan.PromptVersion, []string{"title", "summary"}, plan.InputKinds...), false, nil, now)
+	if err != nil || !found || job.RequestKind != "manual" {
+		t.Fatalf("claim forced replacement = %#v/%t/%v", job, found, err)
+	}
+}
+
 func BenchmarkIdleDiscovery(b *testing.B) {
 	for _, count := range []int{10, 100, 1000} {
 		b.Run(fmt.Sprintf("presentations=%d", count), func(b *testing.B) {
