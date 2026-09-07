@@ -143,7 +143,7 @@ manifest and result report.
 
 | Language | Candidate | Structural | Meaning/readability | Repeats | Decision / open issue | Next action |
 | --- | --- | --- | --- | --- | --- | --- |
-| English | HY-MT2 | A-F: 6/6 after D time-format fix | A-C acceptable with caveats; D-F each has a material meaning error | Not run | Needs focused work | Discuss general English guidance; rerun D-F failures first |
+| English | HY-MT2 | A-F: 6/6; revised D-F: 3/3 | A-C acceptable with caveats; focused guidance fixed all D-F meaning errors | Not run with revised prompt | Final stability check pending | Discuss, then repeat A/B with revised prompt: four calls |
 | Spanish | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After English |
 | French | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Spanish |
 | Italian | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After French |
@@ -251,8 +251,38 @@ accuracy standard. English therefore **needs focused work** and is not ready for
 the A/B repetition. Discuss one short, general English guidance revision, then
 test D-F first; preserve this initial attempt and do not retry for a lucky pass.
 
-**Next proposed step: discuss the focused English guidance; make no further live
-calls until agreed.**
+## English focused-guidance D-F batch: 2026-09-08
+
+Commit `b050f7b` adds two sentences of English-only HY-MT2 guidance: keep neutral
+German person labels neutral unless the source explicitly identifies a victim,
+and preserve explicit inpatient-admission and police-stop-signal meaning. Other
+languages retain the standard fallback prompt and the source-data boundary is
+unchanged. The prompt version remains `incident-translation-en-v3` because it is
+unmerged; its changed rendered request and code hashes force a new checkpoint
+identity regardless of that human-readable version.
+
+The new isolated run reused the identical frozen fixtures and Gazetteer, but no
+old model response. It completed exactly six sequential D-F field calls in
+**5m45s**, with no retry or transport failure. Zero-call replay then reused,
+validated, and persisted all six responses.
+
+| Fixture | Original meaning failure | Revised output | Decision |
+| --- | --- | --- | --- |
+| D | Neutral person became “the victim” | “The individual involved” | Pass |
+| E | Inpatient admission omitted | “Admitted to hospital as an inpatient” | Pass |
+| F | Police stop signals became road stop signs | “Ignored police stop signals” | Pass |
+
+All three revised pairs pass structural and assistant meaning/readability review.
+No material addition, omission, role change, factual reversal, or misleading
+legal strengthening was found. The old failed attempt remains intact in its
+original checkpoint directory. This is not native approval.
+
+English A-F is now ready for the final A/B repetition under the revised prompt.
+Because A/B were generated before the guidance change, the repetition must make
+four new calls under the new identity rather than reusing those responses.
+
+**Next proposed batch: revised-prompt English A/B repetition, four native calls,
+after discussion.**
 
 ## References
 
