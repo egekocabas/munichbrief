@@ -387,6 +387,34 @@ func supersedeQueuedAutomaticTargetsTx(ctx context.Context, tx *sql.Tx, manualCy
 }
 
 func createPipelineCycleTx(ctx context.Context, tx *sql.Tx, kind, sourceMode string, windowAuthorized bool, requestKey, targetCondition string, targetArgs []any, steps []PipelineStepPlan, postPlans []PostProcessingPlan, now time.Time) (int64, int, error) {
+	query := `SELECT i.id, i.content_hash FROM incidents i JOIN source_documents d ON d.id = i.source_document_id WHERE ` + targetCondition + ` ORDER BY d.published_at DESC, i.position ASC`
+	rows, err := tx.QueryContext(ctx, query, targetArgs...)
+	if err != nil {
+		return 0, 0, fmt.Errorf("select pipeline cycle targets: %w", err)
+	}
+	type target struct {
+		id   int64
+		hash string
+	}
+	var targets []target
+	for rows.Next() {
+		var value target
+		if err := rows.Scan(&value.id, &value.hash); err != nil {
+			rows.Close()
+			return 0, 0, fmt.Errorf("scan pipeline target: %w", err)
+		}
+		targets = append(targets, value)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return 0, 0, fmt.Errorf("iterate pipeline cycle targets: %w", err)
+	}
+	if err := rows.Close(); err != nil {
+		return 0, 0, err
+	}
+	if len(targets) == 0 {
+		return 0, 0, nil
+	}
 	formatted := formatTime(now.UTC())
 	requested := any(nil)
 	if kind == "manual" {
@@ -413,31 +441,6 @@ func createPipelineCycleTx(ctx context.Context, tx *sql.Tx, kind, sourceMode str
 		if _, err := tx.ExecContext(ctx, `INSERT INTO cycle_post_processing_plans(cycle_id,processor_key,scope_key,model_identity,prompt_version) VALUES(?,?,?,?,?)`, cycleID, plan.ProcessorKey, plan.ScopeKey, plan.Model, plan.PromptVersion); err != nil {
 			return 0, 0, fmt.Errorf("store cycle post-processing plan %s/%s: %w", plan.ProcessorKey, plan.ScopeKey, err)
 		}
-	}
-	query := `SELECT i.id, i.content_hash FROM incidents i JOIN source_documents d ON d.id = i.source_document_id WHERE ` + targetCondition + ` ORDER BY d.published_at DESC, i.position ASC`
-	rows, err := tx.QueryContext(ctx, query, targetArgs...)
-	if err != nil {
-		return 0, 0, fmt.Errorf("select pipeline cycle targets: %w", err)
-	}
-	type target struct {
-		id   int64
-		hash string
-	}
-	var targets []target
-	for rows.Next() {
-		var value target
-		if err := rows.Scan(&value.id, &value.hash); err != nil {
-			rows.Close()
-			return 0, 0, fmt.Errorf("scan pipeline target: %w", err)
-		}
-		targets = append(targets, value)
-	}
-	if err := rows.Err(); err != nil {
-		rows.Close()
-		return 0, 0, fmt.Errorf("iterate pipeline cycle targets: %w", err)
-	}
-	if err := rows.Close(); err != nil {
-		return 0, 0, err
 	}
 	for _, target := range targets {
 		run, err := tx.ExecContext(ctx, `
@@ -471,12 +474,6 @@ func createPipelineCycleTx(ctx context.Context, tx *sql.Tx, kind, sourceMode str
 				return 0, 0, fmt.Errorf("create pipeline step job: %w", err)
 			}
 		}
-	}
-	if len(targets) == 0 {
-		if _, err := tx.ExecContext(ctx, `DELETE FROM processing_cycles WHERE id = ?`, cycleID); err != nil {
-			return 0, 0, err
-		}
-		return 0, 0, nil
 	}
 	return cycleID, len(targets), nil
 }
