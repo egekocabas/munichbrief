@@ -14,8 +14,26 @@ targeted help for uncertain consequential wording.
 
 Complete a decision for every language; failed languages may remain unconfigured
 and paused when the PR merges. Stop after the initial four-call checkpoint and
-after every language to discuss results before advancing. Merge and deployment
-remain separate decisions.
+after every bounded batch and every language to discuss results before advancing.
+Merge and deployment remain separate decisions.
+
+### Bounded-batch evidence protocol
+
+Treat A-C screening, D-F expansion, and A/B repetition as separate bounded
+batches. After each batch:
+
+1. Inspect every output and its persisted translation result.
+2. Keep the per-call input, raw response, restored output, timing, exact request
+   identity, checks, and attempt status in the ignored durable evaluation record.
+3. Add the assistant's semantic/readability assessment to the separate review
+   record, without overwriting earlier attempts or claiming native review.
+4. Update this tracked roadmap with aggregate results and the next decision,
+   commit and push it, and update PR #55 with a concise evidence table.
+5. Stop for discussion before starting the next batch.
+
+Raw responses, databases, and downloaded real fixtures stay uncommitted. The PR
+records reproducible aggregate evidence, model/adapter/digest, structural and
+meaning findings, timings, limitations, and the agreed next action.
 
 ## Step 1: prepare the production test path
 
@@ -70,7 +88,8 @@ Model: `hf.co/mradermacher/Hy-MT2-7B-GGUF:Q5_K_M`; adapter: `hy-mt2`.
 2. Complete languages in order: **English, Spanish, French, Italian, Polish,
    Turkish, Ukrainian, Chinese, Hindi, Russian**.
 3. Per language, inspect A-C first. If materially accurate, run D-F, then repeat
-   A and B once. Report and stop for discussion before advancing.
+   A and B once. Apply the bounded-batch evidence protocol and stop for discussion
+   after each of those batches before advancing.
 
 Normal budget: eight pairs / 16 native calls per language, 160 calls across ten.
 Identical initial calls count toward the pack. Run across separate sessions.
@@ -118,8 +137,9 @@ decision after reporting the selected candidate.
 After every call durably save input, raw response, restored output when available,
 timing, identity, checks, and attempt status. Keep manual review in a separate
 record never overwritten by resume. Transport interruptions are not model scores.
-Update the table and report after each language before continuing. Exact model
-names above plus resolved digests belong in the run manifest and result report.
+Update the table and PR after each bounded batch and each language before
+continuing. Exact model names above plus resolved digests belong in the run
+manifest and result report.
 
 | Language | Candidate | Structural | Meaning/readability | Repeats | Decision / open issue | Next action |
 | --- | --- | --- | --- | --- | --- | --- |
