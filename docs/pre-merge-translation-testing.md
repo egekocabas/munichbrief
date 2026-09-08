@@ -147,7 +147,7 @@ manifest and result report.
 | Spanish | HY-MT2 | A-F: 6/6; focused B/E: 2/2 structural | 5/6 acceptable; revised E fixes inpatient care but changes bus into a route | Not run | Paused after two focused rounds; no native approval | Discuss result before French; no repetitions |
 | French | HY-MT2 | Historical protocol: 8/8; final-prompt B/2 structural pass | 7/8 acceptable; final B fixes legal framing but invents windshield specificity | A/2 pass; B/2 meaning failure | Paused after two focused rounds; no native approval | Discuss result before Italian |
 | Italian | HY-MT2 | Historical A-F: 6/6; third-guidance E/F: 2/2 structural | Revised E passes; revised F summary passes but title remains grammatically invalid; final prompt not run across full protocol | Not run | Paused after explicit third focused round; no native approval | Discuss result before Polish; no repetitions |
-| Polish | HY-MT2 | A-C: 3/3; focused B: 1/1 structural | 3/3 acceptable after revised B; recorded minor grammar/style caveats | Not run | Expansion pending; one focused round used; no native approval | Discuss, then D-F: six calls |
+| Polish | HY-MT2 | A-F: 6/6; focused B: 1/1 structural | 4/6 acceptable; D invents victim role and F overstates uncertain observations | Not run | Needs second focused round; no native approval | Discuss focused D/F rerun; no repetitions |
 | Turkish | HY-MT2 | Not run | Pending | Pending | Historical grammar/redundancy | After Polish |
 | Ukrainian | HY-MT2 | A: 1/1 pair | Allegation wording ambiguous | Not run | Needs focused work; unapproved | Focused review when Ukrainian is reached |
 | Chinese | HY-MT2 | Not run | Pending | Pending | Historical semantic errors | After Ukrainian |
@@ -773,6 +773,35 @@ Polish A-C is now **3/3 acceptable on assistant review** and ready for D-F. One
 focused prompt round has been used; no native approval is claimed.
 
 **Next proposed batch: Polish D-F, six native calls, after discussion.**
+
+## Polish D-F expansion: 2026-09-08
+
+The focused Polish prompt generated exactly six fresh sequential native field
+calls for real fixtures D-F in **6m46s**, without retry or transport failure.
+All three pairs passed typed-placeholder checks, restoration, final validation,
+and queued-worker persistence. An exact replay reused and persisted all six
+responses with zero new calls.
+
+| Fixture | Structural | Assistant meaning/readability review |
+| --- | --- | --- |
+| D | Pass | Material role failure: neutral `Betroffene` becomes `Poszkodowany` (injured party/victim); title also misspells `Interwencja` as `Intervencja` |
+| E | Pass | Acceptable: facts, inpatient hospital meaning, and ongoing investigation survive; bus and hospital wording is awkward |
+| F | Pass | Material evidentiary failure: tentative `Hinweise` becomes `dowody` (evidence/proof), and uncertain abnormalities become an intoxication state |
+
+Polish is structurally **6/6** across A-F and **4/6 acceptable** on assistant
+meaning/readability review. Preserve D and F without unchanged-prompt retries.
+D otherwise retains the complete event sequence and continuing investigation;
+F otherwise retains the traffic-control and collision sequence.
+
+Do not run repetitions yet. One focused round remains under the roadmap.
+Discuss a short, general Polish clarification that neutral `Betroffener` must not
+become a victim or injured party and that `Hinweise`/`Auffälligkeiten` remain
+uncertain indications rather than proof or confirmed intoxication. The D title's
+spelling error is recorded as a secondary readability issue. No fluent or native
+approval is claimed.
+
+**Next proposed step: discuss the second focused Polish D/F gate. No further
+live calls until agreed.**
 
 ## References
 
