@@ -145,7 +145,7 @@ manifest and result report.
 | --- | --- | --- | --- | --- | --- | --- |
 | English | HY-MT2 | Final protocol: 8/8 pairs | Accurate/readable on assistant review; minor A/B wording caveats | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Spanish A-C |
 | Spanish | HY-MT2 | A-F: 6/6; focused B/E: 2/2 structural | 5/6 acceptable; revised E fixes inpatient care but changes bus into a route | Not run | Paused after two focused rounds; no native approval | Discuss result before French; no repetitions |
-| French | HY-MT2 | Final protocol: 8/8 structural | 7/8 acceptable; B/2 broadens final conviction to any final decision | A/2 pass; B/2 meaning failure | Needs second focused round; no native approval | Discuss legal guidance; retest B first |
+| French | HY-MT2 | Historical protocol: 8/8; final-prompt B/2 structural pass | 7/8 acceptable; final B fixes legal framing but invents windshield specificity | A/2 pass; B/2 meaning failure | Paused after two focused rounds; no native approval | Discuss result before Italian |
 | Italian | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After French |
 | Polish | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Italian |
 | Turkish | HY-MT2 | Not run | Pending | Pending | Historical grammar/redundancy | After Polish |
@@ -532,6 +532,39 @@ agreed, test B first under a fresh identity. This is not native approval.
 
 **Next proposed step: discuss the second focused French guidance round; make no
 further live calls until agreed.**
+
+## French final legal-guidance B gate: 2026-09-08
+
+Commit `477d30e` adds the second and final French-focused rule. It generally maps
+`Unschuldsvermutung` to `présomption d’innocence` and preserves that the safeguard
+lasts until a final conviction (`condamnation définitive`), not merely any final
+decision or judgment. Prompt-isolation tests, the full Go suite, and
+`go vet ./...` passed before inference.
+
+A fresh identity generated B/2's title and summary first: exactly two sequential
+calls in **2m01s**, without retry or transport failure. The pair passed typed
+placeholder checks, restoration, final validation, and queued-worker persistence.
+A zero-new-call replay reused and persisted both responses.
+
+| Evidence | Previous B/2 | Final focused B/2 | Decision |
+| --- | --- | --- | --- |
+| Innocence term | `principe de l’innocence` | `présomption d’innocence` | Fixed |
+| End condition | Any `décision définitive` | `condamnation définitive` | Fixed |
+| Generic vehicle glass | `vitre` | `pare-brise` | New material failure |
+
+The legal rule fixes the consequential legal error. The same output, however,
+narrows generic `Scheibe` to a windshield without source support. This invents a
+factual detail and fails the B gate. Preserve the attempt and do not retry the
+unchanged prompt.
+
+Per the user's explicit condition, the other seven final-prompt pairs were not
+generated because B did not pass. French remains **7/8 acceptable on the prior
+full protocol** and is **paused after two focused rounds**. Its route should
+remain unconfigured unless a later, separately agreed model evaluation qualifies
+it. This is assistant review only; no native approval.
+
+**Next proposed step: discuss the paused French decision before beginning Italian
+A-C. No further live calls until agreed.**
 
 ## References
 
