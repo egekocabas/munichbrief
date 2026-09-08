@@ -147,7 +147,7 @@ manifest and result report.
 | Spanish | HY-MT2 | A-F: 6/6; focused B/E: 2/2 structural | 5/6 acceptable; revised E fixes inpatient care but changes bus into a route | Not run | Paused after two focused rounds; no native approval | Discuss result before French; no repetitions |
 | French | HY-MT2 | Historical protocol: 8/8; final-prompt B/2 structural pass | 7/8 acceptable; final B fixes legal framing but invents windshield specificity | A/2 pass; B/2 meaning failure | Paused after two focused rounds; no native approval | Discuss result before Italian |
 | Italian | HY-MT2 | Historical A-F: 6/6; third-guidance E/F: 2/2 structural | Revised E passes; revised F summary passes but title remains grammatically invalid; final prompt not run across full protocol | Not run | Paused after explicit third focused round; no native approval | Discuss result before Polish; no repetitions |
-| Polish | HY-MT2 | A-C: 3/3 structural | 2/3 acceptable; B changes final conviction to broader final ruling | Not run | Needs focused legal guidance; no native approval | Discuss first focused B rerun; do not expand yet |
+| Polish | HY-MT2 | A-C: 3/3; focused B: 1/1 structural | 3/3 acceptable after revised B; recorded minor grammar/style caveats | Not run | Expansion pending; one focused round used; no native approval | Discuss, then D-F: six calls |
 | Turkish | HY-MT2 | Not run | Pending | Pending | Historical grammar/redundancy | After Polish |
 | Ukrainian | HY-MT2 | A: 1/1 pair | Allegation wording ambiguous | Not run | Needs focused work; unapproved | Focused review when Ukrainian is reached |
 | Chinese | HY-MT2 | Not run | Pending | Pending | Historical semantic errors | After Ukrainian |
@@ -743,6 +743,36 @@ is claimed.
 
 **Next proposed step: discuss the first focused Polish B rerun. No further live
 calls until agreed.**
+
+## Polish focused-guidance B gate: 2026-09-08
+
+Commit `6fcc522` adds one short Polish-specific rule: `Verurteilung` means
+`skazanie`, and `rechtskräftige Verurteilung` means `prawomocne skazanie`, not
+the broader `wyrok` or `orzeczenie`, because a judgment or ruling may be an
+acquittal. Prompt-isolation and processing-package tests passed before
+inference.
+
+A fresh request identity generated exactly two sequential native calls in
+**2m08s**, without retry or transport failure. The pair passed typed-placeholder
+checks, restoration, final validation, and queued-worker persistence. A
+zero-new-call replay reused and persisted both responses.
+
+| Evidence | Initial B | Focused B | Decision |
+| --- | --- | --- | --- |
+| No conviction | `nie ma żadnego wyroku` | `nie ma żadnego skazania` | Fixed |
+| Final-conviction threshold | `prawomocne orzeczenie` | `prawomocne skazanie` | Fixed |
+| Presumption of innocence | Preserved | Preserved | Pass |
+
+`Do chwili wydania prawomocnego skazania` is stylistically awkward; `do czasu
+prawomocnego skazania` would be more natural, but the generated wording is
+accurate and understandable under this roadmap's threshold. No replacement
+material error was found. Preserve the initial and focused attempts. This is
+assistant review only.
+
+Polish A-C is now **3/3 acceptable on assistant review** and ready for D-F. One
+focused prompt round has been used; no native approval is claimed.
+
+**Next proposed batch: Polish D-F, six native calls, after discussion.**
 
 ## References
 
