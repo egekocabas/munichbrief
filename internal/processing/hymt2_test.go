@@ -124,7 +124,7 @@ func TestHyMT2NativeAdapterAddsOnlyConfiguredTargetGuidance(t *testing.T) {
 		t.Fatalf("other target guidance leaked into Polish prompt: %q", polish)
 	}
 	turkish := hyMT2NativePrompt("German", "Turkish", hyMT2LanguageGuidance["tr"], "Quelle")
-	for _, expected := range []string{"‘beschädigen’ as ‘zarar vermek’ or ‘hasar vermek’", "never ‘kırmak’", "‘Verurteilung’ means ‘mahkûmiyet’", "‘rechtskräftige Verurteilung’ means ‘kesinleşmiş mahkûmiyet’", "never merely ‘kesinleşmiş hüküm’", "‘genau’ means ‘tam olarak’ without ‘sularında’ or ‘civarında’", "‘befragen’", "never ‘sorgulamak’"} {
+	for _, expected := range []string{"‘beschädigen’ as ‘zarar vermek’ or ‘hasar vermek’", "never ‘kırmak’", "‘Verurteilung’ means ‘mahkûmiyet’", "‘rechtskräftige Verurteilung’ means ‘kesinleşmiş mahkûmiyet’", "never merely ‘kesinleşmiş hüküm’", "‘genau’ means ‘tam olarak’ without ‘sularında’ or ‘civarında’", "‘befragen’", "never ‘sorgulamak’", "‘Betroffener’ or ‘Betroffene’", "never ‘mağdur’", "‘hastaneye yatırıldı’", "not merely ‘hastaneye kaldırıldı’", "‘polisin dur ihtarları’ or ‘dur emri’", "never road ‘dur işaretleri’", "‘Hinweise’ and ‘Auffälligkeiten’", "never ‘kanıt’, ‘delil’"} {
 		if !strings.Contains(turkish, expected) {
 			t.Errorf("Turkish guidance omitted %q: %s", expected, turkish)
 		}
