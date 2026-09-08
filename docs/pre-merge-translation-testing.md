@@ -144,7 +144,7 @@ manifest and result report.
 | Language | Candidate | Structural | Meaning/readability | Repeats | Decision / open issue | Next action |
 | --- | --- | --- | --- | --- | --- | --- |
 | English | HY-MT2 | Final protocol: 8/8 pairs | Accurate/readable on assistant review; minor A/B wording caveats | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Spanish A-C |
-| Spanish | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After English |
+| Spanish | HY-MT2 | A-C: 3/3 after protected-length fix | A/C acceptable with caveats; B adds unsupported windshield specificity | Not run | Needs focused work | Discuss Spanish guidance; retest B first |
 | French | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Spanish |
 | Italian | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After French |
 | Polish | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Italian |
@@ -303,7 +303,38 @@ protocol positions (A-F plus A/B repetition) pass structural checks and the
 accurate-and-readable threshold after the focused D-F correction. Minor wording
 caveats remain. This is neither native approval nor a guarantee for unseen text.
 
-**Next proposed batch: Spanish A-C, six native calls, after discussion.**
+## Spanish A-C bounded batch: 2026-09-08
+
+Completed exactly six sequential HY-MT2 calls for Spanish A-C in **6m29s**, with
+no retry or transport failure. The standard fallback prompt was used; English
+guidance was absent.
+
+Spanish A was initially rejected because the model-facing typed placeholders
+made its title exceed 90 characters even though the restored reader title is 76
+characters. Commit `c6b9dcc` defers only a protected field's length check until
+Gazetteer restoration; UTF-8, controls, normalization, plain text, numbers,
+script, and placeholder integrity are still checked before restoration, and the
+ordinary 90/600 reader limits remain mandatory afterward. Tests cover the exact
+Spanish title shape and reject an overlong restored title.
+
+The source manifest and exact recordings were imported into a separate offline
+revalidation directory. Request hashes matched, and zero-new-call replay under
+the corrected code validated and persisted A-C without regenerating output.
+
+| Fixture | Structural after fix | Meaning/readability | Decision |
+| --- | --- | --- | --- |
+| A: transit/allegation | Pass | Facts preserved; awkward `al S-Bahnen` title agreement and broader medical-attention wording | Pass with caveats |
+| B: legal meaning | Pass | Generic vehicle `Scheibe` became `parabrisas` (windshield), adding unsupported specificity; `principio de inocencia` is less conventional than `presunción de inocencia` | Meaning failure |
+| C: precise facts/roles | Pass | Facts and roles preserved; `interrogó` is somewhat stronger than neutral questioning | Pass with caveat |
+
+Spanish is 3/3 structural after the deterministic fix and 2/3 on assistant
+meaning/readability review. This is not native approval. Do not expand to D-F
+yet. Discuss one short Spanish-specific guidance revision covering generic
+vehicle glass/window, conventional presumption-of-innocence terminology, and
+neutral police questioning; test B first and preserve this attempt.
+
+**Next proposed step: discuss focused Spanish guidance; make no further live
+calls until agreed.**
 
 ## References
 
