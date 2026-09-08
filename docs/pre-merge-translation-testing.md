@@ -156,7 +156,7 @@ manifest and result report.
 | Turkish | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable under the user-selected time threshold; recurring precision/grammar caveats recorded | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Ukrainian |
 | Ukrainian | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable after two explicit user-approved extra rounds; minor grammar/style caveats recorded | Final A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Chinese A-C |
 | Chinese | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable after three focused rounds; recurring awkward A wording recorded | Final A/B: 2/2 pass | Acceptable on this sample; no native approval | Continue autonomously with Hindi A-C |
-| Hindi | HY-MT2 | Not run | Pending | Pending | Historical legal/role errors | After Chinese |
+| Hindi | HY-MT2 | Baseline A-C: 3/3 structural; revision-1 A-C: 3/3 structural | Baseline 1/3 acceptable; revision-1 fixes A/B but leaks guidance into C | Not run | Needs focused work; Ollama stopped after one D transport EOF | Resume revision-2 C gate, then reassess A/B |
 | Russian | HY-MT2 | Not run | Pending | Pending | Historical legal/role errors | After Hindi |
 | Croatian | TranslateGemma Q3_K_S | Not run | Pending | Pending | Runtime fit unknown | After HY-MT2 decisions |
 | Bosnian | TranslateGemma Q3_K_S | Not run | Pending | Pending | Runtime fit/quality unknown | After Croatian |
@@ -1161,6 +1161,31 @@ recorded, and no native approval or general quality guarantee is claimed.
 
 The user authorized the remaining session to continue autonomously with durable
 checkpoints and PR updates. **Next: Hindi A-C with HY-MT2 Q5_K_M.**
+
+## Hindi baseline and interrupted first revision: 2026-09-09
+
+The shared HY-MT2 prompt generated all six baseline A-C fields in about
+**14m08s**. All three pairs passed deterministic validation and worker
+persistence. C was materially acceptable. A stated the reported injury as an
+established act despite police attribution. B changed alleged completed damage
+into an attempted break and rendered final conviction as a formal sentence.
+Baseline outcome: **3/3 structural, 1/3 materially acceptable**.
+
+Focused round one added explicit Hindi allegation, damage-degree, and
+final-conviction distinctions. Its A/B gate passed all three issues in four calls
+lasting about **10m00s**. When expanded, C preserved its source facts but appended
+two unrelated sentences derived from the new guidance. This material addition is
+a model/prompt failure, not a validator failure. The next D request returned one
+transport `EOF` before producing output, after which the Ollama endpoint stopped
+responding. The interrupted D is not scored as a translation failure.
+
+Focused round two is prepared and offline-tested. It shortens the same terminology
+rules, makes them conditional on corresponding German wording, and explicitly
+forbids emitting glossary rules or examples. No live revision-2 request has been
+made. The exact durable resume point is **Hindi v3, fixture C title and summary**.
+If C contains no guidance leakage, reassess A and B under the identical prompt;
+then continue D-F and A/B repeats only if those gates pass. The endpoint must be
+healthy first. No native review is claimed.
 
 ## References
 
