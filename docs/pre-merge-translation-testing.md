@@ -147,7 +147,7 @@ manifest and result report.
 | Spanish | HY-MT2 | A-F: 6/6; focused B/E: 2/2 structural | 5/6 acceptable; revised E fixes inpatient care but changes bus into a route | Not run | Paused after two focused rounds; no native approval | Discuss result before French; no repetitions |
 | French | HY-MT2 | Historical protocol: 8/8; final-prompt B/2 structural pass | 7/8 acceptable; final B fixes legal framing but invents windshield specificity | A/2 pass; B/2 meaning failure | Paused after two focused rounds; no native approval | Discuss result before Italian |
 | Italian | HY-MT2 | Historical A-F: 6/6; third-guidance E/F: 2/2 structural | Revised E passes; revised F summary passes but title remains grammatically invalid; final prompt not run across full protocol | Not run | Paused after explicit third focused round; no native approval | Discuss result before Polish; no repetitions |
-| Polish | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Italian |
+| Polish | HY-MT2 | A-C: 3/3 structural | 2/3 acceptable; B changes final conviction to broader final ruling | Not run | Needs focused legal guidance; no native approval | Discuss first focused B rerun; do not expand yet |
 | Turkish | HY-MT2 | Not run | Pending | Pending | Historical grammar/redundancy | After Polish |
 | Ukrainian | HY-MT2 | A: 1/1 pair | Allegation wording ambiguous | Not run | Needs focused work; unapproved | Focused review when Ukrainian is reached |
 | Chinese | HY-MT2 | Not run | Pending | Pending | Historical semantic errors | After Ukrainian |
@@ -715,6 +715,34 @@ No fluent or native approval is claimed.
 
 **Next proposed step: discuss whether to keep Italian paused or evaluate a
 different model before beginning Polish. No further live calls until agreed.**
+
+## Polish A-C screening: 2026-09-08
+
+The standard HY-MT2 fallback prompt generated exactly six fresh sequential
+native field calls for Polish A-C in **7m26s**, without retry or transport
+failure. All three pairs passed typed-placeholder checks, restoration, final
+validation, and queued-worker persistence. An exact replay reused and persisted
+all six responses with zero new calls.
+
+| Fixture | Structural | Assistant meaning/readability review |
+| --- | --- | --- |
+| A | Pass | Acceptable: facts and uncertainty survive; `świadki` should be accusative `świadków`, and the transit wording is awkward but understandable |
+| B | Pass | Material failure: `rechtskräftige Verurteilung` becomes `prawomocne orzeczenie` (final ruling), not `prawomocne skazanie` (final conviction); `no conviction` also becomes broader `no judgment` |
+| C | Pass | Acceptable: exact facts, roles, negation, medical examination, police questioning, and causality are preserved |
+
+Polish is **3/3 structural and 2/3 acceptable** on assistant review. Preserve B
+without an unchanged-prompt retry. The model correctly retains allegation and
+unresolved involvement, and uses `domniemanie niewinności`, but changes the
+legal endpoint: a final ruling can be an acquittal, whereas the source requires
+a final conviction.
+
+Do not expand to D-F yet. Discuss one short, general Polish rule distinguishing
+`Verurteilung` (`skazanie`) and `rechtskräftige Verurteilung` (`prawomocne
+skazanie`) from the broader `wyrok` or `orzeczenie`. No fluent or native approval
+is claimed.
+
+**Next proposed step: discuss the first focused Polish B rerun. No further live
+calls until agreed.**
 
 ## References
 
