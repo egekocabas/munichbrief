@@ -146,7 +146,7 @@ manifest and result report.
 | English | HY-MT2 | Final protocol: 8/8 pairs | Accurate/readable on assistant review; minor A/B wording caveats | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Spanish A-C |
 | Spanish | HY-MT2 | A-F: 6/6; focused B/E: 2/2 structural | 5/6 acceptable; revised E fixes inpatient care but changes bus into a route | Not run | Paused after two focused rounds; no native approval | Discuss result before French; no repetitions |
 | French | HY-MT2 | Historical protocol: 8/8; final-prompt B/2 structural pass | 7/8 acceptable; final B fixes legal framing but invents windshield specificity | A/2 pass; B/2 meaning failure | Paused after two focused rounds; no native approval | Discuss result before Italian |
-| Italian | HY-MT2 | A-F: 6/6; final B: 1/1 | 4/6 acceptable; E changes continuing investigation to completed; F changes a check to a search and has a broken title | Not run | Paused after two focused rounds; no native approval | Discuss result before Polish; no repetitions |
+| Italian | HY-MT2 | Historical A-F: 6/6; third-guidance E/F: 2/2 structural | Revised E passes; revised F summary passes but title remains grammatically invalid; final prompt not run across full protocol | Not run | Paused after explicit third focused round; no native approval | Discuss result before Polish; no repetitions |
 | Polish | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Italian |
 | Turkish | HY-MT2 | Not run | Pending | Pending | Historical grammar/redundancy | After Polish |
 | Ukrainian | HY-MT2 | A: 1/1 pair | Allegation wording ambiguous | Not run | Needs focused work; unapproved | Focused review when Ukrainian is reached |
@@ -685,6 +685,36 @@ native approval is claimed.
 
 **Next proposed step: discuss the paused Italian decision before beginning
 Polish A-C. No further live calls until agreed.**
+
+## Italian third-guidance E/F gate: 2026-09-08
+
+The user explicitly approved one exception to the roadmap's two-round prompt
+limit. Commit `36cf6c6` adds short, general Italian guidance to preserve ongoing
+investigation status, distinguish a check from a search, retain evidentiary
+uncertainty, and produce grammatically complete headlines. Prompt-isolation and
+processing-package tests passed before inference.
+
+Exactly four fresh sequential native calls completed for E and F in **5m47s**,
+without retry or transport failure. Both pairs passed typed-placeholder checks,
+restoration, final validation, and queued-worker persistence. An exact replay
+reused and persisted all four responses with zero new calls.
+
+| Fixture | Previous result | Third-guidance result | Decision |
+| --- | --- | --- | --- |
+| E | Ongoing investigation became completed | Present `sono condotte` retains ongoing status; `autobus di linea` accurately renders the scheduled bus | Pass |
+| F | Check became search; evidence strengthened; broken title | Summary now uses `verifica` and retains uncertain signs, but title again uses noun `fuga` instead of finite verb `fugge` | Readability failure |
+
+The third guidance fixes E and the material issues in F's summary, but F's title
+remains grammatically invalid and is not publishable. Preserve this result
+without an unchanged-prompt retry. Because the E/F gate required both pairs to
+pass, the other six pairs in the eight-pair protocol were not generated. The
+new prompt therefore has not completed the full protocol.
+
+Italian remains **paused after the explicitly approved third focused round**.
+No fluent or native approval is claimed.
+
+**Next proposed step: discuss whether to keep Italian paused or evaluate a
+different model before beginning Polish. No further live calls until agreed.**
 
 ## References
 
