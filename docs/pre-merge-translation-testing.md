@@ -147,7 +147,7 @@ manifest and result report.
 | Spanish | HY-MT2 | A-F: 6/6; focused B/E: 2/2 structural | 5/6 acceptable; revised E fixes inpatient care but changes bus into a route | Not run | Paused after two focused rounds; no native approval | Discuss result before French; no repetitions |
 | French | HY-MT2 | Historical protocol: 8/8; final-prompt B/2 structural pass | 7/8 acceptable; final B fixes legal framing but invents windshield specificity | A/2 pass; B/2 meaning failure | Paused after two focused rounds; no native approval | Discuss result before Italian |
 | Italian | HY-MT2 | Historical A-F: 6/6; third-guidance E/F: 2/2 structural | Revised E passes; revised F summary passes but title remains grammatically invalid; final prompt not run across full protocol | Not run | Paused after explicit third focused round; no native approval | Discuss result before Polish; no repetitions |
-| Polish | HY-MT2 | A-F: 6/6; focused B: 1/1 structural | 4/6 acceptable; D invents victim role and F overstates uncertain observations | Not run | Needs second focused round; no native approval | Discuss focused D/F rerun; no repetitions |
+| Polish | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable; recurring grammar/spelling defects recorded | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Turkish A-C |
 | Turkish | HY-MT2 | Not run | Pending | Pending | Historical grammar/redundancy | After Polish |
 | Ukrainian | HY-MT2 | A: 1/1 pair | Allegation wording ambiguous | Not run | Needs focused work; unapproved | Focused review when Ukrainian is reached |
 | Chinese | HY-MT2 | Not run | Pending | Pending | Historical semantic errors | After Ukrainian |
@@ -802,6 +802,48 @@ approval is claimed.
 
 **Next proposed step: discuss the second focused Polish D/F gate. No further
 live calls until agreed.**
+
+## Polish second-guidance gate and final protocol: 2026-09-08
+
+Commit `63655d9` extends the Polish guidance with three general safeguards:
+neutral `Betroffener`/`Betroffene` must not become a victim or injured party;
+`Hinweise`/`Auffälligkeiten` remain indications rather than proof or confirmed
+intoxication; and headlines use standard Polish spelling. Existing conviction
+guidance remains unchanged. Prompt-isolation and processing-package tests passed
+before inference.
+
+The focused D/F gate generated four fresh native calls in **5m45s**. Both
+material failures were fixed: D uses neutral `Osoba, której dotyczy sprawa`, and
+F uses `przesłanki` and `oznaki typowe` rather than proof or confirmed findings.
+The D title still misspells `Interwencja` as `Intervencja`, and `zduszenia
+konfliktu` is forceful wording for de-escalation; these remain understandable,
+non-material errors under the roadmap threshold.
+
+After the gate passed, A, B, C, and E repetition 1 completed in **8m53s**, then A
+and B repetition 2 completed in **4m49s**. The final prompt therefore produced
+exactly 16 fresh sequential native calls for eight pairs in **19m27s**, without
+retry or transport failure. Exact zero-new-call replays succeeded for the D/F
+gate, the remaining first-pass fixtures, and both repetitions.
+
+| Pair | Structural | Assistant meaning/readability review |
+| --- | --- | --- |
+| A/1 | Pass | Material facts preserved; recurring `świadki` case error and awkward transit wording |
+| B/1 | Pass | Conviction and presumption-of-innocence meaning preserved; awkward legal style |
+| C/1 | Pass | Exact facts, negation, roles, and causality preserved |
+| D/1 | Pass | Neutral role fixed; title spelling and de-escalation style remain weak |
+| E/1 | Pass | Facts and ongoing investigation preserved; `autobusem linowym` should be `autobusem liniowym` |
+| F/1 | Pass | Evidentiary uncertainty fixed; traffic and arrest sequence preserved |
+| A/2 | Pass | Material facts stable; witness-case error repeats |
+| B/2 | Pass | Legal meaning stable across repetition |
+
+Polish completes the final protocol at **8/8 structurally valid and 8/8
+materially acceptable on assistant review**. This meets the agreed
+accurate-and-readable threshold, which permits minor grammar, spelling, and style
+errors. It does not establish polished native prose: `świadki`, `Intervencja`,
+and `autobusem linowym` are reproducible defects requiring fluent review. No
+native approval is claimed.
+
+**Next proposed step: stop and discuss the Polish result before Turkish A-C.**
 
 ## References
 
