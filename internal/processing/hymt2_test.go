@@ -96,6 +96,15 @@ func TestHyMT2NativeAdapterAddsOnlyConfiguredTargetGuidance(t *testing.T) {
 	if strings.Contains(spanish, "Betroffene") {
 		t.Fatalf("English guidance leaked into Spanish prompt: %q", spanish)
 	}
+	french := hyMT2NativePrompt("German", "French", hyMT2LanguageGuidance["fr"], "Quelle")
+	for _, expected := range []string{"‘Verkehrspolizei’", "never public-transport police", "‘hospitalisé(e)’"} {
+		if !strings.Contains(french, expected) {
+			t.Errorf("French guidance omitted %q: %s", expected, french)
+		}
+	}
+	if strings.Contains(french, "vehicle glass generic") || strings.Contains(french, "admitted to hospital as an inpatient") {
+		t.Fatalf("other target guidance leaked into French prompt: %q", french)
+	}
 	italian := hyMT2NativePrompt("German", "Italian", hyMT2LanguageGuidance["it"], "Quelle")
 	if strings.Contains(italian, "Target-language guidance") || strings.Contains(italian, "Scheibe") {
 		t.Fatalf("configured guidance leaked into fallback prompt: %q", italian)
