@@ -146,7 +146,7 @@ manifest and result report.
 | English | HY-MT2 | Final protocol: 8/8 pairs | Accurate/readable on assistant review; minor A/B wording caveats | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Spanish A-C |
 | Spanish | HY-MT2 | A-F: 6/6; focused B/E: 2/2 structural | 5/6 acceptable; revised E fixes inpatient care but changes bus into a route | Not run | Paused after two focused rounds; no native approval | Discuss result before French; no repetitions |
 | French | HY-MT2 | Historical protocol: 8/8; final-prompt B/2 structural pass | 7/8 acceptable; final B fixes legal framing but invents windshield specificity | A/2 pass; B/2 meaning failure | Paused after two focused rounds; no native approval | Discuss result before Italian |
-| Italian | HY-MT2 | A-C: 3/3; revised B: 1/1 structural | 2/3 acceptable; glass fixed but final judgment still replaces final conviction | Not run | Needs second focused round; no native approval | Discuss stronger legal guidance; retest B first |
+| Italian | HY-MT2 | A-C: 3/3; final B: 1/1 | 3/3 acceptable after final B; recorded grammar/register caveats | Not run | Expansion pending; two focused rounds used; no native approval | Discuss, then D-F: six calls |
 | Polish | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Italian |
 | Turkish | HY-MT2 | Not run | Pending | Pending | Historical grammar/redundancy | After Polish |
 | Ukrainian | HY-MT2 | A: 1/1 pair | Allegation wording ambiguous | Not run | Needs focused work; unapproved | Focused review when Ukrainian is reached |
@@ -627,6 +627,37 @@ approval.
 
 **Next proposed step: discuss the second focused Italian guidance round and test
 B first under a fresh identity. No further live calls until agreed.**
+
+## Italian final legal-guidance B gate: 2026-09-08
+
+Commit `7824724` makes the second and final Italian-focused rule shorter and more
+direct. It defines `rechtskräftige Verurteilung` as `condanna definitiva` or
+`condanna passata in giudicato`, explicitly rejecting `sentenza definitiva`
+because a final judgment may be an acquittal. The generic-glass and conventional
+innocence rules remain. Prompt-isolation tests, the full Go suite, and
+`go vet ./...` passed before inference.
+
+A fresh identity generated only B's title and summary: exactly two sequential
+calls in **1m55s**, without retry or transport failure. The pair passed typed-
+placeholder checks, restoration, final validation, and queued-worker persistence.
+A zero-new-call replay reused and persisted both responses.
+
+| Evidence | First focused B | Final focused B | Decision |
+| --- | --- | --- | --- |
+| Generic vehicle glass | `vetro` | `vetro` | Preserved |
+| Innocence term | `presunzione d’innocenza` | `presunzione d’innocenza` | Preserved |
+| End condition | `sentenza definitiva` | `condanna definitiva` | Fixed |
+
+The final rule fixes the remaining legal condition without a replacement factual
+error. `fino a quando non arriva` is colloquial rather than polished legal prose,
+but it accurately keeps the presumption in force until a final conviction.
+Preserve all earlier B attempts. This is assistant review only.
+
+Italian A-C is now **3/3 acceptable on assistant review**. Both focused rounds
+have been used. Run D-F under the final prompt next; any new material error will
+pause Italian rather than trigger another prompt round.
+
+**Next proposed batch: Italian D-F, six native calls, after discussion.**
 
 ## References
 
