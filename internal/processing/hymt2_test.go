@@ -88,11 +88,20 @@ func TestHyMT2NativeAdapterAddsOnlyConfiguredTargetGuidance(t *testing.T) {
 		t.Fatalf("English source boundary changed: %q", english)
 	}
 	spanish := hyMT2NativePrompt("German", "Spanish", hyMT2LanguageGuidance["es"], "Quelle")
-	if strings.Contains(spanish, "Target-language guidance") || strings.Contains(spanish, "Betroffene") {
+	for _, expected := range []string{"vehicle glass generic", "presunción de inocencia", "not ‘interrogó’"} {
+		if !strings.Contains(spanish, expected) {
+			t.Errorf("Spanish guidance omitted %q: %s", expected, spanish)
+		}
+	}
+	if strings.Contains(spanish, "Betroffene") {
 		t.Fatalf("English guidance leaked into Spanish prompt: %q", spanish)
 	}
-	if !strings.Contains(spanish, "7. Produce natural, fluent Spanish rather than a word-for-word translation.\n\n### Source Data\nQuelle") {
-		t.Fatalf("fallback prompt structure changed: %q", spanish)
+	italian := hyMT2NativePrompt("German", "Italian", hyMT2LanguageGuidance["it"], "Quelle")
+	if strings.Contains(italian, "Target-language guidance") || strings.Contains(italian, "Scheibe") {
+		t.Fatalf("configured guidance leaked into fallback prompt: %q", italian)
+	}
+	if !strings.Contains(italian, "7. Produce natural, fluent Italian rather than a word-for-word translation.\n\n### Source Data\nQuelle") {
+		t.Fatalf("fallback prompt structure changed: %q", italian)
 	}
 }
 
