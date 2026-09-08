@@ -37,6 +37,7 @@ func embeddedStaticAssets() []staticAsset {
 		{name: "app.css", contentType: "text/css; charset=utf-8", content: stylesheet},
 		{name: "htmx.min.js", contentType: "text/javascript; charset=utf-8", content: htmxScript},
 		{name: "theme.js", contentType: "text/javascript; charset=utf-8", content: themeScript},
+		{name: "navigation.js", contentType: "text/javascript; charset=utf-8", content: navigationScript},
 		{name: "admin.js", contentType: "text/javascript; charset=utf-8", content: adminScript},
 		{name: "favicon.svg", contentType: "image/svg+xml", content: favicon},
 		{name: selectedAIGeneratedPNGAsset, contentType: "image/png", content: euAISocialLabel},

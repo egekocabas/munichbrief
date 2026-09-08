@@ -22,6 +22,12 @@ Reader routes and discovery metadata consume the shared compile-time language
 registry. Follow [Adding a reader language](../../docs/adding-a-language.md) so
 catalog, processing, SEO, and ingress contracts remain synchronized.
 
+Timeline article links use canonical incident URLs without pagination queries.
+`static/navigation.js` remembers the originating timeline and scroll position in
+tab-local session storage, including HTMX navigation. Direct visits and readers
+without JavaScript retain an ordinary Back link to the language homepage. Existing
+incident URLs with `?page=` still preserve their server-rendered Back destination.
+
 Keep routes and template data explicit. Never pass database or model structs
 directly to templates without applying the presentation rules. Template output
 must remain escaped; client-side code must not insert incident content as raw
