@@ -148,7 +148,7 @@ manifest and result report.
 | French | HY-MT2 | Historical protocol: 8/8; final-prompt B/2 structural pass | 7/8 acceptable; final B fixes legal framing but invents windshield specificity | A/2 pass; B/2 meaning failure | Paused after two focused rounds; no native approval | Discuss result before Italian |
 | Italian | HY-MT2 | Historical A-F: 6/6; third-guidance E/F: 2/2 structural | Revised E passes; revised F summary passes but title remains grammatically invalid; final prompt not run across full protocol | Not run | Paused after explicit third focused round; no native approval | Discuss result before Polish; no repetitions |
 | Polish | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable; recurring grammar/spelling defects recorded | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Turkish A-C |
-| Turkish | HY-MT2 | A-F: 6/6; focused B/C: 2/2 structural | 3/6 acceptable after user accepts C time wording; D invents victim, E omits inpatient admission, F changes signals/evidence | Not run | Needs second focused round; no native approval | Discuss focused D/E/F gate; no repetitions |
+| Turkish | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable under the user-selected time threshold; recurring precision/grammar caveats recorded | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Ukrainian |
 | Ukrainian | HY-MT2 | A: 1/1 pair | Allegation wording ambiguous | Not run | Needs focused work; unapproved | Focused review when Ukrainian is reached |
 | Chinese | HY-MT2 | Not run | Pending | Pending | Historical semantic errors | After Ukrainian |
 | Hindi | HY-MT2 | Not run | Pending | Pending | Historical legal/role errors | After Chinese |
@@ -936,6 +936,51 @@ is claimed.
 
 **Next proposed step: discuss the second focused Turkish D/E/F gate. No further
 live calls until agreed.**
+
+## Turkish second-guidance gate and final protocol: 2026-09-08
+
+Commit `898b87f` adds concise, general Turkish guidance for neutral incident
+roles, inpatient admission, police stop commands, and tentative indications.
+Prompt-isolation and processing-package tests passed before inference. The run
+used HY-MT2 digest
+`24acc0f002f8c874f34e8b3e22da236405f7c3a47ae9d62d3744cf3c5b4bd693`,
+the native adapter, an 8192-token context, typed placeholders, and the frozen
+Gazetteer/fixture identities recorded in the durable manifest.
+
+The failed D-F fixtures were the gate. Exactly six fresh sequential native
+calls completed in **7m50s**, without retry or transport failure. All three
+material issues were fixed: D retains a neutral `ilgili kişi`, E explicitly
+says `hastaneye yatırıldı`, and F distinguishes police stop commands and
+tentative indications from road signs and proof.
+
+Because the gate passed, A-C repetition 1 completed in **8m32s**, followed by
+A/B repetition 2 in **5m45s**. The final-prompt protocol therefore contains
+exactly 16 fresh calls over eight title/summary pairs and took **22m07s** in
+aggregate. All pairs passed typed-placeholder checks, restoration, final
+validation, and queued-worker persistence. Separate zero-new-call replays
+verified all six first-pass fixtures and both repetitions.
+
+| Pair | Structural | Assistant meaning/readability review |
+| --- | --- | --- |
+| A/1 | Pass | Material facts preserved; injury wording is less precise and S-Bahn grammar is awkward |
+| B/1 | Pass | Allegation, uncertainty, conviction, and presumption of innocence preserved |
+| C/1 | Pass | Facts, roles, causality, negation, and emergency number preserved; accepted time-phrase caveat |
+| D/1 | Pass | Neutral role and full event sequence preserved; accepted time-phrase caveat |
+| E/1 | Pass | Inpatient admission restored; scheduled-bus specificity and place suffix remain minor caveats |
+| F/1 | Pass | Stop commands and evidentiary uncertainty restored; redundant evidence phrasing remains |
+| A/2 | Pass | Stable material pass with the same injury/transit caveats |
+| B/2 | Pass | Stable legal-meaning pass; `masumiyet varsayımı` is less conventional than `masumiyet karinesi` |
+
+Turkish completes the protocol at **8/8 structurally valid and 8/8 materially
+acceptable on assistant review** under the agreed accurate-and-readable
+threshold. This result applies the user's explicit acceptance of `tam olarak
+03:30 sularında` and the equivalent D time construction. It permits the minor
+precision, grammar, and style issues listed above; it is neither native approval
+nor a general quality guarantee. Each raw response and separate manual review
+remains in the ignored durable evaluation directory.
+
+**Next proposed step: stop and discuss the Turkish result before the focused
+Ukrainian stage.**
 
 ## References
 
