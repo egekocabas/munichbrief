@@ -766,13 +766,14 @@ func validateGermanPresentation(_ StepInput, output *StepOutput) error {
 }
 
 var (
-	translationURLPattern        = regexp.MustCompile(`(?i)\b(?:https?://|www\.)[^\s)]+`)
-	translationPlaceTokenPattern = regexp.MustCompile(`__MB_[A-Z_]+_[0-9]{4}__`)
-	translationNumberPattern     = regexp.MustCompile(`[0-9]+`)
-	translation24HourPattern     = regexp.MustCompile(`\b([01]?[0-9]|2[0-3]):([0-5][0-9])\b`)
-	translation12HourPattern     = regexp.MustCompile(`(?i)\b(1[0-2]|0?[1-9])(?::([0-5][0-9]))?\s*([ap])\.?\s*m\.?`)
-	translationHourMarkerPattern = regexp.MustCompile(`(?i)\b([01]?[0-9]|2[0-3])\s*h(?:eure(?:s)?)?(?:\s*([0-5][0-9]))?\b`)
-	presentationMarkdownPattern  = regexp.MustCompile("(?m)(?:\\*\\*|__|`|^\\s{0,3}(?:#{1,6}\\s|>\\s|[-+*]\\s|[0-9]+\\.\\s)|!?\\[[^]\\n]+\\]\\([^)\\n]+\\))")
+	translationURLPattern         = regexp.MustCompile(`(?i)\b(?:https?://|www\.)[^\s)]+`)
+	translationPlaceTokenPattern  = regexp.MustCompile(`__MB_[A-Z_]+_[0-9]{4}__`)
+	translationNumberPattern      = regexp.MustCompile(`[0-9]+`)
+	translation24HourPattern      = regexp.MustCompile(`\b([01]?[0-9]|2[0-3]):([0-5][0-9])\b`)
+	translation12HourPattern      = regexp.MustCompile(`(?i)\b(1[0-2]|0?[1-9])(?::([0-5][0-9]))?\s*([ap])\.?\s*m\.?`)
+	translationHourMarkerPattern  = regexp.MustCompile(`(?i)\b([01]?[0-9]|2[0-3])\s*h(?:eure(?:s)?)?(?:\s*([0-5][0-9]))?\b`)
+	translationChineseTimePattern = regexp.MustCompile(`([01]?[0-9]|2[0-3])\s*点(?:\s*([0-5]?[0-9])\s*分?)?`)
+	presentationMarkdownPattern   = regexp.MustCompile("(?m)(?:\\*\\*|__|`|^\\s{0,3}(?:#{1,6}\\s|>\\s|[-+*]\\s|[0-9]+\\.\\s)|!?\\[[^]\\n]+\\]\\([^)\\n]+\\))")
 )
 
 func validatePlainPresentation(field, value string) error {
@@ -869,7 +870,8 @@ func removeEquivalentLocalizedTimes(source, translated string) (string, string) 
 	sourceClocks := translation24HourPattern.FindAllStringSubmatchIndex(source, -1)
 	twelveHourClocks := translation12HourPattern.FindAllStringSubmatchIndex(translated, -1)
 	hourMarkerClocks := translationHourMarkerPattern.FindAllStringSubmatchIndex(translated, -1)
-	if len(sourceClocks) == 0 || len(twelveHourClocks) == 0 && len(hourMarkerClocks) == 0 {
+	chineseClocks := translationChineseTimePattern.FindAllStringSubmatchIndex(translated, -1)
+	if len(sourceClocks) == 0 || len(twelveHourClocks) == 0 && len(hourMarkerClocks) == 0 && len(chineseClocks) == 0 {
 		return source, translated
 	}
 	sourceMatches := make([]translationClock, 0, len(sourceClocks))
@@ -878,7 +880,7 @@ func removeEquivalentLocalizedTimes(source, translated string) (string, string) 
 		minute, _ := strconv.Atoi(source[match[4]:match[5]])
 		sourceMatches = append(sourceMatches, translationClock{start: match[0], end: match[1], minutes: hour*60 + minute})
 	}
-	translatedMatches := make([]translationClock, 0, len(twelveHourClocks)+len(hourMarkerClocks))
+	translatedMatches := make([]translationClock, 0, len(twelveHourClocks)+len(hourMarkerClocks)+len(chineseClocks))
 	for _, match := range twelveHourClocks {
 		hour, _ := strconv.Atoi(translated[match[2]:match[3]])
 		minute := 0
@@ -894,6 +896,14 @@ func removeEquivalentLocalizedTimes(source, translated string) (string, string) 
 		translatedMatches = append(translatedMatches, translationClock{start: match[0], end: match[1], minutes: hour*60 + minute})
 	}
 	for _, match := range hourMarkerClocks {
+		hour, _ := strconv.Atoi(translated[match[2]:match[3]])
+		minute := 0
+		if match[4] >= 0 {
+			minute, _ = strconv.Atoi(translated[match[4]:match[5]])
+		}
+		translatedMatches = append(translatedMatches, translationClock{start: match[0], end: match[1], minutes: hour*60 + minute})
+	}
+	for _, match := range chineseClocks {
 		hour, _ := strconv.Atoi(translated[match[2]:match[3]])
 		minute := 0
 		if match[4] >= 0 {

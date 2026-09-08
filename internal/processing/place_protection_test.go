@@ -298,6 +298,40 @@ func TestTranslationValidationAcceptsEquivalentLocalized24HourNotation(t *testin
 	}
 }
 
+func TestTranslationValidationAcceptsEquivalentChineseTimeNotation(t *testing.T) {
+	input := StepInput{Values: map[string]string{
+		"title_de": "Titel", "summary_de": "Am Freitagabend gegen 20:00 Uhr begann der Einsatz.",
+	}}
+	for _, summary := range []string{
+		"周五晚上20点左右，警方开始行动。",
+		"周五晚上大约20点，警方开始行动。",
+	} {
+		output := StepOutput{Values: map[string]string{"title": "标题", "summary": summary}}
+		if err := validateTranslation(input, &output); err != nil {
+			t.Fatalf("equivalent Chinese hour notation rejected for %q: %v", summary, err)
+		}
+	}
+	minuteInput := StepInput{Values: map[string]string{
+		"title_de": "Titel", "summary_de": "Am Freitag gegen 20:30 Uhr begann der Einsatz.",
+	}}
+	minuteOutput := StepOutput{Values: map[string]string{
+		"title": "标题", "summary": "周五晚上20点30分左右，警方开始行动。",
+	}}
+	if err := validateTranslation(minuteInput, &minuteOutput); err != nil {
+		t.Fatalf("equivalent Chinese time with minutes rejected: %v", err)
+	}
+	for _, summary := range []string{
+		"周五晚上20点30分左右，警方开始行动。",
+		"周五晚上21点左右，警方开始行动。",
+		"周五晚上20点左右开始，21点结束。",
+	} {
+		output := StepOutput{Values: map[string]string{"title": "标题", "summary": summary}}
+		if err := validateTranslation(input, &output); err == nil {
+			t.Fatalf("changed or added Chinese time accepted for %q", summary)
+		}
+	}
+}
+
 func TestTranslationValidationRejectsControlCharactersAndWrongScript(t *testing.T) {
 	input := StepInput{Values: map[string]string{"title_de": "Titel", "summary_de": "Zusammenfassung"}}
 	control := StepOutput{Values: map[string]string{"title": "Title", "summary": "Bad\u009ftext"}}

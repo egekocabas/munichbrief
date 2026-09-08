@@ -29,7 +29,8 @@ func TestHyMT2NativeAdapterUsesOfficialContract(t *testing.T) {
 			"4. When a placeholder contains an entity type such as `STREET`, `DISTRICT`, `TRAIN_STATION`, `COMMUTER_TRAIN`, or `SUBWAY_SYSTEM`, use that type only to understand the sentence and produce natural grammar around the placeholder. Do not alter the placeholder itself.\n" +
 			"5. If the target language would normally require changing the hidden entity, restructure the surrounding sentence so the placeholder remains unchanged.\n" +
 			"6. Preserve the original meaning, tone, factual details, numbers, dates, times, negation, uncertainty, attribution, and relationships. Do not add or infer information.\n" +
-			"7. Produce natural, fluent Chinese rather than a word-for-word translation.\n\n" +
+			"7. Produce natural, fluent Chinese rather than a word-for-word translation.\n" +
+			"8. Target-language guidance: " + hyMT2LanguageGuidance["zh"] + "\n\n" +
 			"### Source Data\nEinsatz am <KEEP>__MB_STREET_0001__</KEEP>"
 		if payload.Messages[0].Content != wantPrompt {
 			t.Fatalf("prompt = %q, want %q", payload.Messages[0].Content, wantPrompt)
@@ -78,6 +79,12 @@ func TestHyMT2NativeAdapterMapsEverySupportedReaderLanguage(t *testing.T) {
 }
 
 func TestHyMT2NativeAdapterAddsOnlyConfiguredTargetGuidance(t *testing.T) {
+	chinese := hyMT2NativePrompt("German", "Chinese", hyMT2LanguageGuidance["zh"], "Quelle")
+	for _, expected := range []string{"‘Verurteilung’ means conviction (‘定罪’)", "‘最终定罪’ or ‘已生效的定罪判决’", "never merely a formal/final judgment", "‘正式判决’ or ‘最终判决’", "judgment may be an acquittal", "‘无罪推定’", "generic vehicle glass generic", "‘Scheibe’ means ‘车窗’ or ‘车窗玻璃’", "‘Windschutzscheibe’", "‘挡风玻璃’", "Preserve evidentiary uncertainty", "‘Hinweise’ and ‘Auffälligkeiten’", "‘与酒精或毒品有关的异常表现’", "never as ‘饮酒或吸毒问题’"} {
+		if !strings.Contains(chinese, expected) {
+			t.Errorf("Chinese guidance omitted %q: %s", expected, chinese)
+		}
+	}
 	english := hyMT2NativePrompt("German", "English", hyMT2LanguageGuidance["en"], "Quelle")
 	for _, expected := range []string{"neutral German person labels", "admitted to hospital as an inpatient", "police stop signals or orders"} {
 		if !strings.Contains(english, expected) {

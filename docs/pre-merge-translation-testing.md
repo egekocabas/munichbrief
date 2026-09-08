@@ -102,10 +102,11 @@ summary; estimate the next batch using current measured calls.
 
 Classify infrastructure, deterministic-validation, meaning, and readability
 failures separately. Fix proven validation bugs with regression tests; revalidate
-saved responses offline first. Allow at most two focused prompt-revision rounds
-per language. Test failures first, then complete the pack under the revised
-prompt. Preserve every attempt; do not retry until a lucky pass. Prefer short,
-general language-specific terminology/context guidance for local issues.
+saved responses offline first. For the remaining-language session authorized on
+2026-09-09, allow at most six focused prompt-revision rounds per failing
+language. Test failures first, then complete the pack under the revised prompt.
+Preserve every attempt; do not retry until a lucky pass. Prefer short, general
+language-specific terminology/context guidance for local issues.
 Shared prompt changes require affected languages to be reassessed. Pause
 persistent material failures and continue only after discussing the result.
 
@@ -154,7 +155,7 @@ manifest and result report.
 | Polish | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable; recurring grammar/spelling defects recorded | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Turkish A-C |
 | Turkish | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable under the user-selected time threshold; recurring precision/grammar caveats recorded | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Ukrainian |
 | Ukrainian | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable after two explicit user-approved extra rounds; minor grammar/style caveats recorded | Final A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Chinese A-C |
-| Chinese | HY-MT2 | Not run | Pending | Pending | Historical semantic errors | After Ukrainian |
+| Chinese | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable after three focused rounds; recurring awkward A wording recorded | Final A/B: 2/2 pass | Acceptable on this sample; no native approval | Continue autonomously with Hindi A-C |
 | Hindi | HY-MT2 | Not run | Pending | Pending | Historical legal/role errors | After Chinese |
 | Russian | HY-MT2 | Not run | Pending | Pending | Historical legal/role errors | After Hindi |
 | Croatian | TranslateGemma Q3_K_S | Not run | Pending | Pending | Runtime fit unknown | After HY-MT2 decisions |
@@ -1120,6 +1121,46 @@ documented; this is not native approval or a general quality guarantee.
 
 **Next proposed step: stop and discuss the Ukrainian result before Chinese
 A-C. The exact Q5_K_M resume point is Chinese, followed by Hindi and Russian.**
+
+## Chinese final protocol: 2026-09-09
+
+The initial A-C screen passed structure, but B broadened final conviction to a
+formal judgment. Focused round one corrected the legal condition and exposed a
+generic vehicle window translated as a windshield; round two corrected that
+distinction. Under round two, A-C and E were materially acceptable. D was also
+semantically acceptable, but deterministic validation rejected the legitimate
+conversion of German `20:00` to Chinese `20点`. F strengthened tentative
+alcohol/drug abnormalities into actual drinking/drug problems.
+
+The validator now recognizes equivalent Chinese `点` time notation while still
+rejecting changed minutes, changed hours, and added times. Regression tests cover
+hour-only and hour/minute forms. Focused round three adds only the evidenced
+uncertainty distinction: `Hinweise`/`Auffälligkeiten` remain tentative signs or
+observations and must not establish consumption or impairment.
+
+F was the v4 gate and passed. The final prompt then generated A-E and the A/B
+repetitions. All **16/16 intended native calls** completed without retry,
+transport, memory, or model failure. Successful call durations total about
+**11m47s**. Exact zero-new-call replay restored, validated, and persisted all
+eight pairs through the queued worker path.
+
+| Pair | Structural | Assistant meaning/readability review |
+| --- | --- | --- |
+| A/1 | Pass | Allegation, attribution, medical examination, transit relationships, duration, and witness request preserved; injury grammar remains awkward |
+| B/1 | Pass | Generic vehicle window, unresolved involvement, conviction, final conviction, and presumption of innocence preserved |
+| C/1 | Pass | Exact/approximate times, speed, closure, examination, neutral questioning, negation, and `110` preserved |
+| D/1 | Pass | Localized `20点` accepted; unclear danger, response, neutral person, arrest/release, and continuing investigation preserved |
+| E/1 | Pass | Bus/e-bike, serious injury, inpatient treatment, and continuing traffic-police investigation preserved |
+| F/1 | Pass | Licence and alcohol/drug indications remain tentative; evasion, collision, check, and arrest sequence preserved |
+| A/2 | Pass | Stable material pass with the same minor injury-grammar weakness |
+| B/2 | Pass | Stable generic-window and final-conviction pass |
+
+Chinese is **acceptable on this sample**: **8/8 structural and 8/8 materially
+acceptable pairs** under the agreed threshold. Minor wording and redundancy are
+recorded, and no native approval or general quality guarantee is claimed.
+
+The user authorized the remaining session to continue autonomously with durable
+checkpoints and PR updates. **Next: Hindi A-C with HY-MT2 Q5_K_M.**
 
 ## References
 
