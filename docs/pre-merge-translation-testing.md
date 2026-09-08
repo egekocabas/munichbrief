@@ -145,7 +145,7 @@ manifest and result report.
 | --- | --- | --- | --- | --- | --- | --- |
 | English | HY-MT2 | Final protocol: 8/8 pairs | Accurate/readable on assistant review; minor A/B wording caveats | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Spanish A-C |
 | Spanish | HY-MT2 | A-F: 6/6; focused B/E: 2/2 structural | 5/6 acceptable; revised E fixes inpatient care but changes bus into a route | Not run | Paused after two focused rounds; no native approval | Discuss result before French; no repetitions |
-| French | HY-MT2 | A-C: 3/3 | 3/3 acceptable with grammar, legal-term, and witness-wording caveats | Not run | Expansion pending; no native approval | Discuss, then D-F: six calls |
+| French | HY-MT2 | A-F: 6/6 after clock-validator fix | 5/6 acceptable; E changes traffic police into transport police | Not run | Needs focused work; no native approval | Discuss French guidance; retest E first |
 | Italian | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After French |
 | Polish | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Italian |
 | Turkish | HY-MT2 | Not run | Pending | Pending | Historical grammar/redundancy | After Polish |
@@ -437,6 +437,39 @@ French A-C is **3/3 acceptable on assistant review** and ready for D-F. This is
 not fluent/native approval.
 
 **Next proposed batch: French D-F, six native calls, after discussion.**
+
+## French D-F expansion: 2026-09-08
+
+Exactly six fresh sequential native field calls completed in **5m22s**, without
+retry or transport failure. E and F passed production structure immediately. D
+was initially rejected because its accurate French `20 h` rendering did not
+retain the source's literal `:00` digits.
+
+Commit `db8c7ee` fixes that deterministic false positive by treating 24-hour
+`h`/`heure(s)` notation as clock-equivalent. Regression tests accept equivalent
+hours—with and without minutes—and continue rejecting changed hours, changed
+minutes, and added times. The full Go suite and `go vet ./...` pass. The exact
+saved D-F responses were imported under the corrected code identity and replayed
+with zero new calls; all three then passed restoration, final validation, and
+persistence. Preserve the original D rejection as evidence.
+
+| Fixture | Structural after correction | Assistant meaning/readability | Decision |
+| --- | --- | --- | --- |
+| D | Pass | Time, setting, dispute, threats, slight injury, uncertain danger, response, arrest, release, and investigation preserved | Acceptable |
+| E | Pass | Bus/e-bike collision, injury, inpatient care, and investigation preserved, but `Münchner Verkehrspolizei` becomes public-transport police rather than traffic/road police | Material failure |
+| F | Pass | Evasion, police control, signals, red lights, collision, arrest, and licence/substance indications preserved; wording caveats recorded | Acceptable with caveats |
+
+French is structurally 6/6 and 5/6 acceptable on assistant meaning/readability
+review across A-F. The E agency-attribution error is material; preserve it and do
+not retry under the unchanged prompt. This is not native approval.
+
+Do not run repetitions yet. Discuss one short French-specific clarification that
+`Verkehrspolizei` means traffic/road police (`police de la circulation` or
+`police routière`), not public-transport police, together with natural inpatient
+wording. If agreed, generate only E's two fields under a fresh identity.
+
+**Next proposed step: discuss focused French guidance; make no further live calls
+until agreed.**
 
 ## References
 
