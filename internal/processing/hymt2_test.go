@@ -106,11 +106,20 @@ func TestHyMT2NativeAdapterAddsOnlyConfiguredTargetGuidance(t *testing.T) {
 		t.Fatalf("other target guidance leaked into French prompt: %q", french)
 	}
 	italian := hyMT2NativePrompt("German", "Italian", hyMT2LanguageGuidance["it"], "Quelle")
-	if strings.Contains(italian, "Target-language guidance") || strings.Contains(italian, "Scheibe") {
-		t.Fatalf("configured guidance leaked into fallback prompt: %q", italian)
+	for _, expected := range []string{"‘Scheibe’", "‘vetro’ or ‘finestrino’", "‘presunzione d’innocenza’", "‘condanna definitiva’", "never merely until any final judgment"} {
+		if !strings.Contains(italian, expected) {
+			t.Errorf("Italian guidance omitted %q: %s", expected, italian)
+		}
 	}
-	if !strings.Contains(italian, "7. Produce natural, fluent Italian rather than a word-for-word translation.\n\n### Source Data\nQuelle") {
-		t.Fatalf("fallback prompt structure changed: %q", italian)
+	if strings.Contains(italian, "public-transport police") || strings.Contains(italian, "presunción de inocencia") {
+		t.Fatalf("other target guidance leaked into Italian prompt: %q", italian)
+	}
+	fallback := hyMT2NativePrompt("German", "Polish", hyMT2LanguageGuidance["pl"], "Quelle")
+	if strings.Contains(fallback, "Target-language guidance") || strings.Contains(fallback, "Scheibe") {
+		t.Fatalf("configured guidance leaked into fallback prompt: %q", fallback)
+	}
+	if !strings.Contains(fallback, "7. Produce natural, fluent Polish rather than a word-for-word translation.\n\n### Source Data\nQuelle") {
+		t.Fatalf("fallback prompt structure changed: %q", fallback)
 	}
 }
 
