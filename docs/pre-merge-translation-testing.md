@@ -148,7 +148,7 @@ manifest and result report.
 | French | HY-MT2 | Historical protocol: 8/8; final-prompt B/2 structural pass | 7/8 acceptable; final B fixes legal framing but invents windshield specificity | A/2 pass; B/2 meaning failure | Paused after two focused rounds; no native approval | Discuss result before Italian |
 | Italian | HY-MT2 | Historical A-F: 6/6; third-guidance E/F: 2/2 structural | Revised E passes; revised F summary passes but title remains grammatically invalid; final prompt not run across full protocol | Not run | Paused after explicit third focused round; no native approval | Discuss result before Polish; no repetitions |
 | Polish | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable; recurring grammar/spelling defects recorded | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Turkish A-C |
-| Turkish | HY-MT2 | A-C: 3/3 structural | 1/3 acceptable; B changes damage and final-conviction meaning; C changes exact time and questioning | Not run | Needs focused guidance; no native approval | Discuss focused B/C rerun; do not expand yet |
+| Turkish | HY-MT2 | A-C: 3/3; focused B/C: 2/2 structural | 2/3 acceptable; B fixed; C questioning fixed but exact time still becomes exact/around | Not run | Needs second focused round; no native approval | Discuss final C-only gate; do not expand yet |
 | Ukrainian | HY-MT2 | A: 1/1 pair | Allegation wording ambiguous | Not run | Needs focused work; unapproved | Focused review when Ukrainian is reached |
 | Chinese | HY-MT2 | Not run | Pending | Pending | Historical semantic errors | After Ukrainian |
 | Hindi | HY-MT2 | Not run | Pending | Pending | Historical legal/role errors | After Chinese |
@@ -872,6 +872,36 @@ is claimed.
 
 **Next proposed step: discuss the first focused Turkish B/C gate. No further
 live calls until agreed.**
+
+## Turkish focused-guidance B/C gate: 2026-09-08
+
+Commit `4000d25` adds one general Turkish rule covering degree of damage,
+conviction versus judgment, exact versus approximate time expressions, and
+ordinary questioning versus interrogation. Prompt-isolation and
+processing-package tests passed before inference.
+
+A fresh request identity generated exactly four sequential native calls in
+**5m36s**, without retry or transport failure. Both pairs passed typed-
+placeholder checks, restoration, final validation, and queued-worker
+persistence. A zero-new-call replay reused and persisted all four responses.
+
+| Fixture | Initial result | Focused result | Decision |
+| --- | --- | --- | --- |
+| B | Damage became breakage; final conviction became final judgment | `zarar verdiği`, `mahkûmiyet`, and `kesinleşmiş mahkûmiyet` preserve all three concepts | Pass with style caveat |
+| C | Exact time became exact/around; questioning became interrogation | `ifadesine başvurdu` restores neutral questioning, but `tam olarak 03:30 sularında` still contradicts the exact time | Material time-precision failure |
+
+Turkish A-C improves from **1/3 to 2/3 acceptable** on assistant review. The
+first focused rule fixes B completely and fixes C's police-action error without
+a replacement material error. It does not fix the exact-time phrase even though
+the prompt explicitly forbids combining `tam olarak` with `sularında`.
+
+Preserve C without an unchanged-prompt retry and do not expand to D-F. One
+focused round remains. Discuss a shorter, direct rule giving the exact rendering
+`um genau 03:30 Uhr` → `tam olarak saat 03:30'da`, while keeping `gegen 04:20
+Uhr` approximate. No fluent or native approval is claimed.
+
+**Next proposed step: discuss the second and final Turkish C-only gate. No
+further live calls until agreed.**
 
 ## References
 
