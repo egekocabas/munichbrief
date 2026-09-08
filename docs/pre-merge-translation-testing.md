@@ -144,7 +144,7 @@ manifest and result report.
 | Language | Candidate | Structural | Meaning/readability | Repeats | Decision / open issue | Next action |
 | --- | --- | --- | --- | --- | --- | --- |
 | English | HY-MT2 | Final protocol: 8/8 pairs | Accurate/readable on assistant review; minor A/B wording caveats | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Spanish A-C |
-| Spanish | HY-MT2 | A-C: 3/3; revised B: 1/1 | A-C acceptable with recorded grammar/wording caveats | Not run | Expansion pending | Discuss, then D-F: six calls |
+| Spanish | HY-MT2 | A-F: 6/6; revised B: 1/1 | 5/6 acceptable; E mistranslates inpatient care as permanent | Not run | Needs focused work | Discuss medical guidance; retest E first |
 | French | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Spanish |
 | Italian | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After French |
 | Polish | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Italian |
@@ -359,6 +359,31 @@ Spanish A-C is ready for D-F; A and C retain their recorded non-material grammar
 and wording caveats. Preserve the original failed B attempt.
 
 **Next proposed batch: Spanish D-F, six native calls, after discussion.**
+
+## Spanish D-F expansion: 2026-09-08
+
+Exactly six fresh sequential native field calls completed in **5m21s**, without
+a retry or transport failure. All three pairs passed typed-placeholder checks,
+restoration, final validation, and queued-worker persistence. A zero-new-call
+replay then reused and persisted all six captured responses.
+
+| Fixture | Structural | Assistant meaning/readability | Decision |
+| --- | --- | --- | --- |
+| D | Pass | Time, setting, dispute, threats, slight injury, uncertain danger, response, arrest, release, and continuing investigation preserved | Acceptable |
+| E | Pass | `stationär in ein Krankenhaus gebracht` became `trasladada de forma permanente a un hospital`, incorrectly meaning taken permanently to hospital | Material failure |
+| F | Pass | Evasion, signals, red lights, collision, arrest, and licence/substance indications preserved; awkward securing language and slightly strong wording recorded | Acceptable with caveats |
+
+The failed E response remains durable evidence and must not be replaced by an
+unchanged-prompt retry. Spanish is structurally 6/6 across A-F and 5/6 on
+assistant meaning/readability review. This is not native approval.
+
+Do not run repetitions yet. Discuss one short Spanish-specific clarification
+that `stationär in ein Krankenhaus gebracht` means admitted or taken for
+inpatient hospital care, never permanently. If agreed, update the prompt and
+generate only E's two fields under a fresh identity before expanding again.
+
+**Next proposed step: discuss focused Spanish medical guidance; make no further
+live calls until agreed.**
 
 ## References
 
