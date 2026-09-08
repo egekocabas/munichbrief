@@ -148,7 +148,7 @@ manifest and result report.
 | French | HY-MT2 | Historical protocol: 8/8; final-prompt B/2 structural pass | 7/8 acceptable; final B fixes legal framing but invents windshield specificity | A/2 pass; B/2 meaning failure | Paused after two focused rounds; no native approval | Discuss result before Italian |
 | Italian | HY-MT2 | Historical A-F: 6/6; third-guidance E/F: 2/2 structural | Revised E passes; revised F summary passes but title remains grammatically invalid; final prompt not run across full protocol | Not run | Paused after explicit third focused round; no native approval | Discuss result before Polish; no repetitions |
 | Polish | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable; recurring grammar/spelling defects recorded | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Turkish A-C |
-| Turkish | HY-MT2 | A-C: 3/3; focused B/C: 2/2 structural | 2/3 acceptable; B fixed; C questioning fixed but exact time still becomes exact/around | Not run | Needs second focused round; no native approval | Discuss final C-only gate; do not expand yet |
+| Turkish | HY-MT2 | A-F: 6/6; focused B/C: 2/2 structural | 3/6 acceptable after user accepts C time wording; D invents victim, E omits inpatient admission, F changes signals/evidence | Not run | Needs second focused round; no native approval | Discuss focused D/E/F gate; no repetitions |
 | Ukrainian | HY-MT2 | A: 1/1 pair | Allegation wording ambiguous | Not run | Needs focused work; unapproved | Focused review when Ukrainian is reached |
 | Chinese | HY-MT2 | Not run | Pending | Pending | Historical semantic errors | After Ukrainian |
 | Hindi | HY-MT2 | Not run | Pending | Pending | Historical legal/role errors | After Chinese |
@@ -902,6 +902,40 @@ Uhr` approximate. No fluent or native approval is claimed.
 
 **Next proposed step: discuss the second and final Turkish C-only gate. No
 further live calls until agreed.**
+
+## Turkish user threshold and D-F expansion: 2026-09-08
+
+The user explicitly accepted `tam olarak 03:30 sularında` for this Turkish
+quality threshold. C is therefore accepted without regeneration: its neutral
+questioning, medical action, numbers, negation, and other relationships are
+correct. Turkish A-C becomes **3/3 acceptable under the user-selected
+threshold** using the existing focused prompt identity.
+
+The same prompt then generated exactly six fresh sequential native field calls
+for real fixtures D-F in **7m07s**, without retry or transport failure. All three
+pairs passed typed-placeholder checks, restoration, final validation, and
+queued-worker persistence. An exact replay reused and persisted all six
+responses with zero new calls.
+
+| Fixture | Structural | Assistant meaning/readability review |
+| --- | --- | --- |
+| D | Pass | Material role failure: neutral `Betroffene` becomes `mağdur` (victim) |
+| E | Pass | Material medical omission: inpatient admission becomes only transport to hospital for treatment |
+| F | Pass | Material control/evidence failure: police stop signals become road stop signs, and licence indications become evidence/proof |
+
+Turkish is structurally **6/6** and **3/6 acceptable** across A-F under the
+user-selected time threshold. Preserve D-F without unchanged-prompt retries.
+The A/B repetitions were not run because the expansion introduced material
+failures.
+
+One focused round remains under the roadmap. Discuss concise, general Turkish
+guidance for neutral person roles (`Betroffener` is not automatically `mağdur`),
+inpatient admission (`hastaneye yatırıldı`), police stop signals rather than road
+signs, and uncertain `Hinweise` rather than proof. No fluent or native approval
+is claimed.
+
+**Next proposed step: discuss the second focused Turkish D/E/F gate. No further
+live calls until agreed.**
 
 ## References
 
