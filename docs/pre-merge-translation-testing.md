@@ -145,7 +145,7 @@ manifest and result report.
 | --- | --- | --- | --- | --- | --- | --- |
 | English | HY-MT2 | Final protocol: 8/8 pairs | Accurate/readable on assistant review; minor A/B wording caveats | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Spanish A-C |
 | Spanish | HY-MT2 | A-F: 6/6; focused B/E: 2/2 structural | 5/6 acceptable; revised E fixes inpatient care but changes bus into a route | Not run | Paused after two focused rounds; no native approval | Discuss result before French; no repetitions |
-| French | HY-MT2 | A-F: 6/6 after clock-validator fix | 5/6 acceptable; E changes traffic police into transport police | Not run | Needs focused work; no native approval | Discuss French guidance; retest E first |
+| French | HY-MT2 | A-F: 6/6; revised E: 1/1 | 6/6 acceptable after focused E; recorded style/legal caveats | Not run | Repetition pending; no native approval | Discuss, then repeat A/B: four calls |
 | Italian | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After French |
 | Polish | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Italian |
 | Turkish | HY-MT2 | Not run | Pending | Pending | Historical grammar/redundancy | After Polish |
@@ -470,6 +470,38 @@ wording. If agreed, generate only E's two fields under a fresh identity.
 
 **Next proposed step: discuss focused French guidance; make no further live calls
 until agreed.**
+
+## French focused-guidance E batch: 2026-09-08
+
+Commit `13dd63b` adds general French police/medical terminology without referring
+to fixture E or its people, place, or vehicles. It defines `Verkehrspolizei` as
+traffic/road police rather than public-transport police, and `stationär in ein
+Krankenhaus gebracht` as inpatient admission rather than permanent transfer.
+Prompt-isolation tests, the full Go suite, and `go vet ./...` passed first.
+
+A fresh identity generated only E's title and summary: exactly two sequential
+calls in **3m09s**, without retry or transport failure. About 66 seconds of the
+title call was model loading. A zero-new-call replay reused, validated, and
+persisted both responses.
+
+| Evidence | Previous E | Focused E | Decision |
+| --- | --- | --- | --- |
+| Responsible unit | `police des transports de Munich` | `police de la circulation de Munich` | Fixed |
+| Inpatient care | `transportée en hospitalisation complète` | `admise à l’hôpital pour y recevoir des soins en hospitalisation` | Meaning clear; style remains awkward |
+| Scheduled bus | `bus de ligne` | `bus de ligne` | Preserved |
+
+The first focused round fixes the material agency-attribution error without a
+replacement factual error. Serious injury, cyclist, inpatient admission, place,
+continuing investigation, and absence of blame remain intact. Capitalization of
+`Vélo Électrique` and redundant hospital wording are stylistic caveats. Preserve
+the original failed E. This is assistant review only.
+
+French A-F is now **6/6 acceptable on assistant review**. Do not declare the
+language qualified yet: run the planned A/B repetition under the revised French
+prompt to check transit, allegation, legal meaning, placeholders, and stability.
+
+**Next proposed batch: French A/B repetition 2, four native calls, after
+discussion.**
 
 ## References
 
