@@ -28,7 +28,7 @@ var hyMT2LanguageNames = map[string]string{
 
 var hyMT2LanguageGuidance = map[string]string{
 	"en": "Keep neutral German person labels neutral: do not translate ‘Betroffener’ or ‘Betroffene’ as ‘victim’ unless the source explicitly identifies a victim. Preserve explicit medical and police-control meaning: ‘stationär in ein Krankenhaus gebracht’ means admitted to hospital as an inpatient, and ‘Anhaltesignale’ in a police-control context means police stop signals or orders, not road stop signs.",
-	"es": "Keep generic German vehicle glass generic: translate ‘Scheibe’ as ‘cristal’ or ‘ventanilla’ unless the source explicitly says ‘Windschutzscheibe’, which means ‘parabrisas’. Use ‘presunción de inocencia’ for ‘Unschuldsvermutung’, and translate neutral ‘befragte’ as ‘preguntó’ or ‘entrevistó’, not ‘interrogó’, unless the source explicitly describes an interrogation.",
+	"es": "Keep generic German vehicle glass generic: translate ‘Scheibe’ as ‘cristal’ or ‘ventanilla’ unless the source explicitly says ‘Windschutzscheibe’, which means ‘parabrisas’. Use ‘presunción de inocencia’ for ‘Unschuldsvermutung’, and translate neutral ‘befragte’ as ‘preguntó’ or ‘entrevistó’, not ‘interrogó’, unless the source explicitly describes an interrogation. In medical reporting, ‘stationär in ein Krankenhaus gebracht’ means ‘ingresada en un hospital’ or ‘hospitalizada’, never ‘trasladada de forma permanente’.",
 }
 
 // HyMT2NativeAdapter follows Tencent's user-only translation contract and

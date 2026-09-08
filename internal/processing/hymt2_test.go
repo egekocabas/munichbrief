@@ -88,7 +88,7 @@ func TestHyMT2NativeAdapterAddsOnlyConfiguredTargetGuidance(t *testing.T) {
 		t.Fatalf("English source boundary changed: %q", english)
 	}
 	spanish := hyMT2NativePrompt("German", "Spanish", hyMT2LanguageGuidance["es"], "Quelle")
-	for _, expected := range []string{"vehicle glass generic", "presunción de inocencia", "not ‘interrogó’"} {
+	for _, expected := range []string{"vehicle glass generic", "presunción de inocencia", "not ‘interrogó’", "never ‘trasladada de forma permanente’"} {
 		if !strings.Contains(spanish, expected) {
 			t.Errorf("Spanish guidance omitted %q: %s", expected, spanish)
 		}
