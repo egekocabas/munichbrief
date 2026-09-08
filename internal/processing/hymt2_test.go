@@ -115,7 +115,7 @@ func TestHyMT2NativeAdapterAddsOnlyConfiguredTargetGuidance(t *testing.T) {
 		t.Fatalf("other target guidance leaked into Italian prompt: %q", italian)
 	}
 	polish := hyMT2NativePrompt("German", "Polish", hyMT2LanguageGuidance["pl"], "Quelle")
-	for _, expected := range []string{"‘Verurteilung’ means ‘skazanie’", "‘rechtskräftige Verurteilung’ means ‘prawomocne skazanie’", "never merely ‘wyrok’ or ‘orzeczenie’", "may be an acquittal"} {
+	for _, expected := range []string{"‘Verurteilung’ means ‘skazanie’", "‘rechtskräftige Verurteilung’ means ‘prawomocne skazanie’", "never merely ‘wyrok’ or ‘orzeczenie’", "may be an acquittal", "‘Betroffener’ or ‘Betroffene’", "never ‘poszkodowany’ or ‘ofiara’", "‘Hinweise’ and ‘Auffälligkeiten’", "never ‘dowody’", "never ‘intervencja’"} {
 		if !strings.Contains(polish, expected) {
 			t.Errorf("Polish guidance omitted %q: %s", expected, polish)
 		}
