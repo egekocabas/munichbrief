@@ -148,7 +148,7 @@ manifest and result report.
 | French | HY-MT2 | Historical protocol: 8/8; final-prompt B/2 structural pass | 7/8 acceptable; final B fixes legal framing but invents windshield specificity | A/2 pass; B/2 meaning failure | Paused after two focused rounds; no native approval | Discuss result before Italian |
 | Italian | HY-MT2 | Historical A-F: 6/6; third-guidance E/F: 2/2 structural | Revised E passes; revised F summary passes but title remains grammatically invalid; final prompt not run across full protocol | Not run | Paused after explicit third focused round; no native approval | Discuss result before Polish; no repetitions |
 | Polish | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable; recurring grammar/spelling defects recorded | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Turkish A-C |
-| Turkish | HY-MT2 | Not run | Pending | Pending | Historical grammar/redundancy | After Polish |
+| Turkish | HY-MT2 | A-C: 3/3 structural | 1/3 acceptable; B changes damage and final-conviction meaning; C changes exact time and questioning | Not run | Needs focused guidance; no native approval | Discuss focused B/C rerun; do not expand yet |
 | Ukrainian | HY-MT2 | A: 1/1 pair | Allegation wording ambiguous | Not run | Needs focused work; unapproved | Focused review when Ukrainian is reached |
 | Chinese | HY-MT2 | Not run | Pending | Pending | Historical semantic errors | After Ukrainian |
 | Hindi | HY-MT2 | Not run | Pending | Pending | Historical legal/role errors | After Chinese |
@@ -844,6 +844,34 @@ and `autobusem linowym` are reproducible defects requiring fluent review. No
 native approval is claimed.
 
 **Next proposed step: stop and discuss the Polish result before Turkish A-C.**
+
+## Turkish A-C screening: 2026-09-08
+
+The standard HY-MT2 fallback prompt generated exactly six fresh sequential
+native field calls for Turkish A-C in **8m16s**, without retry or transport
+failure. All three pairs passed typed-placeholder checks, restoration, final
+validation, and queued-worker persistence. An exact replay reused and persisted
+all six responses with zero new calls.
+
+| Fixture | Structural | Assistant meaning/readability review |
+| --- | --- | --- |
+| A | Pass | Acceptable: attribution, medical examination, transit relationships, duration, and witness request survive; restored S-Bahn wording is redundant and has number/agreement awkwardness |
+| B | Pass | Material failure: `beschädigt` becomes stronger `kırdığı` (broke), and final conviction becomes broader `kesinleşmiş bir hüküm` (final judgment/ruling) |
+| C | Pass | Material failure: exact 03:30 becomes contradictory `tam olarak 03:30 sularında` (exactly around 03:30), and neutral `befragte` becomes stronger `sorguladı` (interrogated) |
+
+Turkish is **3/3 structural and 1/3 acceptable** on assistant review. Preserve B
+and C without unchanged-prompt retries. A retains all material facts despite
+minor grammar and redundancy around the immutable transit name.
+
+Do not expand to D-F yet. Discuss one concise, general Turkish rule covering
+damage versus breakage (`zarar vermek` rather than `kırmak` when breakage is not
+stated), final conviction rather than final judgment, exact versus approximate
+time expressions, and neutral police questioning (`ifadesini almak`/`soru
+sormak`) rather than interrogation (`sorgulamak`). No fluent or native approval
+is claimed.
+
+**Next proposed step: discuss the first focused Turkish B/C gate. No further
+live calls until agreed.**
 
 ## References
 
