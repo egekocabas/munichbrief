@@ -145,7 +145,7 @@ manifest and result report.
 | --- | --- | --- | --- | --- | --- | --- |
 | English | HY-MT2 | Final protocol: 8/8 pairs | Accurate/readable on assistant review; minor A/B wording caveats | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Spanish A-C |
 | Spanish | HY-MT2 | A-F: 6/6; focused B/E: 2/2 structural | 5/6 acceptable; revised E fixes inpatient care but changes bus into a route | Not run | Paused after two focused rounds; no native approval | Discuss result before French; no repetitions |
-| French | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Spanish |
+| French | HY-MT2 | A-C: 3/3 | 3/3 acceptable with grammar, legal-term, and witness-wording caveats | Not run | Expansion pending; no native approval | Discuss, then D-F: six calls |
 | Italian | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After French |
 | Polish | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Italian |
 | Turkish | HY-MT2 | Not run | Pending | Pending | Historical grammar/redundancy | After Polish |
@@ -414,6 +414,29 @@ rollout unless a later, separately agreed evaluation qualifies it.
 
 **Next proposed step: discuss the paused Spanish decision before beginning
 French A-C. No further live calls until agreed.**
+
+## French A-C screening: 2026-09-08
+
+The standard HY-MT2 fallback prompt generated exactly six sequential native
+field calls in **6m21s**, without retry or transport failure. All three pairs
+passed typed-placeholder checks, restoration, final validation, and queued-worker
+persistence. A zero-new-call replay reused and persisted all six responses.
+
+| Fixture | Structural | Assistant meaning/readability | Decision |
+| --- | --- | --- | --- |
+| A | Pass | Allegation, medical examination, timing, delay causality, unaffected U-Bahn, and places preserved; awkward entity articles and stronger-sounding witness instruction | Acceptable with caveats |
+| B | Pass | Allegation, generic glass, unresolved involvement, no conviction, innocence safeguard, and repeated place preserved; nonstandard innocence term and awkward place grammar | Acceptable with caveats |
+| C | Pass | All numbers, timing distinctions, speed, closure causality, medical examination, no injuries, witness, and 110 preserved; minor agreement/register and redundant street wording | Acceptable with caveats |
+
+No material factual or legal reversal was found. Do not add focused guidance
+from these stylistic caveats before seeing the real-incident expansion. Native
+review should specifically check `principe de l’innocence`, the witness-request
+wording, and grammar around immutable German place/transit names.
+
+French A-C is **3/3 acceptable on assistant review** and ready for D-F. This is
+not fluent/native approval.
+
+**Next proposed batch: French D-F, six native calls, after discussion.**
 
 ## References
 
