@@ -182,3 +182,28 @@ func TestReadinessRecoversIncompleteTrailingEvent(t *testing.T) {
 		t.Fatal("event log not appendable after recovery")
 	}
 }
+
+func TestReadinessCandidateAllowsExplicitHyMT2ComparisonModel(t *testing.T) {
+	model, adapter, contextSize, err := readinessCandidate(TranslationAdapterHyMT2, " hf.co/example/Hy-MT2:Q6_K ")
+	if err != nil || model != "hf.co/example/Hy-MT2:Q6_K" || adapter != TranslationAdapterHyMT2 || contextSize != 8192 {
+		t.Fatalf("candidate=%q/%q/%d err=%v", model, adapter, contextSize, err)
+	}
+	for _, test := range []struct {
+		name, adapter, model string
+		context              int
+	}{
+		{name: "default HY-MT2", model: hyMT2ScreenModel, adapter: TranslationAdapterHyMT2, context: 8192},
+		{name: "TranslateGemma", adapter: TranslationAdapterTranslateGemma, model: "hf.co/mradermacher/translategemma-12b-it-GGUF:Q3_K_S", context: 2048},
+		{name: "structured", adapter: TranslationAdapterStructured, model: "hf.co/bartowski/Qwen_Qwen3.5-9B-GGUF:Q3_K_M", context: 8192},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			gotModel, gotAdapter, gotContext, err := readinessCandidate(test.adapter, "")
+			if err != nil || gotModel != test.model || gotAdapter != test.adapter || gotContext != test.context {
+				t.Fatalf("candidate=%q/%q/%d err=%v", gotModel, gotAdapter, gotContext, err)
+			}
+		})
+	}
+	if _, _, _, err := readinessCandidate(TranslationAdapterTranslateGemma, "unexpected"); err == nil {
+		t.Fatal("non-HY-MT2 model override accepted")
+	}
+}

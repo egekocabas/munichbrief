@@ -438,20 +438,12 @@ func TestLiveTranslationReadiness(t *testing.T) {
 	if len(fixtures) != 6 {
 		t.Fatal("freeze exactly six fixtures before generation")
 	}
-	model := hyMT2ScreenModel
-	adapter := TranslationAdapterHyMT2
-	contextSize := 8192
-	switch os.Getenv("MUNICHBRIEF_READINESS_ADAPTER") {
-	case "", TranslationAdapterHyMT2:
-	case TranslationAdapterTranslateGemma:
-		adapter = TranslationAdapterTranslateGemma
-		model = "hf.co/mradermacher/translategemma-12b-it-GGUF:Q3_K_S"
-		contextSize = 2048
-	case TranslationAdapterStructured:
-		adapter = TranslationAdapterStructured
-		model = "hf.co/bartowski/Qwen_Qwen3.5-9B-GGUF:Q3_K_M"
-	default:
-		t.Fatal("unsupported readiness adapter")
+	model, adapter, contextSize, err := readinessCandidate(
+		os.Getenv("MUNICHBRIEF_READINESS_ADAPTER"),
+		os.Getenv("MUNICHBRIEF_READINESS_MODEL"),
+	)
+	if err != nil {
+		t.Fatal(err)
 	}
 	languages := strings.Split(os.Getenv("MUNICHBRIEF_READINESS_LANGUAGES"), ",")
 	for _, lang := range languages {
@@ -584,4 +576,34 @@ func TestLiveTranslationReadiness(t *testing.T) {
 		}
 	}
 	t.Logf("CHECKPOINT new_calls=%d directory=%s; editorial review remains required", transport.newCalls, runDir)
+}
+
+func readinessCandidate(adapterName, modelOverride string) (string, string, int, error) {
+	adapterName = strings.TrimSpace(adapterName)
+	modelOverride = strings.TrimSpace(modelOverride)
+	model := hyMT2ScreenModel
+	adapter := TranslationAdapterHyMT2
+	contextSize := 8192
+	switch adapterName {
+	case "", TranslationAdapterHyMT2:
+		if modelOverride != "" {
+			model = modelOverride
+		}
+	case TranslationAdapterTranslateGemma:
+		if modelOverride != "" {
+			return "", "", 0, errors.New("readiness model override is supported only for hy-mt2 comparisons")
+		}
+		adapter = TranslationAdapterTranslateGemma
+		model = "hf.co/mradermacher/translategemma-12b-it-GGUF:Q3_K_S"
+		contextSize = 2048
+	case TranslationAdapterStructured:
+		if modelOverride != "" {
+			return "", "", 0, errors.New("readiness model override is supported only for hy-mt2 comparisons")
+		}
+		adapter = TranslationAdapterStructured
+		model = "hf.co/bartowski/Qwen_Qwen3.5-9B-GGUF:Q3_K_M"
+	default:
+		return "", "", 0, fmt.Errorf("unsupported readiness adapter %q", adapterName)
+	}
+	return model, adapter, contextSize, nil
 }

@@ -162,6 +162,7 @@ Do not copy an operational incident database into the evaluation directory.
 MUNICHBRIEF_READINESS_LIVE_TEST=1 \
 MUNICHBRIEF_READINESS_DIR=.local/translation-evaluations/readiness-v1 \
 MUNICHBRIEF_OLLAMA_BASE_URL=http://127.0.0.1:11434 \
+MUNICHBRIEF_READINESS_MODEL=hf.co/mradermacher/Hy-MT2-7B-GGUF:Q5_K_M \
 MUNICHBRIEF_READINESS_LANGUAGES=en,uk \
 MUNICHBRIEF_READINESS_FIXTURES=A \
 MUNICHBRIEF_READINESS_REPETITIONS=1 \
@@ -174,6 +175,9 @@ Language/fixture/repetition selections and the new-call budget do not invalidate
 completed requests. Select one language for later stages: A-C first, then D-F,
 then A-B with repetition 2. Set `MUNICHBRIEF_READINESS_ADAPTER` to `hy-mt2`
 (default), `translategemma`, or `structured` for the roadmap's fixed candidates.
+`MUNICHBRIEF_READINESS_MODEL` may explicitly select another installed HY-MT2
+artifact for a controlled comparison; it is rejected for other adapters. Always
+use a new evaluation directory for a different model or digest.
 Set the new-call limit to zero to revalidate recorded responses without inference
 (the installed digest is still verified). A transport interruption stops the run;
 rerun the same command to replay saved fields and finish only missing calls.

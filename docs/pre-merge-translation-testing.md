@@ -4,6 +4,10 @@ Agreed 2026-09-08 for PR #55. This roadmap supersedes earlier future-work
 recommendations in [Translation model evaluation](translation-model-evaluation.md)
 and PR comments. Preserve their evidence, harnesses, and checkpoints.
 
+The frozen Q5_K_M overview, exact resume point, operating procedure, and the
+separate Q6_K experiment are preserved in
+[HY-MT2 quantization comparison](hy-mt2-quantization-comparison.md).
+
 ## Acceptance and stopping points
 
 Aim for accurate, readable translations. Minor grammar/style issues are allowed;
@@ -981,6 +985,24 @@ remains in the ignored durable evaluation directory.
 
 **Next proposed step: stop and discuss the Turkish result before the focused
 Ukrainian stage.**
+
+## Q6_K comparison experiment: 2026-09-08
+
+The requested full-current-prompt Q6_K comparison is complete for English,
+Spanish, French, Italian, Polish, and Turkish. It generated 96/96 intended calls
+and 48/48 structurally valid pairs; assistant review accepted 32/48 pairs. One
+additional Polish attempt ended in EOF and recovered by exact checkpoint resume.
+All 48 pairs subsequently replayed with zero new calls.
+
+Q6_K does not replace the Q5_K_M recommendation: its per-language acceptable
+counts were English 5/8, Spanish 4/8, French 4/8, Italian 4/8, Polish 7/8, and
+Turkish 8/8. The loaded model used about 7.49 GB on the 8.32 GB host, leaving
+about 170 MB available with no swap. Detailed per-pair results, failures,
+timings, comparison limitations, the frozen Q5 position, and the exact resume
+procedure are in [HY-MT2 quantization comparison](hy-mt2-quantization-comparison.md).
+
+**Resume the Q5_K_M roadmap at Ukrainian focused work. Do not reuse Q6
+checkpoints for Q5 or changed prompts.**
 
 ## References
 
