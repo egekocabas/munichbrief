@@ -153,7 +153,7 @@ manifest and result report.
 | Italian | HY-MT2 | Historical A-F: 6/6; third-guidance E/F: 2/2 structural | Revised E passes; revised F summary passes but title remains grammatically invalid; final prompt not run across full protocol | Not run | Paused after explicit third focused round; no native approval | Discuss result before Polish; no repetitions |
 | Polish | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable; recurring grammar/spelling defects recorded | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Turkish A-C |
 | Turkish | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable under the user-selected time threshold; recurring precision/grammar caveats recorded | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Ukrainian |
-| Ukrainian | HY-MT2 | A: 1/1 pair | Allegation wording ambiguous | Not run | Needs focused work; unapproved | Focused review when Ukrainian is reached |
+| Ukrainian | HY-MT2 | Focused A-C: 5/5 generated pairs structural across two prompt rounds | A passes after round one; C passes after round two; B fixes legal terms but regresses allegation into obligation-like wording | Not run | Paused after two focused rounds; no native approval | Discuss result before Chinese; no D-F or repetitions |
 | Chinese | HY-MT2 | Not run | Pending | Pending | Historical semantic errors | After Ukrainian |
 | Hindi | HY-MT2 | Not run | Pending | Pending | Historical legal/role errors | After Chinese |
 | Russian | HY-MT2 | Not run | Pending | Pending | Historical legal/role errors | After Hindi |
@@ -1001,8 +1001,57 @@ about 170 MB available with no swap. Detailed per-pair results, failures,
 timings, comparison limitations, the frozen Q5 position, and the exact resume
 procedure are in [HY-MT2 quantization comparison](hy-mt2-quantization-comparison.md).
 
-**Resume the Q5_K_M roadmap at Ukrainian focused work. Do not reuse Q6
-checkpoints for Q5 or changed prompts.**
+The Q5_K_M roadmap subsequently resumed at Ukrainian; its outcome is recorded
+below. Q6 checkpoints remain comparison evidence only and must not be reused for
+Q5 or changed prompts.
+
+## Ukrainian focused rounds: 2026-09-08
+
+The initial A result had rendered German reported allegation `soll ... verletzt
+haben` as Ukrainian `мав ... поранити`, which can instead express an obligation
+or expectation. The first focused round added a general reported-allegation
+distinction. Prompt-isolation tests passed before inference. A then generated
+exactly two fresh sequential Q5_K_M calls in **5m12s** and passed: `чоловік
+нібито легко поранив` unambiguously retains the allegation. Its typed names,
+numbers, attribution, medical examination, transit relationships, and negation
+also survived. An exact replay used zero new calls.
+
+B and C then generated four fresh calls in **5m37s**. Both were structurally
+valid, but each exposed a different material issue. B changed conviction and
+final conviction into the broader verdict and final-decision concepts. C
+changed ordinary questioning into interrogation and moved the collision from
+on Ganghoferstraße to merely near it.
+
+The second and final focused round added reusable Ukrainian distinctions for
+conviction versus verdict/decision, presumption of innocence, neutral
+questioning versus interrogation, and on-street versus near-street location.
+Prompt-isolation tests passed before another four-call B/C gate, which completed
+in **6m24s** without retry or transport failure. Exact replay of the final gate
+used zero new calls.
+
+| Fixture / round | Structural | Assistant meaning/readability review |
+| --- | --- | --- |
+| A / first | Pass | Pass: the allegation is explicit and all material facts survive; time and U-Bahn phrasing remain awkward but understandable |
+| B / first | Pass | Fail: allegation is clear, but conviction becomes verdict and final conviction becomes final decision |
+| C / first | Pass | Fail: ordinary questioning becomes interrogation and on-street becomes near-street |
+| B / second | Pass | Fail: conviction and presumption terminology are fixed, but `мав пошкодити` regresses the alleged act into obligation-like wording |
+| C / second | Pass | Pass: neutral questioning and exact street relation are restored; all facts, roles, numbers, causality, and negation survive |
+
+All **10/10 requested native field calls** completed and all five generated
+pairs passed deterministic validation, restoration, and queued-worker
+persistence. There were no retries or transport/resource failures. However,
+the final B output still contains a consequential allegation ambiguity even
+though the prompt explicitly prohibits that construction. It is preserved as
+the first attempt rather than retried for a favorable sample.
+
+Ukrainian is therefore **paused after two focused prompt rounds**. D-F and A/B
+repetitions were not run, and no native approval is claimed. The guidance is
+still retained because it demonstrably fixes A's allegation, B's legal terms,
+and C's questioning/location errors, but this evidence does not qualify the
+language for rollout.
+
+**Next proposed step: stop and discuss the Ukrainian result before Chinese
+A-C. The exact Q5_K_M resume point is Chinese, followed by Hindi and Russian.**
 
 ## References
 

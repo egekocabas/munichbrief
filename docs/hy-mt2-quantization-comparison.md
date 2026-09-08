@@ -20,11 +20,13 @@ Adapter/context: `hy-mt2` / 8192
 | Italian | A-F plus focused E/F | Paused | Final F title remains grammatically invalid; no repetitions |
 | Polish | Final protocol 8/8 | Acceptable on this sample | Recurring grammar/spelling defects; no native approval |
 | Turkish | Final protocol 8/8 | Acceptable on this sample | User-approved time phrasing plus precision/grammar caveats; no native approval |
-| Ukrainian | A only | Needs focused work | Allegation wording ambiguous |
+| Ukrainian | Focused A-C only | Paused after two focused rounds | A and C pass; B retains an obligation-like allegation ambiguity |
 | Chinese, Hindi, Russian | Not run in the readiness protocol | Pending | Older screens are historical evidence only |
 
-This is the exact point from which the language-by-language Q5_K_M roadmap can
-resume: **Ukrainian focused work**, followed by Chinese, Hindi, and Russian.
+At the time of this comparison, the exact Q5_K_M resume point was **Ukrainian
+focused work**, followed by Chinese, Hindi, and Russian. Ukrainian has since
+been paused after two focused rounds; the current exact resume point is
+**Chinese A-C**, then Hindi and Russian.
 The saved Q5 checkpoints must not be reused for another model or changed prompt.
 
 ## Operating procedure preserved
@@ -143,6 +145,7 @@ with that pressure even though it does not prove an out-of-memory kill.
 The evidence does **not** support replacing Q5_K_M with Q6_K for these languages.
 Q6 produces more material errors in five of six comparisons, offers no score
 gain for Turkish, runs with critically low memory headroom, and is generally
-slower in this run. Keep the Q5 resume point at Ukrainian. If Q6 is revisited,
-use this checkpoint only for exact replay; changed prompts or model digests need
-a new directory.
+slower in this run. Ukrainian has since completed its two focused Q5 rounds and
+is paused; keep the Q5 resume point at Chinese A-C. If Q6 is revisited, use this
+checkpoint only for exact replay; changed prompts or model digests need a new
+directory.
