@@ -146,7 +146,7 @@ manifest and result report.
 | English | HY-MT2 | Final protocol: 8/8 pairs | Accurate/readable on assistant review; minor A/B wording caveats | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Spanish A-C |
 | Spanish | HY-MT2 | A-F: 6/6; focused B/E: 2/2 structural | 5/6 acceptable; revised E fixes inpatient care but changes bus into a route | Not run | Paused after two focused rounds; no native approval | Discuss result before French; no repetitions |
 | French | HY-MT2 | Historical protocol: 8/8; final-prompt B/2 structural pass | 7/8 acceptable; final B fixes legal framing but invents windshield specificity | A/2 pass; B/2 meaning failure | Paused after two focused rounds; no native approval | Discuss result before Italian |
-| Italian | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After French |
+| Italian | HY-MT2 | A-C: 3/3 | 2/3 acceptable; B invents windshield and broadens final conviction | Not run | Needs first focused round; no native approval | Discuss Italian guidance; retest B first |
 | Polish | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Italian |
 | Turkish | HY-MT2 | Not run | Pending | Pending | Historical grammar/redundancy | After Polish |
 | Ukrainian | HY-MT2 | A: 1/1 pair | Allegation wording ambiguous | Not run | Needs focused work; unapproved | Focused review when Ukrainian is reached |
@@ -565,6 +565,34 @@ it. This is assistant review only; no native approval.
 
 **Next proposed step: discuss the paused French decision before beginning Italian
 A-C. No further live calls until agreed.**
+
+## Italian A-C screening: 2026-09-08
+
+The standard HY-MT2 fallback prompt generated exactly six sequential native
+field calls in **7m01s**, without retry or transport failure. All three pairs
+passed typed-placeholder checks, restoration, final validation, and queued-worker
+persistence. A zero-new-call replay reused and persisted all six responses.
+
+| Fixture | Structural | Assistant meaning/readability | Decision |
+| --- | --- | --- | --- |
+| A | Pass | Attribution, allegation, injury, medical checks, timing, delay causality, unaffected U-Bahn, and places preserved; witness and protected-name grammar caveats | Acceptable with caveats |
+| B | Pass | Generic `Scheibe` becomes `parabrezza`, and final conviction becomes the broader `sentenza definitiva` | Material failure |
+| C | Pass | All numbers, timing distinctions, speed, closure causality, medical examination, no injuries, witness, and 110 preserved; questioning-register caveat | Acceptable with caveat |
+
+B retains police attribution, uncertainty, no-conviction wording, and the
+innocence concept. It nevertheless adds unsupported windshield specificity and
+changes `rechtskräftige Verurteilung` from a final conviction to any final
+judgment. Preserve the output and do not retry under the unchanged prompt.
+
+Italian A-C is **3/3 structural and 2/3 acceptable on assistant review**. Do not
+expand to D-F yet. Discuss short, general Italian guidance: keep generic vehicle
+`Scheibe` generic (`vetro` or `finestrino`) unless the source explicitly says
+`Windschutzscheibe`; translate the legal safeguard conventionally as
+`presunzione d’innocenza` until a final conviction (`condanna definitiva`), not
+merely any final judgment. This is not native approval.
+
+**Next proposed step: discuss the first focused Italian guidance round and test
+B first under a fresh identity. No further live calls until agreed.**
 
 ## References
 
