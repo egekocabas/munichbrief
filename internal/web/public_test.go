@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -53,9 +54,18 @@ func TestTimelineAndDetailRenderFixtureData(t *testing.T) {
 	if olderTimeline.Code != http.StatusOK {
 		t.Fatalf("older timeline status = %d, want 200", olderTimeline.Code)
 	}
-	for _, expected := range []string{"Page 2 of 2", "Beschädigte Eingangstür", "← Newer", `?page=2"`} {
+	for _, expected := range []string{"Page 2 of 2", "Beschädigte Eingangstür", "← Newer", `data-timeline-url="/en?page=2"`} {
 		if !strings.Contains(olderTimeline.Body.String(), expected) {
 			t.Errorf("older timeline body does not contain %q", expected)
+		}
+	}
+	articleLinks := regexp.MustCompile(`href="(/en/incidents/[^"]+)"`).FindAllStringSubmatch(olderTimeline.Body.String(), -1)
+	if len(articleLinks) == 0 {
+		t.Fatal("older timeline has no article links")
+	}
+	for _, link := range articleLinks {
+		if strings.ContainsAny(link[1], "?#") {
+			t.Errorf("article link is not canonical: %q", link[1])
 		}
 	}
 
@@ -71,7 +81,7 @@ func TestTimelineAndDetailRenderFixtureData(t *testing.T) {
 	if !strings.Contains(detail.Body.String(), records[0].TitleDE) {
 		t.Errorf("detail body does not contain incident title %q", records[0].TitleDE)
 	}
-	for _, expected := range []string{`href="/en"`, `>←</span> Back</a>`, `target="_blank"`} {
+	for _, expected := range []string{`href="/en"`, `data-timeline-back="/en"`, `>←</span> Back</a>`, `target="_blank"`, staticAssets["navigation.js"].path} {
 		if !strings.Contains(detail.Body.String(), expected) {
 			t.Errorf("direct detail body does not contain %q", expected)
 		}

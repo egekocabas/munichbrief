@@ -723,12 +723,8 @@ func requestedPageParameter(request *http.Request, parameter string) (int, error
 	return page, nil
 }
 
-func incidentURL(language string, id int64, page int) string {
-	path := fmt.Sprintf("/%s/incidents/%d", language, id)
-	if page <= 1 {
-		return path
-	}
-	return (&url.URL{Path: path, RawQuery: url.Values{"page": {strconv.Itoa(page)}}.Encode()}).RequestURI()
+func incidentURL(language string, id int64) string {
+	return fmt.Sprintf("/%s/incidents/%d", language, id)
 }
 
 func timelineURL(language string, page int) string {

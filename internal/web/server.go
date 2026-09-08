@@ -55,6 +55,9 @@ var htmxScript []byte
 //go:embed static/theme.js
 var themeScript []byte
 
+//go:embed static/navigation.js
+var navigationScript []byte
+
 //go:embed static/admin.js
 var adminScript []byte
 
