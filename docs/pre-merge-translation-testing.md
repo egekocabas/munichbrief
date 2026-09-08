@@ -146,7 +146,7 @@ manifest and result report.
 | English | HY-MT2 | Final protocol: 8/8 pairs | Accurate/readable on assistant review; minor A/B wording caveats | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Spanish A-C |
 | Spanish | HY-MT2 | A-F: 6/6; focused B/E: 2/2 structural | 5/6 acceptable; revised E fixes inpatient care but changes bus into a route | Not run | Paused after two focused rounds; no native approval | Discuss result before French; no repetitions |
 | French | HY-MT2 | Historical protocol: 8/8; final-prompt B/2 structural pass | 7/8 acceptable; final B fixes legal framing but invents windshield specificity | A/2 pass; B/2 meaning failure | Paused after two focused rounds; no native approval | Discuss result before Italian |
-| Italian | HY-MT2 | A-C: 3/3; final B: 1/1 | 3/3 acceptable after final B; recorded grammar/register caveats | Not run | Expansion pending; two focused rounds used; no native approval | Discuss, then D-F: six calls |
+| Italian | HY-MT2 | A-F: 6/6; final B: 1/1 | 4/6 acceptable; E changes continuing investigation to completed; F changes a check to a search and has a broken title | Not run | Paused after two focused rounds; no native approval | Discuss result before Polish; no repetitions |
 | Polish | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Italian |
 | Turkish | HY-MT2 | Not run | Pending | Pending | Historical grammar/redundancy | After Polish |
 | Ukrainian | HY-MT2 | A: 1/1 pair | Allegation wording ambiguous | Not run | Needs focused work; unapproved | Focused review when Ukrainian is reached |
@@ -658,6 +658,33 @@ have been used. Run D-F under the final prompt next; any new material error will
 pause Italian rather than trigger another prompt round.
 
 **Next proposed batch: Italian D-F, six native calls, after discussion.**
+
+## Italian D-F expansion: 2026-09-08
+
+The final Italian prompt generated exactly six fresh sequential native field
+calls for real fixtures D-F in **5m51s**, without retry or transport failure.
+All three pairs passed typed-placeholder checks, restoration, final validation,
+and queued-worker persistence. An exact replay reused and persisted all six
+responses with `MUNICHBRIEF_READINESS_MAX_NEW_CALLS=0`.
+
+| Fixture | Structural | Assistant meaning/readability review |
+| --- | --- | --- |
+| D | Pass | Acceptable: facts, uncertain danger, arrest and release sequence, and continuing investigation are preserved |
+| E | Pass | Material failure: ongoing `werden geführt` becomes completed `sono state condotte`, changing the investigation's status |
+| F | Pass | Material/readability failure: `bei der Überprüfung` becomes the added police search `durante la perquisizione`; alcohol/drug indications are strengthened toward consumption; title `L’autista dell’auto fuga` is grammatically broken |
+
+Italian is structurally **6/6** across A-F and **4/6 acceptable** on assistant
+meaning/readability review. D adds no material issue. E changes an ongoing
+investigation into a completed one. F adds a search where the source says a
+check, strengthens evidentiary wording, and has an unpublishable title. Preserve
+both failures without unchanged-prompt retries.
+
+Both allowed focused prompt rounds were already used for fixture B. Italian is
+therefore **paused**, and the planned A/B repetitions were not run. No fluent or
+native approval is claimed.
+
+**Next proposed step: discuss the paused Italian decision before beginning
+Polish A-C. No further live calls until agreed.**
 
 ## References
 
