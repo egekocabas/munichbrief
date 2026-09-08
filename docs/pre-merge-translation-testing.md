@@ -144,7 +144,7 @@ manifest and result report.
 | Language | Candidate | Structural | Meaning/readability | Repeats | Decision / open issue | Next action |
 | --- | --- | --- | --- | --- | --- | --- |
 | English | HY-MT2 | Final protocol: 8/8 pairs | Accurate/readable on assistant review; minor A/B wording caveats | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Spanish A-C |
-| Spanish | HY-MT2 | A-F: 6/6; revised B: 1/1 | 5/6 acceptable; E mistranslates inpatient care as permanent | Not run | Needs focused work | Discuss medical guidance; retest E first |
+| Spanish | HY-MT2 | A-F: 6/6; focused B/E: 2/2 structural | 5/6 acceptable; revised E fixes inpatient care but changes bus into a route | Not run | Paused after two focused rounds; no native approval | Discuss result before French; no repetitions |
 | French | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Spanish |
 | Italian | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After French |
 | Polish | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Italian |
@@ -384,6 +384,36 @@ generate only E's two fields under a fresh identity before expanding again.
 
 **Next proposed step: discuss focused Spanish medical guidance; make no further
 live calls until agreed.**
+
+## Spanish focused medical-guidance E batch: 2026-09-08
+
+Commit `13579b6` adds a Spanish-only clarification that the German medical phrase
+`stationär in ein Krankenhaus gebracht` means hospital admission/inpatient care,
+never a permanent transfer. Prompt-isolation tests, the full Go suite, and
+`go vet ./...` passed before inference.
+
+A fresh identity generated only E's title and summary: exactly two sequential
+calls in **1m17s**, without retry or transport failure. A zero-new-call replay
+reused, validated, and persisted both captured responses.
+
+| Evidence | Previous E | Focused E | Decision |
+| --- | --- | --- | --- |
+| Inpatient care | `trasladada de forma permanente a un hospital` | `fue ingresada en un hospital` | Fixed |
+| Collision participant | `un autobús urbano` | `una ruta urbana` | New material failure |
+
+The revised output corrects the targeted medical error, preserves the serious
+injury, cyclist, place, investigation, and absence of blame, but mistranslates
+`Linienbus` as an urban route rather than a scheduled bus. That removes a central
+participant and makes the collision semantically incoherent. Preserve both E
+attempts; do not retry the unchanged prompt. This is assistant review only.
+
+Spanish remains 6/6 structural and 5/6 acceptable on meaning/readability across
+A-F. It has used the roadmap's two focused prompt rounds (B and E), so mark it
+**paused** and do not run repetitions. Its route should remain unconfigured for
+rollout unless a later, separately agreed evaluation qualifies it.
+
+**Next proposed step: discuss the paused Spanish decision before beginning
+French A-C. No further live calls until agreed.**
 
 ## References
 
