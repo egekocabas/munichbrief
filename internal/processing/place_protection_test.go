@@ -2,7 +2,9 @@ package processing
 
 import (
 	"context"
+	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/egekocabas/munichbrief/internal/gazetteer"
 )
@@ -174,6 +176,39 @@ func TestTranslationValidationPreservesNumbersWithPlaceholders(t *testing.T) {
 		if err := validateTranslation(input, &output); err == nil {
 			t.Fatalf("invalid structure accepted: %#v", output.Values)
 		}
+	}
+}
+
+func TestTranslationValidationDefersProtectedFieldLengthUntilRestoration(t *testing.T) {
+	protectedInput := StepInput{Values: map[string]string{
+		"title_de":   "Polizeieinsatz an der __MB_STREET_0001__ verzögert __MB_COMMUTER_TRAIN_0002__",
+		"summary_de": "Zusammenfassung",
+	}}
+	protectedOutput := StepOutput{Values: map[string]string{
+		"title":   "La intervención policial en la __MB_STREET_0001__ ha retrasado al __MB_COMMUTER_TRAIN_0002__.",
+		"summary": "Resumen",
+	}}
+	if utf8.RuneCountInString(protectedOutput.Values["title"]) <= 90 {
+		t.Fatal("regression fixture does not exceed the protected title limit")
+	}
+	if err := validateTranslation(protectedInput, &protectedOutput); err != nil {
+		t.Fatalf("protected title length was not deferred: %v", err)
+	}
+
+	restoredInput := StepInput{Values: map[string]string{
+		"title_de":   "Polizeieinsatz an der Ingolstädter Straße verzögert S-Bahnen",
+		"summary_de": "Zusammenfassung",
+	}}
+	restoredOutput := StepOutput{Values: map[string]string{
+		"title":   "La intervención policial en la Ingolstädter Straße ha retrasado al S-Bahnen.",
+		"summary": "Resumen",
+	}}
+	if err := validateTranslation(restoredInput, &restoredOutput); err != nil {
+		t.Fatalf("restored reader-visible title rejected: %v", err)
+	}
+	restoredOutput.Values["title"] = strings.Repeat("a", 91)
+	if err := validateTranslation(restoredInput, &restoredOutput); err == nil {
+		t.Fatal("overlong restored reader-visible title was accepted")
 	}
 }
 

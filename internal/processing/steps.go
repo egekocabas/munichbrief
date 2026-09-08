@@ -800,10 +800,10 @@ func validateTranslation(input StepInput, output *StepOutput) error {
 	if !titleFound || !summaryFound {
 		return errorOf(ErrorOutput, "model output contains no translated presentation")
 	}
-	if err := normalizeLimitedField("translated title", &title, 90); err != nil {
+	if err := normalizeTranslationField("translated title", &title, 90, input.Value("title_de")); err != nil {
 		return err
 	}
-	if err := normalizeLimitedField("translated summary", &summary, 600); err != nil {
+	if err := normalizeTranslationField("translated summary", &summary, 600, input.Value("summary_de")); err != nil {
 		return err
 	}
 	output.Values["title"], output.Values["summary"] = title, summary
@@ -1029,6 +1029,29 @@ func validateCategoryVerification(input StepInput, output *StepOutput) error {
 }
 
 func normalizeLimitedField(name string, value *string, limit int) error {
+	if err := normalizeGeneratedField(name, value); err != nil {
+		return err
+	}
+	if utf8.RuneCountInString(*value) > limit {
+		return errorOf(ErrorOutput, "model output %s exceeds %d characters", name, limit)
+	}
+	return nil
+}
+
+func normalizeTranslationField(name string, value *string, limit int, source string) error {
+	if err := normalizeGeneratedField(name, value); err != nil {
+		return err
+	}
+	// Typed placeholder spellings are intentionally longer than the names they
+	// replace. The protected generator validates again after restoration, where
+	// the real reader-visible field must satisfy the ordinary limit.
+	if !translationPlaceTokenPattern.MatchString(source) && utf8.RuneCountInString(*value) > limit {
+		return errorOf(ErrorOutput, "model output %s exceeds %d characters", name, limit)
+	}
+	return nil
+}
+
+func normalizeGeneratedField(name string, value *string) error {
 	if !utf8.ValidString(*value) {
 		return errorOf(ErrorOutput, "model output %s is not valid UTF-8", name)
 	}
@@ -1040,9 +1063,6 @@ func normalizeLimitedField(name string, value *string, limit int) error {
 	*value = norm.NFC.String(strings.Join(strings.Fields(*value), " "))
 	if *value == "" {
 		return errorOf(ErrorOutput, "model output %s is empty", name)
-	}
-	if utf8.RuneCountInString(*value) > limit {
-		return errorOf(ErrorOutput, "model output %s exceeds %d characters", name, limit)
 	}
 	return nil
 }
