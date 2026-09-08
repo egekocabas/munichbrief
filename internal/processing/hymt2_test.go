@@ -106,7 +106,7 @@ func TestHyMT2NativeAdapterAddsOnlyConfiguredTargetGuidance(t *testing.T) {
 		t.Fatalf("other target guidance leaked into French prompt: %q", french)
 	}
 	italian := hyMT2NativePrompt("German", "Italian", hyMT2LanguageGuidance["it"], "Quelle")
-	for _, expected := range []string{"‘Scheibe’", "‘vetro’ or ‘finestrino’", "‘presunzione d’innocenza’", "‘condanna definitiva’ or ‘condanna passata in giudicato’", "never use ‘sentenza definitiva’", "a final judgment may be an acquittal"} {
+	for _, expected := range []string{"‘Scheibe’", "‘vetro’ or ‘finestrino’", "‘presunzione d’innocenza’", "‘condanna definitiva’ or ‘condanna passata in giudicato’", "never use ‘sentenza definitiva’", "a final judgment may be an acquittal", "ongoing investigations remain ongoing", "a check (‘Überprüfung’ or ‘Kontrolle’) is not a search (‘perquisizione’)", "not confirmed consumption", "grammatically complete Italian headlines"} {
 		if !strings.Contains(italian, expected) {
 			t.Errorf("Italian guidance omitted %q: %s", expected, italian)
 		}
