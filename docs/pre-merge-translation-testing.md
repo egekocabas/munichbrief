@@ -144,7 +144,7 @@ manifest and result report.
 | Language | Candidate | Structural | Meaning/readability | Repeats | Decision / open issue | Next action |
 | --- | --- | --- | --- | --- | --- | --- |
 | English | HY-MT2 | Final protocol: 8/8 pairs | Accurate/readable on assistant review; minor A/B wording caveats | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Spanish A-C |
-| Spanish | HY-MT2 | A-C: 3/3 after protected-length fix | A/C acceptable with caveats; B adds unsupported windshield specificity | Not run | Needs focused work | Discuss Spanish guidance; retest B first |
+| Spanish | HY-MT2 | A-C: 3/3; revised B: 1/1 | A-C acceptable with recorded grammar/wording caveats | Not run | Expansion pending | Discuss, then D-F: six calls |
 | French | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Spanish |
 | Italian | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After French |
 | Polish | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Italian |
@@ -333,8 +333,32 @@ yet. Discuss one short Spanish-specific guidance revision covering generic
 vehicle glass/window, conventional presumption-of-innocence terminology, and
 neutral police questioning; test B first and preserve this attempt.
 
-**Next proposed step: discuss focused Spanish guidance; make no further live
-calls until agreed.**
+## Spanish focused-guidance B batch: 2026-09-08
+
+Commit `e84fe25` adds two Spanish-only HY-MT2 guidance sentences: keep generic
+vehicle `Scheibe` generic unless the source explicitly identifies a windshield,
+use conventional `presunción de inocencia`, and keep neutral police questioning
+distinct from interrogation. English retains its separate guidance and languages
+without a specialization retain the standard fallback prompt.
+
+A fresh identity generated only B's title and summary: exactly two sequential
+calls in **3m29s**, without retry or transport failure. Zero-call replay reused,
+validated, and persisted both responses.
+
+| Original issue | Revised output | Decision |
+| --- | --- | --- |
+| `Scheibe` became unsupported `parabrisas` | `cristal de un vehículo` | Fixed |
+| Less conventional `principio de inocencia` | `presunción de inocencia` | Fixed |
+
+The revised B preserves attribution, allegation, unresolved involvement, no
+conviction, final judgment, witness request, street, and both district
+occurrences. It passes structural and assistant meaning/readability review on
+the first revised attempt. This is not native approval.
+
+Spanish A-C is ready for D-F; A and C retain their recorded non-material grammar
+and wording caveats. Preserve the original failed B attempt.
+
+**Next proposed batch: Spanish D-F, six native calls, after discussion.**
 
 ## References
 
