@@ -146,7 +146,7 @@ manifest and result report.
 | English | HY-MT2 | Final protocol: 8/8 pairs | Accurate/readable on assistant review; minor A/B wording caveats | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Spanish A-C |
 | Spanish | HY-MT2 | A-F: 6/6; focused B/E: 2/2 structural | 5/6 acceptable; revised E fixes inpatient care but changes bus into a route | Not run | Paused after two focused rounds; no native approval | Discuss result before French; no repetitions |
 | French | HY-MT2 | Historical protocol: 8/8; final-prompt B/2 structural pass | 7/8 acceptable; final B fixes legal framing but invents windshield specificity | A/2 pass; B/2 meaning failure | Paused after two focused rounds; no native approval | Discuss result before Italian |
-| Italian | HY-MT2 | A-C: 3/3 | 2/3 acceptable; B invents windshield and broadens final conviction | Not run | Needs first focused round; no native approval | Discuss Italian guidance; retest B first |
+| Italian | HY-MT2 | A-C: 3/3; revised B: 1/1 structural | 2/3 acceptable; glass fixed but final judgment still replaces final conviction | Not run | Needs second focused round; no native approval | Discuss stronger legal guidance; retest B first |
 | Polish | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Italian |
 | Turkish | HY-MT2 | Not run | Pending | Pending | Historical grammar/redundancy | After Polish |
 | Ukrainian | HY-MT2 | A: 1/1 pair | Allegation wording ambiguous | Not run | Needs focused work; unapproved | Focused review when Ukrainian is reached |
@@ -592,6 +592,40 @@ expand to D-F yet. Discuss short, general Italian guidance: keep generic vehicle
 merely any final judgment. This is not native approval.
 
 **Next proposed step: discuss the first focused Italian guidance round and test
+B first under a fresh identity. No further live calls until agreed.**
+
+## Italian focused-guidance B batch: 2026-09-08
+
+Commit `f096454` adds a short general Italian rule without fixture-specific
+people or places. It keeps generic vehicle `Scheibe` generic unless the source
+explicitly identifies a windshield, uses conventional `presunzione d’innocenza`,
+and distinguishes final conviction (`condanna definitiva`) from a generic final
+judgment. Prompt-isolation tests, the full Go suite, and `go vet ./...` passed.
+
+A fresh identity generated only B's title and summary: exactly two sequential
+calls in **2m05s**, without retry or transport failure. The pair passed typed-
+placeholder checks, restoration, final validation, and queued-worker persistence.
+A zero-new-call replay reused and persisted both responses.
+
+| Evidence | Initial B | Focused B | Decision |
+| --- | --- | --- | --- |
+| Generic vehicle glass | `parabrezza` | `vetro` | Fixed |
+| Innocence term | `principio di presunzione di innocenza` | `presunzione d’innocenza` | Fixed |
+| End condition | `sentenza definitiva` | `sentenza definitiva` | Material failure remains |
+
+The first focused rule removes the unsupported windshield detail and improves
+the innocence term. HY-MT2 nevertheless ignores the explicit final-conviction
+distinction and again broadens `rechtskräftige Verurteilung` to any final
+judgment. Preserve this attempt and do not retry the unchanged prompt.
+
+Italian remains **3/3 structural and 2/3 acceptable on assistant review**. Do not
+expand to D-F. One focused round remains. Discuss a shorter, stronger general
+rule: render `bis zu einer rechtskräftigen Verurteilung` as `fino a una condanna
+definitiva` (or `fino a una condanna passata in giudicato`), never `sentenza
+definitiva`, because a final judgment may also be an acquittal. This is not native
+approval.
+
+**Next proposed step: discuss the second focused Italian guidance round and test
 B first under a fresh identity. No further live calls until agreed.**
 
 ## References
