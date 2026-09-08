@@ -145,7 +145,7 @@ manifest and result report.
 | --- | --- | --- | --- | --- | --- | --- |
 | English | HY-MT2 | Final protocol: 8/8 pairs | Accurate/readable on assistant review; minor A/B wording caveats | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Spanish A-C |
 | Spanish | HY-MT2 | A-F: 6/6; focused B/E: 2/2 structural | 5/6 acceptable; revised E fixes inpatient care but changes bus into a route | Not run | Paused after two focused rounds; no native approval | Discuss result before French; no repetitions |
-| French | HY-MT2 | A-F: 6/6; revised E: 1/1 | 6/6 acceptable after focused E; recorded style/legal caveats | Not run | Repetition pending; no native approval | Discuss, then repeat A/B: four calls |
+| French | HY-MT2 | Final protocol: 8/8 structural | 7/8 acceptable; B/2 broadens final conviction to any final decision | A/2 pass; B/2 meaning failure | Needs second focused round; no native approval | Discuss legal guidance; retest B first |
 | Italian | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After French |
 | Polish | HY-MT2 | Not run | Pending | Pending | Current pipeline untested | After Italian |
 | Turkish | HY-MT2 | Not run | Pending | Pending | Historical grammar/redundancy | After Polish |
@@ -502,6 +502,36 @@ prompt to check transit, allegation, legal meaning, placeholders, and stability.
 
 **Next proposed batch: French A/B repetition 2, four native calls, after
 discussion.**
+
+## French A/B repetition: 2026-09-08
+
+The revised French prompt generated exactly four fresh sequential native field
+calls in **4m14s**, without retry or transport failure. Both repeated pairs
+passed typed-placeholder checks, restoration, final validation, and queued-worker
+persistence. A zero-new-call replay reused and persisted all four responses.
+
+| Fixture | Structural | Assistant meaning/readability | Decision |
+| --- | --- | --- | --- |
+| A/2 | Pass | All material facts preserved; the known entity-grammar and stronger witness-instruction caveats recur | Acceptable with caveats |
+| B/2 | Pass | Incident facts, allegation, uncertainty, and no-conviction statement preserved, but innocence ends at any final decision rather than only a final conviction | Material legal-framing failure |
+
+The B/2 source says `bis zu einer rechtskräftigen Verurteilung`; the output says
+`jusqu’à ce qu’une décision définitive soit rendue`. A final decision may be an
+acquittal, so this broadens the condition ending the presumption of innocence.
+`principe de l’innocence` is also less conventional than `présomption
+d’innocence`. Place-name grammar remains awkward but is not the failure.
+
+Preserve B/2 and do not retry under the unchanged prompt. French completes the
+eight-pair protocol at **8/8 structural and 7/8 acceptable on assistant review**,
+but is not qualified. One of the roadmap's two focused rounds remains.
+
+Discuss short, general French legal guidance: translate `Unschuldsvermutung` as
+`présomption d’innocence`, and retain that it applies until a final conviction
+(`condamnation définitive`), not merely any final decision or judgment. If
+agreed, test B first under a fresh identity. This is not native approval.
+
+**Next proposed step: discuss the second focused French guidance round; make no
+further live calls until agreed.**
 
 ## References
 
