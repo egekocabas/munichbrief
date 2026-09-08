@@ -771,6 +771,7 @@ var (
 	translationNumberPattern     = regexp.MustCompile(`[0-9]+`)
 	translation24HourPattern     = regexp.MustCompile(`\b([01]?[0-9]|2[0-3]):([0-5][0-9])\b`)
 	translation12HourPattern     = regexp.MustCompile(`(?i)\b(1[0-2]|0?[1-9])(?::([0-5][0-9]))?\s*([ap])\.?\s*m\.?`)
+	translationHourMarkerPattern = regexp.MustCompile(`(?i)\b([01]?[0-9]|2[0-3])\s*h(?:eure(?:s)?)?(?:\s*([0-5][0-9]))?\b`)
 	presentationMarkdownPattern  = regexp.MustCompile("(?m)(?:\\*\\*|__|`|^\\s{0,3}(?:#{1,6}\\s|>\\s|[-+*]\\s|[0-9]+\\.\\s)|!?\\[[^]\\n]+\\]\\([^)\\n]+\\))")
 )
 
@@ -827,7 +828,7 @@ func validateTranslation(input StepInput, output *StepOutput) error {
 }
 
 func sameTranslationNumbers(source, translated string) bool {
-	source, translated = removeEquivalentTwelveHourTimes(source, translated)
+	source, translated = removeEquivalentLocalizedTimes(source, translated)
 	normalize := func(value string) []string {
 		value = translationURLPattern.ReplaceAllString(value, "")
 		value = translationPlaceTokenPattern.ReplaceAllString(value, "")
@@ -864,10 +865,11 @@ type translationClock struct {
 	minutes    int
 }
 
-func removeEquivalentTwelveHourTimes(source, translated string) (string, string) {
+func removeEquivalentLocalizedTimes(source, translated string) (string, string) {
 	sourceClocks := translation24HourPattern.FindAllStringSubmatchIndex(source, -1)
-	translatedClocks := translation12HourPattern.FindAllStringSubmatchIndex(translated, -1)
-	if len(sourceClocks) == 0 || len(translatedClocks) == 0 {
+	twelveHourClocks := translation12HourPattern.FindAllStringSubmatchIndex(translated, -1)
+	hourMarkerClocks := translationHourMarkerPattern.FindAllStringSubmatchIndex(translated, -1)
+	if len(sourceClocks) == 0 || len(twelveHourClocks) == 0 && len(hourMarkerClocks) == 0 {
 		return source, translated
 	}
 	sourceMatches := make([]translationClock, 0, len(sourceClocks))
@@ -876,8 +878,8 @@ func removeEquivalentTwelveHourTimes(source, translated string) (string, string)
 		minute, _ := strconv.Atoi(source[match[4]:match[5]])
 		sourceMatches = append(sourceMatches, translationClock{start: match[0], end: match[1], minutes: hour*60 + minute})
 	}
-	translatedMatches := make([]translationClock, 0, len(translatedClocks))
-	for _, match := range translatedClocks {
+	translatedMatches := make([]translationClock, 0, len(twelveHourClocks)+len(hourMarkerClocks))
+	for _, match := range twelveHourClocks {
 		hour, _ := strconv.Atoi(translated[match[2]:match[3]])
 		minute := 0
 		if match[4] >= 0 {
@@ -888,6 +890,14 @@ func removeEquivalentTwelveHourTimes(source, translated string) (string, string)
 		}
 		if strings.EqualFold(translated[match[6]:match[7]], "p") {
 			hour += 12
+		}
+		translatedMatches = append(translatedMatches, translationClock{start: match[0], end: match[1], minutes: hour*60 + minute})
+	}
+	for _, match := range hourMarkerClocks {
+		hour, _ := strconv.Atoi(translated[match[2]:match[3]])
+		minute := 0
+		if match[4] >= 0 {
+			minute, _ = strconv.Atoi(translated[match[4]:match[5]])
 		}
 		translatedMatches = append(translatedMatches, translationClock{start: match[0], end: match[1], minutes: hour*60 + minute})
 	}

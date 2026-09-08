@@ -263,6 +263,41 @@ func TestTranslationValidationAcceptsEquivalentLocalizedNumberFormatting(t *test
 	}
 }
 
+func TestTranslationValidationAcceptsEquivalentLocalized24HourNotation(t *testing.T) {
+	input := StepInput{Values: map[string]string{
+		"title_de": "Titel", "summary_de": "Am Freitag gegen 20:00 Uhr begann der Einsatz.",
+	}}
+	for _, summary := range []string{
+		"L’intervention a commencé vendredi vers 20 h.",
+		"L’intervention a commencé vendredi vers 20h.",
+		"L’intervention a commencé vendredi vers 20 heures.",
+	} {
+		output := StepOutput{Values: map[string]string{"title": "Titre", "summary": summary}}
+		if err := validateTranslation(input, &output); err != nil {
+			t.Fatalf("equivalent localized 24-hour time rejected for %q: %v", summary, err)
+		}
+	}
+	minuteInput := StepInput{Values: map[string]string{
+		"title_de": "Titel", "summary_de": "Am Freitag gegen 20:30 Uhr begann der Einsatz.",
+	}}
+	minuteOutput := StepOutput{Values: map[string]string{
+		"title": "Titre", "summary": "L’intervention a commencé vendredi vers 20 h 30.",
+	}}
+	if err := validateTranslation(minuteInput, &minuteOutput); err != nil {
+		t.Fatalf("equivalent localized 24-hour time with minutes rejected: %v", err)
+	}
+	for _, summary := range []string{
+		"L’intervention a commencé vendredi vers 20 h 30.",
+		"L’intervention a commencé vendredi vers 21 h.",
+		"L’intervention a commencé vendredi vers 20 h et a pris fin à 21 h.",
+	} {
+		output := StepOutput{Values: map[string]string{"title": "Titre", "summary": summary}}
+		if err := validateTranslation(input, &output); err == nil {
+			t.Fatalf("changed or added localized 24-hour time accepted for %q", summary)
+		}
+	}
+}
+
 func TestTranslationValidationRejectsControlCharactersAndWrongScript(t *testing.T) {
 	input := StepInput{Values: map[string]string{"title_de": "Titel", "summary_de": "Zusammenfassung"}}
 	control := StepOutput{Values: map[string]string{"title": "Title", "summary": "Bad\u009ftext"}}
