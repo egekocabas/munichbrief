@@ -133,7 +133,7 @@ func TestHyMT2NativeAdapterAddsOnlyConfiguredTargetGuidance(t *testing.T) {
 		t.Fatalf("other target guidance leaked into Turkish prompt: %q", turkish)
 	}
 	ukrainian := hyMT2NativePrompt("German", "Ukrainian", hyMT2LanguageGuidance["uk"], "Quelle")
-	for _, expected := range []string{"reported allegations", "German ‘soll … haben’", "‘за повідомленнями, …’", "never ‘мав …’", "supposed or required to act", "‘Verurteilung’ means ‘засудження’", "‘rechtskräftige Verurteilung’", "never merely ‘вирок’ or ‘остаточне рішення’", "‘презумпція невинуватості’", "‘befragen’ as ‘опитувати’", "never ‘допитувати’", "‘an der … Straße’", "not merely near it (‘біля вулиці’)"} {
+	for _, expected := range []string{"every German reported-allegation construction", "‘soll … haben’", "explicitly mark the alleged action", "‘нібито’ or ‘як стверджується’", "Never express this construction with ‘мав’, ‘мала’, or ‘мали’ plus an infinitive", "supposed or required to act", "‘Verurteilung’ means ‘засудження’", "‘rechtskräftige Verurteilung’", "never merely ‘вирок’ or ‘остаточне рішення’", "‘презумпція невинуватості’", "‘befragen’ as ‘опитувати’", "never ‘допитувати’", "‘an der … Straße’", "not merely near it (‘біля вулиці’)", "‘Betroffener’ or ‘Betroffene’", "‘відповідна особа’ or ‘особа, якої це стосується’", "never ‘постраждалий’ or ‘потерпілий’", "‘Hinweise’ and ‘Auffälligkeiten’", "never ‘докази’, proof", "confirmed intoxication"} {
 		if !strings.Contains(ukrainian, expected) {
 			t.Errorf("Ukrainian guidance omitted %q: %s", expected, ukrainian)
 		}

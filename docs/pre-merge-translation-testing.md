@@ -153,7 +153,7 @@ manifest and result report.
 | Italian | HY-MT2 | Historical A-F: 6/6; third-guidance E/F: 2/2 structural | Revised E passes; revised F summary passes but title remains grammatically invalid; final prompt not run across full protocol | Not run | Paused after explicit third focused round; no native approval | Discuss result before Polish; no repetitions |
 | Polish | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable; recurring grammar/spelling defects recorded | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Turkish A-C |
 | Turkish | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable under the user-selected time threshold; recurring precision/grammar caveats recorded | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Ukrainian |
-| Ukrainian | HY-MT2 | Focused A-C: 5/5 generated pairs structural across two prompt rounds | A passes after round one; C passes after round two; B fixes legal terms but regresses allegation into obligation-like wording | Not run | Paused after two focused rounds; no native approval | Discuss result before Chinese; no D-F or repetitions |
+| Ukrainian | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable after two explicit user-approved extra rounds; minor grammar/style caveats recorded | Final A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Chinese A-C |
 | Chinese | HY-MT2 | Not run | Pending | Pending | Historical semantic errors | After Ukrainian |
 | Hindi | HY-MT2 | Not run | Pending | Pending | Historical legal/role errors | After Chinese |
 | Russian | HY-MT2 | Not run | Pending | Pending | Historical legal/role errors | After Hindi |
@@ -1022,7 +1022,7 @@ final conviction into the broader verdict and final-decision concepts. C
 changed ordinary questioning into interrogation and moved the collision from
 on Ganghoferstraße to merely near it.
 
-The second and final focused round added reusable Ukrainian distinctions for
+The second roadmap-bounded focused round added reusable Ukrainian distinctions for
 conviction versus verdict/decision, presumption of innocence, neutral
 questioning versus interrogation, and on-street versus near-street location.
 Prompt-isolation tests passed before another four-call B/C gate, which completed
@@ -1049,6 +1049,74 @@ repetitions were not run, and no native approval is claimed. The guidance is
 still retained because it demonstrably fixes A's allegation, B's legal terms,
 and C's questioning/location errors, but this evidence does not qualify the
 language for rollout.
+
+That was the roadmap decision at this checkpoint. The user subsequently approved
+two explicit additional rounds; their complete results supersede the paused
+decision and are recorded below.
+
+## Ukrainian user-approved allegation round: 2026-09-08
+
+The third focused round made the reported-allegation rule shorter and mandatory:
+German `soll ... haben` must use explicit Ukrainian allegation wording and must
+not use `мав`/`мала`/`мали` plus an infinitive. B was the gate and passed on its
+first v3 attempt, preserving allegation, unresolved involvement, conviction,
+final conviction, and presumption of innocence.
+
+The same prompt then completed A, C, and real fixtures D-F plus A/B repetitions.
+All **16/16 intended native calls** completed in about **26m05s**, without retry,
+transport, or resource failure. All eight pairs were structurally valid. A-C,
+E, and both repetitions passed assistant meaning review; D and F exposed new
+material issues:
+
+- D changed neutral `Betroffene` into `Постраждалого`, identifying the arrested
+  person as injured/a victim without source support.
+- F changed tentative `Hinweise` into `докази` (evidence/proof) and strengthened
+  alcohol/drug-typical observations toward actual influence.
+
+These first attempts were preserved. At this stage v3 was **6/8 materially
+acceptable**, with no native approval.
+
+## Ukrainian neutral-role/evidence round and final protocol: 2026-09-09
+
+The user approved one further focused round for the newly discovered D/F issues.
+The v4 prompt adds two general distinctions: neutral `Betroffener`/`Betroffene`
+must not become an injured/victim label without source support, and tentative
+`Hinweise`/`Auffälligkeiten` must not become proof, confirmed intoxication, or
+confirmed substance use. Prompt-isolation tests passed before inference.
+
+D and F were the gate. Their four fresh calls completed in **7m34s** and both
+passed: D used the neutral `Особу, якої це стосується`; F used `ознаки` and
+`підозри` without proof or confirmed impairment. The remaining six pairs then
+completed under the identical v4 request identity.
+
+One combined invocation hit Go's default ten-minute test timeout while B/1's
+summary was in flight. The durable recorder showed A/1, A/2, and B/1's title as
+complete. Resume replayed the saved B title and generated only the missing
+summary under the exact same request hash. This was an invocation/harness
+timeout, not a model, validation, memory, or translation failure. Subsequent
+batches used `go test -timeout 15m`.
+
+| Pair | Structural | Assistant meaning/readability review |
+| --- | --- | --- |
+| A/1 | Pass | Allegation, attribution, medical examination, transit relationships, duration, and witness request preserved; time/U-Bahn phrasing is awkward but understandable |
+| B/1 | Pass | Allegation, unresolved involvement, conviction, final conviction, and presumption of innocence preserved; minor grammatical awkwardness |
+| C/1 | Pass | Exact/approximate times, street relation, speed, causality, medical examination, neutral questioning, negation, and `110` preserved |
+| D/1 | Pass | Neutral person role restored; injury, response, arrest without resistance, release, and ongoing investigation preserved |
+| E/1 | Pass | Scheduled bus/e-bike, serious injury, inpatient treatment, and ongoing traffic-police investigation preserved |
+| F/1 | Pass | Stop signals and tentative licence/alcohol/drug indications preserved without proof or confirmed influence |
+| A/2 | Pass | Stable material pass; output is effectively identical to A/1 |
+| B/2 | Pass | Stable allegation and legal-meaning pass |
+
+The v4 checkpoint contains **16/16 completed intended native calls** and **8/8
+structurally valid, materially acceptable pairs** on assistant review. Successful
+call durations total about **26m18s**; the interrupted B-summary attempt adds
+roughly two minutes of discarded wall time but no accepted output. A complete
+zero-new-call replay restored, validated, and persisted all eight pairs through
+the queued worker path.
+
+Ukrainian is now **acceptable on this sample** under the agreed
+accurate-and-readable threshold. Minor grammatical and stylistic awkwardness is
+documented; this is not native approval or a general quality guarantee.
 
 **Next proposed step: stop and discuss the Ukrainian result before Chinese
 A-C. The exact Q5_K_M resume point is Chinese, followed by Hindi and Russian.**
