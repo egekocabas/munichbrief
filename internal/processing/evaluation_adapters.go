@@ -59,10 +59,11 @@ type evaluationNativeAdapter struct {
 	targetName        string
 	targetGuidance    string
 	raw               bool
+	rawChatML         bool
 	generationOptions chatOptions
 }
 
-func newEvaluationNativeAdapter(baseURL, model, targetCode, adapterName string, names map[string]string, guidance map[string]string, raw bool, timeout time.Duration, contextSize, contextLimit int, baseClient *http.Client) (*evaluationNativeAdapter, error) {
+func newEvaluationNativeAdapter(baseURL, model, targetCode, adapterName string, names map[string]string, guidance map[string]string, raw, rawChatML bool, timeout time.Duration, contextSize, contextLimit int, baseClient *http.Client) (*evaluationNativeAdapter, error) {
 	definitions := langregistry.Registered()
 	if err := langregistry.Validate(definitions); err != nil {
 		return nil, err
@@ -89,25 +90,25 @@ func newEvaluationNativeAdapter(baseURL, model, targetCode, adapterName string, 
 	}
 	return &evaluationNativeAdapter{
 		client: client, adapterName: adapterName, sourceName: sourceName,
-		targetName: targetName, targetGuidance: guidance[target.Code], raw: raw,
+		targetName: targetName, targetGuidance: guidance[target.Code], raw: raw, rawChatML: rawChatML,
 		generationOptions: chatOptions{Temperature: 0, NumPredict: evaluationMaxOutputTokens, NumCtx: contextSize},
 	}, nil
 }
 
 func NewLLaMAX3NativeAdapter(baseURL, model, targetCode string, timeout time.Duration, contextSize int, baseClient *http.Client) (*evaluationNativeAdapter, error) {
-	return newEvaluationNativeAdapter(baseURL, model, targetCode, "LLaMAX3", llamax3LanguageNames, llamax3LanguageGuidance, true, timeout, contextSize, llamax3ContextLimit, baseClient)
+	return newEvaluationNativeAdapter(baseURL, model, targetCode, "LLaMAX3", llamax3LanguageNames, llamax3LanguageGuidance, true, false, timeout, contextSize, llamax3ContextLimit, baseClient)
 }
 
 func NewEuroLLMNativeAdapter(baseURL, model, targetCode string, timeout time.Duration, contextSize int, baseClient *http.Client) (*evaluationNativeAdapter, error) {
-	return newEvaluationNativeAdapter(baseURL, model, targetCode, "EuroLLM", euroLLMLanguageNames, euroLLMLanguageGuidance, false, timeout, contextSize, euroLLMContextLimit, baseClient)
+	return newEvaluationNativeAdapter(baseURL, model, targetCode, "EuroLLM", euroLLMLanguageNames, euroLLMLanguageGuidance, false, false, timeout, contextSize, euroLLMContextLimit, baseClient)
 }
 
 func NewTowerPlusNativeAdapter(baseURL, model, targetCode string, timeout time.Duration, contextSize int, baseClient *http.Client) (*evaluationNativeAdapter, error) {
-	return newEvaluationNativeAdapter(baseURL, model, targetCode, "Tower+", towerPlusLanguageNames, towerPlusLanguageGuidance, false, timeout, contextSize, towerPlusContextLimit, baseClient)
+	return newEvaluationNativeAdapter(baseURL, model, targetCode, "Tower+", towerPlusLanguageNames, towerPlusLanguageGuidance, false, false, timeout, contextSize, towerPlusContextLimit, baseClient)
 }
 
 func NewTowerInstructNativeAdapter(baseURL, model, targetCode string, timeout time.Duration, contextSize int, baseClient *http.Client) (*evaluationNativeAdapter, error) {
-	return newEvaluationNativeAdapter(baseURL, model, targetCode, "TowerInstruct", towerInstructLanguageNames, towerInstructLanguageGuidance, false, timeout, contextSize, towerInstructContextLimit, baseClient)
+	return newEvaluationNativeAdapter(baseURL, model, targetCode, "TowerInstruct", towerInstructLanguageNames, towerInstructLanguageGuidance, true, true, timeout, contextSize, towerInstructContextLimit, baseClient)
 }
 
 func (a *evaluationNativeAdapter) Translate(ctx context.Context, text string) (string, string, error) {
@@ -119,7 +120,11 @@ func (a *evaluationNativeAdapter) Translate(ctx context.Context, text string) (s
 	var content, model string
 	var err error
 	if a.raw {
-		prompt = llamax3NativePrompt(a.sourceName, a.targetName, a.targetGuidance, text)
+		if a.rawChatML {
+			prompt = "<|im_start|>user\n" + prompt + "<|im_end|>\n<|im_start|>assistant\n"
+		} else {
+			prompt = llamax3NativePrompt(a.sourceName, a.targetName, a.targetGuidance, text)
+		}
 		content, model, err = a.client.rawGenerate(ctx, prompt, a.generationOptions)
 	} else {
 		content, model, err = a.client.chatWithOptions(ctx, true, "", prompt, nil, a.generationOptions)
@@ -158,7 +163,7 @@ func labelledNativePrompt(sourceName, targetName, guidance, text string) string 
 
 func translationAdapterUsesRawGenerate(adapter string) bool {
 	switch strings.TrimSpace(adapter) {
-	case TranslationAdapterSeedX, TranslationAdapterLLaMAX3:
+	case TranslationAdapterSeedX, TranslationAdapterLLaMAX3, TranslationAdapterTowerInstruct:
 		return true
 	default:
 		return false

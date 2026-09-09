@@ -154,8 +154,10 @@ The full production-worker readiness harness also accepts
 `/api/generate`, its mandatory final language tag, greedy decoding, at most 512
 output tokens, and a 4096-token effective context. SalamandraTA uses user-only
 ChatML, greedy decoding, at most 1024 output tokens, and an 8192-token effective
-context. LLaMAX3 uses raw Alpaca-format generation; EuroLLM, Tower+, and
-TowerInstruct use user-only labelled-source ChatML. The evaluation adapters use
+context. LLaMAX3 uses raw Alpaca-format generation; EuroLLM and Tower+ use
+user-only labelled-source ChatML. TowerInstruct renders that user-only ChatML
+through raw generation because the evaluated GGUF template otherwise inserts an
+empty system turn. The evaluation adapters use
 greedy decoding and at most 1024 output tokens; their effective contexts are
 8192 except TowerInstruct at 2048. Use a fresh readiness
 directory whenever the prompt, model, or target changes; recording/replay binds

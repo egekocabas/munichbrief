@@ -278,7 +278,10 @@ documented raw Alpaca template and supports all five remaining targets. EuroLLM
 uses its official labelled-source ChatML evaluation prompt and supports Croatian,
 Greek, Hindi, and Russian, but not Bosnian. Tower+ supports Hindi and Russian;
 TowerInstruct-v0.2 supports Russian among the remaining targets. Both Tower
-families use user-only labelled-source ChatML without a system message.
+families use user-only labelled-source ChatML without a system message. The
+evaluated TowerInstruct GGUF template unconditionally inserts an empty system
+turn, so its adapter renders the documented user-only ChatML envelope through
+raw generation instead of accepting that conversion-specific deviation.
 
 Primary references:
 

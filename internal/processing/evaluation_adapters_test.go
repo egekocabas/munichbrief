@@ -47,7 +47,6 @@ func TestLabelledNativeAdaptersUseUserOnlyChatML(t *testing.T) {
 	}{
 		{name: "EuroLLM", target: "hr", context: euroLLMContextLimit, constructor: NewEuroLLMNativeAdapter},
 		{name: "Tower+", target: "hi", context: towerPlusContextLimit, constructor: NewTowerPlusNativeAdapter},
-		{name: "TowerInstruct", target: "ru", context: towerInstructContextLimit, constructor: NewTowerInstructNativeAdapter},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -83,6 +82,32 @@ func TestLabelledNativeAdaptersUseUserOnlyChatML(t *testing.T) {
 	}
 }
 
+func TestTowerInstructNativeAdapterAvoidsConvertedEmptySystemTurn(t *testing.T) {
+	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		if request.URL.Path != "/api/generate" {
+			t.Fatalf("request path = %q, want raw generation", request.URL.Path)
+		}
+		var payload generateRequest
+		if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
+			t.Fatal(err)
+		}
+		want := "<|im_start|>user\nTranslate the following German source text to Russian:\nPreserve every placeholder matching `__MB_[A-Z_]+_[0-9]{4}__` exactly, character-for-character, and output only the translation.\nGerman: Einsatz an der __MB_STREET_0001__\nRussian:<|im_end|>\n<|im_start|>assistant\n"
+		if !payload.Raw || payload.Prompt != want || strings.Contains(payload.Prompt, "<|im_start|>system") || payload.Options.NumCtx != towerInstructContextLimit {
+			t.Fatalf("TowerInstruct payload = %#v", payload)
+		}
+		var response bytes.Buffer
+		_ = json.NewEncoder(&response).Encode(generateResponse{Model: "tower-instruct:test", Done: true, Response: "Операция на __MB_STREET_0001__"})
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(response.Bytes()))}, nil
+	})
+	adapter, err := NewTowerInstructNativeAdapter("http://ollama.test", "tower-instruct:test", "ru", time.Second, 8192, &http.Client{Transport: transport})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := adapter.Translate(context.Background(), "Einsatz an der __MB_STREET_0001__"); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestEvaluationNativeAdaptersRejectUnsupportedLanguagesAndEmptyInput(t *testing.T) {
 	if _, err := NewEuroLLMNativeAdapter("http://ollama.test", "model:test", "bs", time.Second, 8192, nil); err == nil || !strings.Contains(err.Error(), "does not officially support") {
 		t.Fatalf("EuroLLM Bosnian error = %v", err)
@@ -103,12 +128,12 @@ func TestEvaluationNativeAdaptersRejectUnsupportedLanguagesAndEmptyInput(t *test
 }
 
 func TestTranslationAdapterRawTransportClassification(t *testing.T) {
-	for _, adapter := range []string{TranslationAdapterSeedX, TranslationAdapterLLaMAX3} {
+	for _, adapter := range []string{TranslationAdapterSeedX, TranslationAdapterLLaMAX3, TranslationAdapterTowerInstruct} {
 		if !translationAdapterUsesRawGenerate(adapter) {
 			t.Errorf("%s should use raw generation", adapter)
 		}
 	}
-	for _, adapter := range []string{TranslationAdapterStructured, TranslationAdapterHyMT2, TranslationAdapterSalamandraTA, TranslationAdapterEuroLLM, TranslationAdapterTowerPlus, TranslationAdapterTowerInstruct} {
+	for _, adapter := range []string{TranslationAdapterStructured, TranslationAdapterHyMT2, TranslationAdapterSalamandraTA, TranslationAdapterEuroLLM, TranslationAdapterTowerPlus} {
 		if translationAdapterUsesRawGenerate(adapter) {
 			t.Errorf("%s should use chat", adapter)
 		}
