@@ -156,7 +156,7 @@ manifest and result report.
 | Turkish | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable under the user-selected time threshold; recurring precision/grammar caveats recorded | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Ukrainian |
 | Ukrainian | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable after two explicit user-approved extra rounds; minor grammar/style caveats recorded | Final A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Chinese A-C |
 | Chinese | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable after three focused rounds; recurring awkward A wording recorded | Final A/B: 2/2 pass | Acceptable on this sample; no native approval | Continue autonomously with Hindi A-C |
-| Hindi | HY-MT2 | Baseline A-C: 3/3 structural; revision-1 A-C: 3/3 structural | Baseline 1/3 acceptable; revision-1 fixes A/B but leaks guidance into C | Not run | Needs focused work; Ollama stopped after one D transport EOF | Resume revision-2 C gate, then reassess A/B |
+| Hindi | HY-MT2 | Best revision: A-F 6/6 structural | Best revision 4/6 acceptable (B-E); A allegation and F substance uncertainty fail | Not run | Paused after six focused rounds; no native approval | Retain best observed prompt; evaluate another model separately |
 | Russian | HY-MT2 | Not run | Pending | Pending | Historical legal/role errors | After Hindi |
 | Croatian | TranslateGemma Q3_K_S | Not run | Pending | Pending | Runtime fit unknown | After HY-MT2 decisions |
 | Bosnian | TranslateGemma Q3_K_S | Not run | Pending | Pending | Runtime fit/quality unknown | After Croatian |
@@ -1186,6 +1186,33 @@ made. The exact durable resume point is **Hindi v3, fixture C title and summary*
 If C contains no guidance leakage, reassess A and B under the identical prompt;
 then continue D-F and A/B repeats only if those gates pass. The endpoint must be
 healthy first. No native review is claimed.
+
+The endpoint recovered and the autonomous session continued. Revision two fixed
+the C leakage and passed A-C, but D changed the neutral involved person to a
+victim and definite danger, while E changed traffic police to transport police.
+F passed. Revision three fixed those distinctions but changed a multi-family
+building to a multi-storey building and a scheduled bus to an ordinary bus.
+
+Revision four fixed both noun distinctions. Across its complete A-F pass, B-E
+were materially acceptable; A again lost explicit allegation and F strengthened
+tentative substance abnormalities into problems. This was the best observed
+configuration: **6/6 structural and 4/6 materially acceptable**.
+
+Revision five added target-language examples for A/F. A and F passed, but the
+example contaminated B, D, and E: a vehicle window was “lightly injured,” an
+established injury became alleged, and E gained an unsupported alleged-injury
+sentence. Revision six replaced all examples with compact English semantic rules,
+but A still lost allegation and B regressed to breakage/formal-sentence wording.
+The following D request encountered the second session-level Ollama `EOF`; it is
+recorded as infrastructure, not translation quality. No unchanged-prompt retry
+was made.
+
+All six user-authorized focused rounds are exhausted. No A/B repetitions were
+run because no final prompt passed the six fixtures. Hindi is **paused**. Code
+retains revision four, the best observed prompt, rather than the poorer fifth or
+sixth attempt. The durable records preserve every attempt and two distinct Ollama
+outages. Future Hindi work should compare another model or adapter rather than
+continue growing this HY-MT2 prompt. This is assistant review only.
 
 ## References
 

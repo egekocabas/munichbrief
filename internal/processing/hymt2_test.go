@@ -86,7 +86,7 @@ func TestHyMT2NativeAdapterAddsOnlyConfiguredTargetGuidance(t *testing.T) {
 		}
 	}
 	hindi := hyMT2NativePrompt("German", "Hindi", hyMT2LanguageGuidance["hi"], "Quelle")
-	for _, expected := range []string{"only when its corresponding German wording occurs", "never add glossary rules or examples", "‘कथित तौर पर’ or ‘आरोप है कि’", "‘beschädigt’", "‘क्षतिग्रस्त’", "‘rechtskräftige Verurteilung’", "‘अंतिम दोषसिद्धि’", "until final conviction"} {
+	for _, expected := range []string{"only when its corresponding German wording occurs", "never add glossary rules or examples", "‘कथित तौर पर’ or ‘आरोप है कि’", "‘beschädigt’", "‘क्षतिग्रस्त’", "‘rechtskräftige Verurteilung’", "‘अंतिम दोषसिद्धि’", "until final conviction", "‘संबंधित व्यक्ति’", "never ‘पीड़ित’", "‘अस्पष्ट खतरे की स्थिति’", "‘अनिश्चित खतरे की स्थिति’", "‘यातायात पुलिस’", "never transport police", "‘Mehrfamilienhaus’", "‘बहु-परिवारीय आवासीय इमारत’", "‘Linienbus’", "‘नियमित सार्वजनिक बस’", "never an ordinary bus"} {
 		if !strings.Contains(hindi, expected) {
 			t.Errorf("Hindi guidance omitted %q: %s", expected, hindi)
 		}
