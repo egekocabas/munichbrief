@@ -183,9 +183,13 @@ func TestReadinessRecoversIncompleteTrailingEvent(t *testing.T) {
 	}
 }
 
-func TestReadinessCandidateAllowsExplicitHyMT2ComparisonModel(t *testing.T) {
+func TestReadinessCandidateAllowsExplicitNativeAdapterComparisonModels(t *testing.T) {
 	model, adapter, contextSize, err := readinessCandidate(TranslationAdapterHyMT2, " hf.co/example/Hy-MT2:Q6_K ")
 	if err != nil || model != "hf.co/example/Hy-MT2:Q6_K" || adapter != TranslationAdapterHyMT2 || contextSize != 8192 {
+		t.Fatalf("candidate=%q/%q/%d err=%v", model, adapter, contextSize, err)
+	}
+	model, adapter, contextSize, err = readinessCandidate(TranslationAdapterTranslateGemma, " translategemma:test ")
+	if err != nil || model != "translategemma:test" || adapter != TranslationAdapterTranslateGemma || contextSize != 2048 {
 		t.Fatalf("candidate=%q/%q/%d err=%v", model, adapter, contextSize, err)
 	}
 	for _, test := range []struct {
@@ -203,7 +207,7 @@ func TestReadinessCandidateAllowsExplicitHyMT2ComparisonModel(t *testing.T) {
 			}
 		})
 	}
-	if _, _, _, err := readinessCandidate(TranslationAdapterTranslateGemma, "unexpected"); err == nil {
-		t.Fatal("non-HY-MT2 model override accepted")
+	if _, _, _, err := readinessCandidate(TranslationAdapterStructured, "unexpected"); err == nil {
+		t.Fatal("structured model override accepted")
 	}
 }

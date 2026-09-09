@@ -590,15 +590,15 @@ func readinessCandidate(adapterName, modelOverride string) (string, string, int,
 			model = modelOverride
 		}
 	case TranslationAdapterTranslateGemma:
-		if modelOverride != "" {
-			return "", "", 0, errors.New("readiness model override is supported only for hy-mt2 comparisons")
-		}
 		adapter = TranslationAdapterTranslateGemma
 		model = "hf.co/mradermacher/translategemma-12b-it-GGUF:Q3_K_S"
+		if modelOverride != "" {
+			model = modelOverride
+		}
 		contextSize = 2048
 	case TranslationAdapterStructured:
 		if modelOverride != "" {
-			return "", "", 0, errors.New("readiness model override is supported only for hy-mt2 comparisons")
+			return "", "", 0, errors.New("readiness model override is not supported for structured comparisons")
 		}
 		adapter = TranslationAdapterStructured
 		model = "hf.co/bartowski/Qwen_Qwen3.5-9B-GGUF:Q3_K_M"

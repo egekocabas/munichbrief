@@ -158,10 +158,10 @@ manifest and result report.
 | Chinese | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable after three focused rounds; recurring awkward A wording recorded | Final A/B: 2/2 pass | Acceptable on this sample; no native approval | Continue autonomously with Hindi A-C |
 | Hindi | HY-MT2 | Best revision: A-F 6/6 structural | Best revision 4/6 acceptable (B-E); A allegation and F substance uncertainty fail | Not run | Paused after six focused rounds; no native approval | Retain best observed prompt; evaluate another model separately |
 | Russian | HY-MT2 | All generated pairs structural except one revision-1 overlong title | No single final prompt passed A-F; latest B fixes legal meaning but implies multiple suspects | Not run | Paused after six focused rounds; no native approval | Retain latest legally safer prompt; evaluate another model separately |
-| Croatian | TranslateGemma Q3_K_S | Not run | Not assessable | Not run | Candidate-level hardware blocker after Bosnian gate | Do not reload Q3_K_S on this host |
+| Croatian | TranslateGemma | Not run | Not assessable | Not run | Q3_K_S hardware-blocked; Q2_K and 4B Q8 Bosnian gates loaded but failed meaning/readability | Evaluate a new candidate separately; do not infer Croatian quality from Bosnian |
 | Croatian | Qwen 9B structured | Best complete screen: A-E pass; F rejected | No final prompt passed F; Serbian/malformed output or material fact changes persisted | Not run | Paused after six focused rounds; no native approval | Retain safest observed compact prompt; evaluate another model separately |
-| Bosnian | TranslateGemma Q3_K_S | A title only completed; pair interrupted | Completed title materially fails; summary unavailable | Not run | Hardware-blocked: 2/3 request attempts ended in EOF and model unloaded | Do not prompt-tune; reconsider artifact/hardware separately |
-| Greek | TranslateGemma Q3_K_S | Not run | Not assessable | Not run | Candidate-level hardware blocker after Bosnian gate | Do not reload Q3_K_S on this host |
+| Bosnian | TranslateGemma Q2_K / 4B Q8 | A pair completed on each fallback | Both pairs materially fail; Q2 malformed/mixed language, Q8 reverses causality and emits Serbian Cyrillic | Not run | Both fit memory, so failures are translation quality rather than infrastructure | Pause these candidates; do not expand or prompt-tune |
+| Greek | TranslateGemma | Not run | Not assessable | Not run | Q3_K_S hardware-blocked; Q2_K and 4B Q8 Bosnian gates loaded but failed meaning/readability | Evaluate a new candidate separately; do not infer Greek quality from Bosnian |
 | Romanian | Qwen 9B structured | Final protocol: 8/8 pairs | 8/8 materially acceptable after three focused rounds; recurring grammar/typing defects recorded | Final A/B: 2/2 pass | Acceptable on this sample; no native approval | Keep selected model/adapter; seek catalog/native review |
 
 Before merge: review reader catalogs (especially disclosure, attribution, legal
@@ -1273,6 +1273,41 @@ digest, fixtures, Gazetteer identity, and interrupted worker state.
 The session continues with candidates that fit the host: Romanian and Croatian
 through the Qwen 9B structured adapter. A smaller TranslateGemma artifact or
 different hardware requires a separate decision.
+
+## TranslateGemma fallback gates: 2026-09-09
+
+Two smaller installed artifacts were tested through the unchanged production
+TranslateGemma adapter, typed-placeholder protection, 2048 context, separate
+title/summary calls, restoration, validation, and disposable queued-job path.
+Each candidate used a fresh durable checkpoint and the same Bosnian fixture A.
+
+`hf.co/mradermacher/translategemma-12b-it-GGUF:Q2_K` resolved to digest
+`19bc732a76c240ceaf3f48b26a859399503389cf9fcc0a1c67279c3c0aaad1d6`
+and size 5,362,565,063 bytes. Both calls completed without EOF: the title took
+2m08s, including about 73s loading, and the summary took 3m00s. It therefore
+fits this host better than Q3_K_S. Structural validation passed, but assistant
+review failed the pair. The title changed a police operation into a patrol. The
+summary contained malformed and mixed Serbian/Bosnian wording, unreliable
+subject agreement in the alleged-injury clause, and an incorrect rendering of
+the unaffected U-Bahn. This is a translation-quality failure, not a hardware
+failure.
+
+The requested fallback `translategemma:4b-it-q8_0` resolved to digest
+`69729cbbfd3587b37aa4cc2b14cb0cca36b1edcc12add30fc43a3f9bc4be18ec`
+and size 4,946,529,337 bytes. Its title and summary completed in 1m30s and 1m40s
+respectively, again without a transport failure. The title reversed causality,
+saying the police team was delayed because of S-Bahnen. The summary used
+Serbian Cyrillic rather than the expected Bosnian Latin script, strengthened
+the reported allegation into a direct assertion, and contained malformed
+phrases. It also passed deterministic structure but failed meaning/readability.
+
+Both fallback artifacts are therefore **paused for Bosnian after fixture A**.
+Expanding this failing gate or tuning around one severely malformed sample is
+not justified. These Bosnian results do not establish Greek or Croatian
+quality; those languages remain unassessed rather than failed. The test-only
+readiness selector now permits an explicit TranslateGemma comparison model so
+future artifacts retain exact model/digest/request identities without changing
+production language settings.
 
 ## Romanian Qwen 9B final protocol: 2026-09-09
 
