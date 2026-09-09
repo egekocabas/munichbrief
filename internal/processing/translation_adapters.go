@@ -13,6 +13,10 @@ const (
 	TranslationAdapterHyMT2          = "hy-mt2"
 	TranslationAdapterSeedX          = "seed-x"
 	TranslationAdapterSalamandraTA   = "salamandra-ta"
+	TranslationAdapterLLaMAX3        = "llamax3"
+	TranslationAdapterEuroLLM        = "eurollm"
+	TranslationAdapterTowerPlus      = "tower-plus"
+	TranslationAdapterTowerInstruct  = "tower-instruct"
 )
 
 type TranslationAdapterOption struct {
@@ -33,6 +37,18 @@ func TranslationAdapterOptions(languageCode string) []TranslationAdapterOption {
 	}
 	if _, supported := salamandraTALanguageNames[languageCode]; supported && languageCode != "de" {
 		options = append(options, TranslationAdapterOption{Key: TranslationAdapterSalamandraTA, DisplayName: "SalamandraTA native"})
+	}
+	if _, supported := llamax3LanguageNames[languageCode]; supported && languageCode != "de" {
+		options = append(options, TranslationAdapterOption{Key: TranslationAdapterLLaMAX3, DisplayName: "LLaMAX3 native"})
+	}
+	if _, supported := euroLLMLanguageNames[languageCode]; supported && languageCode != "de" {
+		options = append(options, TranslationAdapterOption{Key: TranslationAdapterEuroLLM, DisplayName: "EuroLLM native"})
+	}
+	if _, supported := towerPlusLanguageNames[languageCode]; supported && languageCode != "de" {
+		options = append(options, TranslationAdapterOption{Key: TranslationAdapterTowerPlus, DisplayName: "Tower+ native"})
+	}
+	if _, supported := towerInstructLanguageNames[languageCode]; supported && languageCode != "de" {
+		options = append(options, TranslationAdapterOption{Key: TranslationAdapterTowerInstruct, DisplayName: "TowerInstruct native"})
 	}
 	return options
 }
@@ -97,6 +113,14 @@ func (g *nativeTranslationStepGenerator) GenerateStep(ctx context.Context, step 
 		translator, err = NewSeedXNativeAdapter(g.provider.baseURL, g.model, language, g.provider.timeout, g.provider.contextSize, g.provider.baseClient)
 	case TranslationAdapterSalamandraTA:
 		translator, err = NewSalamandraTANativeAdapter(g.provider.baseURL, g.model, language, g.provider.timeout, g.provider.contextSize, g.provider.baseClient)
+	case TranslationAdapterLLaMAX3:
+		translator, err = NewLLaMAX3NativeAdapter(g.provider.baseURL, g.model, language, g.provider.timeout, g.provider.contextSize, g.provider.baseClient)
+	case TranslationAdapterEuroLLM:
+		translator, err = NewEuroLLMNativeAdapter(g.provider.baseURL, g.model, language, g.provider.timeout, g.provider.contextSize, g.provider.baseClient)
+	case TranslationAdapterTowerPlus:
+		translator, err = NewTowerPlusNativeAdapter(g.provider.baseURL, g.model, language, g.provider.timeout, g.provider.contextSize, g.provider.baseClient)
+	case TranslationAdapterTowerInstruct:
+		translator, err = NewTowerInstructNativeAdapter(g.provider.baseURL, g.model, language, g.provider.timeout, g.provider.contextSize, g.provider.baseClient)
 	default:
 		err = errors.New("unknown native translation adapter")
 	}

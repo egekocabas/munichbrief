@@ -16,6 +16,32 @@ import (
 	"github.com/egekocabas/munichbrief/internal/gazetteer"
 )
 
+func TestFetchReadinessArtifactPreflightCapturesShowAndRunningModels(t *testing.T) {
+	client := &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		var encoded []byte
+		switch request.URL.Path {
+		case "/api/show":
+			var payload map[string]string
+			if err := json.NewDecoder(request.Body).Decode(&payload); err != nil || payload["model"] != "model:test" {
+				t.Fatalf("show payload=%v err=%v", payload, err)
+			}
+			encoded = []byte(`{"details":{"quantization_level":"Q4_K_M"},"template":"chat"}`)
+		case "/api/ps":
+			encoded = []byte(`{"models":[]}`)
+		default:
+			return &http.Response{StatusCode: http.StatusNotFound, Body: io.NopCloser(strings.NewReader(`{"error":"not found"}`))}, nil
+		}
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(encoded)), Header: make(http.Header)}, nil
+	})}
+	preflight, err := fetchReadinessArtifactPreflight(context.Background(), "http://ollama.test", "model:test", "digest:test", client)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preflight.Model != "model:test" || preflight.Digest != "digest:test" || !bytes.Contains(preflight.Show, []byte("Q4_K_M")) || !bytes.Contains(preflight.Running, []byte("models")) {
+		t.Fatalf("preflight=%#v", preflight)
+	}
+}
+
 func readinessTestManager(t *testing.T) *gazetteer.Manager {
 	t.Helper()
 	ctx := context.Background()
@@ -232,6 +258,21 @@ func TestReadinessCandidateAllowsExplicitNativeAdapterComparisonModels(t *testin
 		t.Fatalf("candidate=%q/%q/%d err=%v", model, adapter, contextSize, err)
 	}
 	for _, test := range []struct {
+		adapter string
+		model   string
+		context int
+	}{
+		{adapter: TranslationAdapterLLaMAX3, model: "llamax3:test", context: 8192},
+		{adapter: TranslationAdapterEuroLLM, model: "eurollm:test", context: 8192},
+		{adapter: TranslationAdapterTowerPlus, model: "tower-plus:test", context: 8192},
+		{adapter: TranslationAdapterTowerInstruct, model: "tower-instruct:test", context: 2048},
+	} {
+		model, adapter, contextSize, err = readinessCandidate(test.adapter, " "+test.model+" ")
+		if err != nil || model != test.model || adapter != test.adapter || contextSize != test.context {
+			t.Fatalf("candidate=%q/%q/%d err=%v", model, adapter, contextSize, err)
+		}
+	}
+	for _, test := range []struct {
 		name, adapter, model string
 		context              int
 	}{
@@ -239,6 +280,10 @@ func TestReadinessCandidateAllowsExplicitNativeAdapterComparisonModels(t *testin
 		{name: "TranslateGemma", adapter: TranslationAdapterTranslateGemma, model: "hf.co/mradermacher/translategemma-12b-it-GGUF:Q3_K_S", context: 2048},
 		{name: "Seed-X", adapter: TranslationAdapterSeedX, model: seedXScreenModel, context: 4096},
 		{name: "SalamandraTA", adapter: TranslationAdapterSalamandraTA, model: "hf.co/egekocabas/salamandraTA-7b-instruct-Q5_K_M-GGUF:salamandrata-7b-instruct-q5_k_m-imat.gguf", context: 8192},
+		{name: "LLaMAX3", adapter: TranslationAdapterLLaMAX3, model: "hf.co/mradermacher/LLaMAX3-8B-Alpaca-GGUF:Q4_K_M", context: 8192},
+		{name: "EuroLLM", adapter: TranslationAdapterEuroLLM, model: "hf.co/mradermacher/EuroLLM-9B-Instruct-2512-GGUF:Q4_K_M", context: 8192},
+		{name: "Tower+", adapter: TranslationAdapterTowerPlus, model: "hf.co/mradermacher/Tower-Plus-9B-GGUF:Q4_K_M", context: 8192},
+		{name: "TowerInstruct", adapter: TranslationAdapterTowerInstruct, model: "hf.co/mradermacher/TowerInstruct-7B-v0.2-GGUF:Q6_K", context: 2048},
 		{name: "structured", adapter: TranslationAdapterStructured, model: "hf.co/bartowski/Qwen_Qwen3.5-9B-GGUF:Q3_K_M", context: 8192},
 	} {
 		t.Run(test.name, func(t *testing.T) {

@@ -149,11 +149,15 @@ evaluation evidence and requires manual semantic review even when all
 mechanical checks pass.
 
 The full production-worker readiness harness also accepts
-`MUNICHBRIEF_READINESS_ADAPTER=seed-x` or `salamandra-ta`. Seed-X uses raw
+`MUNICHBRIEF_READINESS_ADAPTER=seed-x`, `salamandra-ta`, `llamax3`, `eurollm`,
+`tower-plus`, or `tower-instruct`. Seed-X uses raw
 `/api/generate`, its mandatory final language tag, greedy decoding, at most 512
 output tokens, and a 4096-token effective context. SalamandraTA uses user-only
 ChatML, greedy decoding, at most 1024 output tokens, and an 8192-token effective
-context. Use a fresh readiness
+context. LLaMAX3 uses raw Alpaca-format generation; EuroLLM, Tower+, and
+TowerInstruct use user-only labelled-source ChatML. The evaluation adapters use
+greedy decoding and at most 1024 output tokens; their effective contexts are
+8192 except TowerInstruct at 2048. Use a fresh readiness
 directory whenever the prompt, model, or target changes; recording/replay binds
 saved responses to the exact rendered request and model digest.
 
@@ -184,8 +188,9 @@ go test -buildvcs=true -count=1 -timeout 70m -run '^TestLiveTranslationReadiness
 Language/fixture/repetition selections and the new-call budget do not invalidate
 completed requests. Select one language for later stages: A-C first, then D-F,
 then A-B with repetition 2. Set `MUNICHBRIEF_READINESS_ADAPTER` to `hy-mt2`
-(default), `translategemma`, `seed-x`, `salamandra-ta`, or `structured` for the
-roadmap's candidates. `MUNICHBRIEF_READINESS_MODEL` may explicitly select an
+(default), `translategemma`, `seed-x`, `salamandra-ta`, `llamax3`, `eurollm`,
+`tower-plus`, `tower-instruct`, or `structured` for the roadmap's candidates.
+`MUNICHBRIEF_READINESS_MODEL` may explicitly select an
 installed native-adapter artifact for a controlled comparison; structured mode
 uses its fixed candidate. Always use a new evaluation directory for a different
 model or digest.
@@ -197,7 +202,9 @@ The manifest pins code-content identity, revision provenance, model digest,
 fixtures, and Gazetteer generation/content. Rendered request bodies are checked
 before both replay and generation. Code/model/source changes require a new
 directory; documentation-only commits do not invalidate identical requests.
-Append-only `requests.jsonl` retains every attempt, including rejected raw
+The first live invocation also stores the complete Ollama `/api/show` response
+and current `/api/ps` state in `artifact-preflight.json`. Append-only
+`requests.jsonl` retains every attempt, including rejected raw
 responses. Separate per-case databases and result files retain worker outcomes;
 `*-review.json` is initialized once and never overwritten by resume. An incomplete
 final event is retained separately before repairing its append boundary. Completed

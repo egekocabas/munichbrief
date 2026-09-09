@@ -40,6 +40,37 @@ func TestTranslationAdapterSupportMatchesNativeContracts(t *testing.T) {
 	if TranslationAdapterSupports(TranslationAdapterSalamandraTA, "bs") {
 		t.Error("SalamandraTA should not be offered for bs")
 	}
+	for _, code := range []string{"ru", "hr", "el", "hi", "bs"} {
+		if !TranslationAdapterSupports(TranslationAdapterLLaMAX3, code) {
+			t.Errorf("LLaMAX3 should support %s", code)
+		}
+	}
+	for _, code := range []string{"ru", "hr", "el", "hi"} {
+		if !TranslationAdapterSupports(TranslationAdapterEuroLLM, code) {
+			t.Errorf("EuroLLM should support %s", code)
+		}
+	}
+	if TranslationAdapterSupports(TranslationAdapterEuroLLM, "bs") {
+		t.Error("EuroLLM should not be offered for bs")
+	}
+	for _, code := range []string{"ru", "hi"} {
+		if !TranslationAdapterSupports(TranslationAdapterTowerPlus, code) {
+			t.Errorf("Tower+ should support %s", code)
+		}
+	}
+	for _, code := range []string{"hr", "el", "bs"} {
+		if TranslationAdapterSupports(TranslationAdapterTowerPlus, code) {
+			t.Errorf("Tower+ should not support %s", code)
+		}
+	}
+	if !TranslationAdapterSupports(TranslationAdapterTowerInstruct, "ru") {
+		t.Error("TowerInstruct should support ru")
+	}
+	for _, code := range []string{"hr", "el", "hi", "bs"} {
+		if TranslationAdapterSupports(TranslationAdapterTowerInstruct, code) {
+			t.Errorf("TowerInstruct should not support %s", code)
+		}
+	}
 	for _, translation := range RegisteredTranslations() {
 		if !TranslationAdapterSupports(TranslationAdapterStructured, translation.Language) || !TranslationAdapterSupports(TranslationAdapterTranslateGemma, translation.Language) {
 			t.Errorf("common adapters missing for %s", translation.Language)
@@ -84,6 +115,46 @@ func TestSalamandraTATranslationGeneratorUsesProductionNativeLoop(t *testing.T) 
 	}
 	if len(prompts) != 2 || !strings.Contains(prompts[0], "German: Polizeieinsatz\nCroatian:") || !strings.Contains(prompts[1], "German: Die Polizei berichtete über einen Einsatz.\nCroatian:") {
 		t.Fatalf("separate SalamandraTA prompts = %#v", prompts)
+	}
+}
+
+func TestLLaMAX3TranslationGeneratorUsesProductionNativeLoop(t *testing.T) {
+	var prompts []string
+	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		if request.URL.Path != "/api/generate" {
+			t.Fatalf("request path = %q", request.URL.Path)
+		}
+		var payload generateRequest
+		if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
+			t.Fatal(err)
+		}
+		prompts = append(prompts, payload.Prompt)
+		translated := "Policijska intervencija"
+		if len(prompts) == 2 {
+			translated = "Policija je izvijestila o intervenciji."
+		}
+		var response bytes.Buffer
+		_ = json.NewEncoder(&response).Encode(generateResponse{Model: "llamax3:test", Done: true, Response: translated})
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(response.Bytes()))}, nil
+	})
+	provider, err := NewOllamaGeneratorProvider("http://ollama.test:11434", time.Second, 8192, &http.Client{Transport: transport})
+	if err != nil {
+		t.Fatal(err)
+	}
+	generator, err := provider.StepGeneratorFor("llamax3:test", TranslationAdapterLLaMAX3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	input := StepInput{Values: map[string]string{"title_de": "Polizeieinsatz", "summary_de": "Die Polizei berichtete über einen Einsatz."}}
+	output, model, err := generator.GenerateStep(context.Background(), TranslationByLanguageMust(t, "bs").Step, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if model != "llamax3:test" || output.Values["title"] != "Policijska intervencija" || output.Values["summary"] != "Policija je izvijestila o intervenciji." {
+		t.Fatalf("output=%#v model=%q", output, model)
+	}
+	if len(prompts) != 2 || !strings.Contains(prompts[0], "### Input:\nPolizeieinsatz\n### Response:") || !strings.Contains(prompts[1], "### Input:\nDie Polizei berichtete über einen Einsatz.\n### Response:") {
+		t.Fatalf("separate LLaMAX3 prompts = %#v", prompts)
 	}
 }
 

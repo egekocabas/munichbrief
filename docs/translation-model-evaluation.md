@@ -270,6 +270,28 @@ Primary references:
 - Official usage guide (ChatML, prompts, decoding and context):
   <https://huggingface.co/BSC-LT/salamandraTA-7b-instruct/blob/main/usage_guide.md>
 
+## Next unlocked-language candidate contracts
+
+The next tournament retains the production typed-placeholder and queued-worker
+gate while following each model family's trained request shape. LLaMAX3 uses its
+documented raw Alpaca template and supports all five remaining targets. EuroLLM
+uses its official labelled-source ChatML evaluation prompt and supports Croatian,
+Greek, Hindi, and Russian, but not Bosnian. Tower+ supports Hindi and Russian;
+TowerInstruct-v0.2 supports Russian among the remaining targets. Both Tower
+families use user-only labelled-source ChatML without a system message.
+
+Primary references:
+
+- LLaMAX3 model card, Alpaca prompt, and language list:
+  <https://huggingface.co/LLaMAX/LLaMAX3-8B-Alpaca>
+- EuroLLM model card and official evaluation prompt:
+  <https://huggingface.co/utter-project/EuroLLM-9B-Instruct-2512> and
+  <https://github.com/deep-spin/eurollm-eval/blob/main/eurollm_eval/dataloader.py>
+- Tower+ model card and translation prompt:
+  <https://huggingface.co/Unbabel/Tower-Plus-9B>
+- TowerInstruct-v0.2 model card and ChatML prompt:
+  <https://huggingface.co/Unbabel/TowerInstruct-7B-v0.2>
+
 ### HY-MT2 screen on 2026-09-03
 
 The HY-MT2-only screen completed all 48 field calls in about 52 minutes: English,

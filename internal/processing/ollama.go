@@ -76,7 +76,7 @@ func (p *OllamaGeneratorProvider) StepGeneratorFor(model, adapter string) (StepG
 	if adapter == "" || adapter == TranslationAdapterStructured {
 		return p.StepGenerator(model)
 	}
-	if adapter != TranslationAdapterTranslateGemma && adapter != TranslationAdapterHyMT2 && adapter != TranslationAdapterSeedX && adapter != TranslationAdapterSalamandraTA {
+	if adapter != TranslationAdapterTranslateGemma && adapter != TranslationAdapterHyMT2 && adapter != TranslationAdapterSeedX && adapter != TranslationAdapterSalamandraTA && adapter != TranslationAdapterLLaMAX3 && adapter != TranslationAdapterEuroLLM && adapter != TranslationAdapterTowerPlus && adapter != TranslationAdapterTowerInstruct {
 		return nil, fmt.Errorf("unknown translation adapter %q", adapter)
 	}
 	return &nativeTranslationStepGenerator{provider: p, model: strings.TrimSpace(model), adapter: adapter}, nil

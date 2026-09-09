@@ -11,6 +11,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -59,6 +60,14 @@ type readinessManifest struct {
 	GazetteerGeneration int64              `json:"gazetteer_generation"`
 	GazetteerHash       string             `json:"gazetteer_hash"`
 	Fixtures            []readinessFixture `json:"fixtures"`
+}
+
+type readinessArtifactPreflight struct {
+	RecordedAt time.Time       `json:"recorded_at"`
+	Model      string          `json:"model"`
+	Digest     string          `json:"digest"`
+	Show       json.RawMessage `json:"show"`
+	Running    json.RawMessage `json:"running_models"`
 }
 
 type readinessCall struct {
@@ -229,7 +238,7 @@ func readinessExpectedRequests(t *testing.T, baseURL, model, adapter, language s
 		}
 		requests = append(requests, string(body))
 		var encoded []byte
-		if adapter == TranslationAdapterSeedX {
+		if translationAdapterUsesRawGenerate(adapter) {
 			encoded, _ = json.Marshal(generateResponse{Model: model, Done: true, Response: "preflight response"})
 		} else {
 			encoded, _ = json.Marshal(chatResponse{Model: model, Done: true, Message: chatMessage{Role: "assistant", Content: "preflight response"}})
@@ -360,7 +369,7 @@ func readinessRunCase(t *testing.T, directory, baseURL, model, adapter, language
 	// rejects them. This diagnostic never participates in persistence/acceptance.
 	{
 		var title, summary chatResponse
-		if adapter == TranslationAdapterSeedX {
+		if translationAdapterUsesRawGenerate(adapter) {
 			var rawTitle, rawSummary generateResponse
 			_ = json.Unmarshal([]byte(transport.calls[transport.caseKey+"/title"].Response), &rawTitle)
 			_ = json.Unmarshal([]byte(transport.calls[transport.caseKey+"/summary"].Response), &rawSummary)
@@ -538,6 +547,10 @@ func TestLiveTranslationReadiness(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	preflight, err := fetchReadinessArtifactPreflight(ctx, baseURL, model, digest, http.DefaultClient)
+	if err != nil {
+		t.Fatal(err)
+	}
 	manifest := readinessManifest{Revision: evaluationRevision(), CodeHash: readinessCodeHash(t), Model: model, Digest: digest, Adapter: adapter, Context: contextSize, GazetteerGeneration: status.ActiveGeneration, GazetteerHash: hashJSON(t, entries), Fixtures: fixtures}
 	// Revision is provenance; code-content identity permits documentation-only
 	// commits without discarding otherwise identical completed calls.
@@ -546,6 +559,12 @@ func TestLiveTranslationReadiness(t *testing.T) {
 	manifest.Identity = hashJSON(t, identity)
 	runDir := filepath.Join(directory, adapter)
 	if err := os.MkdirAll(runDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	preflightPath := filepath.Join(runDir, "artifact-preflight.json")
+	if _, err := os.Stat(preflightPath); os.IsNotExist(err) {
+		writeAtomicJSON(t, preflightPath, preflight)
+	} else if err != nil {
 		t.Fatal(err)
 	}
 	manifestPath := filepath.Join(runDir, "manifest.json")
@@ -590,6 +609,50 @@ func TestLiveTranslationReadiness(t *testing.T) {
 	t.Logf("CHECKPOINT new_calls=%d directory=%s; editorial review remains required", transport.newCalls, runDir)
 }
 
+func fetchReadinessArtifactPreflight(ctx context.Context, baseURL, model, digest string, client *http.Client) (readinessArtifactPreflight, error) {
+	parsed, err := url.Parse(baseURL)
+	if err != nil {
+		return readinessArtifactPreflight{}, err
+	}
+	call := func(method, path string, body io.Reader) (json.RawMessage, error) {
+		endpoint := *parsed
+		endpoint.Path = strings.TrimRight(parsed.Path, "/") + path
+		request, err := http.NewRequestWithContext(ctx, method, endpoint.String(), body)
+		if err != nil {
+			return nil, err
+		}
+		if body != nil {
+			request.Header.Set("Content-Type", "application/json")
+		}
+		response, err := client.Do(request)
+		if err != nil {
+			return nil, err
+		}
+		defer response.Body.Close()
+		encoded, err := io.ReadAll(io.LimitReader(response.Body, 4<<20))
+		if err != nil {
+			return nil, err
+		}
+		if response.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("ollama %s status %s: %s", path, response.Status, strings.TrimSpace(string(encoded)))
+		}
+		if !json.Valid(encoded) {
+			return nil, fmt.Errorf("ollama %s returned invalid JSON", path)
+		}
+		return json.RawMessage(encoded), nil
+	}
+	showRequest, _ := json.Marshal(map[string]string{"model": model})
+	show, err := call(http.MethodPost, "/api/show", bytes.NewReader(showRequest))
+	if err != nil {
+		return readinessArtifactPreflight{}, err
+	}
+	running, err := call(http.MethodGet, "/api/ps", nil)
+	if err != nil {
+		return readinessArtifactPreflight{}, err
+	}
+	return readinessArtifactPreflight{RecordedAt: time.Now().UTC(), Model: model, Digest: digest, Show: show, Running: running}, nil
+}
+
 func readinessCandidate(adapterName, modelOverride string) (string, string, int, error) {
 	adapterName = strings.TrimSpace(adapterName)
 	modelOverride = strings.TrimSpace(modelOverride)
@@ -628,6 +691,34 @@ func readinessCandidate(adapterName, modelOverride string) (string, string, int,
 			model = modelOverride
 		}
 		contextSize = 8192
+	case TranslationAdapterLLaMAX3:
+		adapter = TranslationAdapterLLaMAX3
+		model = "hf.co/mradermacher/LLaMAX3-8B-Alpaca-GGUF:Q4_K_M"
+		if modelOverride != "" {
+			model = modelOverride
+		}
+		contextSize = 8192
+	case TranslationAdapterEuroLLM:
+		adapter = TranslationAdapterEuroLLM
+		model = "hf.co/mradermacher/EuroLLM-9B-Instruct-2512-GGUF:Q4_K_M"
+		if modelOverride != "" {
+			model = modelOverride
+		}
+		contextSize = 8192
+	case TranslationAdapterTowerPlus:
+		adapter = TranslationAdapterTowerPlus
+		model = "hf.co/mradermacher/Tower-Plus-9B-GGUF:Q4_K_M"
+		if modelOverride != "" {
+			model = modelOverride
+		}
+		contextSize = 8192
+	case TranslationAdapterTowerInstruct:
+		adapter = TranslationAdapterTowerInstruct
+		model = "hf.co/mradermacher/TowerInstruct-7B-v0.2-GGUF:Q6_K"
+		if modelOverride != "" {
+			model = modelOverride
+		}
+		contextSize = 2048
 	default:
 		return "", "", 0, fmt.Errorf("unsupported readiness adapter %q", adapterName)
 	}

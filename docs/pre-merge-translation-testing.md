@@ -137,6 +137,40 @@ SalamandraTA allows at most eight focused improvements per language, but typed-
 placeholder corruption is a hard stop for the remaining SalamandraTA batch. Q4
 is a memory fallback only, not a retry for Q5 translation-quality failures.
 
+### New-model tournament: LLaMAX3, EuroLLM, Tower+, and TowerInstruct
+
+The next unlocked-language comparison uses only officially supported pairs:
+
+| Model | Targets | Quantization order | Adapter |
+| --- | --- | --- | --- |
+| LLaMAX3-8B-Alpaca | `bs`, `hr`, `el`, `hi`, `ru` | Q4_K_M only | `llamax3` |
+| EuroLLM-9B-Instruct-2512 | `hr`, `el`, `hi`, `ru` | Q4_K_M, Q4_K_S, Q3_K_L | `eurollm` |
+| Tower-Plus-9B | `hi`, `ru` | Q4_K_M, Q4_K_S, Q3_K_L | `tower-plus` |
+| TowerInstruct-7B-v0.2 | `ru` | Q6_K, Q5_K_M | `tower-instruct` |
+
+Run fixture A first, grouped by model in the table order; within LLaMAX3 use
+Bosnian, Croatian, Greek, Hindi, Russian, then use the displayed target order for
+the other families. Placeholder corruption disqualifies only that model-language
+pair and does not stop unrelated pairs. An unchanged-request retry is allowed
+only for an isolated transport interruption. Two confirmed load/OOM failures on
+one request, or two in the first four fields, move the entire family to the next
+quantization and require its completed gates to be rerun there. Quality failures
+never trigger quantization fallback.
+
+Advance the best two structurally safe candidates per language to B/C; Bosnian
+has only LLaMAX3. Rank material fact/legal fidelity before readability, then use
+permissive licensing, infrastructure stability, and latency as tie-breakers.
+Compare saved HY-MT2 Russian and Qwen Croatian evidence without regenerating it.
+Complete Bosnian, Greek, Hindi, Croatian, then Russian through D-F and A/B repeat.
+
+Allow ten prompt revisions per language across candidates. The leader receives
+at most six; stop it earlier when one material error survives three consecutive
+revisions or two revisions introduce critical regressions, then give a safe
+runner-up the remaining budget. Test failed fixtures first, but qualify only by
+running all eight pairs under one unchanged prompt/model/digest/quantization.
+Keep every attempt. TowerInstruct and Tower+ remain evaluation-only pending an
+explicit review of their noncommercial licensing.
+
 ## Step 5: decisions and release evidence
 
 - **Acceptable on this sample:** final eight pairs pass structure, preserve
