@@ -54,7 +54,7 @@ var (
 	euroLLMLanguageGuidance       = map[string]string{}
 	towerPlusLanguageGuidance     = map[string]string{}
 	towerInstructLanguageGuidance = map[string]string{
-		"ru": "Use natural Russian. Preserve police attribution and evidential status: render German 'soll ... haben' explicitly as an allegation, for example with 'предположительно' or 'подозревается', never as established fact. Translate 'Polizeieinsatz' as 'полицейская операция' or another neutral police-operation term, never as 'захват'. Preserve negation, legal status, subject, object, and cause.",
+		"ru": "Используй естественный русский язык. Критически важно сохранять недоказанный характер сообщений: немецкое 'soll ... haben' переводи с явным маркером 'предположительно', 'как утверждает полиция' или 'подозревается в том, что', а не как установленный факт. 'Polizeieinsatz' означает нейтральную 'полицейскую операцию', а не 'захват' или более конкретный рейд. Сохраняй отрицание, правовой статус, субъект, объект и причинность.",
 	}
 )
 
