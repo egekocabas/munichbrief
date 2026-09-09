@@ -60,6 +60,10 @@ func TestRegisteredTranslationPromptsUseOnePlaceholderContract(t *testing.T) {
 			t.Errorf("%s unified translation prompt must have exactly two blank lines before the payload", translation.Language)
 		}
 		body := strings.ReplaceAll(prompt.UserPromptTemplate, definition.TranslationName, "TARGET")
+		if guidance := strings.TrimSpace(structuredTranslationLanguageGuidance[translation.Language]); guidance != "" {
+			body = strings.Replace(prompt.UserPromptTemplate, guidance+"\n", "", 1)
+			body = strings.ReplaceAll(body, definition.TranslationName, "TARGET")
+		}
 		body = strings.ReplaceAll(body, definition.Tag.String(), "TAG")
 		body = strings.ReplaceAll(body, `title_`+fieldCode, "title_TARGET")
 		body = strings.ReplaceAll(body, `summary_`+fieldCode, "summary_TARGET")
@@ -67,6 +71,24 @@ func TestRegisteredTranslationPromptsUseOnePlaceholderContract(t *testing.T) {
 			sharedBody = body
 		} else if body != sharedBody {
 			t.Errorf("%s prompt diverged from the unified template", translation.Language)
+		}
+	}
+}
+
+func TestStructuredTranslationLanguageGuidanceIsIsolated(t *testing.T) {
+	payload := `{"title_de":"Unfall an der __MB_STREET_0001__","summary_de":"Unfall an der __MB_STREET_0001__."}`
+	romanian := promptUserMessage(RomanianTranslationPromptVersion, payload)
+	for _, expected := range []string{"never ‘în apropierea’", "never ‘poliția criminalistică’", "plural meaning of German ‘S-Bahnen’", "both trailing underscore characters"} {
+		if !strings.Contains(romanian, expected) {
+			t.Fatalf("Romanian guidance missing %q: %q", expected, romanian)
+		}
+	}
+	for _, translation := range RegisteredTranslations() {
+		if translation.Language == "ro" {
+			continue
+		}
+		if rendered := promptUserMessage(translation.PromptVersion, payload); strings.Contains(rendered, "în apropierea") || strings.Contains(rendered, "poliția criminalistică") || strings.Contains(rendered, "plural meaning of German ‘S-Bahnen’") {
+			t.Fatalf("Romanian guidance leaked into %s: %q", translation.Language, rendered)
 		}
 	}
 }

@@ -161,7 +161,7 @@ manifest and result report.
 | Croatian | TranslateGemma Q3_K_S | Not run | Not assessable | Not run | Candidate-level hardware blocker after Bosnian gate | Preserve planned Qwen comparison; do not reload Q3_K_S on this host |
 | Bosnian | TranslateGemma Q3_K_S | A title only completed; pair interrupted | Completed title materially fails; summary unavailable | Not run | Hardware-blocked: 2/3 request attempts ended in EOF and model unloaded | Do not prompt-tune; reconsider artifact/hardware separately |
 | Greek | TranslateGemma Q3_K_S | Not run | Not assessable | Not run | Candidate-level hardware blocker after Bosnian gate | Do not reload Q3_K_S on this host |
-| Romanian | Qwen 9B | Not run | Pending | Pending | Older baseline only | After Greek |
+| Romanian | Qwen 9B structured | Final protocol: 8/8 pairs | 8/8 materially acceptable after three focused rounds; recurring grammar/typing defects recorded | Final A/B: 2/2 pass | Acceptable on this sample; no native approval | Keep selected model/adapter; seek catalog/native review |
 
 Before merge: review reader catalogs (especially disclosure, attribution, legal
 copy), run the full non-Docker [development suite](development.md), verify admin,
@@ -1272,6 +1272,52 @@ digest, fixtures, Gazetteer identity, and interrupted worker state.
 The session continues with candidates that fit the host: Romanian and Croatian
 through the Qwen 9B structured adapter. A smaller TranslateGemma artifact or
 different hardware requires a separate decision.
+
+## Romanian Qwen 9B final protocol: 2026-09-09
+
+Romanian used the production structured adapter with
+`hf.co/bartowski/Qwen_Qwen3.5-9B-GGUF:Q3_K_M`, digest
+`14349d99100f6a9ea1082670dc15fddc65cabe888161ad35cf59d6c83d89fcf9`,
+and context 8192. Each request returned title and summary together as JSON.
+
+The baseline A-C screen passed deterministic validation. A and B were materially
+acceptable, while C changed German `an der … Straße` from on/at the street to
+near the street. Three focused rounds were used:
+
+1. General Romanian street-location guidance fixed C. The complete A-F screen
+   then exposed `Kriminalpolizei` as forensic police in D.
+2. A criminal-investigation-police distinction fixed D. Reassessment exposed a
+   singular `S-Bahnen` in A and a missing closing `__` on F's title placeholder;
+   restoration rejected F before persistence.
+3. A plural-transit rule and explicit closing-underscore check fixed both A and
+   F. The final prompt then completed the full protocol.
+
+| Pair | Structural | Assistant meaning/readability review |
+| --- | --- | --- |
+| A/1 | Pass | Allegation, examination, plural S-Bahnen, delay route/duration, unaffected U-Bahn, and witness request preserved; recurring `biroulul` typo |
+| B/1 | Pass | Allegation, unresolved involvement, generic vehicle glass, no conviction, final-conviction condition, and presumption of innocence preserved |
+| C/1 | Pass | On-street relation, exact/approximate times, speed, closure cause, examination, one witness, negation, and `110` preserved |
+| D/1 | Pass | Unclear danger, neutral involved person, response, arrest/release, and Munich judicial-police investigation preserved |
+| E/1 | Pass | Scheduled bus/e-bike, serious injury, inpatient admission, and traffic-police investigation preserved; article/gender errors remain |
+| F/1 | Pass | Exact placeholders, evasion/collision/arrest sequence, and tentative licence/alcohol/drug indications preserved |
+| A/2 | Pass | Stable material repeat of A/1 with the same minor typo |
+| B/2 | Pass | Stable legal-meaning repeat of B/1 |
+
+The final identity contains **8/8 completed structured requests**, **8/8
+structurally valid pairs**, and **8/8 materially acceptable pairs** on assistant
+review. Model-reported durations total about **28m29s**. A zero-new-call replay
+restored, validated, and persisted all eight pairs through the queued production
+path. There were no transport or memory failures in the final identity.
+
+Romanian is **acceptable on this sample** under the agreed threshold. Its output
+is understandable but has recurring grammar and typing defects, so this is not
+native approval or a general quality guarantee. All earlier prompt identities,
+including the rejected malformed placeholder, remain in separate durable
+checkpoints.
+
+Next: evaluate Croatian with the same Qwen 9B structured adapter. The requested
+Croatian TranslateGemma comparison remains unassessed because Q3_K_S is
+hardware-blocked on this host.
 
 ## References
 
