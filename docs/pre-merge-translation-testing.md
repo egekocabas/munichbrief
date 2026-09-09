@@ -171,6 +171,35 @@ running all eight pairs under one unchanged prompt/model/digest/quantization.
 Keep every attempt. TowerInstruct and Tower+ remain evaluation-only pending an
 explicit review of their noncommercial licensing.
 
+### Tournament fixture-A gate: 2026-09-09
+
+The baseline gate used the production queued-worker path, typed Gazetteer
+placeholders, separate sequential title/summary calls, and durable recording.
+Every generated response was inspected; mechanically accepted output was not
+treated as a meaning pass.
+
+| Candidate | Pair | Structure | Editorial result / disposition |
+| --- | --- | --- | --- |
+| LLaMAX3 Q4_K_M | Bosnian | Pass | Lost allegation framing, mixed Croatian month name, awkward grammar, and reversed headline causality; tunable |
+| LLaMAX3 Q4_K_M | Croatian | Pass | Lost allegation framing, untranslated headline term, malformed transit clause, and reversed headline causality; tunable |
+| LLaMAX3 Q4_K_M | Greek | Fail | Summary omitted STREET and COMMUTER_TRAIN placeholders; pairing permanently disqualified |
+| LLaMAX3 Q4_K_M | Hindi | Restoration passed; final title length failed | Lost allegation framing, changed the examined woman's gender/reference, and duplicated witness wording; tunable |
+| LLaMAX3 Q4_K_M | Russian | Pass | Lost allegation framing, changed unaffected U-Bahn to closed, omitted the medical examination, and invented a rationale; tunable |
+| EuroLLM Q4_K_M | Croatian | Fail | Emitted the instruction/placeholder regex and Markdown; pairing permanently disqualified |
+| EuroLLM Q4_K_M | Greek | Fail | Invented an unknown placeholder for the time, breaking exact restoration; pairing permanently disqualified |
+| EuroLLM Q4_K_M | Hindi | Pass | Lost police attribution/allegation and weakened location/contact details; tunable |
+| EuroLLM Q4_K_M | Russian | Fail | Translated the instruction instead of the title; pairing permanently disqualified before summary generation |
+| Tower+ Q4_K_M, Q4_K_S, Q3_K_L | Hindi/Russian | No output | Every quantization was kernel-OOM-killed while loading the required 8192 context; family hardware-blocked on the 7.7 GiB host |
+| TowerInstruct Q6_K | Russian | Pass | Preserved all placeholders and most facts, but stated the alleged injury as fact and mistranslated `Polizeieinsatz` in the title; tunable |
+
+No Tower+ quality score exists: its failures are infrastructure failures. No
+lower quantization was tried for semantic or placeholder failures. The current
+shortlist is LLaMAX3 alone for Bosnian and Croatian; LLaMAX3 plus EuroLLM for
+Hindi; and LLaMAX3 plus TowerInstruct for Russian. Greek has no structurally safe
+candidate from this tournament and remains paused unless a separate candidate is
+authorized. Next complete Bosnian, Greek (record the no-candidate decision),
+Hindi, Croatian, and Russian in that order.
+
 ## Step 5: decisions and release evidence
 
 - **Acceptable on this sample:** final eight pairs pass structure, preserve
