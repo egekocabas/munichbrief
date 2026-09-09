@@ -238,6 +238,10 @@ not native-language approval.
 | Hindi | EuroLLM Q4_K_M | A passed structure; B title failed hard | B translated the placeholder instruction and emitted its regex | Not run | Pairing permanently disqualified; no native approval | Do not tune or resume |
 | Hindi | Tower+ Q4_K_M / Q4_K_S / Q3_K_L | No output | Every installed quantization was kernel-OOM-killed at required 8192 context | Not run | Hardware-blocked on current host | Do not retry without more memory or an explicitly revised context experiment |
 | Russian | HY-MT2 | All generated pairs structural except one revision-1 overlong title | No single final prompt passed A-F; latest B fixes legal meaning but implies multiple suspects | Not run | Paused after six focused rounds; no native approval | Retain latest legally safer prompt; evaluate another model separately |
+| Russian | LLaMAX3 Q4_K_M | A-C preserved placeholders | B omitted explicit no-conviction status; C invented afternoon and changed one doctor to multiple; A lost allegation and changed U-Bahn status | Not run | Not selected for tuning; no native approval | TowerInstruct was stronger on B/C; HY-MT2 remains stronger overall |
+| Russian | TowerInstruct Q6_K | A-C and three focused A/B revisions preserved placeholders | C passed; B legal status passed but allegation failed; A allegation failed every revision and final revision invented morning | Not run | Paused by the three-consecutive-error rule; no native approval | Do not resume; exact license also remains noncommercial |
+| Russian | EuroLLM Q4_K_M | Fixture-A title failed hard | Translated the instruction instead of the source | Not run | Pairing permanently disqualified | Do not tune or resume |
+| Russian | Tower+ Q4_K_M / Q4_K_S / Q3_K_L | No output | Every installed quantization was kernel-OOM-killed at required 8192 context | Not run | Hardware-blocked on current host | Do not retry without more memory or an explicitly revised context experiment |
 | Russian | SalamandraTA v3 Q5_K_M | A preserved structure across base plus six focused rounds | No prompt preserved both allegation framing and the operation/delay headline relationship | Not run | Paused; no native approval | HY-MT2 remains the stronger observed candidate |
 | Russian | Seed-X 7B Q5_K_M | 0 usable pairs; minimal control failed before validation | General and official-minimal prompts produced incomplete whitespace, wrong scripts, unrelated text, or loops; placeholder-free `<ru>` control also failed | Not run | Paused; artifact/runtime prerequisite failure, not RAM; no native approval | Do not configure this artifact; HY-MT2 remains materially stronger |
 | Croatian | TranslateGemma Q2_K / 4B Q8 | Q2 0/3 acceptable; Q8 no single prompt passed A-F | Q2 broadly malformed; Q8 unstable allegation/legal fidelity, Croatian/Serbian leakage, and missing detail | Not run under a qualifying prompt | Paused after six Q8 focused rounds; no native approval | Qwen was stronger on A-E, but both candidates remain paused |
@@ -354,6 +358,30 @@ That meets the two-critical-regression early-stop rule, so LLaMAX3/Croatian is
 paused. Historical Qwen remains the strongest observed Croatian candidate (A-E
 passed in its best complete screen), but it remains unqualified because F still
 failed materially. No native approval is claimed.
+
+## Russian tournament decision: 2026-09-09
+
+LLaMAX3 Q4_K_M and TowerInstruct Q6_K were the two structurally safe candidates.
+LLaMAX3 preserved B's allegation but omitted the explicit no-conviction fact and
+weakened the final-conviction boundary. Its C changed one doctor into multiple
+doctors and invented that 03:30 was in the afternoon. TowerInstruct preserved
+B's no-conviction and presumption meaning and passed C materially, making it the
+leader despite losing allegation modality in A and B.
+
+Three focused TowerInstruct revisions were tested on A/B. English guidance left
+the allegations factual. Russian-language guidance changed one B output into
+the misleading obligation `должен был`, while A remained factual. A final
+Russian construction template still produced the factual injury claim, retained
+the overly specific `рейд`, and invented that 03:30 was in the morning. The run
+was stopped before the remaining B call under the three-consecutive-error rule.
+One isolated Q6 prompt-cache OOM occurred between revisions; the exact request
+was resumed successfully, so it did not trigger the two-failure quantization
+fallback.
+
+TowerInstruct/Russian remains paused, and its noncommercial license would also
+block production selection without separate review. HY-MT2 remains the strongest
+observed Russian candidate under the existing evidence, but is still paused for
+its documented material failures. No native approval is claimed.
 
 ## English B/C bounded batch: 2026-09-08
 
