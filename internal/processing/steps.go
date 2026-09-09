@@ -766,14 +766,16 @@ func validateGermanPresentation(_ StepInput, output *StepOutput) error {
 }
 
 var (
-	translationURLPattern         = regexp.MustCompile(`(?i)\b(?:https?://|www\.)[^\s)]+`)
-	translationPlaceTokenPattern  = regexp.MustCompile(`__MB_[A-Z_]+_[0-9]{4}__`)
-	translationNumberPattern      = regexp.MustCompile(`[0-9]+`)
-	translation24HourPattern      = regexp.MustCompile(`\b([01]?[0-9]|2[0-3]):([0-5][0-9])\b`)
-	translation12HourPattern      = regexp.MustCompile(`(?i)\b(1[0-2]|0?[1-9])(?::([0-5][0-9]))?\s*([ap])\.?\s*m\.?`)
-	translationHourMarkerPattern  = regexp.MustCompile(`(?i)\b([01]?[0-9]|2[0-3])\s*h(?:eure(?:s)?)?(?:\s*([0-5][0-9]))?\b`)
-	translationChineseTimePattern = regexp.MustCompile(`([01]?[0-9]|2[0-3])\s*点(?:\s*([0-5]?[0-9])\s*分?)?`)
-	presentationMarkdownPattern   = regexp.MustCompile("(?m)(?:\\*\\*|__|`|^\\s{0,3}(?:#{1,6}\\s|>\\s|[-+*]\\s|[0-9]+\\.\\s)|!?\\[[^]\\n]+\\]\\([^)\\n]+\\))")
+	translationURLPattern          = regexp.MustCompile(`(?i)\b(?:https?://|www\.)[^\s)]+`)
+	translationPlaceTokenPattern   = regexp.MustCompile(`__MB_[A-Z_]+_[0-9]{4}__`)
+	translationNumberPattern       = regexp.MustCompile(`[0-9]+`)
+	translation24HourPattern       = regexp.MustCompile(`\b([01]?[0-9]|2[0-3]):([0-5][0-9])\b`)
+	translation12HourPattern       = regexp.MustCompile(`(?i)\b(1[0-2]|0?[1-9])(?::([0-5][0-9]))?\s*([ap])\.?\s*m\.?`)
+	translationHourMarkerPattern   = regexp.MustCompile(`(?i)\b([01]?[0-9]|2[0-3])\s*h(?:eure(?:s)?)?(?:\s*([0-5][0-9]))?\b`)
+	translationChineseTimePattern  = regexp.MustCompile(`([01]?[0-9]|2[0-3])\s*点(?:\s*([0-5]?[0-9])\s*分?)?`)
+	presentationMarkdownPattern    = regexp.MustCompile("(?m)(?:\\*\\*|__|`|^\\s{0,3}(?:#{1,6}\\s|>\\s|[-+*]\\s)|!?\\[[^]\\n]+\\]\\([^)\\n]+\\))")
+	presentationOrderedListPattern = regexp.MustCompile(`(?m)^\s{0,3}[0-9]+\.\s`)
+	presentationDatePrefixPattern  = regexp.MustCompile(`(?m)^\s{0,3}(?:[1-9]|[12][0-9]|3[01])\.\s+\p{L}[\p{L}\p{M}.-]*\s+[0-9]{4}\.?(?:\s|$)`)
 )
 
 func validatePlainPresentation(field, value string) error {
@@ -781,7 +783,8 @@ func validatePlainPresentation(field, value string) error {
 		return errorOf(ErrorOutput, "%s contains a URL; presentations must be plain text", field)
 	}
 	withoutPlaceholders := translationPlaceTokenPattern.ReplaceAllString(value, "")
-	if presentationMarkdownPattern.MatchString(withoutPlaceholders) {
+	withoutDatePrefixes := presentationDatePrefixPattern.ReplaceAllString(withoutPlaceholders, "")
+	if presentationMarkdownPattern.MatchString(withoutPlaceholders) || presentationOrderedListPattern.MatchString(withoutDatePrefixes) {
 		return errorOf(ErrorOutput, "%s contains Markdown; presentations must be plain text", field)
 	}
 	return nil

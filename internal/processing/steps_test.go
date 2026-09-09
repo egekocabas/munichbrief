@@ -444,6 +444,22 @@ func TestGermanPresentationRejectsURLsAndMarkdown(t *testing.T) {
 	}
 }
 
+func TestPlainPresentationDistinguishesLocalizedDateFromOrderedList(t *testing.T) {
+	for _, value := range []string{
+		"29. kolovoza 2026. u točno 03:30 sati dogodila se nesreća.",
+		"1. September 2026 ereignete sich ein Unfall.",
+	} {
+		if err := validatePlainPresentation("summary", value); err != nil {
+			t.Fatalf("localized leading date rejected as Markdown: %q: %v", value, err)
+		}
+	}
+	for _, value := range []string{"1. First item", "42. Added explanation"} {
+		if err := validatePlainPresentation("summary", value); KindOf(err) != ErrorOutput {
+			t.Fatalf("ordered Markdown list accepted: %q: %v", value, err)
+		}
+	}
+}
+
 func TestEnglishTranslationReceivesOnlyDeclaredGermanPresentation(t *testing.T) {
 	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {
 		var payload chatRequest

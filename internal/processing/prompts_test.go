@@ -83,12 +83,21 @@ func TestStructuredTranslationLanguageGuidanceIsIsolated(t *testing.T) {
 			t.Fatalf("Romanian guidance missing %q: %q", expected, romanian)
 		}
 	}
+	croatian := promptUserMessage(CroatianTranslationPromptVersion, payload)
+	for _, expected := range []string{"standard Croatian, never Serbian", "directly from the input", "plural German context", "explicitly alleged", "neutral ‘osumnjičenik’", "uhićen tijekom provjere", "Keep ‘Hinweise’", "never confirmed offences"} {
+		if !strings.Contains(croatian, expected) {
+			t.Fatalf("Croatian guidance missing %q: %q", expected, croatian)
+		}
+	}
+	if strings.Contains(romanian, "neutral ‘osumnjičenik’") || strings.Contains(croatian, "în apropierea") {
+		t.Fatal("Romanian and Croatian guidance leaked into each other")
+	}
 	for _, translation := range RegisteredTranslations() {
-		if translation.Language == "ro" {
+		if translation.Language == "ro" || translation.Language == "hr" {
 			continue
 		}
-		if rendered := promptUserMessage(translation.PromptVersion, payload); strings.Contains(rendered, "în apropierea") || strings.Contains(rendered, "poliția criminalistică") || strings.Contains(rendered, "plural meaning of German ‘S-Bahnen’") {
-			t.Fatalf("Romanian guidance leaked into %s: %q", translation.Language, rendered)
+		if rendered := promptUserMessage(translation.PromptVersion, payload); strings.Contains(rendered, "în apropierea") || strings.Contains(rendered, "poliția criminalistică") || strings.Contains(rendered, "plural meaning of German ‘S-Bahnen’") || strings.Contains(rendered, "neutral ‘osumnjičenik’") {
+			t.Fatalf("language-specific guidance leaked into %s: %q", translation.Language, rendered)
 		}
 	}
 }

@@ -261,6 +261,7 @@ Tokens matching "__MB_[A-Z_]+_[0-9]{4}__" stand for protected Munich-area proper
 }
 
 var structuredTranslationLanguageGuidance = map[string]string{
+	"hr": "Write only standard Croatian, never Serbian. Copy each complete __MB_*__ placeholder directly from the input into the same field; do not retype it from memory, shorten it, or change any character. Preserve source grammatical number: plural German context such as ‘fuhren’ requires an explicit plural Croatian noun and plural verb around a COMMUTER_TRAIN placeholder. Keep ‘soll … haben’ explicitly alleged with ‘navodno’ or ‘sumnja se da’. Use ‘policijska intervencija’ or ‘policijska akcija’ for ‘Polizeieinsatz’, neutral ‘osumnjičenik’ for ‘Tatverdächtiger’, and ‘uhićen tijekom provjere’ for ‘bei der Überprüfung festgenommen’. Keep ‘Hinweise’ and ‘Auffälligkeiten’ tentative, never confirmed offences, intoxication, or consumption.",
 	"ro": "For Romanian street locations, German ‘an der … Straße’ means on/at that street: use ‘pe’ or ‘la’ as context requires, never ‘în apropierea’ unless the German source explicitly says near the street. German ‘Kriminalpolizei’ means criminal-investigation police: use ‘poliția criminală’ or ‘poliția judiciară’, never ‘poliția criminalistică’, which means forensic police. Preserve the plural meaning of German ‘S-Bahnen’ with plural Romanian wording and verb agreement. Before output, verify that every protected placeholder still includes both leading and both trailing underscore characters.",
 }
 

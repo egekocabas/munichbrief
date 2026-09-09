@@ -158,7 +158,8 @@ manifest and result report.
 | Chinese | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable after three focused rounds; recurring awkward A wording recorded | Final A/B: 2/2 pass | Acceptable on this sample; no native approval | Continue autonomously with Hindi A-C |
 | Hindi | HY-MT2 | Best revision: A-F 6/6 structural | Best revision 4/6 acceptable (B-E); A allegation and F substance uncertainty fail | Not run | Paused after six focused rounds; no native approval | Retain best observed prompt; evaluate another model separately |
 | Russian | HY-MT2 | All generated pairs structural except one revision-1 overlong title | No single final prompt passed A-F; latest B fixes legal meaning but implies multiple suspects | Not run | Paused after six focused rounds; no native approval | Retain latest legally safer prompt; evaluate another model separately |
-| Croatian | TranslateGemma Q3_K_S | Not run | Not assessable | Not run | Candidate-level hardware blocker after Bosnian gate | Preserve planned Qwen comparison; do not reload Q3_K_S on this host |
+| Croatian | TranslateGemma Q3_K_S | Not run | Not assessable | Not run | Candidate-level hardware blocker after Bosnian gate | Do not reload Q3_K_S on this host |
+| Croatian | Qwen 9B structured | Best complete screen: A-E pass; F rejected | No final prompt passed F; Serbian/malformed output or material fact changes persisted | Not run | Paused after six focused rounds; no native approval | Retain safest observed compact prompt; evaluate another model separately |
 | Bosnian | TranslateGemma Q3_K_S | A title only completed; pair interrupted | Completed title materially fails; summary unavailable | Not run | Hardware-blocked: 2/3 request attempts ended in EOF and model unloaded | Do not prompt-tune; reconsider artifact/hardware separately |
 | Greek | TranslateGemma Q3_K_S | Not run | Not assessable | Not run | Candidate-level hardware blocker after Bosnian gate | Do not reload Q3_K_S on this host |
 | Romanian | Qwen 9B structured | Final protocol: 8/8 pairs | 8/8 materially acceptable after three focused rounds; recurring grammar/typing defects recorded | Final A/B: 2/2 pass | Acceptable on this sample; no native approval | Keep selected model/adapter; seek catalog/native review |
@@ -1318,6 +1319,52 @@ checkpoints.
 Next: evaluate Croatian with the same Qwen 9B structured adapter. The requested
 Croatian TranslateGemma comparison remains unassessed because Q3_K_S is
 hardware-blocked on this host.
+
+## Croatian Qwen 9B decision: 2026-09-09
+
+Croatian used the same Qwen 9B digest, structured adapter, and 8192 context as
+Romanian. The baseline A-C calls all completed. A lost the reported-allegation
+status, changed the subsequent police operation into police endangerment, and
+singularized S-Bahnen. B called the neutral suspect a perpetrator and changed
+one parked vehicle to multiple vehicles. C preserved all material facts, but
+deterministic validation falsely treated leading `29. kolovoza 2026.` as an
+ordered Markdown list.
+
+The validator now distinguishes a localized day-month-year prefix from an
+ordered list. Regression tests accept Croatian and German leading dates while
+still rejecting genuine numbered Markdown items. The saved C output was
+therefore classified as materially acceptable rather than prompting the model
+to work around a validator defect.
+
+Six focused Croatian prompt rounds were used:
+
+| Round | Gate / result |
+| --- | --- |
+| 1 | A fixed allegation and police-operation meaning but retained singular S-Bahnen; B fixed neutral suspect and one-vehicle meaning with poor case agreement |
+| 2 | A fixed plural agreement; the complete A-E set was materially acceptable, but F truncated its municipality placeholder and produced garbled Serbian-heavy prose |
+| 3 | F preserved the placeholder but remained malformed and predominantly Serbian |
+| 4 | F improved some Croatian vocabulary but corrupted the municipality placeholder again and remained grammatically poor |
+| 5 | A shorter contract preserved F's placeholders, facts, sequence, and uncertainty, but the output was still predominantly Serbian and not acceptable Croatian |
+| 6 | Croatian-language guidance produced more Croatian vocabulary, but F lost the driver subject, omitted the securing step, and strengthened tentative observations into alcoholization and signs of drug use |
+
+The one immediate Qwen `EOF` before round 1 was preserved as infrastructure;
+exact-identity resume completed the request and later calls remained stable. It
+is not counted as a translation failure. Every generated attempt remains in a
+separate checkpoint. No unchanged-prompt retry was used to obtain a favorable
+sample.
+
+Croatian/Qwen is **paused after six focused rounds**. No single prompt qualified
+A-F, so A/B repetitions were not run. The code retains round 5's compact English
+guidance because it produced the safest observed F semantics and exact tokens;
+the later Croatian-language round improved vocabulary but materially changed
+facts. Retaining it does not qualify the route. The TranslateGemma comparison is
+also unassessed due to the Q3_K_S candidate-level hardware blocker. This is
+assistant review only, not native approval.
+
+This completes the runnable candidates in the authorized remaining-language
+session. Bosnian, Greek, and Croatian/TranslateGemma require a smaller artifact
+or different hardware; Croatian/Qwen requires a different model/adapter rather
+than further prompt growth.
 
 ## References
 
