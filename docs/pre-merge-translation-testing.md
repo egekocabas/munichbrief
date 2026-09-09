@@ -242,8 +242,10 @@ not native-language approval.
 | Croatian | SalamandraTA v3 Q5_K_M | A-D preserved placeholders; E title corrupted the token | Relevant Croatian with legal/grammar caveats before replacing `__MB_TRANSIT_0001__` by literal regex text | Not run | Hard-gate failure; no native approval | Do not configure; Qwen remains strongest observed candidate |
 | Croatian | Seed-X 7B Q5_K_M | 0 usable pairs; minimal control failed before validation | Official-minimal fixture A produced unrelated Chinese/wrong-script output and a token loop; placeholder-free `<hr>` control returned whitespace | Not run | Paused; artifact/runtime prerequisite failure, not RAM; no native approval | Do not configure this artifact; Qwen remains materially stronger |
 | Bosnian | TranslateGemma Q2_K / 4B Q8 | Q2 A failed; Q8 gates completed through six focused rounds | No single prompt qualified A-F; mixed script, token mutation/omission, lost qualifiers, and changed uncertainty persisted | Not run under a qualifying prompt | Paused after six Q8 focused rounds; no native approval | Retain final concise guidance; evaluate another model separately |
+| Bosnian | LLaMAX3 Q4_K_M | A remained structurally safe through three focused revisions | Bosnian month wording improved, but the model repeatedly reversed headline agency and stated an allegation as fact | Not run | Paused by the three-consecutive-error early-stop rule; no native approval | Do not spend remaining revision budget on this pairing |
 | Greek | TranslateGemma 4B Q8 | Best round: A-D pass across accumulated gates; E/F fail | No single prompt passed A-F; scheduled-bus/traffic-police qualifiers and F escape/arrest/uncertainty remain unreliable | Round-3 A/B: 2/2 pass | Paused after six focused rounds; no native approval | Retain final safety guidance; evaluate another model separately |
 | Greek | SalamandraTA v3 Q5_K_M | Base and focused A-C preserved all placeholders/numbers | A strong; B retained final-decision wording and C interrogation wording despite guidance | Not run | Incomplete/needs focused work; no native approval | Further work stopped after Croatian placeholder corruption |
+| Greek | LLaMAX3 Q4_K_M / EuroLLM Q4_K_M | Both fixture-A gates failed structure | LLaMAX3 omitted two typed placeholders; EuroLLM invented a placeholder for a time | Not run | Both pairings permanently disqualified; no tournament candidate remains | Keep Greek paused; do not tune structurally unsafe pairings |
 | Romanian | Qwen 9B structured | Final protocol: 8/8 pairs | 8/8 materially acceptable after three focused rounds; recurring grammar/typing defects recorded | Final A/B: 2/2 pass | User-selected/locked to Qwen 9B; no native approval | Keep selected model/adapter; seek catalog/native review |
 
 Before merge: review reader catalogs (especially disclosure, attribution, legal
@@ -296,6 +298,22 @@ excluded for contradictory German source wording, not a translation failure.
 
 Raw requests, outputs, source checklists, isolated databases, and separate manual
 review records remain in `.local/translation-evaluations/readiness-v1/`.
+
+## Bosnian tournament decision: 2026-09-09
+
+LLaMAX3 Q4_K_M was the only eligible new candidate. Baseline A and two focused
+revisions preserved placeholders but reversed the headline's grammatical roles,
+making the S-Bahn the cause and the police intervention the delayed object. The
+summaries also stated the reported injury as fact. Revision 2 corrected Croatian
+`kolovoza` to Bosnian `augusta`, but not the material errors. Revision 3 explicitly
+required stable active-clause roles and allegation wording; its title repeated
+the identical reversal. The run was stopped before another summary generation
+under the three-consecutive-error rule. Bosnian remains paused; no native approval
+is claimed.
+
+Greek has no structurally safe candidate from this tournament: LLaMAX3 omitted
+typed placeholders and EuroLLM invented an unknown one. Both pairings remain
+disqualified without prompt tuning, so the recorded Greek outcome is paused.
 
 ## English B/C bounded batch: 2026-09-08
 
