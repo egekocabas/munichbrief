@@ -197,8 +197,8 @@ lower quantization was tried for semantic or placeholder failures. The current
 shortlist is LLaMAX3 alone for Bosnian and Croatian; LLaMAX3 plus EuroLLM for
 Hindi; and LLaMAX3 plus TowerInstruct for Russian. Greek has no structurally safe
 candidate from this tournament and remains paused unless a separate candidate is
-authorized. Next complete Bosnian, Greek (record the no-candidate decision),
-Hindi, Croatian, and Russian in that order.
+authorized. Bosnian, Greek, Hindi, Croatian, and Russian were subsequently
+completed in that order; their decisions are recorded below.
 
 ## Step 5: decisions and release evidence
 
@@ -382,6 +382,24 @@ TowerInstruct/Russian remains paused, and its noncommercial license would also
 block production selection without separate review. HY-MT2 remains the strongest
 observed Russian candidate under the existing evidence, but is still paused for
 its documented material failures. No native approval is claimed.
+
+## New-model tournament completion and validation: 2026-09-09
+
+Every officially eligible model-language pairing received a fixture-A gate or a
+recorded hardware outcome. Structurally safe candidates advanced as specified;
+focused work stopped under the three-consecutive-error or two-critical-regression
+rules rather than consuming the maximum revision budget. No candidate qualified
+a new language, no preferred model setting changed, and no failed route was
+enabled. Locked-language selections were untouched.
+
+The final non-Docker validation passed documentation links, whitespace and
+formatting, module consistency, vet, Staticcheck v0.8.1, the complete race suite,
+application build, govulncheck v1.7.0, dead-code analysis, Actionlint, reproducible
+frontend build and committed-output comparison, npm audit with zero
+vulnerabilities, strict Helm lint, default/example/multilingual renders, chart
+assertions, and negative configuration cases. The current CI Repository checks
+run also passes. ShellCheck and Gitleaks were unavailable locally; Docker was
+intentionally skipped by request.
 
 ## English B/C bounded batch: 2026-09-08
 
