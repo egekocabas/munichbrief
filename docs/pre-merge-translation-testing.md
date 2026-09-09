@@ -242,6 +242,7 @@ not native-language approval.
 | Russian | Seed-X 7B Q5_K_M | 0 usable pairs; minimal control failed before validation | General and official-minimal prompts produced incomplete whitespace, wrong scripts, unrelated text, or loops; placeholder-free `<ru>` control also failed | Not run | Paused; artifact/runtime prerequisite failure, not RAM; no native approval | Do not configure this artifact; HY-MT2 remains materially stronger |
 | Croatian | TranslateGemma Q2_K / 4B Q8 | Q2 0/3 acceptable; Q8 no single prompt passed A-F | Q2 broadly malformed; Q8 unstable allegation/legal fidelity, Croatian/Serbian leakage, and missing detail | Not run under a qualifying prompt | Paused after six Q8 focused rounds; no native approval | Qwen was stronger on A-E, but both candidates remain paused |
 | Croatian | Qwen 9B structured | Best complete screen: A-E pass; F rejected | No final prompt passed F; Serbian/malformed output or material fact changes persisted | Not run | Paused after six focused rounds; no native approval | Retain safest observed compact prompt; evaluate another model separately |
+| Croatian | LLaMAX3 Q4_K_M | Baseline A-C preserved placeholders; focused runs remained recoverable | B changed conviction certainty and C changed approximate time; revision 1 looped with invented facts and revision 2 invented schedule claims | Not run | Paused after two critical-regression revisions; no native approval | Qwen remains the strongest observed Croatian candidate |
 | Croatian | SalamandraTA v3 Q5_K_M | A-D preserved placeholders; E title corrupted the token | Relevant Croatian with legal/grammar caveats before replacing `__MB_TRANSIT_0001__` by literal regex text | Not run | Hard-gate failure; no native approval | Do not configure; Qwen remains strongest observed candidate |
 | Croatian | Seed-X 7B Q5_K_M | 0 usable pairs; minimal control failed before validation | Official-minimal fixture A produced unrelated Chinese/wrong-script output and a token loop; placeholder-free `<hr>` control returned whitespace | Not run | Paused; artifact/runtime prerequisite failure, not RAM; no native approval | Do not configure this artifact; Qwen remains materially stronger |
 | Bosnian | TranslateGemma Q2_K / 4B Q8 | Q2 A failed; Q8 gates completed through six focused rounds | No single prompt qualified A-F; mixed script, token mutation/omission, lost qualifiers, and changed uncertainty persisted | Not run under a qualifying prompt | Paused after six Q8 focused rounds; no native approval | Retain final concise guidance; evaluate another model separately |
@@ -335,6 +336,24 @@ after A and B's title when the early-stop rule was met. Hindi remains paused in
 this tournament. The historical HY-MT2 result is still the strongest observed
 Hindi candidate, with its recorded A allegation and F substance-uncertainty
 failures; no native approval is claimed.
+
+## Croatian tournament decision: 2026-09-09
+
+LLaMAX3 Q4_K_M preserved placeholders on baseline A-C. It retained B's
+allegation, involvement uncertainty, and presumption wording, but changed the
+definite absence of a conviction into uncertainty about whether a conviction
+existed. C preserved its events and numbers but changed approximate 04:20 into
+an exact time. A continued to reverse headline agency and state an allegation
+as fact.
+
+The first focused revision then generated a 1,024-token B headline containing
+invented bus-delay, enforcement, and culprit claims plus a repetition loop. A
+shorter second revision generated another invented B headline about there being
+no schedule delays. Both revisions were stopped before their remaining calls.
+That meets the two-critical-regression early-stop rule, so LLaMAX3/Croatian is
+paused. Historical Qwen remains the strongest observed Croatian candidate (A-E
+passed in its best complete screen), but it remains unqualified because F still
+failed materially. No native approval is claimed.
 
 ## English B/C bounded batch: 2026-09-08
 
