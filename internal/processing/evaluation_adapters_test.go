@@ -91,7 +91,7 @@ func TestTowerInstructNativeAdapterAvoidsConvertedEmptySystemTurn(t *testing.T) 
 		if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
 			t.Fatal(err)
 		}
-		want := "<|im_start|>user\nTranslate the following German source text to Russian:\nPreserve every placeholder matching `__MB_[A-Z_]+_[0-9]{4}__` exactly, character-for-character, and output only the translation.\nGerman: Einsatz an der __MB_STREET_0001__\nRussian:<|im_end|>\n<|im_start|>assistant\n"
+		want := "<|im_start|>user\nTranslate the following German source text to French:\nPreserve every placeholder matching `__MB_[A-Z_]+_[0-9]{4}__` exactly, character-for-character, and output only the translation.\nGerman: Einsatz an der __MB_STREET_0001__\nFrench:<|im_end|>\n<|im_start|>assistant\n"
 		if !payload.Raw || payload.Prompt != want || strings.Contains(payload.Prompt, "<|im_start|>system") || payload.Options.NumCtx != towerInstructContextLimit {
 			t.Fatalf("TowerInstruct payload = %#v", payload)
 		}
@@ -99,7 +99,7 @@ func TestTowerInstructNativeAdapterAvoidsConvertedEmptySystemTurn(t *testing.T) 
 		_ = json.NewEncoder(&response).Encode(generateResponse{Model: "tower-instruct:test", Done: true, Response: "Операция на __MB_STREET_0001__"})
 		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(response.Bytes()))}, nil
 	})
-	adapter, err := NewTowerInstructNativeAdapter("http://ollama.test", "tower-instruct:test", "ru", time.Second, 8192, &http.Client{Transport: transport})
+	adapter, err := NewTowerInstructNativeAdapter("http://ollama.test", "tower-instruct:test", "fr", time.Second, 8192, &http.Client{Transport: transport})
 	if err != nil {
 		t.Fatal(err)
 	}
