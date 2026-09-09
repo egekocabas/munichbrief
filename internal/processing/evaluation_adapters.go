@@ -48,6 +48,7 @@ var towerInstructLanguageNames = map[string]string{
 var (
 	llamax3LanguageGuidance = map[string]string{
 		"bs": "Use standard Bosnian in Latin script, including Bosnian month names such as august, and natural Bosnian police terminology. Keep the agent and affected object of every active clause in the same roles; never reverse them or turn the agent into the thing being delayed. Render German evidential forms such as 'soll ... haben' explicitly with Bosnian allegation wording such as 'navodno', never as established fact. Preserve negation, uncertainty, cause and effect, and exactly which service was delayed or unaffected.",
+		"hi": "Use concise, natural standard Hindi in Devanagari, with headlines no longer than 90 characters after placeholders are restored. Preserve grammatical subject, object, referent gender, attribution, negation, and uncertainty; render reported allegations as allegations rather than facts. Translate a vehicle's Scheibe as its window or glass, never as spectacles, and do not duplicate coordinated participant terms.",
 	}
 	euroLLMLanguageGuidance       = map[string]string{}
 	towerPlusLanguageGuidance     = map[string]string{}
