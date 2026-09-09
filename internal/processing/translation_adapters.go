@@ -17,6 +17,8 @@ const (
 	TranslationAdapterEuroLLM        = "eurollm"
 	TranslationAdapterTowerPlus      = "tower-plus"
 	TranslationAdapterTowerInstruct  = "tower-instruct"
+	TranslationAdapterMADLAD400      = "madlad400"
+	TranslationAdapterGemma4         = "gemma4"
 )
 
 type TranslationAdapterOption struct {
@@ -49,6 +51,12 @@ func TranslationAdapterOptions(languageCode string) []TranslationAdapterOption {
 	}
 	if _, supported := towerInstructLanguageNames[languageCode]; supported && languageCode != "de" {
 		options = append(options, TranslationAdapterOption{Key: TranslationAdapterTowerInstruct, DisplayName: "TowerInstruct native"})
+	}
+	if _, supported := madlad400LanguageTokens[languageCode]; supported {
+		options = append(options, TranslationAdapterOption{Key: TranslationAdapterMADLAD400, DisplayName: "MADLAD-400 native"})
+	}
+	if _, supported := gemma4LanguageNames[languageCode]; supported {
+		options = append(options, TranslationAdapterOption{Key: TranslationAdapterGemma4, DisplayName: "Gemma 4 native"})
 	}
 	return options
 }
@@ -121,6 +129,10 @@ func (g *nativeTranslationStepGenerator) GenerateStep(ctx context.Context, step 
 		translator, err = NewTowerPlusNativeAdapter(g.provider.baseURL, g.model, language, g.provider.timeout, g.provider.contextSize, g.provider.baseClient)
 	case TranslationAdapterTowerInstruct:
 		translator, err = NewTowerInstructNativeAdapter(g.provider.baseURL, g.model, language, g.provider.timeout, g.provider.contextSize, g.provider.baseClient)
+	case TranslationAdapterMADLAD400:
+		translator, err = NewMADLAD400NativeAdapter(g.provider.baseURL, g.model, language, g.provider.timeout, g.provider.contextSize, g.provider.baseClient)
+	case TranslationAdapterGemma4:
+		translator, err = NewGemma4NativeAdapter(g.provider.baseURL, g.model, language, g.provider.timeout, g.provider.contextSize, g.provider.baseClient)
 	default:
 		err = errors.New("unknown native translation adapter")
 	}

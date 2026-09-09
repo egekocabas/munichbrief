@@ -109,6 +109,19 @@ func TestEvaluationAdapterMigrationPreservesTranslationSettings(t *testing.T) {
 	if _, err := raw.Exec(`INSERT INTO translation_language_settings(language_code,preferred_model,adapter_key,updated_at) VALUES('hr','salamandra:model','salamandra-ta','2026-09-09T00:00:00Z')`); err != nil {
 		t.Fatal(err)
 	}
+	evaluationMigration, err := migrationFiles.ReadFile("migrations/019_evaluation_translation_adapters.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := raw.Exec(string(evaluationMigration)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := raw.Exec(`INSERT INTO schema_migrations(version,applied_at) VALUES(19,'2026-09-09T01:00:00Z')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := raw.Exec(`INSERT INTO translation_language_settings(language_code,preferred_model,adapter_key,updated_at) VALUES('ru','tower:model','tower-instruct','2026-09-09T01:00:00Z')`); err != nil {
+		t.Fatal(err)
+	}
 	if err := raw.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -119,13 +132,13 @@ func TestEvaluationAdapterMigrationPreservesTranslationSettings(t *testing.T) {
 	}
 	defer database.Close()
 	settings, err := database.TranslationLanguageSettings(ctx)
-	if err != nil || len(settings) != 1 || settings[0].PreferredModel != "salamandra:model" || settings[0].AdapterKey != "salamandra-ta" {
+	if err != nil || len(settings) != 2 || settings[0].PreferredModel != "salamandra:model" || settings[0].AdapterKey != "salamandra-ta" || settings[1].PreferredModel != "tower:model" || settings[1].AdapterKey != "tower-instruct" {
 		t.Fatalf("preserved settings = %#v/%v", settings, err)
 	}
-	if err := database.EnsureTranslationLanguageSettings(ctx, []string{"bs", "hr", "hi", "ru"}, "en", time.Now()); err != nil {
+	if err := database.EnsureTranslationLanguageSettings(ctx, []string{"bs", "el", "hr", "hi", "ru"}, "en", time.Now()); err != nil {
 		t.Fatal(err)
 	}
-	for language, adapter := range map[string]string{"bs": "llamax3", "hr": "eurollm", "hi": "tower-plus", "ru": "tower-instruct"} {
+	for language, adapter := range map[string]string{"bs": "madlad400", "el": "gemma4", "hr": "eurollm", "hi": "tower-plus", "ru": "tower-instruct"} {
 		if err := database.SetTranslationLanguageSetting(ctx, language, adapter+":test", adapter, time.Now()); err != nil {
 			t.Fatalf("select %s after upgrade: %v", adapter, err)
 		}

@@ -707,14 +707,28 @@ func readinessCandidate(adapterName, modelOverride string) (string, string, int,
 		contextSize = 8192
 	case TranslationAdapterTowerPlus:
 		adapter = TranslationAdapterTowerPlus
-		model = "hf.co/mradermacher/Tower-Plus-9B-GGUF:Q4_K_M"
+		model = "hf.co/mradermacher/Tower-Plus-9B-GGUF:Q3_K_M"
 		if modelOverride != "" {
 			model = modelOverride
 		}
-		contextSize = 8192
+		contextSize = 2048
 	case TranslationAdapterTowerInstruct:
 		adapter = TranslationAdapterTowerInstruct
 		model = "hf.co/mradermacher/TowerInstruct-7B-v0.2-GGUF:Q6_K"
+		if modelOverride != "" {
+			model = modelOverride
+		}
+		contextSize = 2048
+	case TranslationAdapterMADLAD400:
+		adapter = TranslationAdapterMADLAD400
+		model = "hf.co/enacimie/madlad400-7b-mt-Q4_K_M-GGUF:Q4_K_M"
+		if modelOverride != "" {
+			model = modelOverride
+		}
+		contextSize = 2048
+	case TranslationAdapterGemma4:
+		adapter = TranslationAdapterGemma4
+		model = "hf.co/unsloth/gemma-4-E4B-it-GGUF:UD-Q4_K_XL"
 		if modelOverride != "" {
 			model = modelOverride
 		}

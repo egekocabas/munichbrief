@@ -264,8 +264,10 @@ func TestReadinessCandidateAllowsExplicitNativeAdapterComparisonModels(t *testin
 	}{
 		{adapter: TranslationAdapterLLaMAX3, model: "llamax3:test", context: 8192},
 		{adapter: TranslationAdapterEuroLLM, model: "eurollm:test", context: 8192},
-		{adapter: TranslationAdapterTowerPlus, model: "tower-plus:test", context: 8192},
+		{adapter: TranslationAdapterTowerPlus, model: "tower-plus:test", context: 2048},
 		{adapter: TranslationAdapterTowerInstruct, model: "tower-instruct:test", context: 2048},
+		{adapter: TranslationAdapterMADLAD400, model: "madlad:test", context: 2048},
+		{adapter: TranslationAdapterGemma4, model: "gemma4:test", context: 2048},
 	} {
 		model, adapter, contextSize, err = readinessCandidate(test.adapter, " "+test.model+" ")
 		if err != nil || model != test.model || adapter != test.adapter || contextSize != test.context {
@@ -282,8 +284,10 @@ func TestReadinessCandidateAllowsExplicitNativeAdapterComparisonModels(t *testin
 		{name: "SalamandraTA", adapter: TranslationAdapterSalamandraTA, model: "hf.co/egekocabas/salamandraTA-7b-instruct-Q5_K_M-GGUF:salamandrata-7b-instruct-q5_k_m-imat.gguf", context: 8192},
 		{name: "LLaMAX3", adapter: TranslationAdapterLLaMAX3, model: "hf.co/mradermacher/LLaMAX3-8B-Alpaca-GGUF:Q4_K_M", context: 8192},
 		{name: "EuroLLM", adapter: TranslationAdapterEuroLLM, model: "hf.co/mradermacher/EuroLLM-9B-Instruct-2512-GGUF:Q4_K_M", context: 8192},
-		{name: "Tower+", adapter: TranslationAdapterTowerPlus, model: "hf.co/mradermacher/Tower-Plus-9B-GGUF:Q4_K_M", context: 8192},
+		{name: "Tower+", adapter: TranslationAdapterTowerPlus, model: "hf.co/mradermacher/Tower-Plus-9B-GGUF:Q3_K_M", context: 2048},
 		{name: "TowerInstruct", adapter: TranslationAdapterTowerInstruct, model: "hf.co/mradermacher/TowerInstruct-7B-v0.2-GGUF:Q6_K", context: 2048},
+		{name: "MADLAD-400", adapter: TranslationAdapterMADLAD400, model: "hf.co/enacimie/madlad400-7b-mt-Q4_K_M-GGUF:Q4_K_M", context: 2048},
+		{name: "Gemma 4", adapter: TranslationAdapterGemma4, model: "hf.co/unsloth/gemma-4-E4B-it-GGUF:UD-Q4_K_XL", context: 2048},
 		{name: "structured", adapter: TranslationAdapterStructured, model: "hf.co/bartowski/Qwen_Qwen3.5-9B-GGUF:Q3_K_M", context: 8192},
 	} {
 		t.Run(test.name, func(t *testing.T) {

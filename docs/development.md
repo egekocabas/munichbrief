@@ -150,16 +150,19 @@ mechanical checks pass.
 
 The full production-worker readiness harness also accepts
 `MUNICHBRIEF_READINESS_ADAPTER=seed-x`, `salamandra-ta`, `llamax3`, `eurollm`,
-`tower-plus`, or `tower-instruct`. Seed-X uses raw
+`tower-plus`, `tower-instruct`, `madlad400`, or `gemma4`. Seed-X uses raw
 `/api/generate`, its mandatory final language tag, greedy decoding, at most 512
 output tokens, and a 4096-token effective context. SalamandraTA uses user-only
 ChatML, greedy decoding, at most 1024 output tokens, and an 8192-token effective
 context. LLaMAX3 uses raw Alpaca-format generation; EuroLLM and Tower+ use
 user-only labelled-source ChatML. TowerInstruct renders that user-only ChatML
 through raw generation because the evaluated GGUF template otherwise inserts an
-empty system turn. The evaluation adapters use
-greedy decoding and at most 1024 output tokens; their effective contexts are
-8192 except TowerInstruct at 2048. Use a fresh readiness
+empty system turn. MADLAD-400 uses raw generation with only its documented
+`<2xx>` target token and source text, greedy decoding, at most 512 output tokens,
+and a 2048-token effective context. Gemma 4 uses one user-only labelled-source
+chat message with thinking disabled. The evaluation adapters use greedy decoding
+and at most 1024 output tokens; Tower+, TowerInstruct, MADLAD-400, and Gemma 4
+use a 2048-token effective context. Use a fresh readiness
 directory whenever the prompt, model, or target changes; recording/replay binds
 saved responses to the exact rendered request and model digest.
 
@@ -191,7 +194,8 @@ Language/fixture/repetition selections and the new-call budget do not invalidate
 completed requests. Select one language for later stages: A-C first, then D-F,
 then A-B with repetition 2. Set `MUNICHBRIEF_READINESS_ADAPTER` to `hy-mt2`
 (default), `translategemma`, `seed-x`, `salamandra-ta`, `llamax3`, `eurollm`,
-`tower-plus`, `tower-instruct`, or `structured` for the roadmap's candidates.
+`tower-plus`, `tower-instruct`, `madlad400`, `gemma4`, or `structured` for the
+roadmap's candidates.
 `MUNICHBRIEF_READINESS_MODEL` may explicitly select an
 installed native-adapter artifact for a controlled comparison; structured mode
 uses its fixed candidate. Always use a new evaluation directory for a different

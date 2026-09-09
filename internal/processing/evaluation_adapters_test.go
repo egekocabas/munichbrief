@@ -47,6 +47,7 @@ func TestLabelledNativeAdaptersUseUserOnlyChatML(t *testing.T) {
 	}{
 		{name: "EuroLLM", target: "hr", context: euroLLMContextLimit, constructor: NewEuroLLMNativeAdapter},
 		{name: "Tower+", target: "hi", context: towerPlusContextLimit, constructor: NewTowerPlusNativeAdapter},
+		{name: "Gemma 4", target: "bs", context: gemma4ContextLimit, constructor: NewGemma4NativeAdapter},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -79,6 +80,38 @@ func TestLabelledNativeAdaptersUseUserOnlyChatML(t *testing.T) {
 				t.Fatal(err)
 			}
 		})
+	}
+}
+
+func TestMADLAD400NativeAdapterUsesOnlyOfficialTargetTokenAndSource(t *testing.T) {
+	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		if request.Method != http.MethodPost || request.URL.Path != "/api/generate" {
+			t.Fatalf("request = %s %s, want POST /api/generate", request.Method, request.URL.Path)
+		}
+		var payload generateRequest
+		if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
+			t.Fatal(err)
+		}
+		if !payload.Raw || payload.Prompt != "<2el> Einsatz an der __MB_STREET_0001__" {
+			t.Fatalf("MADLAD payload = %#v", payload)
+		}
+		if payload.Options.Temperature != 0 || payload.Options.NumPredict != madlad400MaxOutputTokens || payload.Options.NumCtx != madlad400ContextLimit {
+			t.Fatalf("MADLAD options = %#v", payload.Options)
+		}
+		if strings.Contains(payload.Prompt, "Translate") || strings.Contains(payload.Prompt, "placeholder") {
+			t.Fatalf("MADLAD prompt contains instructions: %q", payload.Prompt)
+		}
+		var response bytes.Buffer
+		_ = json.NewEncoder(&response).Encode(generateResponse{Model: "madlad:test", Done: true, Response: "Επιχείρηση στην __MB_STREET_0001__"})
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(response.Bytes()))}, nil
+	})
+	adapter, err := NewMADLAD400NativeAdapter("http://ollama.test", "madlad:test", "el", time.Second, 8192, &http.Client{Transport: transport})
+	if err != nil {
+		t.Fatal(err)
+	}
+	translated, model, err := adapter.Translate(context.Background(), " Einsatz an der __MB_STREET_0001__ ")
+	if err != nil || model != "madlad:test" || translated != "Επιχείρηση στην __MB_STREET_0001__" {
+		t.Fatalf("translation=%q model=%q err=%v", translated, model, err)
 	}
 }
 
@@ -118,6 +151,12 @@ func TestEvaluationNativeAdaptersRejectUnsupportedLanguagesAndEmptyInput(t *test
 	if _, err := NewTowerInstructNativeAdapter("http://ollama.test", "model:test", "hi", time.Second, 8192, nil); err == nil || !strings.Contains(err.Error(), "does not officially support") {
 		t.Fatalf("TowerInstruct Hindi error = %v", err)
 	}
+	if _, err := NewMADLAD400NativeAdapter("http://ollama.test", "model:test", "en", time.Second, 2048, nil); err == nil || !strings.Contains(err.Error(), "does not support") {
+		t.Fatalf("MADLAD English error = %v", err)
+	}
+	if _, err := NewGemma4NativeAdapter("http://ollama.test", "model:test", "en", time.Second, 2048, nil); err == nil || !strings.Contains(err.Error(), "does not officially support") {
+		t.Fatalf("Gemma 4 English error = %v", err)
+	}
 	adapter, err := NewLLaMAX3NativeAdapter("http://ollama.test", "model:test", "bs", time.Second, 8192, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -128,12 +167,12 @@ func TestEvaluationNativeAdaptersRejectUnsupportedLanguagesAndEmptyInput(t *test
 }
 
 func TestTranslationAdapterRawTransportClassification(t *testing.T) {
-	for _, adapter := range []string{TranslationAdapterSeedX, TranslationAdapterLLaMAX3, TranslationAdapterTowerInstruct} {
+	for _, adapter := range []string{TranslationAdapterSeedX, TranslationAdapterLLaMAX3, TranslationAdapterTowerInstruct, TranslationAdapterMADLAD400} {
 		if !translationAdapterUsesRawGenerate(adapter) {
 			t.Errorf("%s should use raw generation", adapter)
 		}
 	}
-	for _, adapter := range []string{TranslationAdapterStructured, TranslationAdapterHyMT2, TranslationAdapterSalamandraTA, TranslationAdapterEuroLLM, TranslationAdapterTowerPlus} {
+	for _, adapter := range []string{TranslationAdapterStructured, TranslationAdapterHyMT2, TranslationAdapterSalamandraTA, TranslationAdapterEuroLLM, TranslationAdapterTowerPlus, TranslationAdapterGemma4} {
 		if translationAdapterUsesRawGenerate(adapter) {
 			t.Errorf("%s should use chat", adapter)
 		}

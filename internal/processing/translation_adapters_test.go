@@ -71,6 +71,19 @@ func TestTranslationAdapterSupportMatchesNativeContracts(t *testing.T) {
 			t.Errorf("TowerInstruct should not support %s", code)
 		}
 	}
+	for _, code := range []string{"bs", "el", "hi", "hr", "ru"} {
+		if !TranslationAdapterSupports(TranslationAdapterMADLAD400, code) {
+			t.Errorf("MADLAD-400 should support %s", code)
+		}
+		if !TranslationAdapterSupports(TranslationAdapterGemma4, code) {
+			t.Errorf("Gemma 4 should support %s", code)
+		}
+	}
+	for _, code := range []string{"en", "tr", "it", "uk", "zh", "es", "fr", "ro", "pl"} {
+		if TranslationAdapterSupports(TranslationAdapterMADLAD400, code) || TranslationAdapterSupports(TranslationAdapterGemma4, code) {
+			t.Errorf("evaluation-only adapters should not be offered for %s", code)
+		}
+	}
 	for _, translation := range RegisteredTranslations() {
 		if !TranslationAdapterSupports(TranslationAdapterStructured, translation.Language) || !TranslationAdapterSupports(TranslationAdapterTranslateGemma, translation.Language) {
 			t.Errorf("common adapters missing for %s", translation.Language)

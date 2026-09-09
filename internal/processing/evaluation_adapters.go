@@ -2,6 +2,7 @@ package processing
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -13,9 +14,12 @@ import (
 const (
 	llamax3ContextLimit       = 8192
 	euroLLMContextLimit       = 8192
-	towerPlusContextLimit     = 8192
+	towerPlusContextLimit     = 2048
 	towerInstructContextLimit = 2048
+	gemma4ContextLimit        = 2048
+	madlad400ContextLimit     = 2048
 	evaluationMaxOutputTokens = 1024
+	madlad400MaxOutputTokens  = 512
 )
 
 var llamax3LanguageNames = map[string]string{
@@ -41,6 +45,19 @@ var towerPlusLanguageNames = map[string]string{
 var towerInstructLanguageNames = map[string]string{
 	"de": "German", "en": "English", "it": "Italian", "zh": "Chinese",
 	"es": "Spanish", "fr": "French", "ru": "Russian",
+}
+
+// Gemma 4 is being evaluated only for the unresolved MunichBrief targets. Its
+// upstream card describes broad multilingual coverage but does not publish the
+// exact higher-quality subset, so these entries express evaluation eligibility,
+// not a production-quality claim.
+var gemma4LanguageNames = map[string]string{
+	"de": "German", "bs": "Bosnian", "el": "Greek", "hi": "Hindi",
+	"hr": "Croatian", "ru": "Russian",
+}
+
+var madlad400LanguageTokens = map[string]string{
+	"bs": "bs", "el": "el", "hi": "hi", "hr": "hr", "ru": "ru",
 }
 
 // Guidance starts empty. The readiness protocol adds only general, evidenced
@@ -117,6 +134,58 @@ func NewTowerInstructNativeAdapter(baseURL, model, targetCode string, timeout ti
 	return newEvaluationNativeAdapter(baseURL, model, targetCode, "TowerInstruct", towerInstructLanguageNames, towerInstructLanguageGuidance, true, true, timeout, contextSize, towerInstructContextLimit, baseClient)
 }
 
+func NewGemma4NativeAdapter(baseURL, model, targetCode string, timeout time.Duration, contextSize int, baseClient *http.Client) (*evaluationNativeAdapter, error) {
+	return newEvaluationNativeAdapter(baseURL, model, targetCode, "Gemma 4", gemma4LanguageNames, nil, false, false, timeout, contextSize, gemma4ContextLimit, baseClient)
+}
+
+type madlad400NativeAdapter struct {
+	client      *OllamaClient
+	targetToken string
+}
+
+func NewMADLAD400NativeAdapter(baseURL, model, targetCode string, timeout time.Duration, contextSize int, baseClient *http.Client) (*madlad400NativeAdapter, error) {
+	definitions := langregistry.Registered()
+	if err := langregistry.Validate(definitions); err != nil {
+		return nil, err
+	}
+	target, found := langregistry.ByCode(definitions, targetCode)
+	if !found || target.Canonical {
+		return nil, errors.New("MADLAD-400 native adapter requires a translated target language")
+	}
+	token, supported := madlad400LanguageTokens[target.Code]
+	if !supported {
+		return nil, fmt.Errorf("MADLAD-400 evaluation does not support target language %q", target.Code)
+	}
+	if contextSize <= 0 || contextSize > madlad400ContextLimit {
+		contextSize = madlad400ContextLimit
+	}
+	client, err := NewOllamaClient(baseURL, model, timeout, contextSize, baseClient)
+	if err != nil {
+		return nil, err
+	}
+	return &madlad400NativeAdapter{client: client, targetToken: token}, nil
+}
+
+func (a *madlad400NativeAdapter) Translate(ctx context.Context, text string) (string, string, error) {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return "", "", errorOf(ErrorOutput, "MADLAD-400 native input is empty")
+	}
+	content, model, err := a.client.rawGenerate(ctx, "<2"+a.targetToken+"> "+text, chatOptions{
+		Temperature: 0,
+		NumPredict:  madlad400MaxOutputTokens,
+		NumCtx:      madlad400ContextLimit,
+	})
+	if err != nil {
+		return "", model, err
+	}
+	content = strings.TrimSpace(content)
+	if content == "" {
+		return "", model, errorOf(ErrorOutput, "MADLAD-400 native output is empty")
+	}
+	return content, model, nil
+}
+
 func (a *evaluationNativeAdapter) Translate(ctx context.Context, text string) (string, string, error) {
 	text = strings.TrimSpace(text)
 	if text == "" {
@@ -169,7 +238,7 @@ func labelledNativePrompt(sourceName, targetName, guidance, text string) string 
 
 func translationAdapterUsesRawGenerate(adapter string) bool {
 	switch strings.TrimSpace(adapter) {
-	case TranslationAdapterSeedX, TranslationAdapterLLaMAX3, TranslationAdapterTowerInstruct:
+	case TranslationAdapterSeedX, TranslationAdapterLLaMAX3, TranslationAdapterTowerInstruct, TranslationAdapterMADLAD400:
 		return true
 	default:
 		return false
@@ -177,3 +246,4 @@ func translationAdapterUsesRawGenerate(adapter string) bool {
 }
 
 var _ nativeTextTranslator = (*evaluationNativeAdapter)(nil)
+var _ nativeTextTranslator = (*madlad400NativeAdapter)(nil)

@@ -171,6 +171,30 @@ running all eight pairs under one unchanged prompt/model/digest/quantization.
 Keep every attempt. TowerInstruct and Tower+ remain evaluation-only pending an
 explicit review of their noncommercial licensing.
 
+### New-candidate extension: MADLAD-400, Gemma 4, and Tower+ Q3
+
+The next comparison keeps every selected language/model route unchanged and
+targets only paused Bosnian, Greek, Hindi, Croatian, and Russian. MADLAD-400 is
+eligible for all five through its raw `<2xx> source` translation contract;
+Gemma 4 is exploratory for all five through user-only chat with thinking off;
+Tower+ remains limited to its officially listed Hindi and Russian targets. The
+effective context is 2048 for all three families on the Pi.
+
+Run the fixture-A gates grouped by model: MADLAD and Gemma 4 each use
+`bs,el,hi,hr,ru`; Tower+ uses `hi,ru`. MADLAD has no prose prompt-tuning path.
+Typed-placeholder corruption disqualifies only the affected pairing. For Gemma
+4, use UD-Q4_K_XL then Q4_K_M only on confirmed memory failure. For Tower+, use
+Q3_K_M then Q3_K_S only on confirmed memory failure, and rerun completed gates
+after any fallback. A missing or incomplete Ollama tag is not a model failure.
+
+Advance at most two structurally safe new candidates per language through B/C,
+then run D-F and repeat A/B for the winner. Compare saved historical candidates
+without regenerating them. The unchanged acceptance rules below apply, and all
+requests, raw responses, restored output, identities, timings, validation, and
+manual reviews remain in the readiness harness's durable records. The untuned
+upper bound is 114 new native calls. Prompt revisions for Gemma 4 and Tower+ are
+limited to ten per language across both models, with at most six for the leader.
+
 ### Tournament fixture-A gate: 2026-09-09
 
 The baseline gate used the production queued-worker path, typed Gazetteer
