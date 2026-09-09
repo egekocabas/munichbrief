@@ -447,6 +447,7 @@ func TestGermanPresentationRejectsURLsAndMarkdown(t *testing.T) {
 func TestPlainPresentationDistinguishesLocalizedDateFromOrderedList(t *testing.T) {
 	for _, value := range []string{
 		"29. kolovoza 2026. u točno 03:30 sati dogodila se nesreća.",
+		"29. avgust 2026, tačno u 03:30, dogodila se nesreća.",
 		"1. September 2026 ereignete sich ein Unfall.",
 	} {
 		if err := validatePlainPresentation("summary", value); err != nil {
@@ -457,6 +458,15 @@ func TestPlainPresentationDistinguishesLocalizedDateFromOrderedList(t *testing.T
 		if err := validatePlainPresentation("summary", value); KindOf(err) != ErrorOutput {
 			t.Fatalf("ordered Markdown list accepted: %q: %v", value, err)
 		}
+	}
+}
+
+func TestTargetScriptRejectsCyrillicBosnianOutput(t *testing.T) {
+	if err := validateTargetScript("bs", "Policijska intervencija", "U petak navečer policija je nastavila istragu."); err != nil {
+		t.Fatalf("Latin Bosnian output rejected: %v", err)
+	}
+	if err := validateTargetScript("bs", "Policijska intervencija", "У петак увече полиција је наставила истрагу."); KindOf(err) != ErrorOutput {
+		t.Fatalf("Cyrillic Bosnian output accepted: %v", err)
 	}
 }
 

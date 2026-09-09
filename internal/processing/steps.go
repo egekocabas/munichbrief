@@ -775,7 +775,7 @@ var (
 	translationChineseTimePattern  = regexp.MustCompile(`([01]?[0-9]|2[0-3])\s*点(?:\s*([0-5]?[0-9])\s*分?)?`)
 	presentationMarkdownPattern    = regexp.MustCompile("(?m)(?:\\*\\*|__|`|^\\s{0,3}(?:#{1,6}\\s|>\\s|[-+*]\\s)|!?\\[[^]\\n]+\\]\\([^)\\n]+\\))")
 	presentationOrderedListPattern = regexp.MustCompile(`(?m)^\s{0,3}[0-9]+\.\s`)
-	presentationDatePrefixPattern  = regexp.MustCompile(`(?m)^\s{0,3}(?:[1-9]|[12][0-9]|3[01])\.\s+\p{L}[\p{L}\p{M}.-]*\s+[0-9]{4}\.?(?:\s|$)`)
+	presentationDatePrefixPattern  = regexp.MustCompile(`(?m)^\s{0,3}(?:[1-9]|[12][0-9]|3[01])\.\s+\p{L}[\p{L}\p{M}.-]*\s+[0-9]{4}(?:[.,]\s+|\s+|$)`)
 )
 
 func validatePlainPresentation(field, value string) error {
@@ -964,6 +964,9 @@ func sameStringMultiset(left, right []string) bool {
 
 func validateTargetScript(language, title, summary string) error {
 	target := map[string]*unicode.RangeTable{
+		"en": unicode.Latin, "tr": unicode.Latin, "hr": unicode.Latin,
+		"it": unicode.Latin, "bs": unicode.Latin, "es": unicode.Latin,
+		"fr": unicode.Latin, "ro": unicode.Latin, "pl": unicode.Latin,
 		"zh": unicode.Han, "hi": unicode.Devanagari, "el": unicode.Greek,
 		"uk": unicode.Cyrillic, "ru": unicode.Cyrillic,
 	}[language]

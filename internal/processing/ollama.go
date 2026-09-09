@@ -326,7 +326,7 @@ var (
 		`siječnja|veljače|ožujka|travnja|svibnja|lipnja|srpnja|kolovoza|rujna|listopada|studenoga|prosinca|` +
 		`gennaio|febbraio|marzo|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre|` +
 		`січня|лютого|березня|квітня|травня|червня|липня|серпня|вересня|жовтня|листопада|грудня|` +
-		`januar|februar|mart|april|maj|juni|juli|august|septembar|oktobar|novembar|decembar|` +
+		`januar|februar|mart|april|maj|juni|juli|avgust|august|septembar|oktobar|novembar|decembar|` +
 		`जनवरी|फ़रवरी|मार्च|अप्रैल|मई|जून|जुलाई|अगस्त|सितंबर|अक्टूबर|नवंबर|दिसंबर|` +
 		`enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|` +
 		`janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre|` +

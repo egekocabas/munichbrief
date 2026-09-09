@@ -94,6 +94,7 @@ func TestPublicTextDistinguishesLocalizedDatesFromStreetAddresses(t *testing.T) 
 		"Операція біля Ganghoferstraße 29 серпня 2026 року",
 		"Экспедиция на Ganghoferstraße 29 августа 2026 года",
 		"Operación en Ganghoferstraße 29 de agosto de 2026",
+		"Nesreća na Ganghoferstraße 29. avgust 2026 u 03:30",
 		"Ganghoferstraße 2026年8月29日",
 	}
 	for _, value := range allowed {
