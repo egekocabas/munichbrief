@@ -195,6 +195,28 @@ manual reviews remain in the readiness harness's durable records. The untuned
 upper bound is 114 new native calls. Prompt revisions for Gemma 4 and Tower+ are
 limited to ten per language across both models, with at most six for the leader.
 
+#### MADLAD-400 fixture-A gate: 2026-09-10
+
+The exact Q4_K_M artifact loaded successfully at 2048 requested context on
+Ollama 0.33.3. Its metadata reported T5, 8.3B parameters, a 512 native context,
+and digest `ce653ea2ea76`. The first load took about 60 seconds; completed field
+calls then took about two to eight seconds. There was no OOM or transport error.
+
+| Pair | Calls | Result |
+| --- | ---: | --- |
+| Bosnian | 2 | Title changed/dropped placeholders and contained no translation; summary was only `.` |
+| Greek | 1 | Empty title |
+| Hindi | 1 | Empty title |
+| Croatian | 1 | Empty title |
+| Russian | 1 | Empty title |
+
+All five pairings are disqualified. These were HTTP 200 completed model outputs,
+not infrastructure failures. Per the fixed MADLAD contract, no prose prompt
+tuning or quantization retry applies; the remaining summaries were not called
+after their titles failed. Raw requests, responses, timings, preflight metadata,
+worker results, and pending manual-review records remain in the ignored local
+`readiness-madlad400-q4km-v1` checkpoint.
+
 ### Tournament fixture-A gate: 2026-09-09
 
 The baseline gate used the production queued-worker path, typed Gazetteer
