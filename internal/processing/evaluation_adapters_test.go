@@ -20,7 +20,7 @@ func TestLLaMAX3NativeAdapterUsesOfficialAlpacaShape(t *testing.T) {
 		if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
 			t.Fatal(err)
 		}
-		want := "Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.\n### Instruction:\nTranslate the following sentences from German to Bosnian. Output only the translation. Preserve every placeholder matching `__MB_[A-Z_]+_[0-9]{4}__` exactly, character-for-character; translate only the surrounding text.\n### Input:\nEinsatz an der __MB_STREET_0001__\n### Response:"
+		want := "Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.\n### Instruction:\nTranslate the following sentences from German to Croatian. Output only the translation. Preserve every placeholder matching `__MB_[A-Z_]+_[0-9]{4}__` exactly, character-for-character; translate only the surrounding text.\n### Input:\nEinsatz an der __MB_STREET_0001__\n### Response:"
 		if !payload.Raw || payload.Prompt != want || payload.Options.Temperature != 0 || payload.Options.NumPredict != evaluationMaxOutputTokens || payload.Options.NumCtx != llamax3ContextLimit {
 			t.Fatalf("generate payload = %#v", payload)
 		}
@@ -28,7 +28,7 @@ func TestLLaMAX3NativeAdapterUsesOfficialAlpacaShape(t *testing.T) {
 		_ = json.NewEncoder(&response).Encode(generateResponse{Model: "llamax3:test", Done: true, Response: "Intervencija u __MB_STREET_0001__"})
 		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(response.Bytes()))}, nil
 	})
-	adapter, err := NewLLaMAX3NativeAdapter("http://ollama.test:11434", "llamax3:test", "bs", time.Second, 16384, &http.Client{Transport: transport})
+	adapter, err := NewLLaMAX3NativeAdapter("http://ollama.test:11434", "llamax3:test", "hr", time.Second, 16384, &http.Client{Transport: transport})
 	if err != nil {
 		t.Fatal(err)
 	}

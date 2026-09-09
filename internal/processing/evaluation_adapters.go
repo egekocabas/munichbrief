@@ -46,7 +46,9 @@ var towerInstructLanguageNames = map[string]string{
 // Guidance starts empty. The readiness protocol adds only general, evidenced
 // language rules after reproducible failures rather than fixture-specific text.
 var (
-	llamax3LanguageGuidance       = map[string]string{}
+	llamax3LanguageGuidance = map[string]string{
+		"bs": "Use standard Bosnian in Latin script and natural Bosnian police terminology. Preserve whether a statement is only reported or alleged, as well as negation, uncertainty, and cause-and-effect direction; do not change delayed transit into unaffected transit or the reverse.",
+	}
 	euroLLMLanguageGuidance       = map[string]string{}
 	towerPlusLanguageGuidance     = map[string]string{}
 	towerInstructLanguageGuidance = map[string]string{}
