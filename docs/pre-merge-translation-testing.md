@@ -234,6 +234,9 @@ not native-language approval.
 | Chinese | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable after three focused rounds; recurring awkward A wording recorded | Final A/B: 2/2 pass | Acceptable on this sample; no native approval | Continue autonomously with Hindi A-C |
 | Hindi | HY-MT2 | Best revision: A-F 6/6 structural | Best revision 4/6 acceptable (B-E); A allegation and F substance uncertainty fail | Not run | Paused after six focused rounds; no native approval | Retain best observed prompt; evaluate another model separately |
 | Hindi | SalamandraTA v3 Q5_K_M | Base A structurally passed | A changed delay to stopping transit and stated the alleged injury as fact | Not run | Incomplete; no native approval | Tuning/further fixtures stopped after Croatian placeholder corruption |
+| Hindi | LLaMAX3 Q4_K_M | A-C and three focused A/B revisions remained structurally safe | C passed; A repeatedly lost allegation modality and later headlines regressed; B lost allegation/legal meaning | Not run | Paused by the three-consecutive-error rule; no native approval | HY-MT2 remains stronger on the recorded sample |
+| Hindi | EuroLLM Q4_K_M | A passed structure; B title failed hard | B translated the placeholder instruction and emitted its regex | Not run | Pairing permanently disqualified; no native approval | Do not tune or resume |
+| Hindi | Tower+ Q4_K_M / Q4_K_S / Q3_K_L | No output | Every installed quantization was kernel-OOM-killed at required 8192 context | Not run | Hardware-blocked on current host | Do not retry without more memory or an explicitly revised context experiment |
 | Russian | HY-MT2 | All generated pairs structural except one revision-1 overlong title | No single final prompt passed A-F; latest B fixes legal meaning but implies multiple suspects | Not run | Paused after six focused rounds; no native approval | Retain latest legally safer prompt; evaluate another model separately |
 | Russian | SalamandraTA v3 Q5_K_M | A preserved structure across base plus six focused rounds | No prompt preserved both allegation framing and the operation/delay headline relationship | Not run | Paused; no native approval | HY-MT2 remains the stronger observed candidate |
 | Russian | Seed-X 7B Q5_K_M | 0 usable pairs; minimal control failed before validation | General and official-minimal prompts produced incomplete whitespace, wrong scripts, unrelated text, or loops; placeholder-free `<ru>` control also failed | Not run | Paused; artifact/runtime prerequisite failure, not RAM; no native approval | Do not configure this artifact; HY-MT2 remains materially stronger |
@@ -314,6 +317,24 @@ is claimed.
 Greek has no structurally safe candidate from this tournament: LLaMAX3 omitted
 typed placeholders and EuroLLM invented an unknown one. Both pairings remain
 disqualified without prompt tuning, so the recorded Greek outcome is paused.
+
+## Hindi tournament decision: 2026-09-09
+
+LLaMAX3 and EuroLLM initially passed fixture A's structural checks. On B/C,
+LLaMAX3 preserved structure and passed C's exact facts, negation, medical versus
+police roles, causality, and `110`. It asserted B's damage allegation as fact and
+weakened or omitted the presumption-of-innocence clause. EuroLLM then translated
+its placeholder instruction and emitted the regex on B's title, permanently
+disqualifying that pairing.
+
+Three focused LLaMAX3 revisions improved isolated details (headline length,
+female reference, and vehicle-window terminology), but all three continued to
+state A's alleged injury as fact. Later revisions also made headlines incoherent,
+and B's material legal clause remained missing. The final run was interrupted
+after A and B's title when the early-stop rule was met. Hindi remains paused in
+this tournament. The historical HY-MT2 result is still the strongest observed
+Hindi candidate, with its recorded A allegation and F substance-uncertainty
+failures; no native approval is claimed.
 
 ## English B/C bounded batch: 2026-09-08
 
