@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	langregistry "github.com/egekocabas/munichbrief/internal/languages"
 )
 
 func TestTranslateGemmaNativeAdapterUsesOfficialPlainTextPrompt(t *testing.T) {
@@ -43,6 +45,29 @@ func TestTranslateGemmaNativeAdapterUsesOfficialPlainTextPrompt(t *testing.T) {
 	translated, model, err := adapter.Translate(context.Background(), "Einsatz am __MB_PLACE_0001__")
 	if err != nil || model != "translategemma:test" || translated != "__MB_PLACE_0001__ konumundaki olay" {
 		t.Fatalf("native translation=%q model=%q err=%v", translated, model, err)
+	}
+}
+
+func TestTranslateGemmaNativeAdapterAddsOnlyConfiguredTargetGuidance(t *testing.T) {
+	definitions := langregistry.Registered()
+	source := langregistry.Canonical(definitions)
+	greek, found := langregistry.ByCode(definitions, "el")
+	if !found {
+		t.Fatal("Greek language is not registered")
+	}
+	turkish, found := langregistry.ByCode(definitions, "tr")
+	if !found {
+		t.Fatal("Turkish language is not registered")
+	}
+	greekPrompt := translateGemmaNativePrompt(source, greek, translateGemmaLanguageGuidance["el"], "Quelle")
+	for _, expected := range []string{"Target-language guidance:", "standard Modern Greek", "φέρεται να", "εξετάστηκε ιατρικά", "ρώτησε έναν μάρτυρα", "μετά την ασφάλιση", "λεωφορείο τακτικής γραμμής", "το βράδυ της Παρασκευής", "never add successful escape", ":\n\n\nQuelle"} {
+		if !strings.Contains(greekPrompt, expected) {
+			t.Errorf("Greek guidance omitted %q: %q", expected, greekPrompt)
+		}
+	}
+	turkishPrompt := translateGemmaNativePrompt(source, turkish, translateGemmaLanguageGuidance["tr"], "Quelle")
+	if strings.Contains(turkishPrompt, "Target-language guidance:") || strings.Contains(turkishPrompt, "Modern Greek") {
+		t.Fatalf("Greek guidance leaked into Turkish prompt: %q", turkishPrompt)
 	}
 }
 

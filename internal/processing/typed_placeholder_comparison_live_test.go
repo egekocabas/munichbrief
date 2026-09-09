@@ -177,7 +177,7 @@ func TestLiveTranslateGemmaTypedPlaceholderComparison(t *testing.T) {
 						field := typedPlaceholderField{
 							Key: fieldKey, Strategy: strategy, Language: language, Fixture: fixture.Name,
 							Repetition: repetition, Field: item.name, State: "running", Attempt: previous.Attempt + 1,
-							Input: item.input, Prompt: translateGemmaNativePrompt(source, target, item.input), StartedAt: time.Now().UTC(),
+							Input: item.input, Prompt: translateGemmaNativePrompt(source, target, "", item.input), StartedAt: time.Now().UTC(),
 						}
 						recordTypedPlaceholderField(t, runDirectory, &state, field)
 						raw, returnedModel, generateErr := adapter.Translate(context.Background(), item.input)

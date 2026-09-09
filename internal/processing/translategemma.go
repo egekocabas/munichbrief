@@ -19,9 +19,14 @@ import (
 type TranslateGemmaNativeAdapter struct {
 	client         *OllamaClient
 	source, target langregistry.Definition
+	targetGuidance string
 }
 
 const translateGemmaContextLimit = 2048
+
+var translateGemmaLanguageGuidance = map[string]string{
+	"el": "Use only standard Modern Greek words and Greek script; never insert another language. Apply these distinctions only when their German phrase occurs and never drop their qualifiers: ‘soll … haben’ → ‘φέρεται να’; ‘soll eine Frau leicht verletzt haben’ → ‘φέρεται να τραυμάτισε ελαφρά μια γυναίκα’; ‘medizinisch untersucht’ → ‘εξετάστηκε ιατρικά’; ‘Polizeieinsatz’ → ‘αστυνομική επιχείρηση’; ‘befragte einen Zeugen’ → ‘ρώτησε έναν μάρτυρα’. For incident details use: ‘Mehrfamilienhaus’ → ‘πολυκατοικία’; ‘unklare Gefahrenlage’ → ‘ασαφής κατάσταση κινδύνου’; ‘deeskalieren’ → ‘αποκλιμακώσει’; ‘nach der Sicherung widerstandslos festgenommen’ → ‘μετά την ασφάλιση της κατάστασης συνελήφθη χωρίς αντίσταση’; ‘Kriminalpolizei’ → ‘εγκληματολογική αστυνομία’; ‘Linienbus’ → ‘λεωφορείο τακτικής γραμμής’; ‘stationär in ein Krankenhaus gebracht’ → ‘εισήχθη σε νοσοκομείο για νοσηλεία’; ‘Verkehrspolizei’ → ‘τροχαία’. Use ‘το βράδυ της Παρασκευής’ for ‘am Freitagabend’, plural ‘κόκκινους φωτεινούς σηματοδότες’ for plural red lights, and ‘ακινητοποιήθηκε και συνελήφθη κατά τον έλεγχο’ for ‘gesichert und bei der Überprüfung festgenommen’. Keep ‘Hinweise’ and ‘Auffälligkeiten’ tentative: say there are indications that a licence may be absent and signs consistent with alcohol or drugs, never confirmed absence or consumption. Distinguish S-Bahn suburban trains from U-Bahn metro. Keep headlines under 90 characters and never add successful escape (‘κατάφερε’).",
+}
 
 func NewTranslateGemmaNativeAdapter(baseURL, model, targetCode string, timeout time.Duration, contextSize int, baseClient *http.Client) (*TranslateGemmaNativeAdapter, error) {
 	definitions := langregistry.Registered()
@@ -37,7 +42,7 @@ func NewTranslateGemmaNativeAdapter(baseURL, model, targetCode string, timeout t
 	if err != nil {
 		return nil, err
 	}
-	return &TranslateGemmaNativeAdapter{client: client, source: source, target: target}, nil
+	return &TranslateGemmaNativeAdapter{client: client, source: source, target: target, targetGuidance: translateGemmaLanguageGuidance[target.Code]}, nil
 }
 
 func (a *TranslateGemmaNativeAdapter) Translate(ctx context.Context, text string) (string, string, error) {
@@ -45,7 +50,7 @@ func (a *TranslateGemmaNativeAdapter) Translate(ctx context.Context, text string
 	if text == "" {
 		return "", "", errorOf(ErrorOutput, "TranslateGemma native input is empty")
 	}
-	content, model, err := a.client.chat(ctx, true, "", translateGemmaNativePrompt(a.source, a.target, text), nil)
+	content, model, err := a.client.chat(ctx, true, "", translateGemmaNativePrompt(a.source, a.target, a.targetGuidance, text), nil)
 	if err != nil {
 		return "", model, err
 	}
@@ -56,10 +61,14 @@ func (a *TranslateGemmaNativeAdapter) Translate(ctx context.Context, text string
 	return content, model, nil
 }
 
-func translateGemmaNativePrompt(source, target langregistry.Definition, text string) string {
+func translateGemmaNativePrompt(source, target langregistry.Definition, guidance, text string) string {
+	guidance = strings.TrimSpace(guidance)
+	if guidance != "" {
+		guidance = "Target-language guidance: " + guidance + "\n"
+	}
 	return fmt.Sprintf(`You are a professional %s (%s) to %s (%s) translator. Your goal is to accurately convey the meaning and nuances of the original %s text while adhering to %s grammar, vocabulary, and cultural sensitivities.
-Produce only the %s translation, without any additional explanations or commentary. Please translate the following %s text into %s:
+%sProduce only the %s translation, without any additional explanations or commentary. Please translate the following %s text into %s:
 
 
-%s`, source.TranslationName, source.Code, target.TranslationName, target.Code, source.TranslationName, target.TranslationName, target.TranslationName, source.TranslationName, target.TranslationName, strings.TrimSpace(text))
+%s`, source.TranslationName, source.Code, target.TranslationName, target.Code, source.TranslationName, target.TranslationName, guidance, target.TranslationName, source.TranslationName, target.TranslationName, strings.TrimSpace(text))
 }

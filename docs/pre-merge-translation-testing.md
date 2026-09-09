@@ -161,7 +161,7 @@ manifest and result report.
 | Croatian | TranslateGemma | Not run | Not assessable | Not run | Q3_K_S hardware-blocked; Q2_K and 4B Q8 Bosnian gates loaded but failed meaning/readability | Evaluate a new candidate separately; do not infer Croatian quality from Bosnian |
 | Croatian | Qwen 9B structured | Best complete screen: A-E pass; F rejected | No final prompt passed F; Serbian/malformed output or material fact changes persisted | Not run | Paused after six focused rounds; no native approval | Retain safest observed compact prompt; evaluate another model separately |
 | Bosnian | TranslateGemma Q2_K / 4B Q8 | A pair completed on each fallback | Both pairs materially fail; Q2 malformed/mixed language, Q8 reverses causality and emits Serbian Cyrillic | Not run | Both fit memory, so failures are translation quality rather than infrastructure | Pause these candidates; do not expand or prompt-tune |
-| Greek | TranslateGemma | Not run | Not assessable | Not run | Q3_K_S hardware-blocked; Q2_K and 4B Q8 Bosnian gates loaded but failed meaning/readability | Evaluate a new candidate separately; do not infer Greek quality from Bosnian |
+| Greek | TranslateGemma 4B Q8 | Best round: A-D pass across accumulated gates; E/F fail | No single prompt passed A-F; scheduled-bus/traffic-police qualifiers and F escape/arrest/uncertainty remain unreliable | Round-3 A/B: 2/2 pass | Paused after six focused rounds; no native approval | Retain final safety guidance; evaluate another model separately |
 | Romanian | Qwen 9B structured | Final protocol: 8/8 pairs | 8/8 materially acceptable after three focused rounds; recurring grammar/typing defects recorded | Final A/B: 2/2 pass | Acceptable on this sample; no native approval | Keep selected model/adapter; seek catalog/native review |
 
 Before merge: review reader catalogs (especially disclosure, attribution, legal
@@ -1304,10 +1304,45 @@ phrases. It also passed deterministic structure but failed meaning/readability.
 Both fallback artifacts are therefore **paused for Bosnian after fixture A**.
 Expanding this failing gate or tuning around one severely malformed sample is
 not justified. These Bosnian results do not establish Greek or Croatian
-quality; those languages remain unassessed rather than failed. The test-only
+quality; those languages remained unassessed at this gate and required their
+own evaluation. The test-only
 readiness selector now permits an explicit TranslateGemma comparison model so
 future artifacts retain exact model/digest/request identities without changing
 production language settings.
+
+## Greek TranslateGemma decision: 2026-09-09
+
+Greek was evaluated independently after the Bosnian gate. Q2_K completed A-C
+without runtime failure but was unusable: A strengthened the allegation and
+mislabeled S-Bahnen as metro, B invented pending accusations and corrupted the
+legal safeguards with non-words, and C contained malformed Greek. The candidate
+was not expanded.
+
+The 4B Q8 baseline completed A-C. B preserved the complete legal meaning and C
+preserved the precision facts, but A inserted Arabic script and broke the
+allegation/actor relationship. Six focused Greek-only guidance rounds then used
+the same native adapter and exact request-identity rules:
+
+| Round | Gate / result |
+| --- | --- |
+| 1 | A removed script leakage but still broke the allegation/actor relationship and broadened examination to treatment |
+| 2 | A fixed allegation, roles, examination, and transit; witness noun became a non-word |
+| 3 | A passed and repeated exactly; B passed and repeated exactly; C-F exposed one-witness, operational, scheduled-bus/traffic-police, and escape/arrest failures |
+| 4 | C still lost one witness; D partly improved; E regressed inpatient care; F remained overlong and materially wrong |
+| 5 | C passed; D retained most details but omitted scene securing; E retained inpatient care but lost route/police qualifiers; F changed Friday to Saturday and confirmed tentative facts |
+| 6 | D passed with grammar caveats; E still lost scheduled-route and traffic-police qualifiers; F still claimed successful escape, was overlong, and did not reliably preserve the arrest/uncertainty details |
+
+All calls completed without EOF or model unloading. Deterministic validation
+correctly rejected overlong F titles, while editorial review independently
+identified their semantic failures. The best results across attempts were A-D,
+but **no single prompt identity passed A-F**. Because round 6 still failed E and
+F, A-C and the repeats were not regenerated under that identity merely to add
+calls after the decision was already negative.
+
+Greek is **paused after six focused rounds**. The code retains the final
+safety-oriented Greek guidance, but that is not route qualification. Every raw
+response, result, and separate assistant review remains in its immutable local
+checkpoint. This is assistant review only, not native approval.
 
 ## Romanian Qwen 9B final protocol: 2026-09-09
 
