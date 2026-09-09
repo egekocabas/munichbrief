@@ -65,6 +65,19 @@ func TestTranslateGemmaNativeAdapterAddsOnlyConfiguredTargetGuidance(t *testing.
 			t.Errorf("Greek guidance omitted %q: %q", expected, greekPrompt)
 		}
 	}
+	croatian, found := langregistry.ByCode(definitions, "hr")
+	if !found {
+		t.Fatal("Croatian language is not registered")
+	}
+	croatianPrompt := translateGemmaNativePrompt(source, croatian, translateGemmaLanguageGuidance["hr"], "Quelle")
+	for _, expected := range []string{"standardnim hrvatskim", "Još nije jasno je li bio uključen", "Ne izostavljaj ‘osuda nije donesena’", "policijska intervencija", "automobil se sudario sa zidom", "uhićen bez otpora", "prometna nesreća", "nikada ‘uhapšen’"} {
+		if !strings.Contains(croatianPrompt, expected) {
+			t.Errorf("Croatian guidance omitted %q: %q", expected, croatianPrompt)
+		}
+		if strings.Contains(greekPrompt, expected) {
+			t.Errorf("Croatian guidance leaked into Greek prompt: %q", greekPrompt)
+		}
+	}
 	turkishPrompt := translateGemmaNativePrompt(source, turkish, translateGemmaLanguageGuidance["tr"], "Quelle")
 	if strings.Contains(turkishPrompt, "Target-language guidance:") || strings.Contains(turkishPrompt, "Modern Greek") {
 		t.Fatalf("Greek guidance leaked into Turkish prompt: %q", turkishPrompt)

@@ -158,7 +158,7 @@ manifest and result report.
 | Chinese | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable after three focused rounds; recurring awkward A wording recorded | Final A/B: 2/2 pass | Acceptable on this sample; no native approval | Continue autonomously with Hindi A-C |
 | Hindi | HY-MT2 | Best revision: A-F 6/6 structural | Best revision 4/6 acceptable (B-E); A allegation and F substance uncertainty fail | Not run | Paused after six focused rounds; no native approval | Retain best observed prompt; evaluate another model separately |
 | Russian | HY-MT2 | All generated pairs structural except one revision-1 overlong title | No single final prompt passed A-F; latest B fixes legal meaning but implies multiple suspects | Not run | Paused after six focused rounds; no native approval | Retain latest legally safer prompt; evaluate another model separately |
-| Croatian | TranslateGemma | Not run | Not assessable | Not run | Q3_K_S hardware-blocked; Q2_K and 4B Q8 Bosnian gates loaded but failed meaning/readability | Evaluate a new candidate separately; do not infer Croatian quality from Bosnian |
+| Croatian | TranslateGemma Q2_K / 4B Q8 | Q2 0/3 acceptable; Q8 no single prompt passed A-F | Q2 broadly malformed; Q8 unstable allegation/legal fidelity, Croatian/Serbian leakage, and missing detail | Not run under a qualifying prompt | Paused after six Q8 focused rounds; no native approval | Qwen was stronger on A-E, but both candidates remain paused |
 | Croatian | Qwen 9B structured | Best complete screen: A-E pass; F rejected | No final prompt passed F; Serbian/malformed output or material fact changes persisted | Not run | Paused after six focused rounds; no native approval | Retain safest observed compact prompt; evaluate another model separately |
 | Bosnian | TranslateGemma Q2_K / 4B Q8 | A pair completed on each fallback | Both pairs materially fail; Q2 malformed/mixed language, Q8 reverses causality and emits Serbian Cyrillic | Not run | Both fit memory, so failures are translation quality rather than infrastructure | Pause these candidates; do not expand or prompt-tune |
 | Greek | TranslateGemma 4B Q8 | Best round: A-D pass across accumulated gates; E/F fail | No single prompt passed A-F; scheduled-bus/traffic-police qualifiers and F escape/arrest/uncertainty remain unreliable | Round-3 A/B: 2/2 pass | Paused after six focused rounds; no native approval | Retain final safety guidance; evaluate another model separately |
@@ -1343,6 +1343,41 @@ Greek is **paused after six focused rounds**. The code retains the final
 safety-oriented Greek guidance, but that is not route qualification. Every raw
 response, result, and separate assistant review remains in its immutable local
 checkpoint. This is assistant review only, not native approval.
+
+## Croatian TranslateGemma comparison: 2026-09-09
+
+Croatian was tested with both requested TranslateGemma fallbacks in addition to
+the previously completed Qwen 9B structured leg. Q2_K completed A-C without
+runtime failures but produced **0/3 acceptable pairs**. Its output contained
+non-words, malformed or alternative text, corrupted legal meaning, an invented
+loss-of-control detail, and unreliable Croatian. It was not prompt-tuned.
+
+The 4B Q8 baseline was materially better: C preserved the factual checklist
+despite grammar errors, while A and B strengthened allegations into facts. Six
+focused rounds then tested short English guidance, direct phrase mappings, and
+Croatian-language guidance:
+
+| Round | Gate / result |
+| --- | --- |
+| 1 | B preserved the allegation but omitted the explicit no-conviction fact; A remained overlong and lost the allegation |
+| 2 | A title and B legal distinction improved, but both allegations were still lost |
+| 3 | B allegation improved but no-conviction fact was again omitted; A ignored a literal mandatory `navodno` rule |
+| 4 | Croatian-language guidance made A materially acceptable with grammar errors; B still omitted no conviction |
+| 5 | B finally passed all legal facts; expansion regressed A and exposed C-F grammar, terminology, inpatient, arrest, and signal-detail failures |
+| 6 | A title and E inpatient detail improved, but A again lost allegation; D/F retained Serbian `uhapšen`; E lost route/traffic qualifiers; F singularized red traffic lights and weakened securing |
+
+All Q2_K and 4B Q8 calls completed without EOF or unloading. The failures are
+quality and instruction-following issues, not hardware. **No single 4B Q8
+prompt identity passed A-F**, so A/B repeats were not run after the final
+negative gate. The final Croatian safety guidance remains in code but does not
+qualify the route.
+
+Compared with TranslateGemma, the Qwen 9B structured candidate remains the
+stronger observed Croatian model because one Qwen identity passed A-E and failed
+only F. However, Qwen also exhausted six rounds without a complete qualifying
+prompt. Croatian is therefore **paused on both model tracks**. This comparison
+is assistant review only, not native approval; all raw attempts and separate
+reviews remain in durable local checkpoints.
 
 ## Romanian Qwen 9B final protocol: 2026-09-09
 
