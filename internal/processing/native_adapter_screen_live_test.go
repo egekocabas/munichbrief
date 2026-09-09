@@ -602,7 +602,9 @@ func liveNativeAdapterFactory(baseURL string) nativeAdapterFactory {
 			if !ok {
 				return nil, nil, fmt.Errorf("Seed-X prompt language %q is unsupported", language)
 			}
-			return adapter, func(text string) string { return seedXNativePrompt(seedXLanguages["de"], target, text) }, nil
+			return adapter, func(text string) string {
+				return seedXNativePrompt(seedXLanguages["de"], target, seedXLanguageGuidance[language], text)
+			}, nil
 		default:
 			return nil, nil, fmt.Errorf("unknown evaluation adapter %q", spec.Adapter)
 		}

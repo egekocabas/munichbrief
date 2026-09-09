@@ -93,6 +93,37 @@ func TestReadinessProductionWorkerRecordsAndResumesFields(t *testing.T) {
 	}
 }
 
+func TestReadinessSeedXRecordsRawResponsesThroughProductionWorker(t *testing.T) {
+	directory := t.TempDir()
+	manager := readinessTestManager(t)
+	fixture := readinessFixture{ID: "test", Title: "Einsatz an der Ingolstädter Straße", Summary: "Die Polizei berichtete, dass die Ingolstädter Straße gesperrt blieb."}
+	masked, err := manager.Protect(fixture.Title, fixture.Summary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	model := "seed-x:test"
+	expected := readinessExpectedRequests(t, "http://ollama.test", model, TranslationAdapterSeedX, "hr", 4096, StepInput{Values: map[string]string{"title_de": masked.Title, "summary_de": masked.Summary}})
+	request := 0
+	inner := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		request++
+		body, _ := io.ReadAll(req.Body)
+		if req.URL.Path != "/api/generate" || string(body) != expected[request-1] {
+			t.Fatalf("raw request %d = %s %s", request, req.URL.Path, body)
+		}
+		content := "Intervencija na " + nativeAdapterTokenPattern.FindString(masked.Title)
+		if request == 2 {
+			content = "Policija je izvijestila da " + nativeAdapterTokenPattern.FindString(masked.Summary) + " ostaje zatvorena."
+		}
+		data, _ := json.Marshal(generateResponse{Model: model, Done: true, Response: content})
+		return &http.Response{StatusCode: 200, Body: io.NopCloser(bytes.NewReader(data)), Header: make(http.Header)}, nil
+	})
+	transport := &readinessTransport{t: t, directory: directory, inner: inner, caseKey: "seed-x/hr/test/1", expected: expected, maxNew: 2, calls: map[string]readinessCall{}}
+	result := readinessRunCase(t, directory, "http://ollama.test", model, TranslationAdapterSeedX, "hr", 4096, fixture, manager, transport)
+	if result.Status != "STRUCTURAL_PASS_REVIEW_PENDING" || result.Translation.AdapterKey != TranslationAdapterSeedX || result.Translation.Model != model || request != 2 {
+		t.Fatalf("Seed-X production result=%#v requests=%d", result, request)
+	}
+}
+
 func TestReadinessCapturesRejectedOutputBeforeValidation(t *testing.T) {
 	directory := t.TempDir()
 	manager := readinessTestManager(t)
@@ -192,12 +223,17 @@ func TestReadinessCandidateAllowsExplicitNativeAdapterComparisonModels(t *testin
 	if err != nil || model != "translategemma:test" || adapter != TranslationAdapterTranslateGemma || contextSize != 2048 {
 		t.Fatalf("candidate=%q/%q/%d err=%v", model, adapter, contextSize, err)
 	}
+	model, adapter, contextSize, err = readinessCandidate(TranslationAdapterSeedX, " seed-x:test ")
+	if err != nil || model != "seed-x:test" || adapter != TranslationAdapterSeedX || contextSize != 4096 {
+		t.Fatalf("candidate=%q/%q/%d err=%v", model, adapter, contextSize, err)
+	}
 	for _, test := range []struct {
 		name, adapter, model string
 		context              int
 	}{
 		{name: "default HY-MT2", model: hyMT2ScreenModel, adapter: TranslationAdapterHyMT2, context: 8192},
 		{name: "TranslateGemma", adapter: TranslationAdapterTranslateGemma, model: "hf.co/mradermacher/translategemma-12b-it-GGUF:Q3_K_S", context: 2048},
+		{name: "Seed-X", adapter: TranslationAdapterSeedX, model: seedXScreenModel, context: 4096},
 		{name: "structured", adapter: TranslationAdapterStructured, model: "hf.co/bartowski/Qwen_Qwen3.5-9B-GGUF:Q3_K_M", context: 8192},
 	} {
 		t.Run(test.name, func(t *testing.T) {

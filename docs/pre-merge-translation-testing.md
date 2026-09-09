@@ -116,19 +116,21 @@ Start after all ten HY-MT2 targets have an evaluation decision.
 
 | Languages | Starting candidate | Adapter |
 | --- | --- | --- |
-| Croatian, Bosnian, Greek | `hf.co/mradermacher/translategemma-12b-it-GGUF:Q3_K_S` | `translategemma` |
+| Croatian, Bosnian, Greek | `hf.co/mradermacher/translategemma-12b-it-GGUF:Q2_K`, then `translategemma:4b-it-q8_0` when the 12B artifact cannot load | `translategemma` |
 | Romanian | `hf.co/bartowski/Qwen_Qwen3.5-9B-GGUF:Q3_K_M` | `structured` |
+| Russian and Croatian comparison | `hf.co/mradermacher/Seed-X-Instruct-7B-GGUF:Q5_K_M` | `seed-x` |
 
 Verify installed artifact, language-code support, template, and available memory.
 First run Croatian A's two fields as a loading/translation gate. Record loading
-time, request duration, completion, and memory evidence. The Q3_K_S artifact is
-about 5.6 GB; runtime fit on the Pi is unproven. Prior IQ3 evidence does not
-qualify Q3_K_S. Stop and report loading failure or repeated Ollama restarts.
+time, request duration, completion, and memory evidence. Q3_K_S was unavailable;
+the later authorized fallback order is Q2_K, then 4B Q8 when the 12B artifact
+cannot load. Stop and report loading failure or repeated Ollama restarts.
 
 Use the same eight-pair protocol, one language at a time. Romanian needs eight
-structured requests; distinguish requests from field counts. Seed-X remains
-excluded after its placeholder failure. Further fallback models need a separate
-decision after reporting the selected candidate.
+structured requests; distinguish requests from field counts. Seed-X may be
+selected only for officially supported targets, and each exact artifact must
+first pass a placeholder-free target-language control plus fixture A. Further
+fallback models need a separate decision after reporting the selected candidate.
 
 ## Step 5: decisions and release evidence
 
@@ -158,8 +160,10 @@ manifest and result report.
 | Chinese | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable after three focused rounds; recurring awkward A wording recorded | Final A/B: 2/2 pass | Acceptable on this sample; no native approval | Continue autonomously with Hindi A-C |
 | Hindi | HY-MT2 | Best revision: A-F 6/6 structural | Best revision 4/6 acceptable (B-E); A allegation and F substance uncertainty fail | Not run | Paused after six focused rounds; no native approval | Retain best observed prompt; evaluate another model separately |
 | Russian | HY-MT2 | All generated pairs structural except one revision-1 overlong title | No single final prompt passed A-F; latest B fixes legal meaning but implies multiple suspects | Not run | Paused after six focused rounds; no native approval | Retain latest legally safer prompt; evaluate another model separately |
+| Russian | Seed-X 7B Q5_K_M | 0 usable pairs; minimal control failed before validation | General and official-minimal prompts produced incomplete whitespace, wrong scripts, unrelated text, or loops; placeholder-free `<ru>` control also failed | Not run | Paused; artifact/runtime prerequisite failure, not RAM; no native approval | Do not configure this artifact; HY-MT2 remains materially stronger |
 | Croatian | TranslateGemma Q2_K / 4B Q8 | Q2 0/3 acceptable; Q8 no single prompt passed A-F | Q2 broadly malformed; Q8 unstable allegation/legal fidelity, Croatian/Serbian leakage, and missing detail | Not run under a qualifying prompt | Paused after six Q8 focused rounds; no native approval | Qwen was stronger on A-E, but both candidates remain paused |
 | Croatian | Qwen 9B structured | Best complete screen: A-E pass; F rejected | No final prompt passed F; Serbian/malformed output or material fact changes persisted | Not run | Paused after six focused rounds; no native approval | Retain safest observed compact prompt; evaluate another model separately |
+| Croatian | Seed-X 7B Q5_K_M | 0 usable pairs; minimal control failed before validation | Official-minimal fixture A produced unrelated Chinese/wrong-script output and a token loop; placeholder-free `<hr>` control returned whitespace | Not run | Paused; artifact/runtime prerequisite failure, not RAM; no native approval | Do not configure this artifact; Qwen remains materially stronger |
 | Bosnian | TranslateGemma Q2_K / 4B Q8 | Q2 A failed; Q8 gates completed through six focused rounds | No single prompt qualified A-F; mixed script, token mutation/omission, lost qualifiers, and changed uncertainty persisted | Not run under a qualifying prompt | Paused after six Q8 focused rounds; no native approval | Retain final concise guidance; evaluate another model separately |
 | Greek | TranslateGemma 4B Q8 | Best round: A-D pass across accumulated gates; E/F fail | No single prompt passed A-F; scheduled-bus/traffic-police qualifiers and F escape/arrest/uncertainty remain unreliable | Round-3 A/B: 2/2 pass | Paused after six focused rounds; no native approval | Retain final safety guidance; evaluate another model separately |
 | Romanian | Qwen 9B structured | Final protocol: 8/8 pairs | 8/8 materially acceptable after three focused rounds; recurring grammar/typing defects recorded | Final A/B: 2/2 pass | Acceptable on this sample; no native approval | Keep selected model/adapter; seek catalog/native review |

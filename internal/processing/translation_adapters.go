@@ -11,6 +11,7 @@ const (
 	TranslationAdapterStructured     = "structured"
 	TranslationAdapterTranslateGemma = "translategemma"
 	TranslationAdapterHyMT2          = "hy-mt2"
+	TranslationAdapterSeedX          = "seed-x"
 )
 
 type TranslationAdapterOption struct {
@@ -25,6 +26,9 @@ func TranslationAdapterOptions(languageCode string) []TranslationAdapterOption {
 	}
 	if _, supported := hyMT2LanguageNames[languageCode]; supported {
 		options = append(options, TranslationAdapterOption{Key: TranslationAdapterHyMT2, DisplayName: "HY-MT2 native"})
+	}
+	if _, supported := seedXLanguages[languageCode]; supported && languageCode != "de" {
+		options = append(options, TranslationAdapterOption{Key: TranslationAdapterSeedX, DisplayName: "Seed-X native"})
 	}
 	return options
 }
@@ -85,6 +89,8 @@ func (g *nativeTranslationStepGenerator) GenerateStep(ctx context.Context, step 
 		translator, err = NewTranslateGemmaNativeAdapter(g.provider.baseURL, g.model, language, g.provider.timeout, g.provider.contextSize, g.provider.baseClient)
 	case TranslationAdapterHyMT2:
 		translator, err = NewHyMT2NativeAdapter(g.provider.baseURL, g.model, language, g.provider.timeout, g.provider.contextSize, g.provider.baseClient)
+	case TranslationAdapterSeedX:
+		translator, err = NewSeedXNativeAdapter(g.provider.baseURL, g.model, language, g.provider.timeout, g.provider.contextSize, g.provider.baseClient)
 	default:
 		err = errors.New("unknown native translation adapter")
 	}

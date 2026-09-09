@@ -30,14 +30,17 @@ func TestSeedXNativeAdapterUsesRawCompletionContract(t *testing.T) {
 		if err := json.Unmarshal(encoded, &payload); err != nil {
 			t.Fatal(err)
 		}
-		wantPrompt := "Translate the following German sentence into Chinese:\nEinsatz am __MB_STREET_0001__ <zh>"
-		if !payload.Raw || payload.Stream || payload.Think || payload.Prompt != wantPrompt {
+		if !payload.Raw || payload.Stream || payload.Think {
 			t.Fatalf("raw generation payload = %#v", payload)
+		}
+		wantPrompt := "Translate the following German sentence into Chinese:\nEinsatz am __MB_STREET_0001__ <zh>"
+		if payload.Prompt != wantPrompt {
+			t.Fatalf("raw prompt = %q, want %q", payload.Prompt, wantPrompt)
 		}
 		if !strings.HasSuffix(payload.Prompt, "<zh>") || strings.Contains(payload.Prompt, "Simplified Chinese") {
 			t.Fatalf("target tag is not the final prompt content: %q", payload.Prompt)
 		}
-		if payload.Options.Temperature != 0 || payload.Options.NumPredict != 512 || payload.Options.NumCtx != 8192 {
+		if payload.Options.Temperature != 0 || payload.Options.NumPredict != 512 || payload.Options.NumCtx != seedXContextLimit {
 			t.Fatalf("generation options = %#v", payload.Options)
 		}
 		var response bytes.Buffer
@@ -51,6 +54,16 @@ func TestSeedXNativeAdapterUsesRawCompletionContract(t *testing.T) {
 	translated, model, err := adapter.Translate(context.Background(), "Einsatz am __MB_STREET_0001__")
 	if err != nil || model != "seed-x:test" || translated != "在 __MB_STREET_0001__ 的行动" {
 		t.Fatalf("native translation=%q model=%q err=%v", translated, model, err)
+	}
+}
+
+func TestSeedXNativeAdapterCapsContextAtDocumentedSlidingWindow(t *testing.T) {
+	adapter, err := NewSeedXNativeAdapter("http://ollama.test:11434", "seed-x:test", "ru", time.Second, 8192, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if adapter.generationOptions.NumCtx != seedXContextLimit {
+		t.Fatalf("context = %d, want %d", adapter.generationOptions.NumCtx, seedXContextLimit)
 	}
 }
 

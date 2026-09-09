@@ -110,11 +110,12 @@ See [Translation model evaluation](translation-model-evaluation.md) for the
 official TranslateGemma request contract, the native-adapter boundary, separate
 structural/editorial scoring, and the bounded comparison protocol.
 
-The HY-MT2 and Seed-X critical screen is separately gated and never mutates
-production model routing. It verifies both installed model identities before
-generation, always uses typed placeholders, sends titles and summaries as
-separate requests, and checkpoints every field under `.local/` so the same run
-can resume after interruption:
+The HY-MT2 and Seed-X critical screen never mutates production model routing. It
+verifies the selected installed model identity before generation, always uses
+typed placeholders, sends titles and summaries as separate requests, and
+checkpoints every field under `.local/` so the same run can resume after
+interruption. Seed-X is an opt-in per-language adapter, but the evaluated
+third-party Q5_K_M artifact is not a qualified production model:
 
 ```bash
 MUNICHBRIEF_NATIVE_ADAPTER_SMOKE_LIVE_TEST=1 \
@@ -146,6 +147,13 @@ codes with `MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_LANGUAGES` and fixture names with
 `MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_FIXTURES`. Generated output remains local
 evaluation evidence and requires manual semantic review even when all
 mechanical checks pass.
+
+The full production-worker readiness harness also accepts
+`MUNICHBRIEF_TRANSLATION_READINESS_ADAPTER=seed-x`. Seed-X uses raw
+`/api/generate`, its mandatory final language tag, greedy decoding, at most 512
+output tokens, and a 4096-token effective context. Use a fresh readiness
+directory whenever the prompt, model, or target changes; recording/replay binds
+saved responses to the exact rendered request and model digest.
 
 The current release gate, resumable six-fixture matrix, per-language report,
 and review criteria are in

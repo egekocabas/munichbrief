@@ -22,10 +22,60 @@ func TestTranslationAdapterSupportMatchesNativeContracts(t *testing.T) {
 			t.Errorf("HY-MT2 should not be offered for %s", code)
 		}
 	}
+	for _, code := range []string{"en", "tr", "hr", "it", "uk", "zh", "es", "fr", "ro", "pl", "ru"} {
+		if !TranslationAdapterSupports(TranslationAdapterSeedX, code) {
+			t.Errorf("Seed-X should support %s", code)
+		}
+	}
+	for _, code := range []string{"bs", "hi", "el"} {
+		if TranslationAdapterSupports(TranslationAdapterSeedX, code) {
+			t.Errorf("Seed-X should not be offered for %s", code)
+		}
+	}
 	for _, translation := range RegisteredTranslations() {
 		if !TranslationAdapterSupports(TranslationAdapterStructured, translation.Language) || !TranslationAdapterSupports(TranslationAdapterTranslateGemma, translation.Language) {
 			t.Errorf("common adapters missing for %s", translation.Language)
 		}
+	}
+}
+
+func TestSeedXTranslationGeneratorUsesProductionNativeLoop(t *testing.T) {
+	var prompts []string
+	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		if request.URL.Path != "/api/generate" {
+			t.Fatalf("request path = %q", request.URL.Path)
+		}
+		var payload generateRequest
+		if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
+			t.Fatal(err)
+		}
+		prompts = append(prompts, payload.Prompt)
+		translated := "Policijska intervencija"
+		if len(prompts) == 2 {
+			translated = "Policija je izvijestila o intervenciji."
+		}
+		var response bytes.Buffer
+		_ = json.NewEncoder(&response).Encode(generateResponse{Model: "seed-x:test", Done: true, Response: translated})
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(response.Bytes()))}, nil
+	})
+	provider, err := NewOllamaGeneratorProvider("http://ollama.test:11434", time.Second, 4096, &http.Client{Transport: transport})
+	if err != nil {
+		t.Fatal(err)
+	}
+	generator, err := provider.StepGeneratorFor("seed-x:test", TranslationAdapterSeedX)
+	if err != nil {
+		t.Fatal(err)
+	}
+	input := StepInput{Values: map[string]string{"title_de": "Polizeieinsatz", "summary_de": "Die Polizei berichtete über einen Einsatz."}}
+	output, model, err := generator.GenerateStep(context.Background(), TranslationByLanguageMust(t, "hr").Step, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if model != "seed-x:test" || output.Values["title"] != "Policijska intervencija" || output.Values["summary"] != "Policija je izvijestila o intervenciji." {
+		t.Fatalf("output=%#v model=%q", output, model)
+	}
+	if len(prompts) != 2 || !strings.HasSuffix(prompts[0], "Polizeieinsatz <hr>") || !strings.HasSuffix(prompts[1], "Die Polizei berichtete über einen Einsatz. <hr>") {
+		t.Fatalf("separate Seed-X prompts = %#v", prompts)
 	}
 }
 

@@ -89,7 +89,7 @@ type readinessTransport struct {
 var errReadinessBudget = errors.New("evaluation new-call budget exhausted")
 
 func (r *readinessTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	if req.URL.Path != "/api/chat" {
+	if req.URL.Path != "/api/chat" && req.URL.Path != "/api/generate" {
 		return nil, fmt.Errorf("unexpected evaluation endpoint %s", req.URL.Path)
 	}
 	body, err := io.ReadAll(req.Body)
@@ -228,7 +228,12 @@ func readinessExpectedRequests(t *testing.T, baseURL, model, adapter, language s
 			return nil, err
 		}
 		requests = append(requests, string(body))
-		encoded, _ := json.Marshal(chatResponse{Model: model, Done: true, Message: chatMessage{Role: "assistant", Content: "preflight response"}})
+		var encoded []byte
+		if adapter == TranslationAdapterSeedX {
+			encoded, _ = json.Marshal(generateResponse{Model: model, Done: true, Response: "preflight response"})
+		} else {
+			encoded, _ = json.Marshal(chatResponse{Model: model, Done: true, Message: chatMessage{Role: "assistant", Content: "preflight response"}})
+		}
 		return &http.Response{StatusCode: 200, Body: io.NopCloser(bytes.NewReader(encoded)), Header: make(http.Header)}, nil
 	})}
 	provider, err := NewOllamaGeneratorProvider(baseURL, time.Minute, ctxSize, client)
@@ -355,8 +360,15 @@ func readinessRunCase(t *testing.T, directory, baseURL, model, adapter, language
 	// rejects them. This diagnostic never participates in persistence/acceptance.
 	{
 		var title, summary chatResponse
-		_ = json.Unmarshal([]byte(transport.calls[transport.caseKey+"/title"].Response), &title)
-		_ = json.Unmarshal([]byte(transport.calls[transport.caseKey+"/summary"].Response), &summary)
+		if adapter == TranslationAdapterSeedX {
+			var rawTitle, rawSummary generateResponse
+			_ = json.Unmarshal([]byte(transport.calls[transport.caseKey+"/title"].Response), &rawTitle)
+			_ = json.Unmarshal([]byte(transport.calls[transport.caseKey+"/summary"].Response), &rawSummary)
+			title.Message.Content, summary.Message.Content = rawTitle.Response, rawSummary.Response
+		} else {
+			_ = json.Unmarshal([]byte(transport.calls[transport.caseKey+"/title"].Response), &title)
+			_ = json.Unmarshal([]byte(transport.calls[transport.caseKey+"/summary"].Response), &summary)
+		}
 		if adapter == TranslationAdapterStructured {
 			var response chatResponse
 			_ = json.Unmarshal([]byte(transport.calls[transport.caseKey+"/structured"].Response), &response)
@@ -602,6 +614,13 @@ func readinessCandidate(adapterName, modelOverride string) (string, string, int,
 		}
 		adapter = TranslationAdapterStructured
 		model = "hf.co/bartowski/Qwen_Qwen3.5-9B-GGUF:Q3_K_M"
+	case TranslationAdapterSeedX:
+		adapter = TranslationAdapterSeedX
+		model = seedXScreenModel
+		if modelOverride != "" {
+			model = modelOverride
+		}
+		contextSize = 4096
 	default:
 		return "", "", 0, fmt.Errorf("unsupported readiness adapter %q", adapterName)
 	}

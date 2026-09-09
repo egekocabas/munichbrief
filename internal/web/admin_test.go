@@ -636,7 +636,7 @@ func TestAdminTranslationOperationsOverviewDrilldownsAndActions(t *testing.T) {
 	handler.ServeHTTP(overview, httptest.NewRequest(http.MethodGet, "/admin/translations", nil))
 	for _, expected := range []string{
 		"Translation operations", "Current source incidents", "Published German", "German canonical backlog",
-		"English", "1 / 1", "100%", "Manage", "Preferred route", "Structured chat (general LLM)", "HY-MT2 native", "Attention can overlap published", "1 retained replacement warning", "data-translation-operations",
+		"English", "1 / 1", "100%", "Manage", "Preferred route", "Structured chat (general LLM)", "HY-MT2 native", "Seed-X native", "Attention can overlap published", "1 retained replacement warning", "data-translation-operations",
 		"data-translation-poll-interval=\"5000\"", "/admin/history", "aria-current=\"page\"",
 	} {
 		if overview.Code != http.StatusOK || !strings.Contains(overview.Body.String(), expected) {

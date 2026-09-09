@@ -91,19 +91,23 @@ Primary references:
 
 ByteDance's Seed-X-Instruct model has no chat template and should not receive a
 multi-turn conversation. Its target-language tag is mandatory at the absolute
-end of the prompt. The experimental `SeedXNativeAdapter` therefore calls
+end of the prompt. The opt-in `SeedXNativeAdapter` therefore calls
 Ollama's `/api/generate` endpoint with `raw=true`, no system prompt or schema,
 and a prompt ending in the exact official tag, such as `<uk>` or `<zh>`. It
 uses ByteDance's minimal documented instruction and single-newline boundary
 without adding a custom placeholder preamble. The protected source text and
 target tag remain on the final line, with the tag as the absolute final prompt
-content. Placeholder preservation is enforced after generation; the adapter is
-not eligible for production routing unless it passes that deterministic gate.
+content. Placeholder preservation is enforced after generation. Migration 017
+makes the adapter selectable per supported language, but no language should be
+routed to a Seed-X artifact until that exact artifact has passed the readiness
+protocol.
 
 ByteDance recommends beam search with width four and a maximum of 512 output
 tokens. Ollama does not expose beam width through its documented runtime
 options, so the adapter uses ByteDance's documented greedy alternative with
-`temperature=0` and `num_predict=512`.
+`temperature=0` and `num_predict=512`. It caps the effective context at 4096
+tokens, matching the released model's documented sliding window even when the
+shared provider is configured with a larger context.
 
 Of MunichBrief's translated reader languages, Seed-X officially supports
 English, Turkish, Croatian, Italian, Ukrainian, Chinese, Spanish, French,
@@ -204,6 +208,32 @@ Seed-X therefore failed the prerequisite and must be excluded from the larger
 screen for this unofficial GGUF. The adapter retains the official minimal prompt
 so future artifacts can be reevaluated without treating a harmful custom prompt
 as part of the model contract.
+
+### Seed-X Russian and Croatian gate on 2026-09-09
+
+The third-party Q5_K_M artifact was reevaluated through the production worker,
+with separate title and summary calls, typed placeholders, durable raw-response
+capture, restoration, validation, and persistence. Russian was tried with a
+general strict instruction, a shorter general instruction, and finally the
+exact official minimal prompt. Croatian was then gated with the official minimal
+prompt. The artifact returned whitespace-only incomplete responses, wrong-script
+text, unrelated text, or token loops; none of the attempted pairs was usable.
+
+Two placeholder-free controls using the exact official form—`Die Polizei
+ermittelt. <ru>` and `Die Polizei ermittelt. <hr>`—also returned the wrong script
+or whitespace instead of Russian or Croatian. Ollama kept the approximately
+6 GB model resident and completed generations, so this is not evidence of an
+out-of-memory failure. It is a base artifact/runtime compatibility failure that
+precedes prompt following or placeholder preservation. Testing stopped early
+instead of spending all six permitted prompt revisions on a model that could not
+perform the minimal translation prerequisite.
+
+For these targets the evaluated Seed-X artifact is materially worse than the
+previous candidates: HY-MT2 at least generated Russian and preserved structure,
+while Qwen 9B produced substantially usable Croatian through fixture E. Both
+languages remain paused, and this Seed-X artifact must not be configured. The
+adapter remains available for reevaluating an official or otherwise verified
+artifact without another database migration.
 
 ### HY-MT2 screen on 2026-09-03
 

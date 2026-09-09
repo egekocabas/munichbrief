@@ -11,7 +11,10 @@ import (
 	langregistry "github.com/egekocabas/munichbrief/internal/languages"
 )
 
-const seedXMaximumOutputTokens = 512
+const (
+	seedXContextLimit        = 4096
+	seedXMaximumOutputTokens = 512
+)
 
 type seedXLanguage struct {
 	name string
@@ -35,13 +38,16 @@ var seedXLanguages = map[string]seedXLanguage{
 	"ro": {name: "Romanian", tag: "ro"}, "zh": {name: "Chinese", tag: "zh"},
 }
 
+var seedXLanguageGuidance = map[string]string{}
+
 // SeedXNativeAdapter uses raw completion because ByteDance explicitly defines
-// Seed-X without a chat template. It remains separate from production routing
-// until the unofficial GGUF and placeholder behavior have been evaluated.
+// Seed-X without a chat template. Production routing remains opt-in per
+// language because local quantizations require separate evaluation.
 type SeedXNativeAdapter struct {
 	client            *OllamaClient
 	source            seedXLanguage
 	target            seedXLanguage
+	targetGuidance    string
 	generationOptions chatOptions
 }
 
@@ -63,12 +69,16 @@ func NewSeedXNativeAdapter(baseURL, model, targetCode string, timeout time.Durat
 	if !targetSupported {
 		return nil, fmt.Errorf("Seed-X does not officially support target language %q", targetDefinition.Code)
 	}
+	if contextSize <= 0 || contextSize > seedXContextLimit {
+		contextSize = seedXContextLimit
+	}
 	client, err := NewOllamaClient(baseURL, model, timeout, contextSize, baseClient)
 	if err != nil {
 		return nil, err
 	}
 	return &SeedXNativeAdapter{
 		client: client, source: source, target: target,
+		targetGuidance:    seedXLanguageGuidance[targetDefinition.Code],
 		generationOptions: chatOptions{Temperature: 0, NumPredict: seedXMaximumOutputTokens, NumCtx: contextSize},
 	}, nil
 }
@@ -78,7 +88,7 @@ func (a *SeedXNativeAdapter) Translate(ctx context.Context, text string) (string
 	if text == "" {
 		return "", "", errorOf(ErrorOutput, "Seed-X native input is empty")
 	}
-	content, model, err := a.client.rawGenerate(ctx, seedXNativePrompt(a.source, a.target, text), a.generationOptions)
+	content, model, err := a.client.rawGenerate(ctx, seedXNativePrompt(a.source, a.target, a.targetGuidance, text), a.generationOptions)
 	if err != nil {
 		return "", model, err
 	}
@@ -89,6 +99,13 @@ func (a *SeedXNativeAdapter) Translate(ctx context.Context, text string) (string
 	return content, model, nil
 }
 
-func seedXNativePrompt(source, target seedXLanguage, text string) string {
-	return fmt.Sprintf("Translate the following %s sentence into %s:\n%s <%s>", source.name, target.name, strings.TrimSpace(text), target.tag)
+func seedXNativePrompt(source, target seedXLanguage, guidance, text string) string {
+	guidance = strings.TrimSpace(guidance)
+	if guidance != "" {
+		guidance = " " + guidance
+	}
+	return fmt.Sprintf(
+		"Translate the following %s sentence into %s:%s\n%s <%s>",
+		source.name, target.name, guidance, strings.TrimSpace(text), target.tag,
+	)
 }
