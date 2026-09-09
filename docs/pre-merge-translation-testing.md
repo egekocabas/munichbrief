@@ -158,9 +158,9 @@ manifest and result report.
 | Chinese | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable after three focused rounds; recurring awkward A wording recorded | Final A/B: 2/2 pass | Acceptable on this sample; no native approval | Continue autonomously with Hindi A-C |
 | Hindi | HY-MT2 | Best revision: A-F 6/6 structural | Best revision 4/6 acceptable (B-E); A allegation and F substance uncertainty fail | Not run | Paused after six focused rounds; no native approval | Retain best observed prompt; evaluate another model separately |
 | Russian | HY-MT2 | All generated pairs structural except one revision-1 overlong title | No single final prompt passed A-F; latest B fixes legal meaning but implies multiple suspects | Not run | Paused after six focused rounds; no native approval | Retain latest legally safer prompt; evaluate another model separately |
-| Croatian | TranslateGemma Q3_K_S | Not run | Pending | Pending | Runtime fit unknown | After HY-MT2 decisions |
-| Bosnian | TranslateGemma Q3_K_S | Not run | Pending | Pending | Runtime fit/quality unknown | After Croatian |
-| Greek | TranslateGemma Q3_K_S | Not run | Pending | Pending | Runtime fit/quality unknown | After Bosnian |
+| Croatian | TranslateGemma Q3_K_S | Not run | Not assessable | Not run | Candidate-level hardware blocker after Bosnian gate | Preserve planned Qwen comparison; do not reload Q3_K_S on this host |
+| Bosnian | TranslateGemma Q3_K_S | A title only completed; pair interrupted | Completed title materially fails; summary unavailable | Not run | Hardware-blocked: 2/3 request attempts ended in EOF and model unloaded | Do not prompt-tune; reconsider artifact/hardware separately |
+| Greek | TranslateGemma Q3_K_S | Not run | Not assessable | Not run | Candidate-level hardware blocker after Bosnian gate | Do not reload Q3_K_S on this host |
 | Romanian | Qwen 9B | Not run | Pending | Pending | Older baseline only | After Greek |
 
 Before merge: review reader catalogs (especially disclosure, attribution, legal
@@ -1243,6 +1243,35 @@ no single final prompt qualified all six fixtures. Code retains revision six,
 which is legally safer than revision five, but the route should remain
 unconfigured. Future work should compare another model/adapter rather than add
 more HY-MT2 guidance. This is assistant review only.
+
+## TranslateGemma Q3_K_S runtime gate: 2026-09-09
+
+The remaining-language session started the 12B TranslateGemma candidate with
+Bosnian fixture A. The installed artifact was
+`hf.co/mradermacher/translategemma-12b-it-GGUF:Q3_K_S`, digest
+`02e145b72bfccbc1ae6a0e0567cc96b6c2e2d0d88ab03bcb686aba9a6c3caa05`,
+size 6,052,659,143 bytes, using the native adapter and effective 2048 context.
+
+The title call completed in 2m23s, including an 81s load. It preserved both
+typed placeholders, but the Bosnian was not acceptable: `Policijski interventsi`
+is malformed and `kasni za` makes the police operation, rather than the trains,
+late. The immediately following summary call returned `EOF` and Ollama unloaded
+the model. Exact-identity resume replayed the completed title without generation,
+but the summary returned another `EOF` after 2m34s and again left no loaded model.
+
+Thus **2/3 new request attempts failed at transport/runtime level (66.7%)**, and
+the only completed output materially failed. This meets the user-defined high
+failure-rate stop condition and the roadmap rule to stop after repeated Ollama
+restarts. Bosnian is hardware-blocked before a complete pair; prompt revisions
+would not address the blocker. Greek and the Croatian TranslateGemma leg inherit
+this candidate-level hardware blocker on the same host and are not repeatedly
+loaded. Their quality remains unassessed, not failed. The durable checkpoint
+preserves the completed response, both EOF attempts, exact requests, timings,
+digest, fixtures, Gazetteer identity, and interrupted worker state.
+
+The session continues with candidates that fit the host: Romanian and Croatian
+through the Qwen 9B structured adapter. A smaller TranslateGemma artifact or
+different hardware requires a separate decision.
 
 ## References
 
