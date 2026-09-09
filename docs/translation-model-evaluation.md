@@ -235,6 +235,41 @@ languages remain paused, and this Seed-X artifact must not be configured. The
 adapter remains available for reevaluating an official or otherwise verified
 artifact without another database migration.
 
+## SalamandraTA v3 request contract and Q5 gate
+
+SalamandraTA-7b-instruct v3 officially supports German source translation into
+Russian, Croatian, Greek, and Hindi. It uses a user-only ChatML conversation and
+the fixed English general-translation form `Translate the following text from
+{source} into {target}`, followed by labelled source text and the target label.
+The `SalamandraTANativeAdapter` keeps that trained shape, adds one concise typed-
+placeholder preservation rule, uses greedy decoding, and caps context at the
+official 8192-token limit. Title and summary remain separate sequential calls.
+
+Version 3 adds terminology-aware and structured-text translation capabilities.
+Language-specific guidance is therefore kept as short, evidenced terminology
+requirements rather than replacing the base task with a long shared instruction.
+Migration 018 makes the adapter selectable for officially supported reader
+languages without changing existing selections. Each exact artifact must still
+qualify independently before configuration.
+
+The evaluated Q5_K_M artifact loaded successfully and did not show a repeated
+memory-failure pattern, so Q4 fallback was unnecessary. Russian preserved every
+typed placeholder across the base and six focused rounds, but no one prompt
+preserved both allegation framing and the headline's operation/delay relation.
+Croatian produced relevant output through A-D, then corrupted fixture E's
+`__MB_TRANSIT_0001__` into the literal regex-shaped
+`__MB_[A-Z_]+_[0-9]{4}__`. Testing stopped immediately under the placeholder
+hard gate; E summary, F, repeats, further Greek work, and Hindi tuning were not
+run. Greek A-C and Hindi A preserved placeholders, but their quality decisions
+remain incomplete. No SalamandraTA route is qualified by this experiment.
+
+Primary references:
+
+- BSC SalamandraTA v3 model card (release, supported languages and tasks):
+  <https://huggingface.co/BSC-LT/salamandraTA-7b-instruct>
+- Official usage guide (ChatML, prompts, decoding and context):
+  <https://huggingface.co/BSC-LT/salamandraTA-7b-instruct/blob/main/usage_guide.md>
+
 ### HY-MT2 screen on 2026-09-03
 
 The HY-MT2-only screen completed all 48 field calls in about 52 minutes: English,

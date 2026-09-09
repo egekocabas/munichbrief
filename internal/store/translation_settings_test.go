@@ -72,7 +72,7 @@ func TestTranslationLanguageSettingsInheritLegacyModelWithoutOverwritingChoices(
 	}
 }
 
-func TestSeedXAdapterMigrationPreservesTranslationSettings(t *testing.T) {
+func TestSalamandraTAAdapterMigrationPreservesTranslationSettings(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "seedx-upgrade.db")
 	raw, err := sql.Open("sqlite", path)
@@ -88,7 +88,7 @@ func TestSeedXAdapterMigrationPreservesTranslationSettings(t *testing.T) {
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Name() < entries[j].Name() })
 	for _, entry := range entries {
-		if entry.Name() == "017_seedx_translation_adapter.sql" {
+		if entry.Name() == "018_salamandrata_translation_adapter.sql" {
 			break
 		}
 		contents, readErr := migrationFiles.ReadFile("migrations/" + entry.Name())
@@ -106,7 +106,7 @@ func TestSeedXAdapterMigrationPreservesTranslationSettings(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if _, err := raw.Exec(`INSERT INTO translation_language_settings(language_code,preferred_model,adapter_key,updated_at) VALUES('hr','old:model','hy-mt2','2026-09-09T00:00:00Z')`); err != nil {
+	if _, err := raw.Exec(`INSERT INTO translation_language_settings(language_code,preferred_model,adapter_key,updated_at) VALUES('hr','seed-x:model','seed-x','2026-09-09T00:00:00Z')`); err != nil {
 		t.Fatal(err)
 	}
 	if err := raw.Close(); err != nil {
@@ -119,11 +119,11 @@ func TestSeedXAdapterMigrationPreservesTranslationSettings(t *testing.T) {
 	}
 	defer database.Close()
 	settings, err := database.TranslationLanguageSettings(ctx)
-	if err != nil || len(settings) != 1 || settings[0].PreferredModel != "old:model" || settings[0].AdapterKey != "hy-mt2" {
+	if err != nil || len(settings) != 1 || settings[0].PreferredModel != "seed-x:model" || settings[0].AdapterKey != "seed-x" {
 		t.Fatalf("preserved settings = %#v/%v", settings, err)
 	}
-	if err := database.SetTranslationLanguageSetting(ctx, "hr", "seed-x:test", "seed-x", time.Now()); err != nil {
-		t.Fatalf("select Seed-X after upgrade: %v", err)
+	if err := database.SetTranslationLanguageSetting(ctx, "hr", "salamandra:test", "salamandra-ta", time.Now()); err != nil {
+		t.Fatalf("select SalamandraTA after upgrade: %v", err)
 	}
 }
 

@@ -621,6 +621,13 @@ func readinessCandidate(adapterName, modelOverride string) (string, string, int,
 			model = modelOverride
 		}
 		contextSize = 4096
+	case TranslationAdapterSalamandraTA:
+		adapter = TranslationAdapterSalamandraTA
+		model = "hf.co/egekocabas/salamandraTA-7b-instruct-Q5_K_M-GGUF:salamandrata-7b-instruct-q5_k_m-imat.gguf"
+		if modelOverride != "" {
+			model = modelOverride
+		}
+		contextSize = 8192
 	default:
 		return "", "", 0, fmt.Errorf("unsupported readiness adapter %q", adapterName)
 	}

@@ -149,9 +149,11 @@ evaluation evidence and requires manual semantic review even when all
 mechanical checks pass.
 
 The full production-worker readiness harness also accepts
-`MUNICHBRIEF_TRANSLATION_READINESS_ADAPTER=seed-x`. Seed-X uses raw
+`MUNICHBRIEF_READINESS_ADAPTER=seed-x` or `salamandra-ta`. Seed-X uses raw
 `/api/generate`, its mandatory final language tag, greedy decoding, at most 512
-output tokens, and a 4096-token effective context. Use a fresh readiness
+output tokens, and a 4096-token effective context. SalamandraTA uses user-only
+ChatML, greedy decoding, at most 1024 output tokens, and an 8192-token effective
+context. Use a fresh readiness
 directory whenever the prompt, model, or target changes; recording/replay binds
 saved responses to the exact rendered request and model digest.
 
@@ -182,10 +184,11 @@ go test -buildvcs=true -count=1 -timeout 70m -run '^TestLiveTranslationReadiness
 Language/fixture/repetition selections and the new-call budget do not invalidate
 completed requests. Select one language for later stages: A-C first, then D-F,
 then A-B with repetition 2. Set `MUNICHBRIEF_READINESS_ADAPTER` to `hy-mt2`
-(default), `translategemma`, or `structured` for the roadmap's fixed candidates.
-`MUNICHBRIEF_READINESS_MODEL` may explicitly select another installed HY-MT2
-artifact for a controlled comparison; it is rejected for other adapters. Always
-use a new evaluation directory for a different model or digest.
+(default), `translategemma`, `seed-x`, `salamandra-ta`, or `structured` for the
+roadmap's candidates. `MUNICHBRIEF_READINESS_MODEL` may explicitly select an
+installed native-adapter artifact for a controlled comparison; structured mode
+uses its fixed candidate. Always use a new evaluation directory for a different
+model or digest.
 Set the new-call limit to zero to revalidate recorded responses without inference
 (the installed digest is still verified). A transport interruption stops the run;
 rerun the same command to replay saved fields and finish only missing calls.

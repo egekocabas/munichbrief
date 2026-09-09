@@ -227,6 +227,10 @@ func TestReadinessCandidateAllowsExplicitNativeAdapterComparisonModels(t *testin
 	if err != nil || model != "seed-x:test" || adapter != TranslationAdapterSeedX || contextSize != 4096 {
 		t.Fatalf("candidate=%q/%q/%d err=%v", model, adapter, contextSize, err)
 	}
+	model, adapter, contextSize, err = readinessCandidate(TranslationAdapterSalamandraTA, " salamandra:test ")
+	if err != nil || model != "salamandra:test" || adapter != TranslationAdapterSalamandraTA || contextSize != 8192 {
+		t.Fatalf("candidate=%q/%q/%d err=%v", model, adapter, contextSize, err)
+	}
 	for _, test := range []struct {
 		name, adapter, model string
 		context              int
@@ -234,6 +238,7 @@ func TestReadinessCandidateAllowsExplicitNativeAdapterComparisonModels(t *testin
 		{name: "default HY-MT2", model: hyMT2ScreenModel, adapter: TranslationAdapterHyMT2, context: 8192},
 		{name: "TranslateGemma", adapter: TranslationAdapterTranslateGemma, model: "hf.co/mradermacher/translategemma-12b-it-GGUF:Q3_K_S", context: 2048},
 		{name: "Seed-X", adapter: TranslationAdapterSeedX, model: seedXScreenModel, context: 4096},
+		{name: "SalamandraTA", adapter: TranslationAdapterSalamandraTA, model: "hf.co/egekocabas/salamandraTA-7b-instruct-Q5_K_M-GGUF:salamandrata-7b-instruct-q5_k_m-imat.gguf", context: 8192},
 		{name: "structured", adapter: TranslationAdapterStructured, model: "hf.co/bartowski/Qwen_Qwen3.5-9B-GGUF:Q3_K_M", context: 8192},
 	} {
 		t.Run(test.name, func(t *testing.T) {

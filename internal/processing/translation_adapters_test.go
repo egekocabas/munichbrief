@@ -32,10 +32,58 @@ func TestTranslationAdapterSupportMatchesNativeContracts(t *testing.T) {
 			t.Errorf("Seed-X should not be offered for %s", code)
 		}
 	}
+	for _, code := range []string{"en", "tr", "hr", "it", "uk", "zh", "hi", "es", "fr", "ro", "pl", "el", "ru"} {
+		if !TranslationAdapterSupports(TranslationAdapterSalamandraTA, code) {
+			t.Errorf("SalamandraTA should support %s", code)
+		}
+	}
+	if TranslationAdapterSupports(TranslationAdapterSalamandraTA, "bs") {
+		t.Error("SalamandraTA should not be offered for bs")
+	}
 	for _, translation := range RegisteredTranslations() {
 		if !TranslationAdapterSupports(TranslationAdapterStructured, translation.Language) || !TranslationAdapterSupports(TranslationAdapterTranslateGemma, translation.Language) {
 			t.Errorf("common adapters missing for %s", translation.Language)
 		}
+	}
+}
+
+func TestSalamandraTATranslationGeneratorUsesProductionNativeLoop(t *testing.T) {
+	var prompts []string
+	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		if request.URL.Path != "/api/chat" {
+			t.Fatalf("request path = %q", request.URL.Path)
+		}
+		var payload chatRequest
+		if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
+			t.Fatal(err)
+		}
+		prompts = append(prompts, payload.Messages[0].Content)
+		translated := "Policijska intervencija"
+		if len(prompts) == 2 {
+			translated = "Policija je izvijestila o intervenciji."
+		}
+		var response bytes.Buffer
+		_ = json.NewEncoder(&response).Encode(chatResponse{Model: "salamandra:test", Done: true, Message: chatMessage{Role: "assistant", Content: translated}})
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(response.Bytes()))}, nil
+	})
+	provider, err := NewOllamaGeneratorProvider("http://ollama.test:11434", time.Second, 8192, &http.Client{Transport: transport})
+	if err != nil {
+		t.Fatal(err)
+	}
+	generator, err := provider.StepGeneratorFor("salamandra:test", TranslationAdapterSalamandraTA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	input := StepInput{Values: map[string]string{"title_de": "Polizeieinsatz", "summary_de": "Die Polizei berichtete über einen Einsatz."}}
+	output, model, err := generator.GenerateStep(context.Background(), TranslationByLanguageMust(t, "hr").Step, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if model != "salamandra:test" || output.Values["title"] != "Policijska intervencija" || output.Values["summary"] != "Policija je izvijestila o intervenciji." {
+		t.Fatalf("output=%#v model=%q", output, model)
+	}
+	if len(prompts) != 2 || !strings.Contains(prompts[0], "German: Polizeieinsatz\nCroatian:") || !strings.Contains(prompts[1], "German: Die Polizei berichtete über einen Einsatz.\nCroatian:") {
+		t.Fatalf("separate SalamandraTA prompts = %#v", prompts)
 	}
 }
 
