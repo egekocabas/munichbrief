@@ -91,6 +91,12 @@ func TestHyMT2NativeAdapterAddsOnlyConfiguredTargetGuidance(t *testing.T) {
 			t.Errorf("Hindi guidance omitted %q: %s", expected, hindi)
 		}
 	}
+	russian := hyMT2NativePrompt("German", "Russian", hyMT2LanguageGuidance["ru"], "Quelle")
+	for _, expected := range []string{"Every reported allegation", "‘предположительно’", "never an established fact", "‘Polizeieinsatz’", "never ‘патрулирование’", "Keep headlines concise", "‘Полицейская операция … задерживает [placeholder]’", "never add ‘движение поездов типа’", "plural Russian grammar", "‘осуждение’", "no conviction at all", "‘осуждения нет’", "‘до вступления в законную силу обвинительного приговора’", "never say merely ‘до вынесения окончательного приговора’", "final verdict may be an acquittal", "‘презумпция невиновности’", "‘опросить’", "never ‘допросить’", "‘одного свидетеля’", "never one of several", "‘an der … Straße’", "‘на улице’", "‘у улицы’", "‘Medizinisch untersucht’", "‘медицински осмотрели’", "never given treatment", "‘соответствующее лицо’", "never ‘пострадавший’", "‘госпитализирована’", "‘помещена в стационар’", "‘рейсовый автобус’"} {
+		if !strings.Contains(russian, expected) {
+			t.Errorf("Russian guidance omitted %q: %s", expected, russian)
+		}
+	}
 	english := hyMT2NativePrompt("German", "English", hyMT2LanguageGuidance["en"], "Quelle")
 	for _, expected := range []string{"neutral German person labels", "admitted to hospital as an inpatient", "police stop signals or orders"} {
 		if !strings.Contains(english, expected) {
@@ -154,11 +160,11 @@ func TestHyMT2NativeAdapterAddsOnlyConfiguredTargetGuidance(t *testing.T) {
 	if strings.Contains(ukrainian, "vehicle glass generic") || strings.Contains(ukrainian, "‘Verurteilung’ means ‘skazanie’") {
 		t.Fatalf("other target guidance leaked into Ukrainian prompt: %q", ukrainian)
 	}
-	fallback := hyMT2NativePrompt("German", "Russian", hyMT2LanguageGuidance["ru"], "Quelle")
+	fallback := hyMT2NativePrompt("German", "Portuguese", hyMT2LanguageGuidance["pt"], "Quelle")
 	if strings.Contains(fallback, "Target-language guidance") || strings.Contains(fallback, "Scheibe") {
 		t.Fatalf("configured guidance leaked into fallback prompt: %q", fallback)
 	}
-	if !strings.Contains(fallback, "7. Produce natural, fluent Russian rather than a word-for-word translation.\n\n### Source Data\nQuelle") {
+	if !strings.Contains(fallback, "7. Produce natural, fluent Portuguese rather than a word-for-word translation.\n\n### Source Data\nQuelle") {
 		t.Fatalf("fallback prompt structure changed: %q", fallback)
 	}
 }

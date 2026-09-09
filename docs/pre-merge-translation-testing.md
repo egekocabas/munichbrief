@@ -157,7 +157,7 @@ manifest and result report.
 | Ukrainian | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable after two explicit user-approved extra rounds; minor grammar/style caveats recorded | Final A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Chinese A-C |
 | Chinese | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable after three focused rounds; recurring awkward A wording recorded | Final A/B: 2/2 pass | Acceptable on this sample; no native approval | Continue autonomously with Hindi A-C |
 | Hindi | HY-MT2 | Best revision: A-F 6/6 structural | Best revision 4/6 acceptable (B-E); A allegation and F substance uncertainty fail | Not run | Paused after six focused rounds; no native approval | Retain best observed prompt; evaluate another model separately |
-| Russian | HY-MT2 | Not run | Pending | Pending | Historical legal/role errors | After Hindi |
+| Russian | HY-MT2 | All generated pairs structural except one revision-1 overlong title | No single final prompt passed A-F; latest B fixes legal meaning but implies multiple suspects | Not run | Paused after six focused rounds; no native approval | Retain latest legally safer prompt; evaluate another model separately |
 | Croatian | TranslateGemma Q3_K_S | Not run | Pending | Pending | Runtime fit unknown | After HY-MT2 decisions |
 | Bosnian | TranslateGemma Q3_K_S | Not run | Pending | Pending | Runtime fit/quality unknown | After Croatian |
 | Greek | TranslateGemma Q3_K_S | Not run | Pending | Pending | Runtime fit/quality unknown | After Bosnian |
@@ -1213,6 +1213,36 @@ retains revision four, the best observed prompt, rather than the poorer fifth or
 sixth attempt. The durable records preserve every attempt and two distinct Ollama
 outages. Future Hindi work should compare another model or adapter rather than
 continue growing this HY-MT2 prompt. This is assistant review only.
+
+## Russian HY-MT2 decision: 2026-09-09
+
+The shared-prompt A-C baseline passed structure but exposed three material
+issues: A's headline changed a police operation to patrolling and used singular
+train grammar; B broadened final conviction to a final decision; C changed
+ordinary questioning to interrogation.
+
+Six focused rounds were used. They successively corrected police-operation and
+plural terminology, final-conviction and presumption wording, neutral
+questioning, exact street relation, headline length, explicit allegation,
+medical examination, witness count, neutral involved-person wording, inpatient
+admission, and scheduled-bus terminology. The complete revision-four A-F screen
+had A and F materially acceptable; B weakened “no conviction” to “no final
+conviction,” C implied multiple witnesses, D called the neutral person a victim,
+and E lost inpatient status. Revision five fixed C/D/E and the no-conviction
+clause, but B's end condition regressed to any final verdict. Revision six fixed
+that legal condition exactly.
+
+The final B gate nevertheless rendered one suspect as “one of the suspects,”
+implying additional suspects absent from the source. That is a material factual
+addition. The final pair passed structure, placeholders, restoration, and worker
+persistence, but failed assistant meaning review. No unchanged-prompt retry was
+made.
+
+Russian is **paused after six focused rounds**. A/B repeats were not run because
+no single final prompt qualified all six fixtures. Code retains revision six,
+which is legally safer than revision five, but the route should remain
+unconfigured. Future work should compare another model/adapter rather than add
+more HY-MT2 guidance. This is assistant review only.
 
 ## References
 
