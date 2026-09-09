@@ -47,7 +47,7 @@ var towerInstructLanguageNames = map[string]string{
 // language rules after reproducible failures rather than fixture-specific text.
 var (
 	llamax3LanguageGuidance = map[string]string{
-		"bs": "Use standard Bosnian in Latin script, including Bosnian month names such as august, and natural Bosnian police terminology. Preserve grammatical subject and object, cause-and-effect direction, negation, and uncertainty. Render German reported-claim forms such as 'soll ... haben' as an allegation rather than an established fact, and preserve exactly which service was delayed or unaffected.",
+		"bs": "Use standard Bosnian in Latin script, including Bosnian month names such as august, and natural Bosnian police terminology. Keep the agent and affected object of every active clause in the same roles; never reverse them or turn the agent into the thing being delayed. Render German evidential forms such as 'soll ... haben' explicitly with Bosnian allegation wording such as 'navodno', never as established fact. Preserve negation, uncertainty, cause and effect, and exactly which service was delayed or unaffected.",
 	}
 	euroLLMLanguageGuidance       = map[string]string{}
 	towerPlusLanguageGuidance     = map[string]string{}
