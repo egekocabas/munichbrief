@@ -305,6 +305,14 @@ completed all eight pairs. Material facts, legal meaning, numbers, causality,
 gender, and uncertainty passed; A/B repeats were identical. Minor awkward Hindi
 wording remains an assistant-reviewed caveat rather than native approval.
 
+Croatian revision 2 passed A-C but D lost the arrest and mistranslated the
+apartment-building setting. Revision 3 fixed D and standard Croatian traffic
+wording, then E weakened inpatient admission and used non-Croatian traffic-
+police terminology. Revision 4 retained inpatient admission and the traffic-
+police role and completed all eight pairs. Material facts and legal meaning
+passed, and A/B repeats were identical. Uneven agreement and occasional register
+issues remain recorded as non-material assistant-review caveats.
+
 ### Tournament fixture-A gate: 2026-09-09
 
 The baseline gate used the production queued-worker path, typed Gazetteer
@@ -384,6 +392,7 @@ not native-language approval.
 | Croatian | LLaMAX3 Q4_K_M | Baseline A-C preserved placeholders; focused runs remained recoverable | B changed conviction certainty and C changed approximate time; revision 1 looped with invented facts and revision 2 invented schedule claims | Not run | Paused after two critical-regression revisions; no native approval | Qwen remains the strongest observed Croatian candidate |
 | Croatian | SalamandraTA v3 Q5_K_M | A-D preserved placeholders; E title corrupted the token | Relevant Croatian with legal/grammar caveats before replacing `__MB_TRANSIT_0001__` by literal regex text | Not run | Hard-gate failure; no native approval | Do not configure; Qwen remains strongest observed candidate |
 | Croatian | Seed-X 7B Q5_K_M | 0 usable pairs; minimal control failed before validation | Official-minimal fixture A produced unrelated Chinese/wrong-script output and a token loop; placeholder-free `<hr>` control returned whitespace | Not run | Paused; artifact/runtime prerequisite failure, not RAM; no native approval | Do not configure this artifact; Qwen remains materially stronger |
+| Croatian | Gemma 4 E4B UD-Q4_K_XL | Final protocol: 8/8 pairs | 8/8 materially acceptable after four focused revisions; uneven grammar/register recorded | Final A/B: identical pass | Acceptable on this sample; no native approval | Keep as leading Croatian candidate; compare with saved Qwen evidence |
 | Bosnian | TranslateGemma Q2_K / 4B Q8 | Q2 A failed; Q8 gates completed through six focused rounds | No single prompt qualified A-F; mixed script, token mutation/omission, lost qualifiers, and changed uncertainty persisted | Not run under a qualifying prompt | Paused after six Q8 focused rounds; no native approval | Retain final concise guidance; evaluate another model separately |
 | Bosnian | LLaMAX3 Q4_K_M | A remained structurally safe through three focused revisions | Bosnian month wording improved, but the model repeatedly reversed headline agency and stated an allegation as fact | Not run | Paused by the three-consecutive-error early-stop rule; no native approval | Do not spend remaining revision budget on this pairing |
 | Bosnian | Gemma 4 E4B UD-Q4_K_XL | Final protocol: 8/8 pairs | 8/8 materially acceptable after five focused revisions; awkward grammar and occasional Serbian/Ekavian wording recorded | Final A/B: identical pass | Acceptable on this sample; no native approval | Keep as leading Bosnian candidate; seek native review |

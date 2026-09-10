@@ -136,6 +136,15 @@ func TestGemma4HindiGuidancePreservesASCIINumerals(t *testing.T) {
 	}
 }
 
+func TestGemma4CroatianGuidanceCoversObservedGeneralFailures(t *testing.T) {
+	guidance := gemma4LanguageGuidance["hr"]
+	for _, required := range []string{"prometna nesreća", "prometna policija", "minhenska", "višestambena zgrada", "uhićen or priveden", "never primljen", "hospitalizirana"} {
+		if !strings.Contains(guidance, required) {
+			t.Errorf("Croatian guidance missing %q: %s", required, guidance)
+		}
+	}
+}
+
 func TestTowerInstructNativeAdapterAvoidsConvertedEmptySystemTurn(t *testing.T) {
 	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {
 		if request.URL.Path != "/api/generate" {
