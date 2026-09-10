@@ -401,11 +401,13 @@ Update the table and PR after each bounded batch and each language before
 continuing. Exact model names above plus resolved digests belong in the run
 manifest and result report.
 
-As of 2026-09-09, the user-selected intended candidates are HY-MT2 Q5_K_M for
-English, Spanish, French, Polish, Turkish, Ukrainian, and Chinese; Italian is a
-potential HY-MT2 selection pending the remaining caveat; Romanian is selected
-for Qwen 9B structured. This records a routing decision with known limitations,
-not native-language approval.
+The 2026-09-09 intended-candidate snapshot selected HY-MT2 Q5_K_M for English,
+Spanish, French, Polish, Turkish, Ukrainian, and Chinese; Italian remained a
+potential HY-MT2 selection, and Romanian used Qwen 9B structured. The 2026-09-10
+requalification recorded below supersedes that snapshot for Spanish, French,
+and Italian: French qualified on HY-MT2, while Spanish and Italian are paused
+with Gemma 4 as their best observed candidate. No preferred production setting
+was changed, and none of these results constitutes native-language approval.
 
 | Language | Candidate | Structural | Meaning/readability | Repeats | Decision / open issue | Next action |
 | --- | --- | --- | --- | --- | --- | --- |
