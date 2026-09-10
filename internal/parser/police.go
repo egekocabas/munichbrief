@@ -31,8 +31,8 @@ type block struct {
 	Text string
 }
 
-// ParsePoliceRelease extracts numbered incidents from supported police release
-// page shapes. It never retains or renders the original HTML.
+// ParsePoliceRelease extracts incidents from supported police release page
+// shapes. It never retains or renders the original HTML.
 func ParsePoliceRelease(contents []byte) (ParsedRelease, error) {
 	document, err := html.Parse(bytes.NewReader(contents))
 	if err != nil {
@@ -94,7 +94,11 @@ func ParsePoliceRelease(contents []byte) (ParsedRelease, error) {
 	finishCurrent()
 
 	if len(incidents) == 0 {
-		return ParsedRelease{ExtractedText: extractedText}, ErrNoIncidents
+		incident, ok := parseUnnumberedStandalone(pressContent)
+		if !ok {
+			return ParsedRelease{ExtractedText: extractedText}, ErrNoIncidents
+		}
+		incidents = append(incidents, incident)
 	}
 	incidentHashes := make([]string, 0, len(incidents))
 	for _, incident := range incidents {
@@ -105,6 +109,61 @@ func ParsePoliceRelease(contents []byte) (ParsedRelease, error) {
 		SourceHash:    hash(incidentHashes...),
 		Incidents:     incidents,
 	}, nil
+}
+
+// parseUnnumberedStandalone accepts only the official single-release shape. A
+// numbered-looking block is rejected so a damaged bundle cannot be collapsed
+// into one incident when its detail headings stop matching the primary parser.
+func parseUnnumberedStandalone(pressContent *html.Node) (domain.Incident, bool) {
+	headline := findElement(pressContent, func(node *html.Node) bool {
+		return node.Data == "bp-headline"
+	})
+	if headline == nil {
+		return domain.Incident{}, false
+	}
+	title := normalizeText(attributeValue(headline, "title"))
+	if title == "" {
+		return domain.Incident{}, false
+	}
+	bodySection := findElement(pressContent, func(node *html.Node) bool {
+		return node.Data == "section" && hasClasses(node, "bp-flex", "bp-textblock-image")
+	})
+	if bodySection == nil {
+		return domain.Incident{}, false
+	}
+	bodyContent := findElement(bodySection, func(node *html.Node) bool {
+		return node.Data == "div" && hasClasses(node, "bp-iwe2")
+	})
+	if bodyContent == nil {
+		return domain.Incident{}, false
+	}
+
+	var blocks []block
+	collectBlocks(bodyContent, &blocks)
+	bodyBlocks := make([]string, 0, len(blocks))
+	hasParagraph := false
+	for _, candidate := range blocks {
+		if numberedHeadingPattern.MatchString(candidate.Text) {
+			return domain.Incident{}, false
+		}
+		if (candidate.Kind == "h2" || candidate.Kind == "h3") && candidate.Text == title {
+			continue
+		}
+		bodyBlocks = append(bodyBlocks, candidate.Text)
+		if candidate.Kind == "p" {
+			hasParagraph = true
+		}
+	}
+	if !hasParagraph || len(bodyBlocks) == 0 {
+		return domain.Incident{}, false
+	}
+	body := strings.Join(bodyBlocks, "\n\n")
+	return domain.Incident{
+		Position:    0,
+		TitleDE:     title,
+		BodyDE:      body,
+		ContentHash: hash("", title, body),
+	}, true
 }
 
 func collectBlocks(node *html.Node, blocks *[]block) {

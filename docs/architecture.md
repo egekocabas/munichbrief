@@ -30,8 +30,9 @@ replicas.
 
 An RSS entry represents a source document, not necessarily one incident. A
 combined daily release is split into numbered incidents that retain the same
-official source URL. A standalone release becomes one incident. Releases are
-never merged solely because they share a publication date.
+official source URL. A standalone release becomes one incident; its report
+number remains empty when the official source does not publish one. Releases
+are never merged solely because they share a publication date.
 
 The canonical police article URL and numeric article ID form the external
 document identity because the feed does not reliably include a GUID. Source

@@ -12,6 +12,7 @@ func TestParsePoliceReleaseAnonymizedProductionShapes(t *testing.T) {
 		name             string
 		fixture          string
 		wantNumbers      []string
+		wantTitle        string
 		wantBodyFragment string
 	}{
 		{
@@ -31,6 +32,13 @@ func TestParsePoliceReleaseAnonymizedProductionShapes(t *testing.T) {
 			fixture:          "testdata/standalone_107230_shape.html",
 			wantNumbers:      []string{"4101"},
 			wantBodyFragment: "Witness appeal Invented standalone appeal.",
+		},
+		{
+			name:             "unnumbered standalone based on 108358",
+			fixture:          "testdata/standalone_unnumbered_108358_shape.html",
+			wantNumbers:      []string{""},
+			wantTitle:        "Synthetic road-safety event – Example South",
+			wantBodyFragment: "Invented closing details for parser testing.",
 		},
 	}
 
@@ -58,8 +66,31 @@ func TestParsePoliceReleaseAnonymizedProductionShapes(t *testing.T) {
 			if !strings.Contains(allBodies.String(), test.wantBodyFragment) {
 				t.Errorf("parsed bodies do not contain %q", test.wantBodyFragment)
 			}
+			if test.wantTitle != "" {
+				if result.Incidents[0].TitleDE != test.wantTitle {
+					t.Errorf("incident title = %q, want %q", result.Incidents[0].TitleDE, test.wantTitle)
+				}
+				if strings.Contains(allBodies.String(), test.wantTitle) {
+					t.Errorf("parsed body repeats incident title %q", test.wantTitle)
+				}
+				repeated, err := ParsePoliceRelease(contents)
+				if err != nil {
+					t.Fatalf("repeated ParsePoliceRelease() error = %v", err)
+				}
+				if repeated.SourceHash != result.SourceHash || repeated.Incidents[0].ContentHash != result.Incidents[0].ContentHash {
+					t.Error("repeated parse produced different hashes")
+				}
+			}
 			if strings.Contains(allBodies.String(), "table-of-contents") || strings.Contains(allBodies.String(), "Footer content") || strings.Contains(allBodies.String(), "never be collected") {
 				t.Errorf("parsed bodies include content outside incident bodies: %q", allBodies.String())
+			}
+			if result.SourceHash == "" {
+				t.Error("source hash must not be empty")
+			}
+			for _, incident := range result.Incidents {
+				if incident.ContentHash == "" {
+					t.Error("incident content hash must not be empty")
+				}
 			}
 		})
 	}
@@ -123,6 +154,38 @@ func TestParsePoliceReleaseRejectsUnnumberedContent(t *testing.T) {
 	_, err := ParsePoliceRelease([]byte(`<section class="bp-template bp-presse"><p>No numbered heading.</p></section>`))
 	if !errors.Is(err, ErrNoIncidents) {
 		t.Fatalf("error = %v, want ErrNoIncidents", err)
+	}
+}
+
+func TestParsePoliceReleaseRejectsIncompleteUnnumberedShapes(t *testing.T) {
+	tests := []struct {
+		name string
+		html string
+	}{
+		{
+			name: "headline without body",
+			html: `<section class="bp-template bp-presse"><bp-headline title="Synthetic release"></bp-headline></section>`,
+		},
+		{
+			name: "unexpected body container",
+			html: `<section class="bp-template bp-presse"><bp-headline title="Synthetic release"></bp-headline><p>Body text.</p></section>`,
+		},
+		{
+			name: "body with repeated title only",
+			html: `<section class="bp-template bp-presse"><bp-headline title="Synthetic release"></bp-headline><section class="bp-flex bp-textblock-image"><div class="bp-iwe2"><h3>Synthetic release</h3></div></section></section>`,
+		},
+		{
+			name: "numbered-looking contents without detail headings",
+			html: `<section class="bp-template bp-presse"><bp-headline title="Synthetic release"></bp-headline><section class="bp-flex bp-textblock-image"><div class="bp-iwe2"><p>1200. First entry</p><p>1201. Second entry</p></div></section></section>`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := ParsePoliceRelease([]byte(test.html))
+			if !errors.Is(err, ErrNoIncidents) {
+				t.Fatalf("error = %v, want ErrNoIncidents", err)
+			}
+		})
 	}
 }
 

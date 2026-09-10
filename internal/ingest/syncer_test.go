@@ -192,6 +192,61 @@ func TestSyncerReportsParserFailuresSeparately(t *testing.T) {
 	}
 }
 
+func TestSyncerStoresUnnumberedStandaloneRelease(t *testing.T) {
+	ctx := context.Background()
+	database := testStore(t)
+	now := time.Date(2026, time.September, 10, 15, 0, 0, 0, time.UTC)
+	client := &fakeLiveClient{
+		feedResults: []source.FeedResult{{Documents: []domain.SourceDocument{testDocument("108358", now)}}},
+		article: []byte(`<main id="readspeaker_lesen"><section class="bp-template bp-presse">
+			<bp-headline title="Synthetic road-safety event – Example South"></bp-headline>
+			<section class="bp-flex bp-textblock-image"><div class="bp-iwe2">
+				<h3>Synthetic road-safety event – Example South</h3><p>Invented event details.</p>
+			</div></section>
+		</section></main>`),
+	}
+	syncer, err := NewSyncer(database, client, 6*time.Hour, func() time.Time { return now }, discardLogger())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := syncer.Sync(ctx)
+	if err != nil {
+		t.Fatalf("Sync() error = %v", err)
+	}
+	if result.Fetched != 1 || result.FetchFailures != 0 || result.ParserFailures != 0 || result.ArticleFailures != 0 {
+		t.Fatalf("sync result = %#v", result)
+	}
+	entries, total, err := database.ListTimelineEntries(ctx, 10, 0, "live")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 1 || len(entries) != 1 || !entries[0].HasIncident || entries[0].Number != "" || entries[0].TitleDE != "Synthetic road-safety event – Example South" {
+		t.Fatalf("stored timeline entries = %#v, total %d", entries, total)
+	}
+	history, err := database.ListRSSSyncHistory(ctx, 10, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(history.Entries) != 1 || history.Entries[0].Status != "succeeded" || history.Entries[0].Fetched != 1 || history.Entries[0].ParserFailures != 0 || history.Entries[0].Inserted != 1 {
+		t.Fatalf("RSS history = %#v", history)
+	}
+	details, err := database.RSSCheckDetails(ctx, history.Entries[0].ID, 10, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(details.Documents) != 1 || details.Documents[0].FetchStatus != "stored" || details.Documents[0].Inserted != 1 || len(details.Documents[0].Incidents) != 0 {
+		t.Fatalf("RSS details = %#v", details)
+	}
+	snapshot, err := database.RSSDocumentSnapshot(ctx, history.Entries[0].ID, details.Documents[0].ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.Incidents) != 1 || snapshot.Incidents[0].Number != "" || snapshot.Incidents[0].BodyDE != "Invented event details." {
+		t.Fatalf("RSS snapshot = %#v", snapshot)
+	}
+}
+
 func TestSyncerRefetchesChangedFeedEntryWithoutValidators(t *testing.T) {
 	ctx := context.Background()
 	database := testStore(t)

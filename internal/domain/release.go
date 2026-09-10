@@ -14,7 +14,8 @@ type SourceDocument struct {
 	Incidents       []Incident
 }
 
-// Incident represents one numbered report within a source document.
+// Incident represents one report within a source document. Number is empty
+// when the official source publishes a standalone report without one.
 type Incident struct {
 	Number      string
 	Position    int
