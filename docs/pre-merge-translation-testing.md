@@ -412,7 +412,7 @@ not native-language approval.
 | English | HY-MT2 | Final protocol: 8/8 pairs | Accurate/readable on assistant review; minor A/B wording caveats | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Spanish A-C |
 | Spanish | HY-MT2 Q5_K_M | Two new focused revisions remained structural | E's scheduled bus was fixed; the full rerun then moved the incident from on Ingolstädter Straße to near it | Not completed | Unqualified after the two newly authorized HY revisions; no native approval | Prefer the safer Gemma evidence, but leave Spanish paused |
 | Spanish | Gemma 4 E4B UD-Q4_K_XL | Typed gate and generated final-prompt pairs all passed structure | Police-office and generic-glass fixes worked; final E omitted inpatient admission | Final A/B repeats passed; protocol stopped at E | Best observed candidate, but paused after the total four-revision budget; no native approval | Do not change the preferred model or enable the route |
-| French | HY-MT2 | Historical protocol: 8/8; final-prompt B/2 structural pass | 7/8 acceptable; final B fixes legal framing but invents windshield specificity | A/2 pass; B/2 meaning failure | User-selected/locked to HY-MT2 with recorded caveat; no native approval | Keep HY-MT2; seek editorial review |
+| French | HY-MT2 Q5_K_M | Final protocol: 8/8 pairs | 8/8 materially acceptable after glass and street-location revisions; minor redundant-name/article wording | Final A/B: stable pass | Acceptable on this sample; no native approval | Leading qualified candidate; seek native review |
 | Italian | HY-MT2 | Historical A-F: 6/6; third-guidance E/F: 2/2 structural | Revised E passes; revised F summary passes but title remains grammatically invalid; final prompt not run across full protocol | Not run | Potentially locked to HY-MT2; final user decision/native review still needed | Keep current candidate and caveat visible |
 | Polish | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable; recurring grammar/spelling defects recorded | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Turkish A-C |
 | Turkish | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable under the user-selected time threshold; recurring precision/grammar caveats recorded | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Ukrainian |
@@ -990,6 +990,35 @@ it. This is assistant review only; no native approval.
 
 **Next proposed step: discuss the paused French decision before beginning Italian
 A-C. No further live calls until agreed.**
+
+## French HY-MT2 requalification: 2026-09-10
+
+Two newly authorized, general French prompt revisions were evaluated through the
+production worker path. Revision 1 added the missing generic-glass distinction;
+focused B then used `vitre` and preserved the allegation, uncertainty, explicit
+absence of conviction, final-conviction condition, and presumption of innocence.
+Its first expansion changed German `an der Ingolstädter Straße` to `près de`, so
+the run stopped rather than mixing a materially changed location into the final
+evidence.
+
+Revision 2 clarified the general street-location relation. A then kept the event
+on the street, and the complete A-F plus repeated A/B protocol ran under one
+unchanged prompt, Q5_K_M digest, and settings:
+
+| Pair | Structural | Assistant meaning/readability review |
+| --- | --- | --- |
+| A/1, A/2 | Pass | Allegation, approximate time, on-street location, examination, delay route/duration, unaffected U-Bahn, and witness request preserved; redundant nouns around protected names |
+| B/1, B/2 | Pass | Generic `vitre`, allegation, uncertainty, no conviction, final-conviction condition, and presumption preserved |
+| C/1 | Pass | Exact/approximate times, speed, closure cause, examination, one witness, negation, and `110` preserved |
+| D/1 | Pass | Uncertain danger, response, securing, arrest/release, and continuing investigation preserved |
+| E/1 | Pass | Scheduled bus, e-bike, serious injury, inpatient admission, female cyclist, and traffic-police investigation preserved; capitalization caveat |
+| F/1 | Pass | Evasion, signals, red lights, collision, securing/arrest, and tentative licence/alcohol/drug indications preserved; awkward headline wording |
+
+French is **acceptable on this sample** at 8/8 structurally valid and 8/8
+materially acceptable pairs. Minor grammar and style issues remain within the
+agreed threshold. Raw responses, restored outputs, request identities, timings,
+worker databases, and separate assistant assessments remain in the durable local
+checkpoint. This is not native approval or a guarantee for unseen incidents.
 
 ## Italian A-C screening: 2026-09-08
 
