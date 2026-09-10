@@ -313,6 +313,13 @@ police role and completed all eight pairs. Material facts and legal meaning
 passed, and A/B repeats were identical. Uneven agreement and occasional register
 issues remain recorded as non-material assistant-review caveats.
 
+Russian revision 2 completed the full eight-pair protocol without another
+prompt change. All placeholders and deterministic checks passed; allegation and
+legal status, exact and approximate times, medical examination, neutral witness
+questioning, female cyclist and inpatient status, arrest/release, explicit crash
+causality, and substance indications survived. A/B repeats were identical. This
+is acceptable on the assistant-reviewed sample without native approval.
+
 ### Tournament fixture-A gate: 2026-09-09
 
 The baseline gate used the production queued-worker path, typed Gazetteer
@@ -386,6 +393,7 @@ not native-language approval.
 | Russian | EuroLLM Q4_K_M | Fixture-A title failed hard | Translated the instruction instead of the source | Not run | Pairing permanently disqualified | Do not tune or resume |
 | Russian | Tower+ Q4_K_M / Q4_K_S / Q3_K_L | No output | Every installed quantization was kernel-OOM-killed at required 8192 context | Not run | Hardware-blocked on current host | Do not retry without more memory or an explicitly revised context experiment |
 | Russian | SalamandraTA v3 Q5_K_M | A preserved structure across base plus six focused rounds | No prompt preserved both allegation framing and the operation/delay headline relationship | Not run | Paused; no native approval | HY-MT2 remains the stronger observed candidate |
+| Russian | Gemma 4 E4B UD-Q4_K_XL | Final protocol: 8/8 pairs | 8/8 materially acceptable under revision 2 | Final A/B: identical pass | Acceptable on this sample; no native approval | Compare independently with Tower+ Q3_K_M at 2048 |
 | Russian | Seed-X 7B Q5_K_M | 0 usable pairs; minimal control failed before validation | General and official-minimal prompts produced incomplete whitespace, wrong scripts, unrelated text, or loops; placeholder-free `<ru>` control also failed | Not run | Paused; artifact/runtime prerequisite failure, not RAM; no native approval | Do not configure this artifact; HY-MT2 remains materially stronger |
 | Croatian | TranslateGemma Q2_K / 4B Q8 | Q2 0/3 acceptable; Q8 no single prompt passed A-F | Q2 broadly malformed; Q8 unstable allegation/legal fidelity, Croatian/Serbian leakage, and missing detail | Not run under a qualifying prompt | Paused after six Q8 focused rounds; no native approval | Qwen was stronger on A-E, but both candidates remain paused |
 | Croatian | Qwen 9B structured | Best complete screen: A-E pass; F rejected | No final prompt passed F; Serbian/malformed output or material fact changes persisted | Not run | Paused after six focused rounds; no native approval | Retain safest observed compact prompt; evaluate another model separately |
