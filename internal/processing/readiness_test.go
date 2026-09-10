@@ -301,3 +301,35 @@ func TestReadinessCandidateAllowsExplicitNativeAdapterComparisonModels(t *testin
 		t.Fatal("structured model override accepted")
 	}
 }
+
+func TestQwenQualificationLanguagesUseStructuredProductionContract(t *testing.T) {
+	const model = "hf.co/bartowski/Qwen_Qwen3.5-9B-GGUF:Q3_K_M"
+	input := StepInput{Values: map[string]string{
+		"title_de":   "Einsatz an der __MB_STREET_0001__",
+		"summary_de": "Die __MB_STREET_0001__ blieb gesperrt.",
+	}}
+	for _, language := range []string{"el", "es", "it"} {
+		t.Run(language, func(t *testing.T) {
+			requests := readinessExpectedRequests(t, "http://ollama.test", model, TranslationAdapterStructured, language, 8192, input)
+			if len(requests) != 1 {
+				t.Fatalf("structured requests=%d, want 1", len(requests))
+			}
+			var request chatRequest
+			if err := json.Unmarshal([]byte(requests[0]), &request); err != nil {
+				t.Fatal(err)
+			}
+			titleField, summaryField := translationFieldNames(language)
+			if request.Model != model || request.Stream || request.Think || request.Options.Temperature != 0 || request.Options.NumCtx != 8192 {
+				t.Fatalf("unexpected structured request options: %#v", request)
+			}
+			if len(request.Messages) != 1 || request.Messages[0].Role != "user" || len(request.Format) == 0 {
+				t.Fatalf("unexpected structured request contract: %#v", request)
+			}
+			for _, expected := range []string{titleField, summaryField, "__MB_STREET_0001__"} {
+				if !strings.Contains(request.Messages[0].Content+string(request.Format), expected) {
+					t.Errorf("structured request omitted %q", expected)
+				}
+			}
+		})
+	}
+}

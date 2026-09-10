@@ -452,6 +452,33 @@ was changed, and none of these results constitutes native-language approval.
 | Greek | Gemma 4 E4B UD-Q4_K_XL | All generated pairs preserved structure | C questioning was fixed, but Polish/Cyrillic contamination persisted through three prompt rounds | Not run under one qualifying prompt | Paused by the three-consecutive-error rule; no native approval | Do not continue Gemma prompt tuning for Greek |
 | Romanian | Qwen 9B structured | Final protocol: 8/8 pairs | 8/8 materially acceptable after three focused rounds; recurring grammar/typing defects recorded | Final A/B: 2/2 pass | User-selected/locked to Qwen 9B; no native approval | Keep selected model/adapter; seek catalog/native review |
 
+### Qwen 9B qualification: Greek, Spanish, and Italian
+
+The next evaluation uses the existing production `structured` adapter with
+`hf.co/bartowski/Qwen_Qwen3.5-9B-GGUF:Q3_K_M`, digest
+`14349d99100f6a9ea1082670dc15fddc65cabe888161ad35cf59d6c83d89fcf9`,
+8192 context, temperature zero, thinking disabled, and schema-constrained JSON.
+Each request returns title and summary together. This is prompt tuning only;
+model weights, production selections, and route state remain unchanged.
+
+Run Greek, Spanish, then Italian. Start each language with the unchanged shared
+prompt and A-C. If those pass, continue D-F and repeat A/B. Otherwise test only
+the reproducibly failing fixtures after short, general English guidance. Allow
+at most ten revisions per language, never retry an unchanged completed output,
+and require the final eight pairs to share one exact prompt/model/digest/settings
+identity. Repeated placeholder corruption or the established early-stop rules
+end a pairing before the revision ceiling.
+
+| Language | Baseline | Revisions | Final protocol | Current Qwen decision |
+| --- | --- | ---: | --- | --- |
+| Greek | Pending | 0/10 | Pending | Evaluation queued |
+| Spanish | Pending | 0/10 | Pending | Evaluation queued |
+| Italian | Pending | 0/10 | Pending | Evaluation queued |
+
+After each language, update this table and its detailed evidence, commit and
+push, post the complete result to PR #55, and continue automatically. Raw
+responses and review records remain in identity-specific ignored checkpoints.
+
 Before merge: review reader catalogs (especially disclosure, attribution, legal
 copy), run the full non-Docker [development suite](development.md), verify admin,
 upgrade migration, retained publications, and paused-language behavior using
