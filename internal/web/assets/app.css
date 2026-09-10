@@ -112,6 +112,41 @@
     margin-inline: auto;
   }
 
+  .admin-history-shell {
+    width: min(96rem, calc(100% - 2rem));
+    margin-inline: auto;
+  }
+
+  .admin-control {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-control-label {
+    min-width: 0;
+  }
+
+  .admin-action-button {
+    width: 100%;
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .admin-provenance {
+    overflow-wrap: anywhere;
+  }
+
+  @media (min-width: 640px) {
+    .admin-action-button {
+      width: auto;
+    }
+  }
+
   .prose-copy p + p {
     margin-top: 1rem;
   }

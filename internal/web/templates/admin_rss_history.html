@@ -13,7 +13,7 @@
 </head>
 <body class="min-h-screen text-ink antialiased">
   {{template "admin-header" "rss-history"}}
-  <main class="page-shell py-8" data-rss-history data-history-poll-interval="5000">
+  <main class="admin-history-shell py-8" data-rss-history data-history-poll-interval="5000">
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div class="max-w-3xl">
         <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Source operations</p>
@@ -38,7 +38,7 @@
             <td class="whitespace-nowrap px-4 py-4"><strong>Parsed and stored {{.Fetched}}</strong><span class="mt-1 block text-xs text-muted">Fetch failures {{.FetchFailures}} · parser failures {{.ParserFailures}}</span></td>
             <td class="min-w-48 px-4 py-4">{{if .DetailsRecorded}}<strong class="block">Documents: {{.NewDocuments}} new · {{.ExistingDocuments}} existing</strong><span class="mt-1 block text-xs text-muted">Incidents: {{.Inserted}} inserted · {{.Updated}} updated · {{.Unchanged}} unchanged{{if .Removed}} · {{.Removed}} removed{{end}}</span>{{if eq .Status "running"}}<span class="text-xs text-muted">Partial · in progress</span>{{else if eq .Status "failed"}}<span class="text-xs text-muted">Partial · check failed</span>{{end}}{{else}}<strong>—</strong><span class="block text-xs text-muted">Details not recorded</span>{{end}}</td>
             <td class="whitespace-nowrap px-4 py-4"><time datetime="{{.WindowStart.Format "2006-01-02T15:04:05Z07:00"}}">{{formatISODate .WindowStart}}</time><span class="mx-1 text-muted">–</span><time datetime="{{.WindowEnd.Format "2006-01-02T15:04:05Z07:00"}}">{{formatISODate .WindowEnd}}</time><span class="mt-1 block text-xs text-muted">Europe/Berlin · end exclusive</span></td>
-            <td class="max-w-md px-4 py-4 text-xs"><span class="font-mono">{{if .ErrorMessage}}{{.ErrorMessage}}{{else if eq .Status "running"}}Awaiting completion{{else}}No terminal error{{end}}</span></td>
+            <td class="admin-provenance max-w-md px-4 py-4 text-xs"><span class="font-mono">{{if .ErrorMessage}}{{.ErrorMessage}}{{else if eq .Status "running"}}Awaiting completion{{else}}No terminal error{{end}}</span></td>
           </tr>
           <tr id="rss-check-{{.ID}}" hidden><td colspan="7" class="px-4 py-4 bg-newsprint/70" data-rss-content></td></tr>
           {{end}}
