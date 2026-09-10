@@ -278,6 +278,16 @@ screen weakened explicit crash causality in F's headline. Revision 2 adds only
 the corresponding general legal-status, target-term, approximate-time, and
 causality/gender distinctions. Failed fixtures run first before any full rerun.
 
+Bosnian's complete revision-2 screen preserved structure but failed D through an
+Indonesian word and weakened E's inpatient status. Revision 3 fixed the scheduled
+bus and inpatient distinction but repeated the cross-language word and changed
+the traffic-police role. Revision 4 fixed D/E, then regressed B's presumption of
+innocence into a nonsensical term. Revision 5 explicitly retained the established
+Bosnian legal term and completed the final eight-pair protocol. All eight pairs
+preserved material facts and legal meaning; A/B repeats were identical. Awkward
+grammar and occasional Serbian/Ekavian wording remain recorded caveats, so this
+is an assistant-reviewed sample result rather than native approval.
+
 ### Tournament fixture-A gate: 2026-09-09
 
 The baseline gate used the production queued-worker path, typed Gazetteer
@@ -358,6 +368,7 @@ not native-language approval.
 | Croatian | Seed-X 7B Q5_K_M | 0 usable pairs; minimal control failed before validation | Official-minimal fixture A produced unrelated Chinese/wrong-script output and a token loop; placeholder-free `<hr>` control returned whitespace | Not run | Paused; artifact/runtime prerequisite failure, not RAM; no native approval | Do not configure this artifact; Qwen remains materially stronger |
 | Bosnian | TranslateGemma Q2_K / 4B Q8 | Q2 A failed; Q8 gates completed through six focused rounds | No single prompt qualified A-F; mixed script, token mutation/omission, lost qualifiers, and changed uncertainty persisted | Not run under a qualifying prompt | Paused after six Q8 focused rounds; no native approval | Retain final concise guidance; evaluate another model separately |
 | Bosnian | LLaMAX3 Q4_K_M | A remained structurally safe through three focused revisions | Bosnian month wording improved, but the model repeatedly reversed headline agency and stated an allegation as fact | Not run | Paused by the three-consecutive-error early-stop rule; no native approval | Do not spend remaining revision budget on this pairing |
+| Bosnian | Gemma 4 E4B UD-Q4_K_XL | Final protocol: 8/8 pairs | 8/8 materially acceptable after five focused revisions; awkward grammar and occasional Serbian/Ekavian wording recorded | Final A/B: identical pass | Acceptable on this sample; no native approval | Keep as leading Bosnian candidate; seek native review |
 | Greek | TranslateGemma 4B Q8 | Best round: A-D pass across accumulated gates; E/F fail | No single prompt passed A-F; scheduled-bus/traffic-police qualifiers and F escape/arrest/uncertainty remain unreliable | Round-3 A/B: 2/2 pass | Paused after six focused rounds; no native approval | Retain final safety guidance; evaluate another model separately |
 | Greek | SalamandraTA v3 Q5_K_M | Base and focused A-C preserved all placeholders/numbers | A strong; B retained final-decision wording and C interrogation wording despite guidance | Not run | Incomplete/needs focused work; no native approval | Further work stopped after Croatian placeholder corruption |
 | Greek | LLaMAX3 Q4_K_M / EuroLLM Q4_K_M | Both fixture-A gates failed structure | LLaMAX3 omitted two typed placeholders; EuroLLM invented a placeholder for a time | Not run | Both pairings permanently disqualified; no tournament candidate remains | Keep Greek paused; do not tune structurally unsafe pairings |
