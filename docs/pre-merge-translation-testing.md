@@ -405,15 +405,17 @@ The 2026-09-09 intended-candidate snapshot selected HY-MT2 Q5_K_M for English,
 Spanish, French, Polish, Turkish, Ukrainian, and Chinese; Italian remained a
 potential HY-MT2 selection, and Romanian used Qwen 9B structured. The 2026-09-10
 requalification recorded below supersedes that snapshot for Spanish, French,
-and Italian: French qualified on HY-MT2, while Spanish and Italian are paused
-with Gemma 4 as their best observed candidate. No preferred production setting
-was changed, and none of these results constitutes native-language approval.
+and Italian: French qualified on HY-MT2, Spanish subsequently qualified on Qwen
+9B, and Italian remains paused with Gemma 4 as its best observed candidate. No
+preferred production setting was changed, and none of these results constitutes
+native-language approval.
 
 | Language | Candidate | Structural | Meaning/readability | Repeats | Decision / open issue | Next action |
 | --- | --- | --- | --- | --- | --- | --- |
 | English | HY-MT2 | Final protocol: 8/8 pairs | Accurate/readable on assistant review; minor A/B wording caveats | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Spanish A-C |
 | Spanish | HY-MT2 Q5_K_M | Two new focused revisions remained structural | E's scheduled bus was fixed; the full rerun then moved the incident from on Ingolstädter Straße to near it | Not completed | Unqualified after the two newly authorized HY revisions; no native approval | Prefer the safer Gemma evidence, but leave Spanish paused |
 | Spanish | Gemma 4 E4B UD-Q4_K_XL | Typed gate and generated final-prompt pairs all passed structure | Police-office and generic-glass fixes worked; final E omitted inpatient admission | Final A/B repeats passed; protocol stopped at E | Best observed candidate, but paused after the total four-revision budget; no native approval | Do not change the preferred model or enable the route |
+| Spanish | Qwen 9B structured | Final protocol: 8/8 pairs | 8/8 materially acceptable after seven focused revisions; inpatient wording is clumsy but unambiguous | Final A/B: stable pass | Acceptable on this sample; no native approval | Leading qualified candidate; keep production selection unchanged pending review |
 | French | HY-MT2 Q5_K_M | Final protocol: 8/8 pairs | 8/8 materially acceptable after glass and street-location revisions; minor redundant-name/article wording | Final A/B: stable pass | Acceptable on this sample; no native approval | Leading qualified candidate; seek native review |
 | Italian | HY-MT2 Q5_K_M | Two new focused identities remained structural | F headline fixed, but expanded A repeat changed the street location to nearby | Not completed | Unqualified after two new HY revisions; no native approval | Prefer the safer Gemma evidence, but leave Italian paused |
 | Italian | Gemma 4 E4B UD-Q4_K_XL | Typed gates and all generated final-prompt fields passed structure | Glass and time fixes worked; final D changed continuing investigations into past/completed wording | Final A/B repeats passed; protocol stopped at D | Best observed candidate, but paused after the total four-revision budget; no native approval | Do not change the preferred model or enable the route |
@@ -473,7 +475,7 @@ end a pairing before the revision ceiling.
 | Language | Baseline | Revisions | Final protocol | Current Qwen decision |
 | --- | --- | ---: | --- | --- |
 | Greek | A-C structurally safe by revision 4; D exposed repeated token duplication | 7/10 explored; revision 6 retained | Not completed | Paused: Qwen duplicated a municipality placeholder twice across focused attempts |
-| Spanish | Pending | 0/10 | Pending | Evaluation queued |
+| Spanish | Shared A-C: 3/3 structural, 1/3 acceptable | 7/10 used | 8/8 structural and materially acceptable | Acceptable on this sample; Qwen is the leading Spanish candidate |
 | Italian | Pending | 0/10 | Pending | Evaluation queued |
 
 After each language, update this table and its detailed evidence, commit and
@@ -511,6 +513,40 @@ The completed outputs, one interrupted revision-5 transport attempt, rendered
 requests, validations, timings, model metadata, and manual reviews remain in
 separate ignored identity-specific checkpoints. No preferred model or route
 state changed, and no native-language approval is claimed.
+
+#### Spanish Qwen 9B result: 2026-09-10
+
+The shared A-C baseline was structurally safe. C passed materially; A lost an
+approximate-time qualifier, singularized S-Bahnen, and narrowed an inclusive
+witness appeal, while B strengthened a neutral suspect into a perpetrator.
+Seven focused, general prompt revisions were explored:
+
+1. Restored approximate time, inclusive witnesses, and neutral suspect wording.
+2. Added explicit plural train grammar; A passed, but C later lost its explicit
+   exact-time qualifier.
+3. Made `gegen`/`genau` precision symmetric; C passed, but A's title regressed
+   to singular S-Bahn grammar.
+4. Required number agreement independently in title and summary; A-D passed,
+   but E's inpatient admission remained ambiguous.
+5. Made hospital admission explicit; E passed, but F implied established
+   alcohol/drug consumption.
+6. Kept evidentiary observations tentative, but F still said signs of
+   consumption.
+7. Required neutral “anomalies compatible with alcohol or drugs” wording and
+   prohibited unsupported consumption claims; F passed.
+
+The revision-7 identity completed **8/8 structured requests**, **8/8 structural
+passes**, and **8/8 materially acceptable pairs** on assistant review. A and B
+both passed their second repetitions with stable material meaning. Model-reported
+generation time totaled about **30m16s**. A zero-new-call replay restored,
+validated, and persisted A-F plus both repetitions through the queued production
+path without contacting the model.
+
+Qwen preserves the on-street relationship that blocked HY-MT2 and the inpatient
+admission that blocked Gemma 4, so it is the strongest tested Spanish candidate.
+Minor style caveats remain—especially `ingresada ... de forma estacionaria`—and
+native-language approval is still outstanding. No preferred production model,
+route state, or deployment setting changed.
 
 Before merge: review reader catalogs (especially disclosure, attribution, legal
 copy), run the full non-Docker [development suite](development.md), verify admin,

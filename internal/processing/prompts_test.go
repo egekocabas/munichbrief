@@ -98,11 +98,17 @@ func TestStructuredTranslationLanguageGuidanceIsIsolated(t *testing.T) {
 			t.Fatalf("Greek guidance missing %q: %q", expected, greek)
 		}
 	}
+	spanish := promptUserMessage(SpanishTranslationPromptVersion, payload)
+	for _, expected := range []string{"German time precision explicitly", "‘genau’ requires ‘exactamente’", "never make either unmarked", "‘los trenes’", "independently in both title and summary", "never singular ‘el’", "singular verb such as ‘circuló’", "‘ingresada en un hospital’", "vague ‘de forma hospitalaria’", "‘anomalías compatibles con alcohol o drogas’", "Do not use the word ‘consumo’", "generic plural ‘testigos’", "neutral ‘Tatverdächtiger’ as ‘sospechoso’", "never as an author or perpetrator"} {
+		if !strings.Contains(spanish, expected) {
+			t.Fatalf("Spanish guidance missing %q: %q", expected, spanish)
+		}
+	}
 	for _, translation := range RegisteredTranslations() {
-		if translation.Language == "ro" || translation.Language == "hr" || translation.Language == "el" {
+		if translation.Language == "ro" || translation.Language == "hr" || translation.Language == "el" || translation.Language == "es" {
 			continue
 		}
-		if rendered := promptUserMessage(translation.PromptVersion, payload); strings.Contains(rendered, "în apropierea") || strings.Contains(rendered, "poliția criminalistică") || strings.Contains(rendered, "plural meaning of German ‘S-Bahnen’") || strings.Contains(rendered, "neutral ‘osumnjičenik’") || strings.Contains(rendered, "τεκμήριο αθωότητας") {
+		if rendered := promptUserMessage(translation.PromptVersion, payload); strings.Contains(rendered, "în apropierea") || strings.Contains(rendered, "poliția criminalistică") || strings.Contains(rendered, "plural meaning of German ‘S-Bahnen’") || strings.Contains(rendered, "neutral ‘osumnjičenik’") || strings.Contains(rendered, "τεκμήριο αθωότητας") || strings.Contains(rendered, "generic plural ‘testigos’") {
 			t.Fatalf("language-specific guidance leaked into %s: %q", translation.Language, rendered)
 		}
 	}
