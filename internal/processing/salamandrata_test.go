@@ -54,6 +54,30 @@ func TestSalamandraTANativeAdapterSupportsRequestedLanguages(t *testing.T) {
 	}
 }
 
+func TestSalamandraTAGreekGuidanceIsIsolated(t *testing.T) {
+	greek := salamandraTANativePrompt("German", "Greek", salamandraTALanguageGuidance["el"], "Quelle")
+	for _, expected := range []string{
+		"plural grammar around plural transit placeholders",
+		"‘αμετάκλητη καταδίκη’",
+		"never merely ‘τελική απόφαση’",
+		"‘λαμβάνω κατάθεση’",
+		"never ‘ανακρίνω’",
+	} {
+		if !strings.Contains(greek, expected) {
+			t.Fatalf("Greek guidance missing %q: %q", expected, greek)
+		}
+	}
+	for code, guidance := range salamandraTALanguageGuidance {
+		if code == "el" {
+			continue
+		}
+		rendered := salamandraTANativePrompt("German", salamandraTALanguageNames[code], guidance, "Quelle")
+		if strings.Contains(rendered, "αμετάκλητη καταδίκη") || strings.Contains(rendered, "λαμβάνω κατάθεση") {
+			t.Fatalf("Greek guidance leaked into %s: %q", code, rendered)
+		}
+	}
+}
+
 func TestSalamandraTANativeAdapterRejectsEmptyInput(t *testing.T) {
 	adapter, err := NewSalamandraTANativeAdapter("http://ollama.test:11434", "salamandra:test", "hr", time.Second, 8192, nil)
 	if err != nil {

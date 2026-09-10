@@ -450,7 +450,7 @@ native-language approval.
 | Bosnian | LLaMAX3 Q4_K_M | A remained structurally safe through three focused revisions | Bosnian month wording improved, but the model repeatedly reversed headline agency and stated an allegation as fact | Not run | Paused by the three-consecutive-error early-stop rule; no native approval | Do not spend remaining revision budget on this pairing |
 | Bosnian | Gemma 4 E4B UD-Q4_K_XL | Final protocol: 8/8 pairs | 8/8 materially acceptable after five focused revisions; awkward grammar and occasional Serbian/Ekavian wording recorded | Final A/B: identical pass | Acceptable on this sample; no native approval | Keep as leading Bosnian candidate; seek native review |
 | Greek | TranslateGemma 4B Q8 | Best round: A-D pass across accumulated gates; E/F fail | No single prompt passed A-F; scheduled-bus/traffic-police qualifiers and F escape/arrest/uncertainty remain unreliable | Round-3 A/B: 2/2 pass | Paused after six focused rounds; no native approval | Retain final safety guidance; evaluate another model separately |
-| Greek | SalamandraTA v3 Q5_K_M | Base and focused A-C preserved all placeholders/numbers | A strong; B retained final-decision wording and C interrogation wording despite guidance | Not run | Incomplete/needs focused work; no native approval | Further work stopped after Croatian placeholder corruption |
+| Greek | SalamandraTA v3 Q5_K_M | Baseline and revision 1 A-C preserved structure; revision 2 B title omitted its source tokens and emitted the prompt/regex | Revision 2 fixed B's legal meaning in the summary, but its title failed the placeholder hard gate | Not run | Disqualified after placeholder corruption; no native approval | Retain the earlier structurally safe guidance; do not configure SalamandraTA for Greek |
 | Greek | LLaMAX3 Q4_K_M / EuroLLM Q4_K_M | Both fixture-A gates failed structure | LLaMAX3 omitted two typed placeholders; EuroLLM invented a placeholder for a time | Not run | Both pairings permanently disqualified; no tournament candidate remains | Keep Greek paused; do not tune structurally unsafe pairings |
 | Greek | Gemma 4 E4B UD-Q4_K_XL | All generated pairs preserved structure | C questioning was fixed, but Polish/Cyrillic contamination persisted through three prompt rounds | Not run under one qualifying prompt | Paused by the three-consecutive-error rule; no native approval | Do not continue Gemma prompt tuning for Greek |
 | Greek | Qwen 9B structured | A-C passed structure under revision 4; D duplicated its municipality token under revisions 4 and 7 | Revisions fixed allegation, plural transit, street relation, legal terminology, closure tense, witness questioning, approximate time, and neutral release; D remained unstable | Not run under one qualifying prompt | Paused after repeated placeholder corruption; no native approval | Retain revision 6 as the safest structurally valid prompt; do not select Qwen for Greek |
@@ -591,6 +591,40 @@ blocked Gemma 4, making it the strongest tested Italian candidate. Raw evidence
 and append-only reviews remain in the ignored identity-specific checkpoints.
 No preferred production model or route state changed, and native-language
 approval remains outstanding.
+
+#### Greek SalamandraTA Q5_K_M final decision: 2026-09-11
+
+The preserved baseline and first focused A-C checkpoints were reviewed without
+regeneration. All six pairs retained their typed placeholders and numbers. Both
+A outputs preserved allegation, examination, timing, route, and unaffected
+U-Bahn meaning but used singular Greek agreement around plural S-Bahnen. Both B
+outputs weakened final conviction to final decision, and both C outputs changed
+neutral witness questioning into interrogation.
+
+A second focused identity kept the official user-only ChatML contract and added
+only general Greek language, transit-number, conviction, and questioning
+distinctions. B's title then translated the requirements themselves, emitted
+Markdown and the placeholder regex, and omitted the title's actual STREET and
+DISTRICT tokens. Its summary was readable and correctly distinguished no
+conviction from final conviction, but the pair was deterministically rejected
+and could not be restored. Because native fields are generated before pair-level
+validation, C's structurally valid title completed before the stop signal was
+delivered; C's summary was not generated and is recorded as interrupted rather
+than scored.
+
+This was a completed model-output failure, not an OOM or transport failure. Q5
+remained loaded and responsive, so Q4 fallback does not apply. The typed-token
+hard gate ends the pairing without spending the remaining six revision slots.
+The code retains the earlier structurally safe Greek guidance and adds a prompt-
+isolation regression test; the unsafe expanded guidance is preserved only in
+the ignored request checkpoint.
+
+SalamandraTA is therefore **disqualified for Greek**. Qwen demonstrated broader
+semantic coverage before repeating municipality placeholders, TranslateGemma
+4B Q8 reached A-D only across mixed prompt identities, and Gemma 4 repeatedly
+mixed foreign scripts. None completed one acceptable eight-pair identity, so
+Greek remains paused and no production model selection changes. This is
+assistant review only, not native approval.
 
 Before merge: review reader catalogs (especially disclosure, attribution, legal
 copy), run the full non-Docker [development suite](development.md), verify admin,
