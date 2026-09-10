@@ -118,6 +118,15 @@ func TestMADLAD400NativeAdapterUsesOnlyOfficialTargetTokenAndSource(t *testing.T
 	}
 }
 
+func TestGemma4GreekGuidanceCoversObservedGeneralFailures(t *testing.T) {
+	guidance := gemma4LanguageGuidance["el"]
+	for _, required := range []string{"Greek alphabet", "Cyrillic", "αστυνομική επιχείρηση", "παίρνω κατάθεση", "συλλαμβάνω"} {
+		if !strings.Contains(guidance, required) {
+			t.Errorf("Greek guidance missing %q: %s", required, guidance)
+		}
+	}
+}
+
 func TestTowerInstructNativeAdapterAvoidsConvertedEmptySystemTurn(t *testing.T) {
 	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {
 		if request.URL.Path != "/api/generate" {

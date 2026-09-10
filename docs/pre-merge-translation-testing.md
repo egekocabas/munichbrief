@@ -288,6 +288,14 @@ preserved material facts and legal meaning; A/B repeats were identical. Awkward
 grammar and occasional Serbian/Ekavian wording remain recorded caveats, so this
 is an assistant-reviewed sample result rather than native approval.
 
+Greek revision 2 preserved structure and fixed the earlier legal term, but the
+full run changed neutral witness questioning into arrest and mixed Cyrillic into
+a translated headline. Revision 3 fixed both targeted distinctions in C and D's
+headline, then inserted the Polish word `piątku` into D's summary despite the
+Greek-only instruction. Cross-language contamination therefore survived three
+focused prompt rounds. The pairing is paused under the repeated-error rule; no
+single final prompt completed the eight-pair protocol.
+
 ### Tournament fixture-A gate: 2026-09-09
 
 The baseline gate used the production queued-worker path, typed Gazetteer
@@ -372,6 +380,7 @@ not native-language approval.
 | Greek | TranslateGemma 4B Q8 | Best round: A-D pass across accumulated gates; E/F fail | No single prompt passed A-F; scheduled-bus/traffic-police qualifiers and F escape/arrest/uncertainty remain unreliable | Round-3 A/B: 2/2 pass | Paused after six focused rounds; no native approval | Retain final safety guidance; evaluate another model separately |
 | Greek | SalamandraTA v3 Q5_K_M | Base and focused A-C preserved all placeholders/numbers | A strong; B retained final-decision wording and C interrogation wording despite guidance | Not run | Incomplete/needs focused work; no native approval | Further work stopped after Croatian placeholder corruption |
 | Greek | LLaMAX3 Q4_K_M / EuroLLM Q4_K_M | Both fixture-A gates failed structure | LLaMAX3 omitted two typed placeholders; EuroLLM invented a placeholder for a time | Not run | Both pairings permanently disqualified; no tournament candidate remains | Keep Greek paused; do not tune structurally unsafe pairings |
+| Greek | Gemma 4 E4B UD-Q4_K_XL | All generated pairs preserved structure | C questioning was fixed, but Polish/Cyrillic contamination persisted through three prompt rounds | Not run under one qualifying prompt | Paused by the three-consecutive-error rule; no native approval | Do not continue Gemma prompt tuning for Greek |
 | Romanian | Qwen 9B structured | Final protocol: 8/8 pairs | 8/8 materially acceptable after three focused rounds; recurring grammar/typing defects recorded | Final A/B: 2/2 pass | User-selected/locked to Qwen 9B; no native approval | Keep selected model/adapter; seek catalog/native review |
 
 Before merge: review reader catalogs (especially disclosure, attribution, legal
