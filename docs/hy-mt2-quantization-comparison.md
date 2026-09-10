@@ -8,8 +8,8 @@ JSON remain in ignored `.local/translation-evaluations/` directories.
 
 ## Frozen Q5_K_M position
 
-Model: `hf.co/mradermacher/Hy-MT2-7B-GGUF:Q5_K_M`  
-Digest: `24acc0f002f8c874f34e8b3e22da236405f7c3a47ae9d62d3744cf3c5b4bd693`  
+Model: `hf.co/mradermacher/Hy-MT2-7B-GGUF:Q5_K_M`
+Digest: `24acc0f002f8c874f34e8b3e22da236405f7c3a47ae9d62d3744cf3c5b4bd693`
 Adapter/context: `hy-mt2` / 8192
 
 | Language | Coverage at the stopping point | Assistant decision | Important limitations |
@@ -52,8 +52,8 @@ variables are documented in [Development](development.md).
 
 ## Q6_K experiment
 
-Model: `hf.co/mradermacher/Hy-MT2-7B-GGUF:Q6_K`  
-Adapter/context: `hy-mt2` / 8192  
+Model: `hf.co/mradermacher/Hy-MT2-7B-GGUF:Q6_K`
+Adapter/context: `hy-mt2` / 8192
 Checkpoint: `.local/translation-evaluations/readiness-hymt2-q6k-v1`
 
 Run the full eight-pair protocol with the current branch prompts for English,
