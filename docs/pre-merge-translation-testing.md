@@ -217,6 +217,28 @@ after their titles failed. Raw requests, responses, timings, preflight metadata,
 worker results, and pending manual-review records remain in the ignored local
 `readiness-madlad400-q4km-v1` checkpoint.
 
+#### Gemma 4 fixture-A gate: 2026-09-10
+
+UD-Q4_K_XL loaded and completed all ten fields at 2048 context without an OOM or
+transport failure. Ollama reported Gemma 4, 7.52B parameters, and digest
+`cbde5d133210`. The first load took about 85 seconds; generation took about
+18–105 seconds per field. Every pairing preserved and restored all typed
+placeholders and passed the deterministic production validators.
+
+| Pair | Structure | Editorial result / disposition |
+| --- | --- | --- |
+| Bosnian | Pass | Clear overall, but stated the alleged injury as fact; focused work |
+| Greek | Pass | Allegation phrase contained a Chinese character and the title invented “intensive”; focused work |
+| Hindi | Pass | Stated the alleged injury as fact; focused work |
+| Croatian | Pass | Stated the allegation as fact and changed medical examination to receiving treatment; focused work |
+| Russian | Pass | Stated the allegation as fact and changed medical examination to receiving treatment; focused work |
+
+No Q4_K_M fallback applies because there was no confirmed memory failure. The
+unchanged baseline is not acceptable for any of the five, but each remains
+eligible for a focused general prompt revision after the Tower+ gate and
+shortlist comparison. Evidence is retained in
+`readiness-gemma4-udq4kxl-v1`.
+
 ### Tournament fixture-A gate: 2026-09-09
 
 The baseline gate used the production queued-worker path, typed Gazetteer
