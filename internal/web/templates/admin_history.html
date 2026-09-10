@@ -13,7 +13,7 @@
 </head>
 <body class="min-h-screen text-ink antialiased">
   {{template "admin-header" "history"}}
-  <main class="page-shell py-8" data-pipeline-history data-history-poll-interval="2000">
+  <main class="admin-history-shell py-8" data-pipeline-history data-history-poll-interval="2000">
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div class="max-w-3xl">
         <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Operations</p>
@@ -37,7 +37,7 @@
             <td class="whitespace-nowrap px-4 py-4 font-bold">#{{.IncidentID}}</td>
             <td class="px-4 py-4 font-mono text-xs font-bold">{{.ExecutionKey}}</td>
             <td class="whitespace-nowrap px-4 py-4"><strong>{{pipelineStatusLabel .Status .FailureKind .StatusReason}}</strong><span class="mt-1 block text-xs text-muted">Attempts {{.AttemptCount}}{{if .StatusReason}} · {{postProcessingStatusReason .StatusReason .StatusDetail}}{{end}}{{if and .FailureKind (ne .FailureKind "operator_canceled")}} · {{.FailureKind}}{{end}}</span></td>
-            <td class="px-4 py-4">{{if and (eq .Kind "post_processing") (eq .Status "skipped") (eq .AttemptCount 0)}}<span class="block font-bold">Not invoked</span>{{else}}<span class="block font-mono text-xs font-bold">{{.ModelIdentity}}</span>{{end}}<span class="mt-1 block font-mono text-xs text-muted">{{.PromptVersion}}</span></td>
+            <td class="admin-provenance px-4 py-4">{{if and (eq .Kind "post_processing") (eq .Status "skipped") (eq .AttemptCount 0)}}<span class="block font-bold">Not invoked</span>{{else}}<span class="block font-mono text-xs font-bold">{{.ModelIdentity}}</span>{{end}}<span class="mt-1 block font-mono text-xs text-muted">{{.PromptVersion}}</span></td>
           </tr>
           {{end}}
         </tbody>
