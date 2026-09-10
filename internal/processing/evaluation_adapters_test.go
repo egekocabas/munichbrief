@@ -145,6 +145,21 @@ func TestGemma4CroatianGuidanceCoversObservedGeneralFailures(t *testing.T) {
 	}
 }
 
+func TestTowerPlusGuidanceCoversObservedGeneralFailures(t *testing.T) {
+	tests := map[string][]string{
+		"hi": {"no explanation or note", "केवल 'पुलिस के अनुसार' लिखना पर्याप्त नहीं है", "तथ्यात्मक रूप मत लिखो", "लगभग", "causal relationship", "वाहन की खिड़की", "relevant police station"},
+		"ru": {"allegation", "около", "полицейская операция", "never as рейд or захват"},
+	}
+	for language, required := range tests {
+		guidance := towerPlusLanguageGuidance[language]
+		for _, phrase := range required {
+			if !strings.Contains(guidance, phrase) {
+				t.Errorf("Tower+ %s guidance missing %q: %s", language, phrase, guidance)
+			}
+		}
+	}
+}
+
 func TestTowerInstructNativeAdapterAvoidsConvertedEmptySystemTurn(t *testing.T) {
 	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {
 		if request.URL.Path != "/api/generate" {

@@ -320,6 +320,18 @@ questioning, female cyclist and inpatient status, arrest/release, explicit crash
 causality, and substance indications survived. A/B repeats were identical. This
 is acceptable on the assistant-reviewed sample without native approval.
 
+Tower+ Q3_K_M Hindi remained structurally safe at 2048 context, but did not
+advance beyond fixture A. Revision 1 preserved most facts while stating the
+alleged injury as fact. Revision 2 appended an explanatory note to the title and
+its summary ended with an isolated EOF. Revisions 3 and 4 removed the commentary
+and preserved approximate time, transit causality, medical examination, and
+Gazetteer placeholders, but again rendered the alleged act as established fact
+despite increasingly explicit general evidential guidance. The material error
+therefore survived three completed summary generations and the four-revision
+Tower budget is exhausted. Hindi/Tower+ is paused; Q3_K_S was not used because
+there was no repeated memory/load failure. Gemma 4 remains the qualified Hindi
+candidate, and Tower+ remains evaluation-only under its noncommercial license.
+
 ### Tournament fixture-A gate: 2026-09-09
 
 The baseline gate used the production queued-worker path, typed Gazetteer
@@ -387,6 +399,7 @@ not native-language approval.
 | Hindi | EuroLLM Q4_K_M | A passed structure; B title failed hard | B translated the placeholder instruction and emitted its regex | Not run | Pairing permanently disqualified; no native approval | Do not tune or resume |
 | Hindi | Tower+ Q4_K_M / Q4_K_S / Q3_K_L | No output | Every installed quantization was kernel-OOM-killed at required 8192 context | Not run | Hardware-blocked on current host | Do not retry without more memory or an explicitly revised context experiment |
 | Hindi | Gemma 4 E4B UD-Q4_K_XL | Final protocol: 8/8 pairs | 8/8 materially acceptable after the sixth and final Gemma revision; minor awkward wording recorded | Final A/B: identical pass | Acceptable on this sample; no native approval | Compare independently with Tower+ Q3_K_M at 2048 |
+| Hindi | Tower+ Q3_K_M at 2048 | Fixture A remained structurally safe through four prompt revisions | Alleged injury became established fact in revisions 1, 3, and 4; revision 2 also appended commentary and its summary was interrupted | Not run | Paused after the material error survived three completed generations; noncommercial license | Prefer qualified Gemma 4; do not resume or use Q3_K_S for semantic failure |
 | Russian | HY-MT2 | All generated pairs structural except one revision-1 overlong title | No single final prompt passed A-F; latest B fixes legal meaning but implies multiple suspects | Not run | Paused after six focused rounds; no native approval | Retain latest legally safer prompt; evaluate another model separately |
 | Russian | LLaMAX3 Q4_K_M | A-C preserved placeholders | B omitted explicit no-conviction status; C invented afternoon and changed one doctor to multiple; A lost allegation and changed U-Bahn status | Not run | Not selected for tuning; no native approval | TowerInstruct was stronger on B/C; HY-MT2 remains stronger overall |
 | Russian | TowerInstruct Q6_K | A-C and three focused A/B revisions preserved placeholders | C passed; B legal status passed but allegation failed; A allegation failed every revision and final revision invented morning | Not run | Paused by the three-consecutive-error rule; no native approval | Do not resume; exact license also remains noncommercial |
