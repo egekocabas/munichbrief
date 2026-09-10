@@ -296,6 +296,15 @@ Greek-only instruction. Cross-language contamination therefore survived three
 focused prompt rounds. The pairing is paused under the repeated-error rule; no
 single final prompt completed the eight-pair protocol.
 
+Hindi revision 2 preserved structure but C converted source numbers to
+Devanagari and even mixed numeral scripts in `110`. Revision 3 fixed exact ASCII
+numbers but lost A's approximate time. Revision 4 fixed both, then E omitted the
+explicit female cyclist; revision 5 fixed gender but regressed A's allegation
+framing. The sixth and final Gemma revision made the allegation explicit and
+completed all eight pairs. Material facts, legal meaning, numbers, causality,
+gender, and uncertainty passed; A/B repeats were identical. Minor awkward Hindi
+wording remains an assistant-reviewed caveat rather than native approval.
+
 ### Tournament fixture-A gate: 2026-09-09
 
 The baseline gate used the production queued-worker path, typed Gazetteer
@@ -362,6 +371,7 @@ not native-language approval.
 | Hindi | LLaMAX3 Q4_K_M | A-C and three focused A/B revisions remained structurally safe | C passed; A repeatedly lost allegation modality and later headlines regressed; B lost allegation/legal meaning | Not run | Paused by the three-consecutive-error rule; no native approval | HY-MT2 remains stronger on the recorded sample |
 | Hindi | EuroLLM Q4_K_M | A passed structure; B title failed hard | B translated the placeholder instruction and emitted its regex | Not run | Pairing permanently disqualified; no native approval | Do not tune or resume |
 | Hindi | Tower+ Q4_K_M / Q4_K_S / Q3_K_L | No output | Every installed quantization was kernel-OOM-killed at required 8192 context | Not run | Hardware-blocked on current host | Do not retry without more memory or an explicitly revised context experiment |
+| Hindi | Gemma 4 E4B UD-Q4_K_XL | Final protocol: 8/8 pairs | 8/8 materially acceptable after the sixth and final Gemma revision; minor awkward wording recorded | Final A/B: identical pass | Acceptable on this sample; no native approval | Compare independently with Tower+ Q3_K_M at 2048 |
 | Russian | HY-MT2 | All generated pairs structural except one revision-1 overlong title | No single final prompt passed A-F; latest B fixes legal meaning but implies multiple suspects | Not run | Paused after six focused rounds; no native approval | Retain latest legally safer prompt; evaluate another model separately |
 | Russian | LLaMAX3 Q4_K_M | A-C preserved placeholders | B omitted explicit no-conviction status; C invented afternoon and changed one doctor to multiple; A lost allegation and changed U-Bahn status | Not run | Not selected for tuning; no native approval | TowerInstruct was stronger on B/C; HY-MT2 remains stronger overall |
 | Russian | TowerInstruct Q6_K | A-C and three focused A/B revisions preserved placeholders | C passed; B legal status passed but allegation failed; A allegation failed every revision and final revision invented morning | Not run | Paused by the three-consecutive-error rule; no native approval | Do not resume; exact license also remains noncommercial |

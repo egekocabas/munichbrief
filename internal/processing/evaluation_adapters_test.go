@@ -127,6 +127,15 @@ func TestGemma4GreekGuidanceCoversObservedGeneralFailures(t *testing.T) {
 	}
 }
 
+func TestGemma4HindiGuidancePreservesASCIINumerals(t *testing.T) {
+	guidance := gemma4LanguageGuidance["hi"]
+	for _, required := range []string{"ASCII digits 0-9", "leading zeroes", "never convert digits to Devanagari", "police attribution alone is not sufficient", "must be rendered explicitly with लगभग or करीब", "महिला साइकिल चालक"} {
+		if !strings.Contains(guidance, required) {
+			t.Errorf("Hindi guidance missing %q: %s", required, guidance)
+		}
+	}
+}
+
 func TestTowerInstructNativeAdapterAvoidsConvertedEmptySystemTurn(t *testing.T) {
 	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {
 		if request.URL.Path != "/api/generate" {
