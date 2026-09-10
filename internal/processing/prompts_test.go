@@ -104,11 +104,17 @@ func TestStructuredTranslationLanguageGuidanceIsIsolated(t *testing.T) {
 			t.Fatalf("Spanish guidance missing %q: %q", expected, spanish)
 		}
 	}
+	italian := promptUserMessage(ItalianTranslationPromptVersion, payload)
+	for _, expected := range []string{"German time precision explicitly", "‘genau’ requires ‘esattamente’", "‘venerdì sera’", "never Friday afternoon", "‘i treni’", "independently in title and summary", "never put singular ‘il’", "generic vehicle ‘Scheibe’", "never infer ‘parabrezza’", "‘non vi è alcuna condanna’", "without adding ‘definitiva’", "‘condanna passata in giudicato’", "‘anomalie compatibili con alcol o droghe’", "never claim intake, consumption, intoxication", "neutral ‘Tatverdächtiger’ as ‘sospettato’", "never as an author, offender, or perpetrator"} {
+		if !strings.Contains(italian, expected) {
+			t.Fatalf("Italian guidance missing %q: %q", expected, italian)
+		}
+	}
 	for _, translation := range RegisteredTranslations() {
-		if translation.Language == "ro" || translation.Language == "hr" || translation.Language == "el" || translation.Language == "es" {
+		if translation.Language == "ro" || translation.Language == "hr" || translation.Language == "el" || translation.Language == "es" || translation.Language == "it" {
 			continue
 		}
-		if rendered := promptUserMessage(translation.PromptVersion, payload); strings.Contains(rendered, "în apropierea") || strings.Contains(rendered, "poliția criminalistică") || strings.Contains(rendered, "plural meaning of German ‘S-Bahnen’") || strings.Contains(rendered, "neutral ‘osumnjičenik’") || strings.Contains(rendered, "τεκμήριο αθωότητας") || strings.Contains(rendered, "generic plural ‘testigos’") {
+		if rendered := promptUserMessage(translation.PromptVersion, payload); strings.Contains(rendered, "în apropierea") || strings.Contains(rendered, "poliția criminalistică") || strings.Contains(rendered, "plural meaning of German ‘S-Bahnen’") || strings.Contains(rendered, "neutral ‘osumnjičenik’") || strings.Contains(rendered, "τεκμήριο αθωότητας") || strings.Contains(rendered, "generic plural ‘testigos’") || strings.Contains(rendered, "neutral ‘Tatverdächtiger’ as ‘sospettato’") {
 			t.Fatalf("language-specific guidance leaked into %s: %q", translation.Language, rendered)
 		}
 	}

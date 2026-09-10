@@ -405,8 +405,8 @@ The 2026-09-09 intended-candidate snapshot selected HY-MT2 Q5_K_M for English,
 Spanish, French, Polish, Turkish, Ukrainian, and Chinese; Italian remained a
 potential HY-MT2 selection, and Romanian used Qwen 9B structured. The 2026-09-10
 requalification recorded below supersedes that snapshot for Spanish, French,
-and Italian: French qualified on HY-MT2, Spanish subsequently qualified on Qwen
-9B, and Italian remains paused with Gemma 4 as its best observed candidate. No
+and Italian: French qualified on HY-MT2, while Spanish and Italian subsequently
+qualified on Qwen 9B. No
 preferred production setting was changed, and none of these results constitutes
 native-language approval.
 
@@ -419,6 +419,7 @@ native-language approval.
 | French | HY-MT2 Q5_K_M | Final protocol: 8/8 pairs | 8/8 materially acceptable after glass and street-location revisions; minor redundant-name/article wording | Final A/B: stable pass | Acceptable on this sample; no native approval | Leading qualified candidate; seek native review |
 | Italian | HY-MT2 Q5_K_M | Two new focused identities remained structural | F headline fixed, but expanded A repeat changed the street location to nearby | Not completed | Unqualified after two new HY revisions; no native approval | Prefer the safer Gemma evidence, but leave Italian paused |
 | Italian | Gemma 4 E4B UD-Q4_K_XL | Typed gates and all generated final-prompt fields passed structure | Glass and time fixes worked; final D changed continuing investigations into past/completed wording | Final A/B repeats passed; protocol stopped at D | Best observed candidate, but paused after the total four-revision budget; no native approval | Do not change the preferred model or enable the route |
+| Italian | Qwen 9B structured | Final protocol: 8/8 pairs | 8/8 materially acceptable after four focused revisions; minor literal headline and register wording recorded | Final A/B: byte-stable pass | Acceptable on this sample; no native approval | Leading qualified candidate; keep production selection unchanged pending review |
 | Polish | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable; recurring grammar/spelling defects recorded | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Turkish A-C |
 | Turkish | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable under the user-selected time threshold; recurring precision/grammar caveats recorded | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Ukrainian |
 | Ukrainian | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable after two explicit user-approved extra rounds; minor grammar/style caveats recorded | Final A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Chinese A-C |
@@ -476,7 +477,7 @@ end a pairing before the revision ceiling.
 | --- | --- | ---: | --- | --- |
 | Greek | A-C structurally safe by revision 4; D exposed repeated token duplication | 7/10 explored; revision 6 retained | Not completed | Paused: Qwen duplicated a municipality placeholder twice across focused attempts |
 | Spanish | Shared A-C: 3/3 structural, 1/3 acceptable | 7/10 used | 8/8 structural and materially acceptable | Acceptable on this sample; Qwen is the leading Spanish candidate |
-| Italian | Pending | 0/10 | Pending | Evaluation queued |
+| Italian | Shared A-C: 3/3 structural; material time, plural-transit, and suspect issues | 4/10 used | 8/8 structural and materially acceptable | Acceptable on this sample; Qwen is the leading Italian candidate |
 
 After each language, update this table and its detailed evidence, commit and
 push, post the complete result to PR #55, and continue automatically. Raw
@@ -547,6 +548,49 @@ admission that blocked Gemma 4, so it is the strongest tested Spanish candidate.
 Minor style caveats remain—especially `ingresada ... de forma estacionaria`—and
 native-language approval is still outstanding. No preferred production model,
 route state, or deployment setting changed.
+
+#### Italian Qwen 9B result: 2026-09-11
+
+The unchanged shared A-C baseline preserved typed placeholders and passed the
+worker's structural checks. It nevertheless lost approximate-time marking and
+plural S-Bahn meaning in A, strengthened a neutral suspect in B, and omitted
+the explicit exact-time qualifier in C. One B request ended in EOF; exact
+identity resume generated it once, so the interruption is transport evidence
+rather than a model-quality failure.
+
+Four focused, general prompt revisions were evaluated:
+
+1. Restored approximate/exact time, plural transit grammar, and neutral suspect
+   wording. A-E passed, but F changed Friday evening to afternoon and implied
+   alcohol/drug intake.
+2. Restored Friday-evening and tentative substance evidence. F passed and A
+   passed in the expanded run, but B inferred a windshield from generic vehicle
+   glass.
+3. Required generic `Scheibe` wording such as `vetro` or `finestrino`; B then
+   weakened the source's absence of any conviction to absence of a final
+   conviction.
+4. Distinguished no conviction of any kind from the later final-conviction
+   condition. The focused B gate passed.
+
+The revision-4 identity completed **8/8 structured requests**, **8/8 structural
+passes**, and **8/8 materially acceptable pairs** on assistant review. A-F
+preserve allegations, exact and approximate times, plural transit relationships,
+generic vehicle glass, both conviction concepts, inpatient treatment, ongoing
+investigations, Friday evening, escape/collision causality, and tentative
+substance evidence. A and B repetitions are byte-stable. Minor wording remains:
+some headlines are literal and D uses `scontro` for a dispute, but neither issue
+materially changes the report.
+
+Model-reported generation time for the final eight requests totaled about
+**31m28s**.
+
+Exact zero-new-call replay restored, validated, and persisted A-F and both
+repetitions through the queued production path. Qwen fixes the on-street
+relationship that blocked HY-MT2 and the continuing-investigation failure that
+blocked Gemma 4, making it the strongest tested Italian candidate. Raw evidence
+and append-only reviews remain in the ignored identity-specific checkpoints.
+No preferred production model or route state changed, and native-language
+approval remains outstanding.
 
 Before merge: review reader catalogs (especially disclosure, attribution, legal
 copy), run the full non-Docker [development suite](development.md), verify admin,
