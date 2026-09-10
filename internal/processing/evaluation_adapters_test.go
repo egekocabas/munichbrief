@@ -148,7 +148,7 @@ func TestGemma4CroatianGuidanceCoversObservedGeneralFailures(t *testing.T) {
 func TestTowerPlusGuidanceCoversObservedGeneralFailures(t *testing.T) {
 	tests := map[string][]string{
 		"hi": {"no explanation or note", "केवल 'पुलिस के अनुसार' लिखना पर्याप्त नहीं है", "तथ्यात्मक रूप मत लिखो", "लगभग", "causal relationship", "वाहन की खिड़की", "relevant police station"},
-		"ru": {"allegation", "около", "полицейская операция", "never as рейд or захват"},
+		"ru": {"только один", "без пояснений", "самим предполагаемым действием", "пиши 'около'", "полицейская операция", "не как рейд или захват", "задержан без сопротивления", "не превращая его в потерпевшего"},
 	}
 	for language, required := range tests {
 		guidance := towerPlusLanguageGuidance[language]

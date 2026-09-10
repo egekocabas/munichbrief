@@ -332,6 +332,30 @@ Tower budget is exhausted. Hindi/Tower+ is paused; Q3_K_S was not used because
 there was no repeated memory/load failure. Gemma 4 remains the qualified Hindi
 candidate, and Tower+ remains evaluation-only under its noncommercial license.
 
+Tower+ Q3_K_M Russian passed A-C under revision 1 except that A made the
+approximate 03:30 exact-looking. Revision 2 fixed that distinction; A/B repeats
+were byte-for-byte stable and C preserved its exact and approximate times,
+numbers, examination, negation, and questioning. During the same-prompt
+expansion, D translated neutral `Betroffene` as a victim and omitted "without
+resistance." Revision 3 appended an alternate translation and commentary to D's
+title. The fourth and final Tower revision removed the commentary and restored
+"without resistance," but again inferred a victim role. Russian/Tower+ is
+therefore paused without a complete eight-pair protocol. Q3_K_S was not used
+because Q3_K_M had no repeated memory/load failure.
+
+#### Gemma 4 versus Tower+ Q3 final comparison
+
+| Language | Candidate | Structure | Material accuracy / readability | Repeats | Mean completed-call latency | Memory | Revisions | License / decision |
+| --- | --- | --- | --- | --- | ---: | --- | ---: | --- |
+| Hindi | Gemma 4 UD-Q4_K_XL | Final 8/8 pairs passed | 8/8 materially acceptable; minor awkward phrasing | A/B identical | 50.5 s | Stable at 2048 | 6 | Apache-2.0; acceptable on sample |
+| Hindi | Tower+ Q3_K_M | Fixture A stayed recoverable; one title emitted commentary in an intermediate revision | Alleged injury became established fact in three completed summaries | Not run | 135.0 s in final revision | One isolated EOF; no repeated OOM/load failure | 4 | Noncommercial; paused |
+| Russian | Gemma 4 UD-Q4_K_XL | Final 8/8 pairs passed | 8/8 materially acceptable | A/B identical | 41.1 s | Stable at 2048 | 2 | Apache-2.0; acceptable on sample |
+| Russian | Tower+ Q3_K_M | A-C and targeted D stayed recoverable; revision 3 added commentary | A-C passed after time fix, but D repeatedly inferred a victim role | A/B identical under revision 2 | 101.5 s across revision-2 completed calls | One isolated EOF; no repeated OOM/load failure | 4 | Noncommercial; paused |
+
+Gemma 4 is both materially stronger and roughly two to three times faster in
+these final Hindi/Russian samples. Tower+ remains useful negative evidence but
+is neither qualified nor licensable for production under the evaluated terms.
+
 ### Tournament fixture-A gate: 2026-09-09
 
 The baseline gate used the production queued-worker path, typed Gazetteer
@@ -398,7 +422,7 @@ not native-language approval.
 | Hindi | LLaMAX3 Q4_K_M | A-C and three focused A/B revisions remained structurally safe | C passed; A repeatedly lost allegation modality and later headlines regressed; B lost allegation/legal meaning | Not run | Paused by the three-consecutive-error rule; no native approval | HY-MT2 remains stronger on the recorded sample |
 | Hindi | EuroLLM Q4_K_M | A passed structure; B title failed hard | B translated the placeholder instruction and emitted its regex | Not run | Pairing permanently disqualified; no native approval | Do not tune or resume |
 | Hindi | Tower+ Q4_K_M / Q4_K_S / Q3_K_L | No output | Every installed quantization was kernel-OOM-killed at required 8192 context | Not run | Hardware-blocked on current host | Do not retry without more memory or an explicitly revised context experiment |
-| Hindi | Gemma 4 E4B UD-Q4_K_XL | Final protocol: 8/8 pairs | 8/8 materially acceptable after the sixth and final Gemma revision; minor awkward wording recorded | Final A/B: identical pass | Acceptable on this sample; no native approval | Compare independently with Tower+ Q3_K_M at 2048 |
+| Hindi | Gemma 4 E4B UD-Q4_K_XL | Final protocol: 8/8 pairs | 8/8 materially acceptable after the sixth and final Gemma revision; minor awkward wording recorded | Final A/B: identical pass | Acceptable on this sample; no native approval | Leading qualified candidate; seek native review |
 | Hindi | Tower+ Q3_K_M at 2048 | Fixture A remained structurally safe through four prompt revisions | Alleged injury became established fact in revisions 1, 3, and 4; revision 2 also appended commentary and its summary was interrupted | Not run | Paused after the material error survived three completed generations; noncommercial license | Prefer qualified Gemma 4; do not resume or use Q3_K_S for semantic failure |
 | Russian | HY-MT2 | All generated pairs structural except one revision-1 overlong title | No single final prompt passed A-F; latest B fixes legal meaning but implies multiple suspects | Not run | Paused after six focused rounds; no native approval | Retain latest legally safer prompt; evaluate another model separately |
 | Russian | LLaMAX3 Q4_K_M | A-C preserved placeholders | B omitted explicit no-conviction status; C invented afternoon and changed one doctor to multiple; A lost allegation and changed U-Bahn status | Not run | Not selected for tuning; no native approval | TowerInstruct was stronger on B/C; HY-MT2 remains stronger overall |
@@ -406,7 +430,8 @@ not native-language approval.
 | Russian | EuroLLM Q4_K_M | Fixture-A title failed hard | Translated the instruction instead of the source | Not run | Pairing permanently disqualified | Do not tune or resume |
 | Russian | Tower+ Q4_K_M / Q4_K_S / Q3_K_L | No output | Every installed quantization was kernel-OOM-killed at required 8192 context | Not run | Hardware-blocked on current host | Do not retry without more memory or an explicitly revised context experiment |
 | Russian | SalamandraTA v3 Q5_K_M | A preserved structure across base plus six focused rounds | No prompt preserved both allegation framing and the operation/delay headline relationship | Not run | Paused; no native approval | HY-MT2 remains the stronger observed candidate |
-| Russian | Gemma 4 E4B UD-Q4_K_XL | Final protocol: 8/8 pairs | 8/8 materially acceptable under revision 2 | Final A/B: identical pass | Acceptable on this sample; no native approval | Compare independently with Tower+ Q3_K_M at 2048 |
+| Russian | Gemma 4 E4B UD-Q4_K_XL | Final protocol: 8/8 pairs | 8/8 materially acceptable under revision 2 | Final A/B: identical pass | Acceptable on this sample; no native approval | Leading qualified candidate; seek native review |
+| Russian | Tower+ Q3_K_M at 2048 | A-C passed structure; focused D remained recoverable through revision 4 | A-C passed after the time fix, but D repeatedly changed a neutral person into a victim; revision 3 also emitted commentary | Revision-2 A/B identical | Paused after four Tower revisions without one complete protocol; noncommercial license | Prefer qualified Gemma 4; do not resume or use Q3_K_S for semantic failure |
 | Russian | Seed-X 7B Q5_K_M | 0 usable pairs; minimal control failed before validation | General and official-minimal prompts produced incomplete whitespace, wrong scripts, unrelated text, or loops; placeholder-free `<ru>` control also failed | Not run | Paused; artifact/runtime prerequisite failure, not RAM; no native approval | Do not configure this artifact; HY-MT2 remains materially stronger |
 | Croatian | TranslateGemma Q2_K / 4B Q8 | Q2 0/3 acceptable; Q8 no single prompt passed A-F | Q2 broadly malformed; Q8 unstable allegation/legal fidelity, Croatian/Serbian leakage, and missing detail | Not run under a qualifying prompt | Paused after six Q8 focused rounds; no native approval | Qwen was stronger on A-E, but both candidates remain paused |
 | Croatian | Qwen 9B structured | Best complete screen: A-E pass; F rejected | No final prompt passed F; Serbian/malformed output or material fact changes persisted | Not run | Paused after six focused rounds; no native approval | Retain safest observed compact prompt; evaluate another model separately |
