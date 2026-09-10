@@ -145,6 +145,18 @@ func TestGemma4CroatianGuidanceCoversObservedGeneralFailures(t *testing.T) {
 	}
 }
 
+func TestGemma4SpanishGuidanceCoversObservedGeneralFailures(t *testing.T) {
+	guidance := gemma4LanguageGuidance["es"]
+	for _, required := range []string{"zuständige Dienststelle", "dependencia policial competente", "never as a service station", "Scheibe", "cristal", "Windschutzscheibe", "never infer 'parabrisas'", "allegations", "approximate times"} {
+		if !strings.Contains(guidance, required) {
+			t.Errorf("Spanish guidance missing %q: %s", required, guidance)
+		}
+	}
+	if strings.Contains(guidance, "Linienbus") {
+		t.Errorf("Spanish guidance contains unrelated terminology: %s", guidance)
+	}
+}
+
 func TestTowerPlusGuidanceCoversObservedGeneralFailures(t *testing.T) {
 	tests := map[string][]string{
 		"hi": {"no explanation or note", "केवल 'पुलिस के अनुसार' लिखना पर्याप्त नहीं है", "तथ्यात्मक रूप मत लिखो", "लगभग", "causal relationship", "वाहन की खिड़की", "relevant police station"},

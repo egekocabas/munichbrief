@@ -410,7 +410,8 @@ not native-language approval.
 | Language | Candidate | Structural | Meaning/readability | Repeats | Decision / open issue | Next action |
 | --- | --- | --- | --- | --- | --- | --- |
 | English | HY-MT2 | Final protocol: 8/8 pairs | Accurate/readable on assistant review; minor A/B wording caveats | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Spanish A-C |
-| Spanish | HY-MT2 | A-F: 6/6; focused B/E: 2/2 structural | 5/6 acceptable; revised E fixes inpatient care but changes bus into a route | Not run | User-selected/locked to HY-MT2 with recorded caveat; no native approval | Keep HY-MT2; seek editorial review |
+| Spanish | HY-MT2 Q5_K_M | Two new focused revisions remained structural | E's scheduled bus was fixed; the full rerun then moved the incident from on Ingolstädter Straße to near it | Not completed | Unqualified after the two newly authorized HY revisions; no native approval | Prefer the safer Gemma evidence, but leave Spanish paused |
+| Spanish | Gemma 4 E4B UD-Q4_K_XL | Typed gate and generated final-prompt pairs all passed structure | Police-office and generic-glass fixes worked; final E omitted inpatient admission | Final A/B repeats passed; protocol stopped at E | Best observed candidate, but paused after the total four-revision budget; no native approval | Do not change the preferred model or enable the route |
 | French | HY-MT2 | Historical protocol: 8/8; final-prompt B/2 structural pass | 7/8 acceptable; final B fixes legal framing but invents windshield specificity | A/2 pass; B/2 meaning failure | User-selected/locked to HY-MT2 with recorded caveat; no native approval | Keep HY-MT2; seek editorial review |
 | Italian | HY-MT2 | Historical A-F: 6/6; third-guidance E/F: 2/2 structural | Revised E passes; revised F summary passes but title remains grammatically invalid; final prompt not run across full protocol | Not run | Potentially locked to HY-MT2; final user decision/native review still needed | Keep current candidate and caveat visible |
 | Polish | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable; recurring grammar/spelling defects recorded | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Turkish A-C |
@@ -798,6 +799,46 @@ rollout unless a later, separately agreed evaluation qualifies it.
 
 **Next proposed step: discuss the paused Spanish decision before beginning
 French A-C. No further live calls until agreed.**
+
+## Spanish HY-MT2 and Gemma 4 requalification: 2026-09-10
+
+The newly authorized qualification used the frozen A-F pack, typed Gazetteer
+protection, sequential native title/summary calls, disposable worker databases,
+and exact-request checkpoints. No preferred production model or route state was
+changed.
+
+HY-MT2 Q5_K_M used two new general Spanish prompt revisions. The first added
+the scheduled-bus distinction and fixed E. Its expansion preserved most facts
+but translated `an der Ingolstädter Straße` as *cerca de Ingolstädter Straße*,
+changing an on-street location into a nearby location. The second added the
+final-conviction distinction and fixed focused B and E, but its expanded A
+again used *cerca de*. HY-MT2 therefore did not qualify within its two-revision
+share.
+
+Gemma 4 UD-Q4_K_XL then passed the typed A/E structural gate. E preserved
+`autobús de línea`, but baseline A rendered `zuständige Dienststelle` as a
+service station. Gemma revision 1 fixed that with the general police-office
+distinction; expansion then inferred a windshield from generic vehicle glass.
+Gemma revision 2 fixed B with `cristal` and produced stable, materially sound
+A/B repetitions. C and D preserved the fact checklists with minor wording
+caveats. Final E, however, reduced inpatient admission to merely being taken to
+a hospital:
+
+| Final Gemma pair | Structural | Assistant meaning/readability review |
+| --- | --- | --- |
+| A/1, A/2 | Pass | Material facts stable; awkward inclusive-witness wording |
+| B/1, B/2 | Pass | Allegation, generic glass, uncertainty, no conviction, and presumption of innocence preserved |
+| C/1 | Pass | Facts preserved; `interrogó` is somewhat stronger than neutral questioning |
+| D/1 | Pass | Material sequence preserved; awkward securing wording |
+| E/1 | Pass | **Material failure:** `stationär` was omitted, leaving only transfer to hospital |
+
+The run stopped after E because the four total new revisions were exhausted;
+an already-started F title was durably recorded as interrupted work and was not
+used to claim a completed pair. Spanish is **paused**. Gemma 4 is the best
+observed candidate in this round, but no identity completed eight acceptable
+pairs and native approval remains outstanding. All raw responses, partial runs,
+databases, timings, hashes, and separate manual assessments remain in the local
+checkpoints.
 
 ## French A-C screening: 2026-09-08
 
