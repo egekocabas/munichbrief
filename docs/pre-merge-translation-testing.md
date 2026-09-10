@@ -239,6 +239,23 @@ eligible for a focused general prompt revision after the Tower+ gate and
 shortlist comparison. Evidence is retained in
 `readiness-gemma4-udq4kxl-v1`.
 
+#### Tower+ Q3_K_M fixture-A gate at 2048 context: 2026-09-10
+
+The Q3_K_M artifact loaded and completed all four fields without an OOM or
+transport failure, establishing that the prior family failures were caused by
+the larger quantization/context combination rather than an incompatible
+runtime. Ollama reported Gemma 2, 9.24B parameters, and digest
+`02a89d5b17a3`. Calls took about 38–150 seconds after a roughly 73-second load.
+
+| Pair | Structure | Editorial result / disposition |
+| --- | --- | --- |
+| Hindi | Pass | Headline blurred/reversed the delay causality and summary stated the allegation as fact; focused work |
+| Russian | Pass | Used “police raid” rather than neutral police operation and stated the allegation as fact; focused work |
+
+Q3_K_S was not run because Q3_K_M had no confirmed memory failure. Both
+pairings remain eligible for a focused general prompt revision. Evidence is
+retained in `readiness-towerplus-q3km-2048-v1`.
+
 ### Tournament fixture-A gate: 2026-09-09
 
 The baseline gate used the production queued-worker path, typed Gazetteer
