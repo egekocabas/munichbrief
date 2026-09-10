@@ -450,6 +450,7 @@ was changed, and none of these results constitutes native-language approval.
 | Greek | SalamandraTA v3 Q5_K_M | Base and focused A-C preserved all placeholders/numbers | A strong; B retained final-decision wording and C interrogation wording despite guidance | Not run | Incomplete/needs focused work; no native approval | Further work stopped after Croatian placeholder corruption |
 | Greek | LLaMAX3 Q4_K_M / EuroLLM Q4_K_M | Both fixture-A gates failed structure | LLaMAX3 omitted two typed placeholders; EuroLLM invented a placeholder for a time | Not run | Both pairings permanently disqualified; no tournament candidate remains | Keep Greek paused; do not tune structurally unsafe pairings |
 | Greek | Gemma 4 E4B UD-Q4_K_XL | All generated pairs preserved structure | C questioning was fixed, but Polish/Cyrillic contamination persisted through three prompt rounds | Not run under one qualifying prompt | Paused by the three-consecutive-error rule; no native approval | Do not continue Gemma prompt tuning for Greek |
+| Greek | Qwen 9B structured | A-C passed structure under revision 4; D duplicated its municipality token under revisions 4 and 7 | Revisions fixed allegation, plural transit, street relation, legal terminology, closure tense, witness questioning, approximate time, and neutral release; D remained unstable | Not run under one qualifying prompt | Paused after repeated placeholder corruption; no native approval | Retain revision 6 as the safest structurally valid prompt; do not select Qwen for Greek |
 | Romanian | Qwen 9B structured | Final protocol: 8/8 pairs | 8/8 materially acceptable after three focused rounds; recurring grammar/typing defects recorded | Final A/B: 2/2 pass | User-selected/locked to Qwen 9B; no native approval | Keep selected model/adapter; seek catalog/native review |
 
 ### Qwen 9B qualification: Greek, Spanish, and Italian
@@ -471,13 +472,45 @@ end a pairing before the revision ceiling.
 
 | Language | Baseline | Revisions | Final protocol | Current Qwen decision |
 | --- | --- | ---: | --- | --- |
-| Greek | Pending | 0/10 | Pending | Evaluation queued |
+| Greek | A-C structurally safe by revision 4; D exposed repeated token duplication | 7/10 explored; revision 6 retained | Not completed | Paused: Qwen duplicated a municipality placeholder twice across focused attempts |
 | Spanish | Pending | 0/10 | Pending | Evaluation queued |
 | Italian | Pending | 0/10 | Pending | Evaluation queued |
 
 After each language, update this table and its detailed evidence, commit and
 push, post the complete result to PR #55, and continue automatically. Raw
 responses and review records remain in identity-specific ignored checkpoints.
+
+#### Greek Qwen 9B result: 2026-09-10
+
+The shared-prompt A-C baseline first exposed a deterministic schema problem:
+JSON `maxLength` was applied to model-facing text before long typed placeholders
+were restored, so an otherwise bounded title could be truncated inside a token.
+The translation schema now defers maximum title/summary length checks until
+after exact restoration; a regression test proves that restored reader limits
+remain enforced. This validator repair did not consume a prompt revision.
+
+Seven bounded Greek prompt identities were evaluated. General guidance fixed
+mixed English, explicit allegation framing, plural S-Bahn grammar, on-street
+location, concise headlines, final-conviction terminology, past closure tense,
+neutral witness questioning, approximate time, and neutral release from
+custody. Revision 4 made A-C materially acceptable on assistant review, with
+minor awkward witness and police-operation wording.
+
+Expansion to real fixture D failed exact restoration because Qwen reused the
+single municipality placeholder for ordinary nearby “Munich” text. Revision 5
+added a generic exact-occurrence rule and restored D structurally, but changed
+an approximate time to exact and used prison-specific release wording. Revision
+6 fixed those two meanings and is retained as the safest structurally valid
+prompt, though it added “last” to an unqualified Friday and remained
+grammatically uneven. Revision 7 fixed the weekday wording but duplicated the
+municipality placeholder again. Under the agreed repeated-corruption rule, the
+Qwen/Greek pairing is disqualified without spending the final three revisions.
+
+Greek therefore has no Qwen final eight-pair protocol and remains **paused**.
+The completed outputs, one interrupted revision-5 transport attempt, rendered
+requests, validations, timings, model metadata, and manual reviews remain in
+separate ignored identity-specific checkpoints. No preferred model or route
+state changed, and no native-language approval is claimed.
 
 Before merge: review reader catalogs (especially disclosure, attribution, legal
 copy), run the full non-Docker [development suite](development.md), verify admin,

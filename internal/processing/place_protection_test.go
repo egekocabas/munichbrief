@@ -2,6 +2,7 @@ package processing
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -209,6 +210,25 @@ func TestTranslationValidationDefersProtectedFieldLengthUntilRestoration(t *test
 	restoredOutput.Values["title"] = strings.Repeat("a", 91)
 	if err := validateTranslation(restoredInput, &restoredOutput); err == nil {
 		t.Fatal("overlong restored reader-visible title was accepted")
+	}
+}
+
+func TestTranslationSchemaDefersFieldLimitsUntilPlaceRestoration(t *testing.T) {
+	translation := TranslationByLanguageMust(t, "el")
+	var schema struct {
+		Properties map[string]map[string]any `json:"properties"`
+	}
+	if err := json.Unmarshal(translation.Step.Schema, &schema); err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{"title_el", "summary_el"} {
+		property := schema.Properties[field]
+		if property["minLength"] != float64(1) {
+			t.Fatalf("%s minimum length = %#v", field, property["minLength"])
+		}
+		if _, found := property["maxLength"]; found {
+			t.Fatalf("%s applies its reader limit before restoration: %#v", field, property)
+		}
 	}
 }
 

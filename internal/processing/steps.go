@@ -235,8 +235,11 @@ func newTranslationDefinition(target langregistry.Definition, prompt PromptDefin
 	schema, err := json.Marshal(map[string]any{
 		"type": "object",
 		"properties": map[string]any{
-			titleField:   map[string]any{"type": "string", "minLength": 1, "maxLength": 90},
-			summaryField: map[string]any{"type": "string", "minLength": 1, "maxLength": 600},
+			// Typed placeholders can be longer than the reader-visible names they
+			// replace. Enforce the real 90/600 limits after restoration instead of
+			// inviting schema-constrained models to truncate an immutable token.
+			titleField:   map[string]any{"type": "string", "minLength": 1},
+			summaryField: map[string]any{"type": "string", "minLength": 1},
 		},
 		"required": []string{titleField, summaryField}, "additionalProperties": false,
 	})
