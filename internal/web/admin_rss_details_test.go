@@ -110,3 +110,24 @@ func TestRSSLegacyHistoryShowsUnknownCounts(t *testing.T) {
 		t.Fatal("missing legacy detail explanation")
 	}
 }
+
+func TestRSSDetailsRenderUnnumberedIncident(t *testing.T) {
+	server := adminTestServer(t, fixtureStore(t), nil)
+	var body strings.Builder
+	err := server.adminRSSHistoryTemplate.ExecuteTemplate(&body, "rss_document_details", adminRSSDetailsPage{
+		Document: &store.RSSDocumentDetail{
+			Incidents: []domain.Incident{{TitleDE: "Synthetic unnumbered release", BodyDE: "Synthetic body."}},
+			Outcomes:  []store.RSSIncidentOutcome{{IncidentID: 42, Status: "inserted"}},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	html := body.String()
+	if !strings.Contains(html, `class="font-bold">Synthetic unnumbered release</h4>`) || !strings.Contains(html, "Unnumbered incident · Database ID #42") {
+		t.Fatalf("unnumbered RSS details = %s", html)
+	}
+	if strings.Contains(html, `class="font-bold">. Synthetic`) || strings.Contains(html, "Incident  ·") {
+		t.Fatalf("unnumbered RSS details contain an empty number label: %s", html)
+	}
+}

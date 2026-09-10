@@ -44,7 +44,7 @@ func TestLiveMunichSource(t *testing.T) {
 
 func TestLiveKnownPageShapes(t *testing.T) {
 	if os.Getenv("MUNICHBRIEF_KNOWN_PAGE_TEST") != "1" {
-		t.Skip("set MUNICHBRIEF_KNOWN_PAGE_TEST=1 to contact the three known official pages")
+		t.Skip("set MUNICHBRIEF_KNOWN_PAGE_TEST=1 to contact the known official pages")
 	}
 	client := newLiveTestClient(t)
 	tests := []struct {
@@ -54,6 +54,7 @@ func TestLiveKnownPageShapes(t *testing.T) {
 		{articleID: "107252", wantCount: 7},
 		{articleID: "107292", wantCount: 8},
 		{articleID: "107230", wantCount: 1},
+		{articleID: "108358", wantCount: 1},
 	}
 	for _, test := range tests {
 		t.Run(test.articleID, func(t *testing.T) {
