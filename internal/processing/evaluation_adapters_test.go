@@ -157,6 +157,15 @@ func TestGemma4SpanishGuidanceCoversObservedGeneralFailures(t *testing.T) {
 	}
 }
 
+func TestGemma4ItalianGuidanceCoversObservedGeneralFailures(t *testing.T) {
+	guidance := gemma4LanguageGuidance["it"]
+	for _, required := range []string{"italiano standard naturale", "'Scheibe'", "'vetro' o 'finestrino'", "'Windschutzscheibe'", "non dedurre mai 'parabrezza'", "'um genau'", "'esattamente alle'", "mai 'circa'", "'gegen'", "orario approssimativo", "'befragte'", "'ha sentito' o 'ha intervistato'", "non 'ha interrogato'", "stato giuridico", "significato medico"} {
+		if !strings.Contains(guidance, required) {
+			t.Errorf("Italian guidance missing %q: %s", required, guidance)
+		}
+	}
+}
+
 func TestTowerPlusGuidanceCoversObservedGeneralFailures(t *testing.T) {
 	tests := map[string][]string{
 		"hi": {"no explanation or note", "केवल 'पुलिस के अनुसार' लिखना पर्याप्त नहीं है", "तथ्यात्मक रूप मत लिखो", "लगभग", "causal relationship", "वाहन की खिड़की", "relevant police station"},

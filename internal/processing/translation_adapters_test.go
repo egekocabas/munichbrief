@@ -76,12 +76,12 @@ func TestTranslationAdapterSupportMatchesNativeContracts(t *testing.T) {
 			t.Errorf("MADLAD-400 should support %s", code)
 		}
 	}
-	for _, code := range []string{"bs", "el", "hi", "hr", "ru", "es"} {
+	for _, code := range []string{"bs", "el", "hi", "hr", "ru", "es", "it"} {
 		if !TranslationAdapterSupports(TranslationAdapterGemma4, code) {
 			t.Errorf("Gemma 4 should support %s", code)
 		}
 	}
-	for _, code := range []string{"en", "tr", "it", "uk", "zh", "fr", "ro", "pl"} {
+	for _, code := range []string{"en", "tr", "uk", "zh", "fr", "ro", "pl"} {
 		if TranslationAdapterSupports(TranslationAdapterMADLAD400, code) || TranslationAdapterSupports(TranslationAdapterGemma4, code) {
 			t.Errorf("evaluation-only adapters should not be offered for %s", code)
 		}

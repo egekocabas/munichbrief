@@ -413,7 +413,8 @@ not native-language approval.
 | Spanish | HY-MT2 Q5_K_M | Two new focused revisions remained structural | E's scheduled bus was fixed; the full rerun then moved the incident from on Ingolstädter Straße to near it | Not completed | Unqualified after the two newly authorized HY revisions; no native approval | Prefer the safer Gemma evidence, but leave Spanish paused |
 | Spanish | Gemma 4 E4B UD-Q4_K_XL | Typed gate and generated final-prompt pairs all passed structure | Police-office and generic-glass fixes worked; final E omitted inpatient admission | Final A/B repeats passed; protocol stopped at E | Best observed candidate, but paused after the total four-revision budget; no native approval | Do not change the preferred model or enable the route |
 | French | HY-MT2 Q5_K_M | Final protocol: 8/8 pairs | 8/8 materially acceptable after glass and street-location revisions; minor redundant-name/article wording | Final A/B: stable pass | Acceptable on this sample; no native approval | Leading qualified candidate; seek native review |
-| Italian | HY-MT2 | Historical A-F: 6/6; third-guidance E/F: 2/2 structural | Revised E passes; revised F summary passes but title remains grammatically invalid; final prompt not run across full protocol | Not run | Potentially locked to HY-MT2; final user decision/native review still needed | Keep current candidate and caveat visible |
+| Italian | HY-MT2 Q5_K_M | Two new focused identities remained structural | F headline fixed, but expanded A repeat changed the street location to nearby | Not completed | Unqualified after two new HY revisions; no native approval | Prefer the safer Gemma evidence, but leave Italian paused |
+| Italian | Gemma 4 E4B UD-Q4_K_XL | Typed gates and all generated final-prompt fields passed structure | Glass and time fixes worked; final D changed continuing investigations into past/completed wording | Final A/B repeats passed; protocol stopped at D | Best observed candidate, but paused after the total four-revision budget; no native approval | Do not change the preferred model or enable the route |
 | Polish | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable; recurring grammar/spelling defects recorded | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Turkish A-C |
 | Turkish | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable under the user-selected time threshold; recurring precision/grammar caveats recorded | Revised A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Ukrainian |
 | Ukrainian | HY-MT2 | Final protocol: 8/8 pairs | 8/8 materially acceptable after two explicit user-approved extra rounds; minor grammar/style caveats recorded | Final A/B: 2/2 pass | Acceptable on this sample; no native approval | Stop; discuss before Chinese A-C |
@@ -1169,6 +1170,42 @@ No fluent or native approval is claimed.
 
 **Next proposed step: discuss whether to keep Italian paused or evaluate a
 different model before beginning Polish. No further live calls until agreed.**
+
+## Italian HY-MT2 and Gemma 4 requalification: 2026-09-10
+
+HY-MT2 Q5_K_M received two newly authorized prompt revisions. Revision 1
+replaced the accumulated English guidance with a concise Italian contract, but
+focused F still used the noun `fuga` as a finite verb. Revision 2 made the
+headline rule prominent and fixed F with `fugge`; its summary preserved the
+control, signals, collision, securing/arrest, and uncertain licence/alcohol/drug
+indications. Expansion then produced `in prossimità di Ingolstädter Straße` on
+A/2, changing an on-street event into a nearby event. HY-MT2 was therefore not
+qualified.
+
+Gemma 4 UD-Q4_K_XL passed baseline A and F, including typed placeholders and the
+finite F headline verb. Baseline B inferred a windshield from generic vehicle
+glass. Gemma revision 1 fixed B with `vetro`; its expansion changed exact 03:30
+to approximate `circa`. The final Gemma revision distinguished exact and
+approximate times and neutral questioning. Focused C then used `esattamente alle
+03:30`, `verso le 04:20`, and `ha sentito un testimone`.
+
+Under that final identity, A and B repeated stably and C replayed successfully.
+D preserved the incident sequence but rendered the continuing criminal-police
+investigation as `le indagini sono proseguite`, a past/completed formulation
+rather than `proseguono` or `sono in corso`:
+
+| Final Gemma pair | Structural | Assistant meaning/readability review |
+| --- | --- | --- |
+| A/1, A/2 | Pass | Material facts and approximate time stable; minor articles/witness wording |
+| B/1, B/2 | Pass | Generic `vetro`, allegation, uncertainty, no conviction, and presumption preserved |
+| C/1 | Pass | Exact/approximate times, speed, causality, examination, one neutral witness, negation, and `110` preserved |
+| D/1 | Pass | **Material failure:** ongoing investigation changed to past/completed wording |
+
+The run stopped at D because all four new revisions were exhausted; a started E
+title remains durable interrupted evidence and is not counted as a pair. Italian
+is **paused**. Gemma 4 is the best observed candidate in this round, but no
+identity completed eight acceptable pairs. No preferred model or route state
+changed, and no native approval is claimed.
 
 ## Polish A-C screening: 2026-09-08
 
