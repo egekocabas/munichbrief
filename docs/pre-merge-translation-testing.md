@@ -270,6 +270,14 @@ Hindi C lost the approximate nature of 04:20. Russian B again stated the alleged
 damage as fact, while Russian C also made 04:20 exact. Gemma 4 remains the
 leading new candidate for both languages; Tower+ is retained as the runner-up.
 
+Gemma revision 1 fixed allegation and examination handling on A across all five
+languages. It did not qualify a language yet: Bosnian and Croatian B called a
+suspect formally accused; Greek B contaminated the presumption-of-innocence term;
+Hindi A made the approximate 03:30 exact; and Russian's otherwise complete 8/8
+screen weakened explicit crash causality in F's headline. Revision 2 adds only
+the corresponding general legal-status, target-term, approximate-time, and
+causality/gender distinctions. Failed fixtures run first before any full rerun.
+
 ### Tournament fixture-A gate: 2026-09-09
 
 The baseline gate used the production queued-worker path, typed Gazetteer
