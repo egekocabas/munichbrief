@@ -65,6 +65,9 @@ func TestLabelledNativeAdaptersUseUserOnlyChatML(t *testing.T) {
 				if !strings.Contains(payload.Messages[0].Content, "German: Einsatz an der __MB_STREET_0001__") || !strings.Contains(payload.Messages[0].Content, "Preserve every placeholder matching") {
 					t.Fatalf("prompt = %q", payload.Messages[0].Content)
 				}
+				if test.name == "Gemma 4" && !strings.Contains(payload.Messages[0].Content, "navodno") {
+					t.Fatalf("Gemma 4 guidance missing from prompt = %q", payload.Messages[0].Content)
+				}
 				if payload.Options.Temperature != 0 || payload.Options.NumPredict != evaluationMaxOutputTokens || payload.Options.NumCtx != test.context {
 					t.Fatalf("generation options = %#v", payload.Options)
 				}

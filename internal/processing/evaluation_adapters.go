@@ -73,6 +73,13 @@ var (
 	towerInstructLanguageGuidance = map[string]string{
 		"ru": "Используй естественный русский язык. Немецкое 'soll ... haben' в полицейском сообщении никогда не означает 'должен был' и не устанавливает факт. Всегда передавай его по общей схеме 'По данным полиции, X предположительно совершил Y' либо 'X подозревается в том, что совершил Y'. Переводи 'Polizeieinsatz' только нейтрально как 'полицейская операция' или 'действия полиции', не как захват или рейд. Сохраняй отрицание, правовой статус, субъект, объект и причинность.",
 	}
+	gemma4LanguageGuidance = map[string]string{
+		"bs": "Use natural standard Bosnian. Preserve evidential and legal modality: German 'soll ... haben' reports an allegation and must use wording such as 'navodno' or 'sumnjiči se', never an established fact. Keep a medical examination distinct from treatment or aid.",
+		"el": "Use only natural standard Greek without words or characters from another script. Preserve evidential and legal modality: German 'soll ... haben' reports an allegation and should use wording such as 'φέρεται να', never an established fact. Keep a medical examination distinct from treatment or aid.",
+		"hi": "Use only natural standard Hindi in Devanagari. Preserve evidential and legal modality: German 'soll ... haben' reports an allegation and should use wording such as 'पर ... का आरोप है' or 'कथित तौर पर', never an established fact. Keep a medical examination distinct from treatment or aid.",
+		"hr": "Use only natural standard Croatian. Preserve evidential and legal modality: German 'soll ... haben' reports an allegation and must use wording such as 'navodno', never an established fact. Keep a medical examination distinct from treatment or aid.",
+		"ru": "Use only natural standard Russian. Preserve evidential and legal modality: German 'soll ... haben' reports an allegation and should use wording such as 'предположительно' or 'подозревается', never an established fact. Keep a medical examination distinct from treatment or aid, and use neutral wording for police operations.",
+	}
 )
 
 type evaluationNativeAdapter struct {
@@ -135,7 +142,7 @@ func NewTowerInstructNativeAdapter(baseURL, model, targetCode string, timeout ti
 }
 
 func NewGemma4NativeAdapter(baseURL, model, targetCode string, timeout time.Duration, contextSize int, baseClient *http.Client) (*evaluationNativeAdapter, error) {
-	return newEvaluationNativeAdapter(baseURL, model, targetCode, "Gemma 4", gemma4LanguageNames, nil, false, false, timeout, contextSize, gemma4ContextLimit, baseClient)
+	return newEvaluationNativeAdapter(baseURL, model, targetCode, "Gemma 4", gemma4LanguageNames, gemma4LanguageGuidance, false, false, timeout, contextSize, gemma4ContextLimit, baseClient)
 }
 
 type madlad400NativeAdapter struct {

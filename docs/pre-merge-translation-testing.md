@@ -239,6 +239,14 @@ eligible for a focused general prompt revision after the Tower+ gate and
 shortlist comparison. Evidence is retained in
 `readiness-gemma4-udq4kxl-v1`.
 
+The unchanged Gemma B/C screen kept placeholders intact. C preserved material
+facts in all five languages; Bosnian C exposed a validator false positive for
+the ordinary date form `29. avgusta`, now covered by a regression test. B again
+lost allegation framing in every language; Greek mixed in a French word and
+Croatian a Polish character, with additional grammar errors. The first focused
+revision therefore adds only general target-language, allegation, and medical-
+examination guidance and must re-pass A/B before expansion.
+
 #### Tower+ Q3_K_M fixture-A gate at 2048 context: 2026-09-10
 
 The Q3_K_M artifact loaded and completed all four fields without an OOM or
@@ -255,6 +263,12 @@ runtime. Ollama reported Gemma 2, 9.24B parameters, and digest
 Q3_K_S was not run because Q3_K_M had no confirmed memory failure. Both
 pairings remain eligible for a focused general prompt revision. Evidence is
 retained in `readiness-towerplus-q3km-2048-v1`.
+
+The unchanged Tower+ B/C screen also preserved all placeholders. Hindi B kept
+the allegation framing but translated the vehicle window as a bottle/vial, and
+Hindi C lost the approximate nature of 04:20. Russian B again stated the alleged
+damage as fact, while Russian C also made 04:20 exact. Gemma 4 remains the
+leading new candidate for both languages; Tower+ is retained as the runner-up.
 
 ### Tournament fixture-A gate: 2026-09-09
 
