@@ -331,7 +331,6 @@ var (
 		`जनवरी|फ़रवरी|मार्च|अप्रैल|मई|जून|जुलाई|अगस्त|सितंबर|अक्टूबर|नवंबर|दिसंबर|` +
 		`enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|` +
 		`janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre|` +
-		`ιανουαρίου|φεβρουαρίου|μαρτίου|απριλίου|μαΐου|ιουνίου|ιουλίου|αυγούστου|σεπτεμβρίου|οκτωβρίου|νοεμβρίου|δεκεμβρίου|` +
 		`ianuarie|februarie|martie|aprilie|mai|iunie|iulie|august|septembrie|octombrie|noiembrie|decembrie|` +
 		`stycznia|lutego|marca|kwietnia|maja|czerwca|lipca|sierpnia|września|października|listopada|grudnia|` +
 		`января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря` +

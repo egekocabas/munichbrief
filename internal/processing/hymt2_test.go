@@ -49,7 +49,8 @@ func TestHyMT2NativeAdapterUsesOfficialContract(t *testing.T) {
 		_ = json.NewEncoder(&response).Encode(chatResponse{Model: "hy-mt2:test", Done: true, Message: chatMessage{Role: "assistant", Content: "在 <KEEP>__MB_STREET_0001__</KEEP> 的行动"}})
 		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(response.Bytes()))}, nil
 	})
-	adapter, err := NewHyMT2NativeAdapter("http://ollama.test:11434", "hy-mt2:test", "zh", time.Second, 8192, &http.Client{Transport: transport})
+	// A larger global context must not change the qualified HY-MT2 request.
+	adapter, err := NewHyMT2NativeAdapter("http://ollama.test:11434", "hy-mt2:test", "zh", time.Second, 32768, &http.Client{Transport: transport})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -136,8 +136,52 @@ func TestSourceFailureMarksLaterSourcesNotRun(t *testing.T) {
 		t.Fatal(err)
 	}
 	details, err := store.RefreshDetails(ctx, runID)
-	if err != nil || details.Sources[0].Status != "failed" || details.Sources[1].Status != "not_run" || details.Run.Trigger != string(RefreshTriggerRetry) {
+	if err != nil || details.Sources[0].Status != "failed" || details.Sources[1].Status != "not_run" || details.Run.Trigger != string(RefreshTriggerRetry) || details.Run.SourcesCompleted != 2 {
 		t.Fatalf("failure details = %#v, %v", details, err)
+	}
+}
+
+func TestCompletedSourceUpdatesHealthBeforeRunActivation(t *testing.T) {
+	ctx := context.Background()
+	store, err := Open(ctx, filepath.Join(t.TempDir(), "gazetteer.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	sources := []SourceDefinition{
+		{Key: "one", DisplayName: "One", URL: "https://example.test/one", License: "test", Attribution: "test"},
+		{Key: "two", DisplayName: "Two", URL: "https://example.test/two", License: "test", Attribution: "test"},
+	}
+	failedRun, err := store.BeginRefresh(ctx, RefreshTriggerScheduled, sources, time.Now(), time.Now().Add(time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.StartRefreshSource(ctx, failedRun, "one", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.FailRefresh(ctx, failedRun, &sources[0], "download", SourceFetchDiagnostic{}, errors.New("timeout"), time.Now()); err != nil {
+		t.Fatal(err)
+	}
+
+	succeededAt := time.Now().Add(time.Minute).UTC()
+	activeRun, err := store.BeginRefresh(ctx, RefreshTriggerRetry, sources, succeededAt, succeededAt.Add(time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.StartRefreshSource(ctx, activeRun, "one", succeededAt); err != nil {
+		t.Fatal(err)
+	}
+	snapshot := SourceSnapshot{Definition: sources[0], ContentHash: "hash", FetchedAt: succeededAt, Entries: []Entry{{Name: "Schwabing", Kind: KindNeighbourhood}}}
+	if err := store.CompleteRefreshSource(ctx, activeRun, snapshot, false, SourceFetchDiagnostic{RowCount: 1}, succeededAt); err != nil {
+		t.Fatal(err)
+	}
+
+	health, err := store.AdminSnapshot(ctx)
+	if err != nil || len(health.Sources) != 2 {
+		t.Fatalf("source health = %#v, %v", health.Sources, err)
+	}
+	if health.Sources[0].LastSuccess.IsZero() || !health.Sources[0].LastSuccess.Equal(succeededAt) || health.Sources[0].ConsecutiveFailures != 0 || health.Sources[0].LastError != "" {
+		t.Fatalf("completed source health = %#v", health.Sources[0])
 	}
 }
 

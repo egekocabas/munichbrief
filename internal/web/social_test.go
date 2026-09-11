@@ -108,7 +108,7 @@ func TestSocialCardFontCoversReaderAlphabets(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer closeFace()
-	const representativeCharacters = "çğıİöşüčćđšžàáâèéêìíîòóôùúûüñœÀÈÉÌÍÒÓÙÚăâîșțĂÂÎȘȚąćęłńóśźżĄĆĘŁŃÓŚŹŻΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩάέήίόύώϊϋΐΰАБВГҐДЕЁЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгґдеёєжзиіїйклмнопрстуфхцчшщъыьэюя"
+	const representativeCharacters = "çğıİöşüčćđšžàáâèéêìíîòóôùúûüñœÀÈÉÌÍÒÓÙÚăâîșțĂÂÎȘȚąćęłńóśźżĄĆĘŁŃÓŚŹŻАБВГҐДЕЁЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгґдеёєжзиіїйклмнопрстуфхцчшщъыьэюя"
 	for _, character := range representativeCharacters {
 		if _, ok := face.GlyphAdvance(character); !ok {
 			t.Errorf("embedded social font does not cover %q (U+%04X)", character, character)

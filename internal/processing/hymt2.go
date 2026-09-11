@@ -11,7 +11,10 @@ import (
 	langregistry "github.com/egekocabas/munichbrief/internal/languages"
 )
 
-const hyMT2MaximumOutputTokens = 4096
+const (
+	hyMT2ContextLimit        = 8192
+	hyMT2MaximumOutputTokens = 4096
+)
 
 var hyMT2LanguageNames = map[string]string{
 	"zh": "Chinese", "en": "English", "fr": "French", "pt": "Portuguese",
@@ -67,6 +70,9 @@ func NewHyMT2NativeAdapter(baseURL, model, targetCode string, timeout time.Durat
 	}
 	if !targetSupported {
 		return nil, fmt.Errorf("Hy-MT2 does not officially support target language %q", target.Code)
+	}
+	if contextSize <= 0 || contextSize > hyMT2ContextLimit {
+		contextSize = hyMT2ContextLimit
 	}
 	client, err := NewOllamaClient(baseURL, model, timeout, contextSize, baseClient)
 	if err != nil {
