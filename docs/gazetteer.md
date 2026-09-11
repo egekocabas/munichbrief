@@ -74,10 +74,15 @@ An abandoned running attempt is marked interrupted when the database next
 opens; already completed source results remain intact and untouched sources are
 marked not reached. Queries remain paginated or aggregated.
 
-The page is read-only. Use the CLI for a deliberate refresh and manage
-deterministic overrides through a database migration or reviewed operational
-procedure. Wide source and history tables use the wider admin layout and become
-horizontally scrollable only when their columns cannot fit the viewport.
+The page provides a confirmed **Refresh now** action for authenticated
+operators. It queues an asynchronous manual attempt through the same serialized
+manager used by startup and scheduled refreshes; duplicate clicks do not create
+an unbounded backlog, and the currently active generation remains in service
+until the complete candidate succeeds. The CLI remains available for a
+synchronous deliberate refresh. Manage deterministic overrides through a
+database migration or reviewed operational procedure. Wide source and history
+tables use the wider admin layout and become horizontally scrollable only when
+their columns cannot fit the viewport.
 
 ## Matching contract
 

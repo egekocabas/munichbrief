@@ -35,6 +35,7 @@ func TestAdminIsDisabledByDefault(t *testing.T) {
 		{method: http.MethodGet, path: "/admin/rss-history/1"},
 		{method: http.MethodGet, path: "/admin/rss-history/1/documents/1?fragment=1"},
 		{method: http.MethodGet, path: "/admin/gazetteer"},
+		{method: http.MethodPost, path: "/api/admin/gazetteer/refresh"},
 		{method: http.MethodGet, path: "/admin/history"},
 		{method: http.MethodPost, path: "/api/admin/ai/process-all-now"},
 		{method: http.MethodPost, path: "/api/admin/ai/translations/process"},
@@ -73,14 +74,14 @@ func TestAdminGazetteerShowsBoundedOperationalStatus(t *testing.T) {
 	database := fixtureStore(t)
 	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review", AdminEnabled: true,
-		Processor: fakeProcessingRequester{database: database}, Gazetteer: gazetteerStore,
+		Processor: fakeProcessingRequester{database: database}, Gazetteer: gazetteerStore, GazetteerRefresher: &fakeGazetteerRefresher{result: gazetteer.RefreshRequestAccepted},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	response := httptest.NewRecorder()
 	server.Handler().ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/admin/gazetteer", nil))
-	for _, expected := range []string{"Gazetteer operations", "Place-name gazetteer", "Ready", "1 protected names", "Official Munich places", "City of Munich", "aggregate-hash", "Source payloads and the complete name list are intentionally not rendered", "Stale but operational", "Refresh history", "http_status", "gazetteer-history-table", `role="region"`, `tabindex="0"`, `data-gazetteer-history`, "admin-history-shell", "upstream &lt;script&gt;alert(1)&lt;/script&gt; failed"} {
+	for _, expected := range []string{"Gazetteer operations", "Place-name gazetteer", "Ready", "1 protected names", "Official Munich places", "City of Munich", "aggregate-hash", "Source payloads and the complete name list are intentionally not rendered", "Stale but operational", "Refresh history", "http_status", "gazetteer-history-table", `role="region"`, `tabindex="0"`, `data-gazetteer-history`, "admin-history-shell", "upstream &lt;script&gt;alert(1)&lt;/script&gt; failed", "/api/admin/gazetteer/refresh", "Refresh now", `id="processing-confirmation"`} {
 		if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), expected) {
 			t.Errorf("gazetteer admin = %d, missing %q", response.Code, expected)
 		}
@@ -137,6 +138,90 @@ func TestAdminGazetteerShowsBoundedOperationalStatus(t *testing.T) {
 	adminTestServer(t, database, nil).Handler().ServeHTTP(disabledDetails, httptest.NewRequest(http.MethodGet, "/admin/gazetteer/1", nil))
 	if disabledDetails.Code != http.StatusNotFound {
 		t.Fatalf("disabled gazetteer details = %d", disabledDetails.Code)
+	}
+}
+
+type fakeGazetteerRefresher struct {
+	result gazetteer.RefreshRequestResult
+	calls  int
+}
+
+func (f *fakeGazetteerRefresher) RequestRefresh() gazetteer.RefreshRequestResult {
+	f.calls++
+	return f.result
+}
+
+func TestAdminGazetteerRequestsManualRefresh(t *testing.T) {
+	ctx := context.Background()
+	gazetteerStore, err := gazetteer.Open(ctx, filepath.Join(t.TempDir(), "gazetteer.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { gazetteerStore.Close() })
+	database := fixtureStore(t)
+	refresher := &fakeGazetteerRefresher{result: gazetteer.RefreshRequestAccepted}
+	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{PageSize: 20, SourceMode: "fixture", PresentationMode: "review", AdminEnabled: true, Processor: fakeProcessingRequester{database: database}, Gazetteer: gazetteerStore, GazetteerRefresher: refresher})
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := server.Handler()
+
+	accepted := httptest.NewRecorder()
+	handler.ServeHTTP(accepted, formRequest(http.MethodPost, "/api/admin/gazetteer/refresh", "confirmed=true"))
+	if accepted.Code != http.StatusSeeOther || accepted.Header().Get("Location") != "/admin/gazetteer?notice=refresh_requested" || refresher.calls != 1 {
+		t.Fatalf("accepted refresh = %d/%q calls=%d", accepted.Code, accepted.Header().Get("Location"), refresher.calls)
+	}
+	refresher.result = gazetteer.RefreshRequestRunning
+	running := httptest.NewRecorder()
+	handler.ServeHTTP(running, formRequest(http.MethodPost, "/api/admin/gazetteer/refresh", "confirmed=true"))
+	if running.Code != http.StatusSeeOther || running.Header().Get("Location") != "/admin/gazetteer?notice=refresh_running" {
+		t.Fatalf("running refresh = %d/%q", running.Code, running.Header().Get("Location"))
+	}
+	refresher.result = gazetteer.RefreshRequestPending
+	pending := httptest.NewRecorder()
+	handler.ServeHTTP(pending, formRequest(http.MethodPost, "/api/admin/gazetteer/refresh", "confirmed=true"))
+	if pending.Code != http.StatusSeeOther || pending.Header().Get("Location") != "/admin/gazetteer?notice=refresh_pending" {
+		t.Fatalf("pending refresh = %d/%q", pending.Code, pending.Header().Get("Location"))
+	}
+
+	for _, test := range []struct {
+		name    string
+		request *http.Request
+		want    int
+	}{
+		{name: "unconfirmed", request: formRequest(http.MethodPost, "/api/admin/gazetteer/refresh", "confirmed=false"), want: http.StatusBadRequest},
+		{name: "non form", request: httptest.NewRequest(http.MethodPost, "/api/admin/gazetteer/refresh", strings.NewReader("confirmed=true")), want: http.StatusUnsupportedMediaType},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, test.request)
+			if response.Code != test.want {
+				t.Fatalf("status = %d, want %d", response.Code, test.want)
+			}
+		})
+	}
+	crossSite := formRequest(http.MethodPost, "/api/admin/gazetteer/refresh", "confirmed=true")
+	crossSite.Header.Set("Sec-Fetch-Site", "cross-site")
+	blocked := httptest.NewRecorder()
+	handler.ServeHTTP(blocked, crossSite)
+	if blocked.Code != http.StatusForbidden {
+		t.Fatalf("cross-site status = %d", blocked.Code)
+	}
+	oversized := httptest.NewRecorder()
+	handler.ServeHTTP(oversized, formRequest(http.MethodPost, "/api/admin/gazetteer/refresh", "confirmed=true&"+strings.Repeat("padding=x&", 600)))
+	if oversized.Code != http.StatusBadRequest {
+		t.Fatalf("oversized form status = %d", oversized.Code)
+	}
+	disabled := httptest.NewRecorder()
+	adminTestServer(t, database, nil).Handler().ServeHTTP(disabled, formRequest(http.MethodPost, "/api/admin/gazetteer/refresh", "confirmed=true"))
+	if disabled.Code != http.StatusServiceUnavailable {
+		t.Fatalf("disabled refresh status = %d", disabled.Code)
+	}
+
+	notice := httptest.NewRecorder()
+	handler.ServeHTTP(notice, httptest.NewRequest(http.MethodGet, "/admin/gazetteer?notice=refresh_running", nil))
+	if notice.Code != http.StatusOK || !strings.Contains(notice.Body.String(), "already running") {
+		t.Fatalf("refresh notice = %d/%q", notice.Code, notice.Body.String())
 	}
 }
 

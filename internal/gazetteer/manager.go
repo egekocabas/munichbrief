@@ -26,17 +26,29 @@ type Observer interface {
 }
 
 type Manager struct {
-	store     *Store
-	fetcher   *Fetcher
-	sources   []SourceDefinition
-	interval  time.Duration
-	clock     func() time.Time
-	logger    *slog.Logger
-	observer  Observer
-	matcher   atomic.Pointer[Matcher]
-	ready     atomic.Bool
-	refreshMu sync.Mutex
+	store          *Store
+	fetcher        *Fetcher
+	sources        []SourceDefinition
+	interval       time.Duration
+	clock          func() time.Time
+	logger         *slog.Logger
+	observer       Observer
+	matcher        atomic.Pointer[Matcher]
+	ready          atomic.Bool
+	refreshing     atomic.Bool
+	manualRequests chan struct{}
+	refreshMu      sync.Mutex
 }
+
+// RefreshRequestResult describes whether a manual refresh was queued. Requests
+// are coalesced so the admin action cannot build an unbounded refresh backlog.
+type RefreshRequestResult string
+
+const (
+	RefreshRequestAccepted RefreshRequestResult = "accepted"
+	RefreshRequestRunning  RefreshRequestResult = "running"
+	RefreshRequestPending  RefreshRequestResult = "pending"
+)
 
 func NewManager(ctx context.Context, store *Store, fetcher *Fetcher, sources []SourceDefinition, interval time.Duration, observer Observer, logger *slog.Logger) (*Manager, error) {
 	if store == nil || fetcher == nil || len(sources) == 0 || interval < time.Hour {
@@ -48,7 +60,7 @@ func NewManager(ctx context.Context, store *Store, fetcher *Fetcher, sources []S
 	if err := store.recoverInterruptedRefreshes(ctx, time.Now()); err != nil {
 		return nil, fmt.Errorf("recover interrupted gazetteer refreshes: %w", err)
 	}
-	manager := &Manager{store: store, fetcher: fetcher, sources: append([]SourceDefinition(nil), sources...), interval: interval, clock: time.Now, observer: observer, logger: logger}
+	manager := &Manager{store: store, fetcher: fetcher, sources: append([]SourceDefinition(nil), sources...), interval: interval, clock: time.Now, observer: observer, logger: logger, manualRequests: make(chan struct{}, 1)}
 	entries, err := store.ActiveEntries(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("load active gazetteer: %w", err)
@@ -85,9 +97,25 @@ func (m *Manager) Refresh(ctx context.Context) (RefreshResult, error) {
 	return m.refresh(ctx, RefreshTriggerManual)
 }
 
+// RequestRefresh asks the manager's background loop to run a manual refresh.
+// It returns immediately; an active or already queued refresh is not duplicated.
+func (m *Manager) RequestRefresh() RefreshRequestResult {
+	if m == nil || m.refreshing.Load() {
+		return RefreshRequestRunning
+	}
+	select {
+	case m.manualRequests <- struct{}{}:
+		return RefreshRequestAccepted
+	default:
+		return RefreshRequestPending
+	}
+}
+
 func (m *Manager) refresh(ctx context.Context, trigger RefreshTrigger) (RefreshResult, error) {
 	m.refreshMu.Lock()
 	defer m.refreshMu.Unlock()
+	m.refreshing.Store(true)
+	defer m.refreshing.Store(false)
 	started := m.clock()
 	succeeded := false
 	defer func() {
@@ -163,20 +191,28 @@ func (m *Manager) Run(ctx context.Context) {
 	failures := 0
 	first := true
 	for {
+		trigger := RefreshTriggerScheduled
+		if first {
+			trigger = RefreshTriggerStartup
+		} else if failures > 0 {
+			trigger = RefreshTriggerRetry
+		}
 		if delay > 0 {
 			timer := time.NewTimer(delay)
 			select {
 			case <-ctx.Done():
 				timer.Stop()
 				return
+			case <-m.manualRequests:
+				if !timer.Stop() {
+					select {
+					case <-timer.C:
+					default:
+					}
+				}
+				trigger = RefreshTriggerManual
 			case <-timer.C:
 			}
-		}
-		trigger := RefreshTriggerScheduled
-		if first {
-			trigger = RefreshTriggerStartup
-		} else if failures > 0 {
-			trigger = RefreshTriggerRetry
 		}
 		first = false
 		_, err := m.refresh(ctx, trigger)

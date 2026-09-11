@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -16,7 +17,7 @@ func (s *Server) adminGazetteer(response http.ResponseWriter, request *http.Requ
 		http.Error(response, "invalid gazetteer history page", http.StatusBadRequest)
 		return
 	}
-	data := adminGazetteerPage{Enabled: s.options.Gazetteer != nil, UpdatedAt: time.Now().In(s.location)}
+	data := adminGazetteerPage{Enabled: s.options.Gazetteer != nil, CanRefresh: s.options.GazetteerRefresher != nil, UpdatedAt: time.Now().In(s.location), Notice: gazetteerNotice(request.URL.Query())}
 	if s.options.Gazetteer != nil {
 		snapshot, err := s.options.Gazetteer.AdminSnapshot(request.Context())
 		if err != nil {
@@ -51,13 +52,60 @@ func (s *Server) adminGazetteer(response http.ResponseWriter, request *http.Requ
 }
 
 type adminGazetteerPage struct {
-	Enabled   bool
-	Ready     bool
-	Snapshot  gazetteer.AdminSnapshot
-	UpdatedAt time.Time
-	History   gazetteer.RefreshHistoryPage
-	NewerURL  string
-	OlderURL  string
+	Enabled    bool
+	CanRefresh bool
+	Ready      bool
+	Notice     string
+	Snapshot   gazetteer.AdminSnapshot
+	UpdatedAt  time.Time
+	History    gazetteer.RefreshHistoryPage
+	NewerURL   string
+	OlderURL   string
+}
+
+func gazetteerNotice(query url.Values) string {
+	switch query.Get("notice") {
+	case "refresh_requested":
+		return "Gazetteer refresh requested. This page will show source progress as it is recorded."
+	case "refresh_running":
+		return "A Gazetteer refresh is already running; no duplicate refresh was queued."
+	case "refresh_pending":
+		return "A manual Gazetteer refresh is already queued; no duplicate refresh was added."
+	default:
+		return ""
+	}
+}
+
+func (s *Server) refreshGazetteer(response http.ResponseWriter, request *http.Request) {
+	if !validAdminMutation(request) {
+		http.Error(response, "cross-site request blocked", http.StatusForbidden)
+		return
+	}
+	if !isFormPost(request) {
+		http.Error(response, "form content type required", http.StatusUnsupportedMediaType)
+		return
+	}
+	request.Body = http.MaxBytesReader(response, request.Body, 4096)
+	if err := request.ParseForm(); err != nil {
+		http.Error(response, "invalid form", http.StatusBadRequest)
+		return
+	}
+	if request.PostForm.Get("confirmed") != "true" {
+		http.Error(response, "gazetteer refresh confirmation is required", http.StatusBadRequest)
+		return
+	}
+	if s.options.Gazetteer == nil || s.options.GazetteerRefresher == nil {
+		http.Error(response, "gazetteer refresh is disabled", http.StatusServiceUnavailable)
+		return
+	}
+	notice := "refresh_requested"
+	switch s.options.GazetteerRefresher.RequestRefresh() {
+	case gazetteer.RefreshRequestRunning:
+		notice = "refresh_running"
+	case gazetteer.RefreshRequestPending:
+		notice = "refresh_pending"
+	}
+	http.Redirect(response, request, "/admin/gazetteer?notice="+notice, http.StatusSeeOther)
 }
 
 func gazetteerHistoryURL(page int) string {

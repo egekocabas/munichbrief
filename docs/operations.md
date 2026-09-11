@@ -182,8 +182,12 @@ reached. The newest 500 completed attempts and every running attempt are
 retained in the rebuildable Gazetteer database. Diagnostics are limited to 2
 KiB and never include response bodies, downloaded place-name payloads,
 credentials or incident text. It also shows bounded source provenance,
-retained generations, and overrides, but never the complete name set. The view
-is read-only; use `munichbrief gazetteer refresh` for a manual attempt.
+retained generations, and overrides, but never the complete name set. An
+authenticated operator can request a refresh from the page. The request is
+asynchronous, uses the same serialized manager and durable history as scheduled
+refreshes, and coalesces duplicate requests while work is running or queued.
+The `munichbrief gazetteer refresh` command remains available for a synchronous
+one-shot operational attempt.
 
 `review` presentation mode displays stored German source text and processing
 states and is intended for local fixture development. `public` mode fails closed: it

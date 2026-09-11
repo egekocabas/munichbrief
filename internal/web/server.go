@@ -123,19 +123,24 @@ type GazetteerReader interface {
 	RefreshDetails(context.Context, int64) (gazetteer.RefreshRunDetails, error)
 }
 
+type GazetteerRefresher interface {
+	RequestRefresh() gazetteer.RefreshRequestResult
+}
+
 // Options controls presentation and access behavior for a Server.
 // PublicHosts identifies requests that must never reach review-only routes.
 type Options struct {
-	PageSize         int
-	SourceMode       string
-	PresentationMode string
-	SecureCookies    bool
-	AdminEnabled     bool
-	PublicHosts      []string
-	CanonicalOrigin  string
-	Processor        ProcessingRequester
-	Gazetteer        GazetteerReader
-	Build            BuildInfo
+	PageSize           int
+	SourceMode         string
+	PresentationMode   string
+	SecureCookies      bool
+	AdminEnabled       bool
+	PublicHosts        []string
+	CanonicalOrigin    string
+	Processor          ProcessingRequester
+	Gazetteer          GazetteerReader
+	GazetteerRefresher GazetteerRefresher
+	Build              BuildInfo
 }
 
 // BuildInfo identifies the source revision and time used for a deployed build.
@@ -308,6 +313,7 @@ func (s *Server) Handler() http.Handler {
 		mux.HandleFunc("GET /admin/rss-history/{id}/documents/{document}", s.adminRSSDetails)
 		mux.HandleFunc("GET /admin/gazetteer", s.adminGazetteer)
 		mux.HandleFunc("GET /admin/gazetteer/{id}", s.adminGazetteerDetails)
+		mux.HandleFunc("POST /api/admin/gazetteer/refresh", s.refreshGazetteer)
 		mux.HandleFunc("GET /admin/history", s.adminHistory)
 		mux.HandleFunc("GET /api/admin/ai/status", s.pipelineStatus)
 		mux.HandleFunc("POST /api/admin/ai/process-now", s.processIncidentNow)

@@ -193,8 +193,9 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 		PageSize: cfg.PageSize, SourceMode: cfg.SourceMode, PresentationMode: cfg.PresentationMode,
 		SecureCookies: cfg.SecureCookies,
 		AdminEnabled:  cfg.AdminEnabled, PublicHosts: cfg.PublicHosts, CanonicalOrigin: cfg.CanonicalOrigin, Processor: processor,
-		Gazetteer: gazetteerStore,
-		Build:     build,
+		Gazetteer:          gazetteerStore,
+		GazetteerRefresher: gazetteerManager,
+		Build:              build,
 	})
 	if err != nil {
 		return err
