@@ -119,6 +119,8 @@ type ProcessingRequester interface {
 
 type GazetteerReader interface {
 	AdminSnapshot(context.Context) (gazetteer.AdminSnapshot, error)
+	RefreshHistory(context.Context, int) (gazetteer.RefreshHistoryPage, error)
+	RefreshDetails(context.Context, int64) (gazetteer.RefreshRunDetails, error)
 }
 
 // Options controls presentation and access behavior for a Server.
@@ -305,6 +307,7 @@ func (s *Server) Handler() http.Handler {
 		mux.HandleFunc("GET /admin/rss-history/{id}", s.adminRSSDetails)
 		mux.HandleFunc("GET /admin/rss-history/{id}/documents/{document}", s.adminRSSDetails)
 		mux.HandleFunc("GET /admin/gazetteer", s.adminGazetteer)
+		mux.HandleFunc("GET /admin/gazetteer/{id}", s.adminGazetteerDetails)
 		mux.HandleFunc("GET /admin/history", s.adminHistory)
 		mux.HandleFunc("GET /api/admin/ai/status", s.pipelineStatus)
 		mux.HandleFunc("POST /api/admin/ai/process-now", s.processIncidentNow)

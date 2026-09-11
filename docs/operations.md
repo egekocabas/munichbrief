@@ -173,8 +173,17 @@ without downloaded payloads. The fixed sources are Landeshauptstadt München –
 GeodatenService (`dl-de/by-2.0`), GeoNames (`CC BY 4.0`), and OpenStreetMap
 contributors (`ODbL 1.0`). Public HTTPS egress must remain enabled for refresh.
 The protected `/admin/gazetteer` view shows the same operational state plus
-bounded source provenance, retained generations, and overrides; it never shows
-the complete name set or source payloads.
+the latest health diagnosis, active entry counts by type, paginated refresh
+history, and per-source outcomes. Failed attempts show the exact sanitized
+stage and public-source diagnostic while confirming whether the previous valid
+generation remains active. Startup recovers an abandoned attempt as
+`interrupted`, preserving completed sources and marking sources that were never
+reached. The newest 500 completed attempts and every running attempt are
+retained in the rebuildable Gazetteer database. Diagnostics are limited to 2
+KiB and never include response bodies, downloaded place-name payloads,
+credentials or incident text. It also shows bounded source provenance,
+retained generations, and overrides, but never the complete name set. The view
+is read-only; use `munichbrief gazetteer refresh` for a manual attempt.
 
 `review` presentation mode displays stored German source text and processing
 states and is intended for local fixture development. `public` mode fails closed: it

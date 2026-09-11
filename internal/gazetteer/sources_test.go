@@ -147,15 +147,15 @@ func TestFetcherRejectsOversizedAndImplausibleResponses(t *testing.T) {
 	})}
 	fetcher, _ := NewFetcher(client, "MunichBrief/test", store)
 	definition := SourceDefinition{Key: "bounded", DisplayName: "Bounded", URL: "https://example.test/source", License: "test", Attribution: "test", MinimumRows: 1, MaximumRows: 2, MaximumSize: 4, Parse: func([]byte) ([]Entry, error) { return nil, nil }}
-	if _, _, err := fetcher.Fetch(ctx, definition); err == nil || !strings.Contains(err.Error(), "exceeds") {
-		t.Fatalf("oversized fetch error = %v", err)
+	if _, _, diagnostic, err := fetcher.FetchWithDiagnostics(ctx, definition); err == nil || !strings.Contains(err.Error(), "exceeds") || diagnostic.FailureStage != "response_size" || diagnostic.ResponseSize != 5 || diagnostic.HTTPStatus != http.StatusOK {
+		t.Fatalf("oversized fetch diagnostic = %#v, error = %v", diagnostic, err)
 	}
 	client.Transport = roundTripFunc(func(*http.Request) (*http.Response, error) {
 		return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader("{}"))}, nil
 	})
 	definition.MaximumSize = 10
-	if _, _, err := fetcher.Fetch(ctx, definition); err == nil || !strings.Contains(err.Error(), "outside safety range") {
-		t.Fatalf("implausible row count error = %v", err)
+	if _, _, diagnostic, err := fetcher.FetchWithDiagnostics(ctx, definition); err == nil || !strings.Contains(err.Error(), "outside safety range") || diagnostic.FailureStage != "row_count" || diagnostic.RowCount != 0 {
+		t.Fatalf("implausible row count diagnostic = %#v, error = %v", diagnostic, err)
 	}
 }
 

@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -59,6 +60,16 @@ func TestAdminGazetteerShowsBoundedOperationalStatus(t *testing.T) {
 	if _, changed, err := gazetteerStore.Activate(ctx, []gazetteer.SourceSnapshot{{Definition: definition, ContentHash: "source-hash", FetchedAt: now, Entries: []gazetteer.Entry{entry}}}, []gazetteer.Entry{entry}, "aggregate-hash", now, now.Add(24*time.Hour)); err != nil || !changed {
 		t.Fatalf("activate gazetteer = changed:%v err:%v", changed, err)
 	}
+	runID, err := gazetteerStore.BeginRefresh(ctx, gazetteer.RefreshTriggerScheduled, []gazetteer.SourceDefinition{definition}, now.Add(time.Hour), now.Add(25*time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := gazetteerStore.StartRefreshSource(ctx, runID, definition.Key, now.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if err := gazetteerStore.FailRefresh(ctx, runID, &definition, "http_status", gazetteer.SourceFetchDiagnostic{HTTPStatus: http.StatusBadGateway, ResponseSize: 17}, errors.New("upstream <script>alert(1)</script> failed"), now.Add(time.Hour+time.Second)); err != nil {
+		t.Fatal(err)
+	}
 	database := fixtureStore(t)
 	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "review", AdminEnabled: true,
@@ -69,13 +80,49 @@ func TestAdminGazetteerShowsBoundedOperationalStatus(t *testing.T) {
 	}
 	response := httptest.NewRecorder()
 	server.Handler().ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/admin/gazetteer", nil))
-	for _, expected := range []string{"Gazetteer operations", "Place-name gazetteer", "Ready", "1 protected names", "Official Munich places", "City of Munich", "aggregate-hash", "Source payloads and the complete name list are intentionally not rendered"} {
+	for _, expected := range []string{"Gazetteer operations", "Place-name gazetteer", "Ready", "1 protected names", "Official Munich places", "City of Munich", "aggregate-hash", "Source payloads and the complete name list are intentionally not rendered", "Stale but operational", "Refresh history", "http_status", "gazetteer-history-table", `role="region"`, `tabindex="0"`, `data-gazetteer-history`, "admin-history-shell", "upstream &lt;script&gt;alert(1)&lt;/script&gt; failed"} {
 		if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), expected) {
 			t.Errorf("gazetteer admin = %d, missing %q", response.Code, expected)
 		}
 	}
 	if strings.Contains(response.Body.String(), "Schwabing") {
 		t.Error("gazetteer admin rendered the active name set")
+	}
+	if strings.Contains(response.Body.String(), "upstream <script>") {
+		t.Fatal("gazetteer diagnostic was not HTML escaped")
+	}
+
+	details := httptest.NewRecorder()
+	server.Handler().ServeHTTP(details, httptest.NewRequest(http.MethodGet, "/admin/gazetteer/"+strconv.FormatInt(runID, 10), nil))
+	for _, expected := range []string{"Gazetteer refresh details", "HTTP 502", "expected 0–0", "Data licence · City of Munich", "upstream &lt;script&gt;alert(1)&lt;/script&gt; failed", "Attempted source URL"} {
+		if details.Code != http.StatusOK || !strings.Contains(details.Body.String(), expected) {
+			t.Errorf("gazetteer details = %d, missing %q", details.Code, expected)
+		}
+	}
+	fragment := httptest.NewRecorder()
+	server.Handler().ServeHTTP(fragment, httptest.NewRequest(http.MethodGet, "/admin/gazetteer/"+strconv.FormatInt(runID, 10)+"?fragment=1", nil))
+	if fragment.Code != http.StatusOK || strings.Contains(fragment.Body.String(), "<!doctype html>") || !strings.Contains(fragment.Body.String(), "Source outcomes") {
+		t.Fatalf("gazetteer fragment = %d/%q", fragment.Code, fragment.Body.String())
+	}
+	missing := httptest.NewRecorder()
+	server.Handler().ServeHTTP(missing, httptest.NewRequest(http.MethodGet, "/admin/gazetteer/999999", nil))
+	if missing.Code != http.StatusNotFound {
+		t.Fatalf("missing gazetteer details = %d", missing.Code)
+	}
+	invalidID := httptest.NewRecorder()
+	server.Handler().ServeHTTP(invalidID, httptest.NewRequest(http.MethodGet, "/admin/gazetteer/not-a-number", nil))
+	if invalidID.Code != http.StatusBadRequest {
+		t.Fatalf("invalid gazetteer details = %d", invalidID.Code)
+	}
+	invalidPage := httptest.NewRecorder()
+	server.Handler().ServeHTTP(invalidPage, httptest.NewRequest(http.MethodGet, "/admin/gazetteer?page=zero", nil))
+	if invalidPage.Code != http.StatusBadRequest {
+		t.Fatalf("invalid gazetteer page = %d", invalidPage.Code)
+	}
+	emptyPage := httptest.NewRecorder()
+	server.Handler().ServeHTTP(emptyPage, httptest.NewRequest(http.MethodGet, "/admin/gazetteer?page=2", nil))
+	if emptyPage.Code != http.StatusNotFound {
+		t.Fatalf("empty gazetteer page = %d", emptyPage.Code)
 	}
 	if response.Header().Get("Cache-Control") != "private, no-store" || response.Header().Get("X-Robots-Tag") != "noindex, nofollow, noarchive" {
 		t.Fatalf("gazetteer headers = %#v", response.Header())
@@ -85,6 +132,11 @@ func TestAdminGazetteerShowsBoundedOperationalStatus(t *testing.T) {
 	adminTestServer(t, database, nil).Handler().ServeHTTP(disabled, httptest.NewRequest(http.MethodGet, "/admin/gazetteer", nil))
 	if disabled.Code != http.StatusOK || !strings.Contains(disabled.Body.String(), "Gazetteer is disabled") {
 		t.Fatalf("disabled gazetteer = %d/%q", disabled.Code, disabled.Body.String())
+	}
+	disabledDetails := httptest.NewRecorder()
+	adminTestServer(t, database, nil).Handler().ServeHTTP(disabledDetails, httptest.NewRequest(http.MethodGet, "/admin/gazetteer/1", nil))
+	if disabledDetails.Code != http.StatusNotFound {
+		t.Fatalf("disabled gazetteer details = %d", disabledDetails.Code)
 	}
 }
 

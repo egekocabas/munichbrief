@@ -339,6 +339,10 @@
 .rss-history-table {
   container-type: inline-size;
 }
-.rss-history-table .rss-check-details {
+.gazetteer-history-table {
+  container-type: inline-size;
+}
+.rss-history-table .rss-check-details,
+.gazetteer-history-table .gazetteer-refresh-details {
   width: calc(100cqw - 2rem);
 }

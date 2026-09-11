@@ -58,10 +58,26 @@ Use `munichbrief gazetteer status` without network access or
 rebuildable and deliberately excluded from incident backups.
 
 The protected `/admin/gazetteer` page provides an RSS-history-style operational
-view of matcher readiness, refresh timing, active counts, source failures and
-contracts, retained generations, and overrides. It uses bounded metadata
-queries and intentionally does not expose downloaded payloads or the complete
-active name list.
+view of matcher readiness, refresh timing, active counts by type, source health
+and contracts, retained generations, and overrides. It also retains the newest
+500 completed refresh attempts plus any running attempt. Each attempt identifies
+whether it was triggered by startup, the scheduler, retry backoff, or the manual
+CLI and records every source as pending, fetching, successful, unchanged,
+failed, not reached, or interrupted.
+
+Refresh diagnostics distinguish transport, redirect, HTTP response, response
+size, parsing, row-count, override, matcher, activation/storage, and
+interruption failures. Messages are stripped of control characters and bounded
+to 2 KiB. Response bodies, downloaded payloads, credentials, incident text, and
+the complete name set are never stored in the diagnostic tables or rendered.
+An abandoned running attempt is marked interrupted when the database next
+opens; already completed source results remain intact and untouched sources are
+marked not reached. Queries remain paginated or aggregated.
+
+The page is read-only. Use the CLI for a deliberate refresh and manage
+deterministic overrides through a database migration or reviewed operational
+procedure. Wide source and history tables use the wider admin layout and become
+horizontally scrollable only when their columns cannot fit the viewport.
 
 ## Matching contract
 

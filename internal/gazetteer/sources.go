@@ -64,19 +64,29 @@ func NewFetcher(client *http.Client, userAgent string, store *Store) (*Fetcher, 
 }
 
 func (f *Fetcher) Fetch(ctx context.Context, definition SourceDefinition) (SourceSnapshot, bool, error) {
+	snapshot, notModified, _, err := f.FetchWithDiagnostics(ctx, definition)
+	return snapshot, notModified, err
+}
+
+func (f *Fetcher) FetchWithDiagnostics(ctx context.Context, definition SourceDefinition) (snapshot SourceSnapshot, notModified bool, diagnostic SourceFetchDiagnostic, err error) {
+	started := f.clock()
+	defer func() { diagnostic.Duration = f.clock().Sub(started) }()
 	if err := validateSourceDefinition(definition); err != nil {
-		return SourceSnapshot{}, false, err
+		diagnostic.FailureStage = "validation"
+		return SourceSnapshot{}, false, diagnostic, err
 	}
 	etag, modified, oldHash, oldURL, contractVersion, err := f.store.SourceValidators(ctx, definition.Key)
 	if err != nil {
-		return SourceSnapshot{}, false, err
+		diagnostic.FailureStage = "storage"
+		return SourceSnapshot{}, false, diagnostic, err
 	}
 	if oldURL != definition.URL || contractVersion != sourceContractVersion {
 		etag, modified, oldHash = "", "", ""
 	}
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, definition.URL, nil)
 	if err != nil {
-		return SourceSnapshot{}, false, err
+		diagnostic.FailureStage = "download"
+		return SourceSnapshot{}, false, diagnostic, err
 	}
 	request.Header.Set("User-Agent", f.userAgent)
 	request.Header.Set("Accept", "application/json, application/zip, text/plain;q=0.8")
@@ -88,42 +98,56 @@ func (f *Fetcher) Fetch(ctx context.Context, definition SourceDefinition) (Sourc
 	}
 	response, err := f.client.Do(request)
 	if err != nil {
-		return SourceSnapshot{}, false, err
+		diagnostic.FailureStage = "download"
+		return SourceSnapshot{}, false, diagnostic, err
 	}
 	defer response.Body.Close()
+	diagnostic.HTTPStatus = response.StatusCode
 	if response.Request != nil && response.Request.URL.Scheme != "https" {
-		return SourceSnapshot{}, false, fmt.Errorf("fetch %s: redirected to non-HTTPS URL", definition.Key)
+		diagnostic.FailureStage = "redirect"
+		return SourceSnapshot{}, false, diagnostic, fmt.Errorf("fetch %s: redirected to non-HTTPS URL", definition.Key)
 	}
 	if response.StatusCode == http.StatusNotModified {
 		entries, err := f.store.ActiveSourceEntries(ctx, definition.Key)
 		if err != nil || len(entries) == 0 || oldHash == "" {
-			return SourceSnapshot{}, false, fmt.Errorf("reuse unchanged %s: no active source snapshot", definition.Key)
+			diagnostic.FailureStage = "storage"
+			return SourceSnapshot{}, false, diagnostic, fmt.Errorf("reuse unchanged %s: no active source snapshot", definition.Key)
 		}
 		if len(entries) < definition.MinimumRows || len(entries) > definition.MaximumRows {
-			return SourceSnapshot{}, false, fmt.Errorf("reuse unchanged %s: %d rows outside safety range %d..%d", definition.Key, len(entries), definition.MinimumRows, definition.MaximumRows)
+			diagnostic.RowCount = len(entries)
+			diagnostic.FailureStage = "row_count"
+			return SourceSnapshot{}, false, diagnostic, fmt.Errorf("reuse unchanged %s: %d rows outside safety range %d..%d", definition.Key, len(entries), definition.MinimumRows, definition.MaximumRows)
 		}
-		return SourceSnapshot{Definition: definition, ContentHash: oldHash, ETag: etag, LastModified: modified, FetchedAt: f.clock(), Entries: entries}, true, nil
+		diagnostic.RowCount = len(entries)
+		return SourceSnapshot{Definition: definition, ContentHash: oldHash, ETag: etag, LastModified: modified, FetchedAt: f.clock(), Entries: entries}, true, diagnostic, nil
 	}
 	if response.StatusCode != http.StatusOK {
-		return SourceSnapshot{}, false, fmt.Errorf("fetch %s: HTTP %d", definition.Key, response.StatusCode)
+		diagnostic.FailureStage = "http_status"
+		return SourceSnapshot{}, false, diagnostic, fmt.Errorf("fetch %s: HTTP %d", definition.Key, response.StatusCode)
 	}
 	limited := io.LimitReader(response.Body, definition.MaximumSize+1)
 	data, err := io.ReadAll(limited)
 	if err != nil {
-		return SourceSnapshot{}, false, err
+		diagnostic.FailureStage = "download"
+		return SourceSnapshot{}, false, diagnostic, err
 	}
+	diagnostic.ResponseSize = int64(len(data))
 	if int64(len(data)) > definition.MaximumSize {
-		return SourceSnapshot{}, false, fmt.Errorf("fetch %s: response exceeds %d bytes", definition.Key, definition.MaximumSize)
+		diagnostic.FailureStage = "response_size"
+		return SourceSnapshot{}, false, diagnostic, fmt.Errorf("fetch %s: response exceeds %d bytes", definition.Key, definition.MaximumSize)
 	}
 	entries, err := definition.Parse(data)
 	if err != nil {
-		return SourceSnapshot{}, false, fmt.Errorf("parse %s: %w", definition.Key, err)
+		diagnostic.FailureStage = "parse"
+		return SourceSnapshot{}, false, diagnostic, fmt.Errorf("parse %s: %w", definition.Key, err)
 	}
+	diagnostic.RowCount = len(entries)
 	if len(entries) < definition.MinimumRows || len(entries) > definition.MaximumRows {
-		return SourceSnapshot{}, false, fmt.Errorf("parse %s: %d rows outside safety range %d..%d", definition.Key, len(entries), definition.MinimumRows, definition.MaximumRows)
+		diagnostic.FailureStage = "row_count"
+		return SourceSnapshot{}, false, diagnostic, fmt.Errorf("parse %s: %d rows outside safety range %d..%d", definition.Key, len(entries), definition.MinimumRows, definition.MaximumRows)
 	}
 	hash := sha256.Sum256(data)
-	return SourceSnapshot{Definition: definition, ContentHash: hex.EncodeToString(hash[:]), ETag: response.Header.Get("ETag"), LastModified: response.Header.Get("Last-Modified"), FetchedAt: f.clock(), Entries: entries}, false, nil
+	return SourceSnapshot{Definition: definition, ContentHash: hex.EncodeToString(hash[:]), ETag: response.Header.Get("ETag"), LastModified: response.Header.Get("Last-Modified"), FetchedAt: f.clock(), Entries: entries}, false, diagnostic, nil
 }
 
 func validateSourceDefinition(definition SourceDefinition) error {

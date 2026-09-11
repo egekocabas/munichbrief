@@ -10,6 +10,7 @@ import (
 	"math/rand/v2"
 	"sort"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -25,15 +26,16 @@ type Observer interface {
 }
 
 type Manager struct {
-	store    *Store
-	fetcher  *Fetcher
-	sources  []SourceDefinition
-	interval time.Duration
-	clock    func() time.Time
-	logger   *slog.Logger
-	observer Observer
-	matcher  atomic.Pointer[Matcher]
-	ready    atomic.Bool
+	store     *Store
+	fetcher   *Fetcher
+	sources   []SourceDefinition
+	interval  time.Duration
+	clock     func() time.Time
+	logger    *slog.Logger
+	observer  Observer
+	matcher   atomic.Pointer[Matcher]
+	ready     atomic.Bool
+	refreshMu sync.Mutex
 }
 
 func NewManager(ctx context.Context, store *Store, fetcher *Fetcher, sources []SourceDefinition, interval time.Duration, observer Observer, logger *slog.Logger) (*Manager, error) {
@@ -42,6 +44,9 @@ func NewManager(ctx context.Context, store *Store, fetcher *Fetcher, sources []S
 	}
 	if logger == nil {
 		logger = slog.Default()
+	}
+	if err := store.recoverInterruptedRefreshes(ctx, time.Now()); err != nil {
+		return nil, fmt.Errorf("recover interrupted gazetteer refreshes: %w", err)
 	}
 	manager := &Manager{store: store, fetcher: fetcher, sources: append([]SourceDefinition(nil), sources...), interval: interval, clock: time.Now, observer: observer, logger: logger}
 	entries, err := store.ActiveEntries(ctx)
@@ -77,6 +82,12 @@ func (m *Manager) Protect(title, summary string) (Protected, error) {
 }
 
 func (m *Manager) Refresh(ctx context.Context) (RefreshResult, error) {
+	return m.refresh(ctx, RefreshTriggerManual)
+}
+
+func (m *Manager) refresh(ctx context.Context, trigger RefreshTrigger) (RefreshResult, error) {
+	m.refreshMu.Lock()
+	defer m.refreshMu.Unlock()
 	started := m.clock()
 	succeeded := false
 	defer func() {
@@ -93,31 +104,46 @@ func (m *Manager) Refresh(ctx context.Context) (RefreshResult, error) {
 		m.observer.RecordGazetteerAttempt()
 		m.observer.SetNextGazetteerRefresh(next)
 	}
-	_ = m.store.RecordAttempt(ctx, started, next)
+	runID, err := m.store.BeginRefresh(ctx, trigger, m.sources, started, next)
+	if err != nil {
+		return RefreshResult{}, fmt.Errorf("record gazetteer refresh start: %w", err)
+	}
+	fail := func(source *SourceDefinition, stage string, diagnostic SourceFetchDiagnostic, failure error) error {
+		if historyErr := m.store.FailRefresh(ctx, runID, source, stage, diagnostic, failure, m.clock()); historyErr != nil {
+			return errors.Join(failure, fmt.Errorf("record gazetteer refresh failure: %w", historyErr))
+		}
+		return failure
+	}
 	var snapshots []SourceSnapshot
 	allNotModified := true
 	for _, source := range m.sources {
-		snapshot, notModified, err := m.fetcher.Fetch(ctx, source)
+		sourceStarted := m.clock()
+		if err := m.store.StartRefreshSource(ctx, runID, source.Key, sourceStarted); err != nil {
+			return RefreshResult{}, fail(&source, "storage", SourceFetchDiagnostic{}, fmt.Errorf("record %s source start: %w", source.Key, err))
+		}
+		snapshot, notModified, diagnostic, err := m.fetcher.FetchWithDiagnostics(ctx, source)
 		if err != nil {
-			_ = m.store.RecordSourceFailure(ctx, source, m.clock())
-			return RefreshResult{}, err
+			return RefreshResult{}, fail(&source, diagnostic.FailureStage, diagnostic, err)
+		}
+		if err := m.store.CompleteRefreshSource(ctx, runID, snapshot, notModified, diagnostic, m.clock()); err != nil {
+			return RefreshResult{}, fail(&source, "storage", diagnostic, fmt.Errorf("record %s source completion: %w", source.Key, err))
 		}
 		allNotModified = allNotModified && notModified
 		snapshots = append(snapshots, snapshot)
 	}
 	overrides, err := m.store.Overrides(ctx)
 	if err != nil {
-		return RefreshResult{}, err
+		return RefreshResult{}, fail(nil, "overrides", SourceFetchDiagnostic{}, err)
 	}
 	entries := mergeEntries(snapshots, overrides)
 	matcher, err := NewMatcher(entries)
 	if err != nil {
-		return RefreshResult{}, err
+		return RefreshResult{}, fail(nil, "matcher", SourceFetchDiagnostic{}, err)
 	}
 	aggregateHash := aggregateSourceHash(snapshots, overrides)
-	generationID, changed, err := m.store.Activate(ctx, snapshots, entries, aggregateHash, m.clock(), next)
+	generationID, changed, err := m.store.ActivateRefresh(ctx, runID, snapshots, entries, aggregateHash, m.clock(), next)
 	if err != nil {
-		return RefreshResult{}, err
+		return RefreshResult{}, fail(nil, "activation", SourceFetchDiagnostic{}, err)
 	}
 	if changed || !m.ready.Load() {
 		m.matcher.Store(matcher)
@@ -135,6 +161,7 @@ func (m *Manager) Refresh(ctx context.Context) (RefreshResult, error) {
 func (m *Manager) Run(ctx context.Context) {
 	delay := time.Duration(0)
 	failures := 0
+	first := true
 	for {
 		if delay > 0 {
 			timer := time.NewTimer(delay)
@@ -145,7 +172,14 @@ func (m *Manager) Run(ctx context.Context) {
 			case <-timer.C:
 			}
 		}
-		_, err := m.Refresh(ctx)
+		trigger := RefreshTriggerScheduled
+		if first {
+			trigger = RefreshTriggerStartup
+		} else if failures > 0 {
+			trigger = RefreshTriggerRetry
+		}
+		first = false
+		_, err := m.refresh(ctx, trigger)
 		if err != nil {
 			m.logger.Error("gazetteer refresh failed; keeping last successful generation", "error", err)
 			failures++

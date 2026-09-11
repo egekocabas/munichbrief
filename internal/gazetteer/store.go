@@ -155,10 +155,13 @@ func (s *Store) AdminSnapshot(ctx context.Context) (AdminSnapshot, error) {
 		SELECT source.source_key,source.display_name,source.source_url,source.license,source.attribution,
 			source.content_sha256,source.contract_version,COALESCE(source.last_checked_at,''),
 			COALESCE(source.last_success_at,''),source.consecutive_failures,
-			COALESCE(active.row_count,0)
+			COALESCE(active.row_count,0),COALESCE(source.last_failure_at,''),source.last_error,COALESCE(source.last_failure_run_id,0),
+			COALESCE(attempt.status,''),COALESCE(attempt.run_id,0)
 		FROM gazetteer_sources source
 		LEFT JOIN gazetteer_generation_sources active ON active.source_key=source.source_key
 			AND active.generation_id=(SELECT active_generation_id FROM gazetteer_state WHERE singleton=1)
+		LEFT JOIN gazetteer_refresh_sources attempt ON attempt.source_key=source.source_key
+			AND attempt.run_id=(SELECT id FROM gazetteer_refresh_runs ORDER BY id DESC LIMIT 1)
 		ORDER BY source.source_key
 		LIMIT 100`)
 	if err != nil {
@@ -166,12 +169,12 @@ func (s *Store) AdminSnapshot(ctx context.Context) (AdminSnapshot, error) {
 	}
 	for rows.Next() {
 		var source SourceStatus
-		var checked, success string
-		if err := rows.Scan(&source.Key, &source.DisplayName, &source.URL, &source.License, &source.Attribution, &source.ContentHash, &source.ContractVersion, &checked, &success, &source.ConsecutiveFailures, &source.ActiveRowCount); err != nil {
+		var checked, success, failure string
+		if err := rows.Scan(&source.Key, &source.DisplayName, &source.URL, &source.License, &source.Attribution, &source.ContentHash, &source.ContractVersion, &checked, &success, &source.ConsecutiveFailures, &source.ActiveRowCount, &failure, &source.LastError, &source.LastFailureRunID, &source.AttemptStatus, &source.AttemptRunID); err != nil {
 			rows.Close()
 			return AdminSnapshot{}, err
 		}
-		source.LastChecked, source.LastSuccess = parseTime(checked), parseTime(success)
+		source.LastChecked, source.LastSuccess, source.LastFailure = parseTime(checked), parseTime(success), parseTime(failure)
 		snapshot.Sources = append(snapshot.Sources, source)
 	}
 	if err := rows.Err(); err != nil {
@@ -214,7 +217,39 @@ func (s *Store) AdminSnapshot(ctx context.Context) (AdminSnapshot, error) {
 		}
 		snapshot.Overrides = append(snapshot.Overrides, override)
 	}
-	return snapshot, rows.Err()
+	if err := rows.Err(); err != nil {
+		return AdminSnapshot{}, err
+	}
+	if err := rows.Close(); err != nil {
+		return AdminSnapshot{}, err
+	}
+	rows, err = s.db.QueryContext(ctx, `SELECT n.kind,COUNT(*) FROM gazetteer_names n JOIN gazetteer_state state ON state.active_generation_id=n.generation_id WHERE state.singleton=1 GROUP BY n.kind ORDER BY n.kind LIMIT 100`)
+	if err != nil {
+		return AdminSnapshot{}, err
+	}
+	for rows.Next() {
+		var count KindCount
+		if err := rows.Scan(&count.Kind, &count.Count); err != nil {
+			rows.Close()
+			return AdminSnapshot{}, err
+		}
+		snapshot.KindCounts = append(snapshot.KindCounts, count)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return AdminSnapshot{}, err
+	}
+	if err := rows.Close(); err != nil {
+		return AdminSnapshot{}, err
+	}
+	latest, err := scanRefreshRun(s.db.QueryRowContext(ctx, refreshRunSelect+` ORDER BY run.id DESC LIMIT 1`))
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return AdminSnapshot{}, err
+	}
+	if err == nil {
+		snapshot.LatestRun = &latest
+	}
+	return snapshot, nil
 }
 
 func (s *Store) SourceValidators(ctx context.Context, key string) (etag, modified, hash, sourceURL, contractVersion string, err error) {
@@ -291,6 +326,14 @@ func (s *Store) RecordSourceFailure(ctx context.Context, definition SourceDefini
 }
 
 func (s *Store) Activate(ctx context.Context, snapshots []SourceSnapshot, entries []Entry, aggregateHash string, at, next time.Time) (int64, bool, error) {
+	return s.activate(ctx, snapshots, entries, aggregateHash, at, next, 0)
+}
+
+func (s *Store) ActivateRefresh(ctx context.Context, runID int64, snapshots []SourceSnapshot, entries []Entry, aggregateHash string, at, next time.Time) (int64, bool, error) {
+	return s.activate(ctx, snapshots, entries, aggregateHash, at, next, runID)
+}
+
+func (s *Store) activate(ctx context.Context, snapshots []SourceSnapshot, entries []Entry, aggregateHash string, at, next time.Time, runID int64) (int64, bool, error) {
 	status, err := s.Status(ctx)
 	if err != nil {
 		return 0, false, err
@@ -301,7 +344,7 @@ func (s *Store) Activate(ctx context.Context, snapshots []SourceSnapshot, entrie
 			return 0, false, err
 		}
 		if current == aggregateHash {
-			if err := s.updateSuccessfulSources(ctx, snapshots, at, next); err != nil {
+			if err := s.updateSuccessfulSources(ctx, snapshots, at, next, runID, status.ActiveGeneration, len(entries)); err != nil {
 				return 0, false, err
 			}
 			return status.ActiveGeneration, false, nil
@@ -327,7 +370,7 @@ func (s *Store) Activate(ctx context.Context, snapshots []SourceSnapshot, entrie
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
 			ON CONFLICT(source_key) DO UPDATE SET display_name=excluded.display_name, source_url=excluded.source_url,
 			license=excluded.license, attribution=excluded.attribution, etag=excluded.etag, last_modified=excluded.last_modified,
-			content_sha256=excluded.content_sha256, contract_version=excluded.contract_version, last_checked_at=excluded.last_checked_at, last_success_at=excluded.last_success_at, consecutive_failures=0`,
+			content_sha256=excluded.content_sha256, contract_version=excluded.contract_version, last_checked_at=excluded.last_checked_at, last_success_at=excluded.last_success_at, consecutive_failures=0,last_failure_at=NULL,last_error='',last_failure_run_id=NULL`,
 			definition.Key, definition.DisplayName, definition.URL, definition.License, definition.Attribution, snapshot.ETag, snapshot.LastModified, snapshot.ContentHash, sourceContractVersion, formatTime(at), formatTime(at)); err != nil {
 			return 0, false, err
 		}
@@ -360,6 +403,18 @@ func (s *Store) Activate(ctx context.Context, snapshots []SourceSnapshot, entrie
 	if _, err := tx.ExecContext(ctx, `UPDATE gazetteer_state SET active_generation_id = ?, last_attempt_at = ?, last_success_at = ?, next_refresh_at = ? WHERE singleton = 1`, generationID, formatTime(at), formatTime(at), formatTime(next)); err != nil {
 		return 0, false, err
 	}
+	if runID != 0 {
+		result, err := tx.ExecContext(ctx, `UPDATE gazetteer_refresh_runs SET status='succeeded',completed_at=?,duration_seconds=MAX(0,(julianday(?)-julianday(started_at))*86400),active_generation_after=?,entry_count=?,changed=1,all_not_modified=0 WHERE id=? AND status='running'`, formatTime(at), formatTime(at), generationID, len(entries), runID)
+		if err != nil {
+			return 0, false, err
+		}
+		if changed, _ := result.RowsAffected(); changed != 1 {
+			return 0, false, errors.New("gazetteer refresh attempt is not running")
+		}
+		if err := pruneRefreshHistoryTx(ctx, tx); err != nil {
+			return 0, false, err
+		}
+	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM gazetteer_generations WHERE id NOT IN (SELECT id FROM gazetteer_generations WHERE status IN ('active','superseded') ORDER BY id DESC LIMIT 2)`); err != nil {
 		return 0, false, err
 	}
@@ -369,7 +424,7 @@ func (s *Store) Activate(ctx context.Context, snapshots []SourceSnapshot, entrie
 	return generationID, true, nil
 }
 
-func (s *Store) updateSuccessfulSources(ctx context.Context, snapshots []SourceSnapshot, at, next time.Time) error {
+func (s *Store) updateSuccessfulSources(ctx context.Context, snapshots []SourceSnapshot, at, next time.Time, runID, generationID int64, entryCount int) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -377,12 +432,24 @@ func (s *Store) updateSuccessfulSources(ctx context.Context, snapshots []SourceS
 	defer tx.Rollback()
 	for _, snapshot := range snapshots {
 		definition := snapshot.Definition
-		if _, err := tx.ExecContext(ctx, `INSERT INTO gazetteer_sources(source_key, display_name, source_url, license, attribution, etag, last_modified, content_sha256, contract_version, last_checked_at, last_success_at, consecutive_failures) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0) ON CONFLICT(source_key) DO UPDATE SET display_name=excluded.display_name, source_url=excluded.source_url, license=excluded.license, attribution=excluded.attribution, etag=excluded.etag, last_modified=excluded.last_modified, content_sha256=excluded.content_sha256, contract_version=excluded.contract_version, last_checked_at=excluded.last_checked_at, last_success_at=excluded.last_success_at, consecutive_failures=0`, definition.Key, definition.DisplayName, definition.URL, definition.License, definition.Attribution, snapshot.ETag, snapshot.LastModified, snapshot.ContentHash, sourceContractVersion, formatTime(at), formatTime(at)); err != nil {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO gazetteer_sources(source_key, display_name, source_url, license, attribution, etag, last_modified, content_sha256, contract_version, last_checked_at, last_success_at, consecutive_failures) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0) ON CONFLICT(source_key) DO UPDATE SET display_name=excluded.display_name, source_url=excluded.source_url, license=excluded.license, attribution=excluded.attribution, etag=excluded.etag, last_modified=excluded.last_modified, content_sha256=excluded.content_sha256, contract_version=excluded.contract_version, last_checked_at=excluded.last_checked_at, last_success_at=excluded.last_success_at, consecutive_failures=0,last_failure_at=NULL,last_error='',last_failure_run_id=NULL`, definition.Key, definition.DisplayName, definition.URL, definition.License, definition.Attribution, snapshot.ETag, snapshot.LastModified, snapshot.ContentHash, sourceContractVersion, formatTime(at), formatTime(at)); err != nil {
 			return err
 		}
 	}
 	if _, err := tx.ExecContext(ctx, `UPDATE gazetteer_state SET last_attempt_at=?, last_success_at=?, next_refresh_at=? WHERE singleton=1`, formatTime(at), formatTime(at), formatTime(next)); err != nil {
 		return err
+	}
+	if runID != 0 {
+		result, err := tx.ExecContext(ctx, `UPDATE gazetteer_refresh_runs SET status='succeeded',completed_at=?,duration_seconds=MAX(0,(julianday(?)-julianday(started_at))*86400),active_generation_after=?,entry_count=?,changed=0,all_not_modified=CASE WHEN NOT EXISTS (SELECT 1 FROM gazetteer_refresh_sources WHERE run_id=? AND status!='not_modified') THEN 1 ELSE 0 END WHERE id=? AND status='running'`, formatTime(at), formatTime(at), generationID, entryCount, runID, runID)
+		if err != nil {
+			return err
+		}
+		if changed, _ := result.RowsAffected(); changed != 1 {
+			return errors.New("gazetteer refresh attempt is not running")
+		}
+		if err := pruneRefreshHistoryTx(ctx, tx); err != nil {
+			return err
+		}
 	}
 	return tx.Commit()
 }
