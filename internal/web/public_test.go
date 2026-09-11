@@ -688,7 +688,7 @@ func TestPublicHostUsesFailClosedPresentationAndRejectsAdmin(t *testing.T) {
 				{http.MethodGet, "/admin"}, {http.MethodGet, "/admin/translations"}, {http.MethodGet, "/admin/verifications"}, {http.MethodGet, "/admin/rss-history"}, {http.MethodGet, "/admin/gazetteer"}, {http.MethodGet, "/admin/history"},
 				{http.MethodPost, "/api/admin/ai/process-all-now"}, {http.MethodPost, "/api/admin/ai/translations/process"},
 				{http.MethodPost, "/api/admin/gazetteer/refresh"},
-				{http.MethodPost, "/api/admin/ai/automatic-processing"}, {http.MethodPost, "/api/admin/ai/cancel-all"}, {http.MethodGet, "/private"},
+				{http.MethodPost, "/api/admin/ai/automatic-processing"}, {http.MethodPost, "/api/admin/ai/post-processing/processor-enabled"}, {http.MethodPost, "/api/admin/ai/cancel-all"}, {http.MethodGet, "/private"},
 			} {
 				response := httptest.NewRecorder()
 				request := httptest.NewRequest(route.method, route.path, nil)

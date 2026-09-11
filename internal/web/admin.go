@@ -561,6 +561,50 @@ func (s *Server) updatePostProcessingScopeEnabled(response http.ResponseWriter, 
 	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
 }
 
+func (s *Server) updatePostProcessingProcessorEnabled(response http.ResponseWriter, request *http.Request) {
+	if !s.preparePostProcessingMutation(response, request, "post-processing processor setting") {
+		return
+	}
+	processorKey := strings.TrimSpace(request.PostForm.Get("processor"))
+	enabledValue := strings.TrimSpace(request.PostForm.Get("enabled"))
+	if processorKey == "" || (enabledValue != "true" && enabledValue != "false") {
+		http.Error(response, "processor and a strict enabled value are required", http.StatusBadRequest)
+		return
+	}
+	models, err := s.options.Processor.ModelStatus(request.Context())
+	if err != nil {
+		s.internalError(response, request, "read post-processing registry", err)
+		return
+	}
+	found := false
+	for _, processor := range models.PostProcessors {
+		if processor.Key == processorKey {
+			found = true
+			break
+		}
+	}
+	if !found || processorKey != processing.TranslationModelStep {
+		http.Error(response, "unsupported post-processing processor setting", http.StatusBadRequest)
+		return
+	}
+	enabled := enabledValue == "true"
+	skipped, err := s.options.Processor.SetPostProcessingProcessorEnabled(request.Context(), processorKey, enabled)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			http.Error(response, "unsupported post-processing processor setting", http.StatusBadRequest)
+			return
+		}
+		s.internalError(response, request, "update post-processing processor setting", err)
+		return
+	}
+	target := &url.URL{Path: "/admin/translations"}
+	query := target.Query()
+	query.Set("processor_automatic_enabled", enabledValue)
+	query.Set("processor_automatic_skipped", strconv.Itoa(skipped))
+	target.RawQuery = query.Encode()
+	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
+}
+
 func postProcessingReturnURL(form url.Values, processorKey, scopeKey string, verificationProcessor bool) (*url.URL, error) {
 	switch strings.TrimSpace(form.Get("return_to")) {
 	case "":

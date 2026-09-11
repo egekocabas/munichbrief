@@ -35,6 +35,8 @@ type PipelineRepository interface {
 	PipelineSnapshot(context.Context, string, []string, []store.PostProcessingCounterSpec, time.Time) (store.PipelineSnapshot, error)
 	PipelineStepModel(context.Context, int64, int) (string, string, error)
 	EnsurePostProcessingScopes(context.Context, []store.PostProcessingScope, time.Time) error
+	PostProcessingProcessorSettings(context.Context) ([]store.PostProcessingProcessorSetting, error)
+	SetPostProcessingProcessorEnabled(context.Context, string, bool, time.Time) (int, error)
 	PostProcessingScopeSettings(context.Context) ([]store.PostProcessingScopeSetting, error)
 	SetPostProcessingScopeEnabled(context.Context, string, string, bool, time.Time) (int, error)
 	QueuePostProcessingForRun(context.Context, int64, []store.PostProcessingPlan, string, bool, time.Time) (int, error)
@@ -186,6 +188,8 @@ type PostProcessorModelStatus struct {
 	Preferred          string                     `json:"preferred"`
 	PreferredAvailable bool                       `json:"preferred_available"`
 	PerScopeSettings   bool                       `json:"per_scope_settings"`
+	Enabled            bool                       `json:"enabled"`
+	EnabledUpdatedAt   time.Time                  `json:"enabled_updated_at"`
 	Scopes             []PostProcessorScopeStatus `json:"scopes"`
 	Verification       *PostProcessorVerification `json:"verification,omitempty"`
 }
@@ -382,6 +386,21 @@ func (w *PipelineWorker) SetPostProcessingScopeEnabled(ctx context.Context, proc
 	return skipped, err
 }
 
+// SetPostProcessingProcessorEnabled changes the automatic gate shared by all
+// scopes of a registered processor. Enabling waits for normal discovery.
+func (w *PipelineWorker) SetPostProcessingProcessorEnabled(ctx context.Context, processorKey string, enabled bool) (int, error) {
+	if _, found := w.postProcessors.Definition(processorKey); !found {
+		return 0, store.ErrNotFound
+	}
+	w.executionMu.Lock()
+	defer w.executionMu.Unlock()
+	skipped, err := w.repository.SetPostProcessingProcessorEnabled(ctx, processorKey, enabled, w.clock())
+	if err == nil {
+		w.logger.Info("automatic AI post-processing processor changed", "processor", processorKey, "enabled", enabled, "skipped_jobs", skipped)
+	}
+	return skipped, err
+}
+
 func (w *PipelineWorker) configuredTranslationPlans(ctx context.Context, scopeKeys []string) ([]store.PostProcessingPlan, error) {
 	settings, err := w.repository.TranslationLanguageSettings(ctx)
 	if err != nil {
@@ -511,9 +530,18 @@ func (w *PipelineWorker) ModelStatus(ctx context.Context) (PipelineModelStatus, 
 	for _, setting := range scopeSettings {
 		scopeByIdentity[scopeIdentity{processor: setting.ProcessorKey, scope: setting.ScopeKey}] = setting
 	}
+	processorSettings, err := w.repository.PostProcessingProcessorSettings(ctx)
+	if err != nil {
+		return PipelineModelStatus{}, err
+	}
+	processorByKey := make(map[string]store.PostProcessingProcessorSetting, len(processorSettings))
+	for _, setting := range processorSettings {
+		processorByKey[setting.ProcessorKey] = setting
+	}
 	for _, definition := range w.postProcessors.Definitions() {
 		model := byKey[definition.ModelSettingKey]
-		item := PostProcessorModelStatus{Key: definition.Key, DisplayName: definition.DisplayName, Description: definition.Description, ModelSettingKey: definition.ModelSettingKey, Manual: definition.Manual, Preferred: model, PreferredAvailable: model != "" && catalog.Available() && catalog.Has(model), Verification: clonePostProcessorVerification(definition.Verification)}
+		processorSetting := processorByKey[definition.Key]
+		item := PostProcessorModelStatus{Key: definition.Key, DisplayName: definition.DisplayName, Description: definition.Description, ModelSettingKey: definition.ModelSettingKey, Manual: definition.Manual, Preferred: model, PreferredAvailable: model != "" && catalog.Available() && catalog.Has(model), Enabled: processorSetting.Enabled, EnabledUpdatedAt: processorSetting.EnabledUpdatedAt, Verification: clonePostProcessorVerification(definition.Verification)}
 		for _, scope := range definition.Scopes {
 			scopeSetting := scopeByIdentity[scopeIdentity{processor: definition.Key, scope: scope.Key}]
 			scopeStatus := PostProcessorScopeStatus{Key: scope.Key, DisplayName: scope.DisplayName, StepKey: scope.Step.Key, PromptVersion: scope.Step.PromptVersion, Enabled: scopeSetting.Enabled, EnabledUpdatedAt: scopeSetting.EnabledUpdatedAt}

@@ -30,6 +30,9 @@ func (s *Store) EnsurePostProcessingScopes(ctx context.Context, scopes []PostPro
 			continue
 		}
 		seen[identity] = struct{}{}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO post_processing_processor_controls(processor_key,enabled,enabled_updated_at) VALUES(?,1,?) ON CONFLICT(processor_key) DO NOTHING`, scope.ProcessorKey, formatted); err != nil {
+			return fmt.Errorf("ensure post-processing processor %s: %w", scope.ProcessorKey, err)
+		}
 		enabled := scope.ProcessorKey != "translation" || scope.ScopeKey == "en"
 		if _, err := tx.ExecContext(ctx, `INSERT INTO post_processing_scopes(processor_key,scope_key,automatic_after,enabled,enabled_updated_at) VALUES(?,?,?,?,?) ON CONFLICT(processor_key,scope_key) DO NOTHING`, scope.ProcessorKey, scope.ScopeKey, formatted, boolInt(enabled), formatted); err != nil {
 			return fmt.Errorf("ensure post-processing scope %s/%s: %w", scope.ProcessorKey, scope.ScopeKey, err)
@@ -39,6 +42,77 @@ func (s *Store) EnsurePostProcessingScopes(ctx context.Context, scopes []PostPro
 		return fmt.Errorf("commit post-processing scope initialization: %w", err)
 	}
 	return nil
+}
+
+// PostProcessingProcessorSettings lists the processor-wide automatic-work
+// gates without triggering discovery.
+func (s *Store) PostProcessingProcessorSettings(ctx context.Context) ([]PostProcessingProcessorSetting, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT processor_key,enabled,enabled_updated_at FROM post_processing_processor_controls ORDER BY processor_key`)
+	if err != nil {
+		return nil, fmt.Errorf("list post-processing processor settings: %w", err)
+	}
+	defer rows.Close()
+	var settings []PostProcessingProcessorSetting
+	for rows.Next() {
+		var setting PostProcessingProcessorSetting
+		var enabled int
+		var updatedAt string
+		if err := rows.Scan(&setting.ProcessorKey, &enabled, &updatedAt); err != nil {
+			return nil, fmt.Errorf("scan post-processing processor setting: %w", err)
+		}
+		setting.Enabled = enabled == 1
+		setting.EnabledUpdatedAt, err = time.Parse(time.RFC3339Nano, updatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("parse post-processing processor update time: %w", err)
+		}
+		settings = append(settings, setting)
+	}
+	return settings, rows.Err()
+}
+
+// SetPostProcessingProcessorEnabled changes the processor-wide automatic gate
+// and terminalizes its queued automatic work on disable.
+func (s *Store) SetPostProcessingProcessorEnabled(ctx context.Context, processorKey string, enabled bool, now time.Time) (int, error) {
+	processorKey = strings.TrimSpace(processorKey)
+	if processorKey == "" {
+		return 0, errors.New("post-processing processor is required")
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+	formatted := formatTime(now.UTC())
+	result, err := tx.ExecContext(ctx, `UPDATE post_processing_processor_controls SET enabled=?,enabled_updated_at=? WHERE processor_key=?`, boolInt(enabled), formatted, processorKey)
+	if err != nil {
+		return 0, fmt.Errorf("set post-processing processor enabled: %w", err)
+	}
+	if affected, _ := result.RowsAffected(); affected != 1 {
+		return 0, ErrNotFound
+	}
+	var skipped int64
+	if !enabled {
+		result, err = tx.ExecContext(ctx, `UPDATE post_processing_jobs SET status='skipped',status_reason=?,status_detail=NULL,next_retry_at=NULL,failure_kind=NULL,error_message=NULL,started_at=NULL,completed_at=?,updated_at=? WHERE processor_key=? AND request_kind='scheduled' AND status='pending'`, PostProcessingStatusReasonProcessorDisabled, formatted, formatted, processorKey)
+		if err != nil {
+			return 0, fmt.Errorf("skip disabled post-processing processor jobs: %w", err)
+		}
+		skipped, _ = result.RowsAffected()
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return int(skipped), nil
+}
+
+func postProcessingProcessorEnabledTx(ctx context.Context, tx *sql.Tx, processorKey string) (bool, error) {
+	var enabled int
+	if err := tx.QueryRowContext(ctx, `SELECT enabled FROM post_processing_processor_controls WHERE processor_key=?`, processorKey).Scan(&enabled); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, ErrNotFound
+		}
+		return false, err
+	}
+	return enabled == 1, nil
 }
 
 // PostProcessingScopeSettings lists the automatic-work gates without changing
@@ -152,7 +226,14 @@ func (s *Store) QueuePostProcessingForRun(ctx context.Context, runID int64, plan
 	count := 0
 	for _, plan := range plans {
 		if requestKind == "scheduled" {
-			enabled, err := postProcessingScopeEnabledTx(ctx, tx, plan.ProcessorKey, plan.ScopeKey)
+			enabled, err := postProcessingProcessorEnabledTx(ctx, tx, plan.ProcessorKey)
+			if err != nil {
+				return 0, err
+			}
+			if !enabled {
+				continue
+			}
+			enabled, err = postProcessingScopeEnabledTx(ctx, tx, plan.ProcessorKey, plan.ScopeKey)
 			if err != nil {
 				return 0, err
 			}
@@ -242,7 +323,14 @@ func (s *Store) queuePostProcessingForAll(ctx context.Context, sourceMode string
 			return 0, errors.New("unpublished selection requires the translation processor")
 		}
 		if requestKind == "scheduled" {
-			enabled, err := postProcessingScopeEnabledTx(ctx, tx, plan.ProcessorKey, plan.ScopeKey)
+			enabled, err := postProcessingProcessorEnabledTx(ctx, tx, plan.ProcessorKey)
+			if err != nil {
+				return 0, err
+			}
+			if !enabled {
+				continue
+			}
+			enabled, err = postProcessingScopeEnabledTx(ctx, tx, plan.ProcessorKey, plan.ScopeKey)
 			if err != nil {
 				return 0, err
 			}
@@ -523,6 +611,14 @@ func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string,
 		PostProcessingStatusReasonScopeDisabled, formatted, formatted, processorKey); err != nil {
 		return PostProcessingJob{}, false, err
 	}
+	if _, err := tx.ExecContext(ctx, `UPDATE post_processing_jobs SET status='skipped',status_reason=?,status_detail=NULL,
+		next_retry_at=NULL,failure_kind=NULL,error_message=NULL,started_at=NULL,completed_at=?,updated_at=?
+		WHERE processor_key=? AND request_kind='scheduled' AND status='pending'
+		AND EXISTS (SELECT 1 FROM post_processing_processor_controls processor
+			WHERE processor.processor_key=post_processing_jobs.processor_key AND processor.enabled=0)`,
+		PostProcessingStatusReasonProcessorDisabled, formatted, formatted, processorKey); err != nil {
+		return PostProcessingJob{}, false, err
+	}
 	blockedCondition := ""
 	args := []any{processorKey, formatted, boolInt(allowScheduled)}
 	if len(blockedModels) > 0 {
@@ -538,6 +634,7 @@ func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string,
 		JOIN incidents i ON i.id=r.incident_id AND i.content_hash=r.source_hash
 		WHERE job.processor_key=? AND job.status='pending' AND (job.next_retry_at IS NULL OR job.next_retry_at<=?)
 		AND (job.request_kind='manual' OR (? AND (SELECT automatic_processing_enabled FROM ai_runtime_control WHERE id=1)=1
+			AND EXISTS (SELECT 1 FROM post_processing_processor_controls processor WHERE processor.processor_key=job.processor_key AND processor.enabled=1)
 			AND EXISTS (SELECT 1 FROM post_processing_scopes scope WHERE scope.processor_key=job.processor_key AND scope.scope_key=job.scope_key AND scope.enabled=1)))`+blockedCondition+`
 		ORDER BY CASE job.request_kind WHEN 'manual' THEN 0 WHEN 'scheduled' THEN 1 ELSE 2 END,job.created_at,job.id LIMIT 1`, args...).Scan(
 		&job.ID, &job.PresentationRunID, &job.IncidentID, &job.ProcessorKey, &job.ScopeKey, &job.RequestKind,

@@ -146,6 +146,12 @@ func TestUnifiedPostProcessingMigrationPreservesAuditAndCutsReadersToV2(t *testi
 			t.Fatalf("migrated %s enabled = %d/%v, want %t", identity, enabled, err, want)
 		}
 	}
+	for _, processor := range []string{"translation", "category_verification", "public_assistance_verification"} {
+		var enabled int
+		if err := database.db.QueryRowContext(ctx, `SELECT enabled FROM post_processing_processor_controls WHERE processor_key=?`, processor).Scan(&enabled); err != nil || enabled != 1 {
+			t.Fatalf("migrated %s processor enabled = %d/%v", processor, enabled, err)
+		}
+	}
 	for _, table := range []string{"presentation_translations", "presentation_category_verifications", "translation_language_cutovers", "category_verification_cutover"} {
 		var count int
 		if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?`, table).Scan(&count); err != nil || count != 0 {

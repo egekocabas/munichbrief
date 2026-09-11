@@ -158,6 +158,11 @@ func (p fakeProcessingRequester) ModelStatus(ctx context.Context) (processing.Pi
 	for _, setting := range scopeSettings {
 		scopeEnabled[setting.ProcessorKey+"/"+setting.ScopeKey] = setting.Enabled
 	}
+	processorSettings, _ := p.database.PostProcessingProcessorSettings(ctx)
+	processorEnabled := make(map[string]bool, len(processorSettings))
+	for _, setting := range processorSettings {
+		processorEnabled[setting.ProcessorKey] = setting.Enabled
+	}
 	for _, translation := range processing.RegisteredTranslations() {
 		setting := byCode[translation.Language]
 		translationScopes = append(translationScopes, processing.PostProcessorScopeStatus{
@@ -166,9 +171,9 @@ func (p fakeProcessingRequester) ModelStatus(ctx context.Context) (processing.Pi
 		})
 	}
 	postProcessors := []processing.PostProcessorModelStatus{
-		{Key: processing.PublicAssistanceVerificationStep, DisplayName: "Public assistance verification", Description: "Verify public assistance metadata.", ModelSettingKey: processing.PublicAssistanceVerificationStep, Manual: true, Preferred: "qwen3.5:4b", PreferredAvailable: true, Scopes: []processing.PostProcessorScopeStatus{{Key: "default", DisplayName: "Default", Enabled: scopeEnabled[processing.PublicAssistanceVerificationStep+"/default"]}}, Verification: assistance.Verification},
-		{Key: processing.CategoryVerificationStep, DisplayName: "Category verification", Description: "Verify categories.", ModelSettingKey: processing.CategoryVerificationStep, Manual: true, Preferred: "qwen3.5:4b", PreferredAvailable: true, Scopes: []processing.PostProcessorScopeStatus{{Key: "default", DisplayName: "Default", Enabled: scopeEnabled[processing.CategoryVerificationStep+"/default"]}}, Verification: category.Verification},
-		{Key: processing.TranslationModelStep, DisplayName: "Translations", Description: "Translate presentations.", ModelSettingKey: processing.TranslationModelStep, Manual: true, PreferredAvailable: true, PerScopeSettings: true, Scopes: translationScopes},
+		{Key: processing.PublicAssistanceVerificationStep, DisplayName: "Public assistance verification", Description: "Verify public assistance metadata.", ModelSettingKey: processing.PublicAssistanceVerificationStep, Manual: true, Preferred: "qwen3.5:4b", PreferredAvailable: true, Enabled: processorEnabled[processing.PublicAssistanceVerificationStep], Scopes: []processing.PostProcessorScopeStatus{{Key: "default", DisplayName: "Default", Enabled: scopeEnabled[processing.PublicAssistanceVerificationStep+"/default"]}}, Verification: assistance.Verification},
+		{Key: processing.CategoryVerificationStep, DisplayName: "Category verification", Description: "Verify categories.", ModelSettingKey: processing.CategoryVerificationStep, Manual: true, Preferred: "qwen3.5:4b", PreferredAvailable: true, Enabled: processorEnabled[processing.CategoryVerificationStep], Scopes: []processing.PostProcessorScopeStatus{{Key: "default", DisplayName: "Default", Enabled: scopeEnabled[processing.CategoryVerificationStep+"/default"]}}, Verification: category.Verification},
+		{Key: processing.TranslationModelStep, DisplayName: "Translations", Description: "Translate presentations.", ModelSettingKey: processing.TranslationModelStep, Manual: true, PreferredAvailable: true, PerScopeSettings: true, Enabled: processorEnabled[processing.TranslationModelStep], Scopes: translationScopes},
 	}
 	return processing.PipelineModelStatus{Steps: defaultTestStepStatus("qwen3.5:4b"), PostProcessors: postProcessors, Models: []string{"granite4:3b", longTestModel, "qwen3.5:4b"}, CatalogAvailable: true, Ready: true}, nil
 }
@@ -201,6 +206,16 @@ func (p fakeProcessingRequester) SetPostProcessingScopeEnabled(ctx context.Conte
 		return 0, store.ErrNotFound
 	}
 	return p.database.SetPostProcessingScopeEnabled(ctx, processor, scope, enabled, time.Now())
+}
+
+func (p fakeProcessingRequester) SetPostProcessingProcessorEnabled(ctx context.Context, processor string, enabled bool) (int, error) {
+	if p.err != nil {
+		return 0, p.err
+	}
+	if p.database == nil {
+		return 0, store.ErrNotFound
+	}
+	return p.database.SetPostProcessingProcessorEnabled(ctx, processor, enabled, time.Now())
 }
 
 func (p fakeProcessingRequester) RequestPostProcessing(ctx context.Context, request processing.PostProcessingRequest) (int, error) {

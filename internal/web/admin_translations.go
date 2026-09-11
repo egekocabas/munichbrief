@@ -430,6 +430,16 @@ func adminTranslationAttemptLabel(status, reason string, attempts int) string {
 }
 
 func (data *adminTranslationsPage) setNotice(query url.Values) {
+	if enabledValue := query.Get("processor_automatic_enabled"); enabledValue != "" {
+		enabled := enabledValue == "true"
+		skipped, _ := nonNegativeQueryIntValues(query, "processor_automatic_skipped")
+		state := "disabled"
+		if enabled {
+			state = "enabled"
+		}
+		data.Notice = fmt.Sprintf("Automatic translations are %s. %d queued automatic job(s) were skipped; running and manual jobs remain unaffected.", state, skipped)
+		return
+	}
 	if scope := query.Get("automatic_scope"); scope != "" && query.Get("automatic_processor") == processing.TranslationModelStep {
 		label := scope
 		for _, item := range data.Languages {

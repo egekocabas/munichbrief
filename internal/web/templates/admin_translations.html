@@ -19,12 +19,21 @@
         <div class="max-w-3xl">
           <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Operations</p>
           <h1 class="mt-1 font-serif text-4xl font-bold tracking-tight">Translation operations</h1>
-          <p class="mt-3 text-muted">Reader publication and the newest job health are tracked separately. Automatic translation can be controlled per language; disabling skips queued automatic jobs, while enabling is picked up by the next normal check. Manual actions remain available.</p>
+          <p class="mt-3 text-muted">Reader publication and the newest job health are tracked separately. Automatic translation requires the global AI switch, the translation-wide switch, and the language switch. Enabling is picked up by the next normal check. Manual actions remain available.</p>
         </div>
         <p class="text-sm font-semibold text-muted" aria-live="polite"><span data-translation-connection>Connected</span> · updated <time datetime="{{.UpdatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime "en" .UpdatedAt}}</time></p>
       </div>
 
       {{if .Notice}}<div class="mt-6 rounded-md border px-4 py-3 font-semibold {{if .NoticeIsWarning}}border-alert/30 bg-alert-soft text-alert{{else}}border-civic/25 bg-paper text-civic{{end}}" role="status">{{.Notice}}</div>{{end}}
+
+      {{with .TranslationModel}}
+      <section class="mt-8 rounded-lg border border-rule bg-paper p-5" aria-labelledby="automatic-translations-heading">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div class="max-w-3xl"><p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Automatic processing</p><h2 id="automatic-translations-heading" class="mt-1 font-serif text-2xl font-bold">All translations</h2><p class="mt-2 text-sm text-muted">This translation-wide gate applies before each language gate. Disabling skips queued automatic translations; running and manual jobs are unaffected.</p></div>
+          <form class="flex items-center gap-3" method="post" action="/api/admin/ai/post-processing/processor-enabled" data-confirm-processing data-confirm-description="{{if .Enabled}}Disable{{else}}Enable{{end}} automatic translations for every language. Running and manual jobs are unaffected."><input name="confirmed" type="hidden" value="false"><input name="processor" type="hidden" value="translation"><input name="enabled" type="hidden" value="{{if .Enabled}}false{{else}}true{{end}}"><strong class="text-sm {{if .Enabled}}text-emerald-700{{else}}text-muted{{end}}">{{if .Enabled}}Enabled{{else}}Disabled{{end}}</strong><button class="admin-action-button whitespace-nowrap rounded-md border border-civic bg-white px-3 py-2 text-sm font-bold text-civic hover:bg-newsprint" type="submit" {{if not $.ProcessingEnabled}}disabled aria-disabled="true"{{end}}>{{if .Enabled}}Disable all{{else}}Enable all{{end}}</button></form>
+        </div>
+      </section>
+      {{end}}
 
       <section class="mt-8 grid gap-4 sm:grid-cols-3" aria-label="Canonical coverage">
         <article class="rounded-lg border border-rule bg-paper p-5"><p class="text-xs font-bold uppercase tracking-wider text-muted">Current source incidents</p><p class="mt-2 font-serif text-4xl font-bold tabular-nums">{{.Canonical.Total}}</p></article>

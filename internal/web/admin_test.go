@@ -519,6 +519,7 @@ func TestAdminProcessingReturnsUnavailableWhenAIIsDisabled(t *testing.T) {
 		{method: http.MethodPost, path: "/api/admin/ai/cancel-all", body: "confirmed=true"},
 		{method: http.MethodPost, path: "/api/admin/ai/post-processing/process", body: "confirmed=true&processor=translation&scope=en&target=all&model=qwen3.5%3A4b"},
 		{method: http.MethodPost, path: "/api/admin/ai/post-processing/enabled", body: "confirmed=true&processor=translation&scope=en&enabled=false"},
+		{method: http.MethodPost, path: "/api/admin/ai/post-processing/processor-enabled", body: "confirmed=true&processor=translation&enabled=false"},
 		{method: http.MethodPost, path: "/api/admin/ai/translations/process", body: "confirmed=true&language=en&action=all&model=qwen3.5%3A4b"},
 	} {
 		response := httptest.NewRecorder()
@@ -1624,10 +1625,34 @@ func TestAdminControlsAutomaticPostProcessingPerScope(t *testing.T) {
 
 	translations := httptest.NewRecorder()
 	handler.ServeHTTP(translations, httptest.NewRequest(http.MethodGet, "/admin/translations", nil))
-	for _, expected := range []string{"Automatic", "Automatic translation can be controlled per language", "enabling is picked up by the next normal check", `/api/admin/ai/post-processing/enabled`, `name="scope" type="hidden" value="en"`, "Enabled", `name="scope" type="hidden" value="ru"`, "Disabled"} {
+	for _, expected := range []string{"Automatic", "Automatic translation requires the global AI switch", "Enabling is picked up by the next normal check", `/api/admin/ai/post-processing/processor-enabled`, "All translations", `/api/admin/ai/post-processing/enabled`, `name="scope" type="hidden" value="en"`, "Enabled", `name="scope" type="hidden" value="ru"`, "Disabled"} {
 		if translations.Code != http.StatusOK || !strings.Contains(translations.Body.String(), expected) {
 			t.Errorf("translation controls do not contain %q", expected)
 		}
+	}
+	disableAll := httptest.NewRecorder()
+	handler.ServeHTTP(disableAll, formRequest(http.MethodPost, "/api/admin/ai/post-processing/processor-enabled", "confirmed=true&processor=translation&enabled=false"))
+	if disableAll.Code != http.StatusSeeOther || !strings.Contains(disableAll.Header().Get("Location"), "/admin/translations?") || !strings.Contains(disableAll.Header().Get("Location"), "processor_automatic_enabled=false") {
+		t.Fatalf("disable all translations redirect = %d %q", disableAll.Code, disableAll.Header().Get("Location"))
+	}
+	processorSettings, err := database.PostProcessingProcessorSettings(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, setting := range processorSettings {
+		if setting.ProcessorKey == processing.TranslationModelStep && setting.Enabled {
+			t.Fatalf("translation processor remains enabled: %#v", setting)
+		}
+	}
+	invalidProcessor := httptest.NewRecorder()
+	handler.ServeHTTP(invalidProcessor, formRequest(http.MethodPost, "/api/admin/ai/post-processing/processor-enabled", "confirmed=true&processor=translation&enabled=1"))
+	if invalidProcessor.Code != http.StatusBadRequest {
+		t.Fatalf("non-boolean processor enabled status = %d", invalidProcessor.Code)
+	}
+	unknownProcessor := httptest.NewRecorder()
+	handler.ServeHTTP(unknownProcessor, formRequest(http.MethodPost, "/api/admin/ai/post-processing/processor-enabled", "confirmed=true&processor=missing&enabled=false"))
+	if unknownProcessor.Code != http.StatusBadRequest {
+		t.Fatalf("unknown processor status = %d", unknownProcessor.Code)
 	}
 
 	disable := httptest.NewRecorder()
@@ -1667,6 +1692,13 @@ func TestAdminControlsAutomaticPostProcessingPerScope(t *testing.T) {
 	protected.Handler().ServeHTTP(crossSite, crossSiteRequest)
 	if crossSite.Code != http.StatusForbidden {
 		t.Fatalf("cross-site scope update status = %d", crossSite.Code)
+	}
+	crossSiteProcessor := httptest.NewRecorder()
+	crossSiteProcessorRequest := formRequest(http.MethodPost, "/api/admin/ai/post-processing/processor-enabled", "confirmed=true&processor=translation&enabled=true")
+	crossSiteProcessorRequest.Header.Set("Origin", "https://evil.invalid")
+	protected.Handler().ServeHTTP(crossSiteProcessor, crossSiteProcessorRequest)
+	if crossSiteProcessor.Code != http.StatusForbidden {
+		t.Fatalf("cross-site processor update status = %d", crossSiteProcessor.Code)
 	}
 }
 

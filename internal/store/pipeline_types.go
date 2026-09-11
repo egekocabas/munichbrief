@@ -19,6 +19,10 @@ const PostProcessingStatusReasonMissingInput = "missing_input"
 // because its processor scope was disabled before execution.
 const PostProcessingStatusReasonScopeDisabled = "scope_disabled"
 
+// PostProcessingStatusReasonProcessorDisabled identifies automatic work
+// skipped because its processor-wide gate was disabled before execution.
+const PostProcessingStatusReasonProcessorDisabled = "processor_disabled"
+
 // ProcessingStatusReasonOperatorCanceled identifies unfinished work explicitly
 // canceled by an administrator without exposing any job input or output.
 const ProcessingStatusReasonOperatorCanceled = "operator_canceled"
@@ -94,6 +98,14 @@ type PostProcessingScopeSetting struct {
 	ScopeKey         string    `json:"scope_key"`
 	Enabled          bool      `json:"enabled"`
 	AutomaticAfter   time.Time `json:"automatic_after"`
+	EnabledUpdatedAt time.Time `json:"enabled_updated_at"`
+}
+
+// PostProcessingProcessorSetting is the durable automatic-work gate shared by
+// every scope of one processor. Manual requests intentionally bypass it.
+type PostProcessingProcessorSetting struct {
+	ProcessorKey     string    `json:"processor_key"`
+	Enabled          bool      `json:"enabled"`
 	EnabledUpdatedAt time.Time `json:"enabled_updated_at"`
 }
 

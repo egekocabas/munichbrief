@@ -91,15 +91,19 @@ If a scheduled or continuation cycle is waiting on a retry or circuit breaker,
 a queued explicit canonical request takes its running lease and the automatic
 cycle resumes afterward with its accepted results intact.
 
-The Verifications and Translations pages provide a second, narrower durable
-gate for each registered post-processing scope. Verification scopes and English
-translation start enabled; all other translation languages start disabled.
-Disabling one scope marks its pending and retrying scheduled jobs as skipped
-with `scope_disabled`. Its running job finishes, other scopes are unaffected,
-and explicit manual rechecks or translations remain available. Enabling a scope
-does not wake the worker or enqueue inside the admin request. The next normal
-discovery pass uses the unchanged cutover and queues eligible work accumulated
-while the scope was disabled.
+The Verifications and Translations pages provide narrower durable gates below
+the global runtime switch. The Translations page has a translation-wide switch
+and one switch per reader language. Automatic translation runs only when the
+global, translation-wide, and language switches are all enabled. Processor
+gates start enabled; verification scopes and English translation start enabled,
+while all other translation languages start disabled. Disabling the
+translation-wide gate marks pending and retrying scheduled translations as
+skipped with `processor_disabled`; disabling one language uses `scope_disabled`.
+Running jobs finish, unrelated processors are unaffected, and explicit manual
+rechecks or translations remain available. Enabling either narrow gate does not
+wake the worker or enqueue inside the admin request. The next normal discovery
+pass uses unchanged cutovers and queues eligible work accumulated while the gate
+was disabled.
 
 “Cancel all unfinished work” is the immediate-stop operation. It disables
 automatic processing, interrupts the current Ollama request, and terminalizes
@@ -248,9 +252,10 @@ purpose: when a replacement fails, the retained earlier success remains
 published while the newest attempt also appears under attention and the
 replacement-warning count.
 
-The translation overview also shows and changes automatic eligibility for each
-language independently. Model and adapter preferences remain stored while a
-language is disabled, and the switch never removes published translations.
+The translation overview shows the translation-wide automatic gate and the
+independent gate for each language. Model and adapter preferences remain stored
+while either gate is disabled, and neither switch removes published
+translations.
 
 Language drill-down filters are `all`, `published`, `unpublished`,
 `never_queued`, `active`, and `attention`. Incident drill-down shows the German
@@ -299,7 +304,8 @@ gate. New presentations are queued automatically once its preferred model is
 configured and the scope is enabled.
 Existing presentations are not backfilled automatically; use the protected
 post-processing “process all” control in the admin dashboard. Migration `021`
-adds the per-scope gate without changing existing cutovers or job history.
+adds per-scope gates, and migration `022` adds processor-wide gates; neither
+changes existing cutovers or job history.
 
 Category verification is correction-only. Its model receives the privacy-safe
 German title and summary plus a German category label. German labels are mapped

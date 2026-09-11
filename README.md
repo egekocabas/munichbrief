@@ -25,7 +25,8 @@ Visit the live reader at [munichbrief.de](https://munichbrief.de).
 - Bounded, low-rate ingestion of RSS-linked official articles.
 - Metadata-first Ollama processing: a two-stage canonical German pipeline plus
   independent public-assistance verification, category verification, and
-  per-language translation jobs.
+  per-language translation jobs with global, translation-wide, and
+  language-specific automatic controls.
 - A separately refreshed Munich-area gazetteer protects official place names
   with deterministic placeholders before any translation request.
 - Fail-closed public presentation: retained source text is never rendered on a
