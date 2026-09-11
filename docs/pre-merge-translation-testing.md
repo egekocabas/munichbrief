@@ -116,10 +116,10 @@ Start after all ten HY-MT2 targets have an evaluation decision.
 
 | Languages | Starting candidate | Adapter |
 | --- | --- | --- |
-| Croatian, Bosnian, Greek | `hf.co/mradermacher/translategemma-12b-it-GGUF:Q2_K`, then `translategemma:4b-it-q8_0` when the 12B artifact cannot load | `translategemma` |
+| Croatian, Bosnian | `hf.co/mradermacher/translategemma-12b-it-GGUF:Q2_K`, then `translategemma:4b-it-q8_0` when the 12B artifact cannot load | `translategemma` |
 | Romanian | `hf.co/bartowski/Qwen_Qwen3.5-9B-GGUF:Q3_K_M` | `structured` |
 | Russian and Croatian comparison | `hf.co/mradermacher/Seed-X-Instruct-7B-GGUF:Q5_K_M` | `seed-x` |
-| Russian, Croatian, Greek, Hindi comparison | SalamandraTA v3 Q5_K_M; Q4_K_M only after repeated Q5 memory failures | `salamandra-ta` |
+| Russian, Croatian, Hindi comparison | SalamandraTA v3 Q5_K_M; Q4_K_M only after repeated Q5 memory failures | `salamandra-ta` |
 
 Verify installed artifact, language-code support, template, and available memory.
 First run Croatian A's two fields as a loading/translation gate. Record loading
@@ -143,13 +143,13 @@ The next unlocked-language comparison uses only officially supported pairs:
 
 | Model | Targets | Quantization order | Adapter |
 | --- | --- | --- | --- |
-| LLaMAX3-8B-Alpaca | `bs`, `hr`, `el`, `hi`, `ru` | Q4_K_M only | `llamax3` |
-| EuroLLM-9B-Instruct-2512 | `hr`, `el`, `hi`, `ru` | Q4_K_M, Q4_K_S, Q3_K_L | `eurollm` |
+| LLaMAX3-8B-Alpaca | `bs`, `hr`, `hi`, `ru` | Q4_K_M only | `llamax3` |
+| EuroLLM-9B-Instruct-2512 | `hr`, `hi`, `ru` | Q4_K_M, Q4_K_S, Q3_K_L | `eurollm` |
 | Tower-Plus-9B | `hi`, `ru` | Q4_K_M, Q4_K_S, Q3_K_L | `tower-plus` |
 | TowerInstruct-7B-v0.2 | `ru` | Q6_K, Q5_K_M | `tower-instruct` |
 
 Run fixture A first, grouped by model in the table order; within LLaMAX3 use
-Bosnian, Croatian, Greek, Hindi, Russian, then use the displayed target order for
+Bosnian, Croatian, Hindi, Russian, then use the displayed target order for
 the other families. Placeholder corruption disqualifies only that model-language
 pair and does not stop unrelated pairs. An unchanged-request retry is allowed
 only for an isolated transport interruption. Two confirmed load/OOM failures on
@@ -161,7 +161,7 @@ Advance the best two structurally safe candidates per language to B/C; Bosnian
 has only LLaMAX3. Rank material fact/legal fidelity before readability, then use
 permissive licensing, infrastructure stability, and latency as tie-breakers.
 Compare saved HY-MT2 Russian and Qwen Croatian evidence without regenerating it.
-Complete Bosnian, Greek, Hindi, Croatian, then Russian through D-F and A/B repeat.
+Complete Bosnian, Hindi, Croatian, then Russian through D-F and A/B repeat.
 
 Allow ten prompt revisions per language across candidates. The leader receives
 at most six; stop it earlier when one material error survives three consecutive
@@ -174,14 +174,14 @@ explicit review of their noncommercial licensing.
 ### New-candidate extension: MADLAD-400, Gemma 4, and Tower+ Q3
 
 The next comparison keeps every selected language/model route unchanged and
-targets only paused Bosnian, Greek, Hindi, Croatian, and Russian. MADLAD-400 is
-eligible for all five through its raw `<2xx> source` translation contract;
-Gemma 4 is exploratory for all five through user-only chat with thinking off;
+targets only paused Bosnian, Hindi, Croatian, and Russian. MADLAD-400 is
+eligible for all four through its raw `<2xx> source` translation contract;
+Gemma 4 is exploratory for all four through user-only chat with thinking off;
 Tower+ remains limited to its officially listed Hindi and Russian targets. The
 effective context is 2048 for all three families on the Pi.
 
 Run the fixture-A gates grouped by model: MADLAD and Gemma 4 each use
-`bs,el,hi,hr,ru`; Tower+ uses `hi,ru`. MADLAD has no prose prompt-tuning path.
+`bs,hi,hr,ru`; Tower+ uses `hi,ru`. MADLAD has no prose prompt-tuning path.
 Typed-placeholder corruption disqualifies only the affected pairing. For Gemma
 4, use UD-Q4_K_XL then Q4_K_M only on confirmed memory failure. For Tower+, use
 Q3_K_M then Q3_K_S only on confirmed memory failure, and rerun completed gates
@@ -205,7 +205,6 @@ calls then took about two to eight seconds. There was no OOM or transport error.
 | Pair | Calls | Result |
 | --- | ---: | --- |
 | Bosnian | 2 | Title changed/dropped placeholders and contained no translation; summary was only `.` |
-| Greek | 1 | Empty title |
 | Hindi | 1 | Empty title |
 | Croatian | 1 | Empty title |
 | Russian | 1 | Empty title |
@@ -228,7 +227,6 @@ placeholders and passed the deterministic production validators.
 | Pair | Structure | Editorial result / disposition |
 | --- | --- | --- |
 | Bosnian | Pass | Clear overall, but stated the alleged injury as fact; focused work |
-| Greek | Pass | Allegation phrase contained a Chinese character and the title invented “intensive”; focused work |
 | Hindi | Pass | Stated the alleged injury as fact; focused work |
 | Croatian | Pass | Stated the allegation as fact and changed medical examination to receiving treatment; focused work |
 | Russian | Pass | Stated the allegation as fact and changed medical examination to receiving treatment; focused work |
@@ -240,10 +238,10 @@ shortlist comparison. Evidence is retained in
 `readiness-gemma4-udq4kxl-v1`.
 
 The unchanged Gemma B/C screen kept placeholders intact. C preserved material
-facts in all five languages; Bosnian C exposed a validator false positive for
+facts in all four languages; Bosnian C exposed a validator false positive for
 the ordinary date form `29. avgusta`, now covered by a regression test. B again
-lost allegation framing in every language; Greek mixed in a French word and
-Croatian a Polish character, with additional grammar errors. The first focused
+lost allegation framing in every language; Croatian mixed in a Polish character,
+with additional grammar errors. The first focused
 revision therefore adds only general target-language, allegation, and medical-
 examination guidance and must re-pass A/B before expansion.
 
@@ -270,9 +268,9 @@ Hindi C lost the approximate nature of 04:20. Russian B again stated the alleged
 damage as fact, while Russian C also made 04:20 exact. Gemma 4 remains the
 leading new candidate for both languages; Tower+ is retained as the runner-up.
 
-Gemma revision 1 fixed allegation and examination handling on A across all five
+Gemma revision 1 fixed allegation and examination handling on A across all four
 languages. It did not qualify a language yet: Bosnian and Croatian B called a
-suspect formally accused; Greek B contaminated the presumption-of-innocence term;
+suspect formally accused;
 Hindi A made the approximate 03:30 exact; and Russian's otherwise complete 8/8
 screen weakened explicit crash causality in F's headline. Revision 2 adds only
 the corresponding general legal-status, target-term, approximate-time, and
@@ -287,14 +285,6 @@ Bosnian legal term and completed the final eight-pair protocol. All eight pairs
 preserved material facts and legal meaning; A/B repeats were identical. Awkward
 grammar and occasional Serbian/Ekavian wording remain recorded caveats, so this
 is an assistant-reviewed sample result rather than native approval.
-
-Greek revision 2 preserved structure and fixed the earlier legal term, but the
-full run changed neutral witness questioning into arrest and mixed Cyrillic into
-a translated headline. Revision 3 fixed both targeted distinctions in C and D's
-headline, then inserted the Polish word `piątku` into D's summary despite the
-Greek-only instruction. Cross-language contamination therefore survived three
-focused prompt rounds. The pairing is paused under the repeated-error rule; no
-single final prompt completed the eight-pair protocol.
 
 Hindi revision 2 preserved structure but C converted source numbers to
 Devanagari and even mixed numeral scripts in `110`. Revision 3 fixed exact ASCII
@@ -367,11 +357,9 @@ treated as a meaning pass.
 | --- | --- | --- | --- |
 | LLaMAX3 Q4_K_M | Bosnian | Pass | Lost allegation framing, mixed Croatian month name, awkward grammar, and reversed headline causality; tunable |
 | LLaMAX3 Q4_K_M | Croatian | Pass | Lost allegation framing, untranslated headline term, malformed transit clause, and reversed headline causality; tunable |
-| LLaMAX3 Q4_K_M | Greek | Fail | Summary omitted STREET and COMMUTER_TRAIN placeholders; pairing permanently disqualified |
 | LLaMAX3 Q4_K_M | Hindi | Restoration passed; final title length failed | Lost allegation framing, changed the examined woman's gender/reference, and duplicated witness wording; tunable |
 | LLaMAX3 Q4_K_M | Russian | Pass | Lost allegation framing, changed unaffected U-Bahn to closed, omitted the medical examination, and invented a rationale; tunable |
 | EuroLLM Q4_K_M | Croatian | Fail | Emitted the instruction/placeholder regex and Markdown; pairing permanently disqualified |
-| EuroLLM Q4_K_M | Greek | Fail | Invented an unknown placeholder for the time, breaking exact restoration; pairing permanently disqualified |
 | EuroLLM Q4_K_M | Hindi | Pass | Lost police attribution/allegation and weakened location/contact details; tunable |
 | EuroLLM Q4_K_M | Russian | Fail | Translated the instruction instead of the title; pairing permanently disqualified before summary generation |
 | Tower+ Q4_K_M, Q4_K_S, Q3_K_L | Hindi/Russian | No output | Every quantization was kernel-OOM-killed while loading the required 8192 context; family hardware-blocked on the 7.7 GiB host |
@@ -380,9 +368,7 @@ treated as a meaning pass.
 No Tower+ quality score exists: its failures are infrastructure failures. No
 lower quantization was tried for semantic or placeholder failures. The current
 shortlist is LLaMAX3 alone for Bosnian and Croatian; LLaMAX3 plus EuroLLM for
-Hindi; and LLaMAX3 plus TowerInstruct for Russian. Greek has no structurally safe
-candidate from this tournament and remains paused unless a separate candidate is
-authorized. Bosnian, Greek, Hindi, Croatian, and Russian were subsequently
+Hindi; and LLaMAX3 plus TowerInstruct for Russian. Bosnian, Hindi, Croatian, and Russian were subsequently
 completed in that order; their decisions are recorded below.
 
 ## Step 5: decisions and release evidence
@@ -449,14 +435,9 @@ native-language approval.
 | Bosnian | TranslateGemma Q2_K / 4B Q8 | Q2 A failed; Q8 gates completed through six focused rounds | No single prompt qualified A-F; mixed script, token mutation/omission, lost qualifiers, and changed uncertainty persisted | Not run under a qualifying prompt | Paused after six Q8 focused rounds; no native approval | Retain final concise guidance; evaluate another model separately |
 | Bosnian | LLaMAX3 Q4_K_M | A remained structurally safe through three focused revisions | Bosnian month wording improved, but the model repeatedly reversed headline agency and stated an allegation as fact | Not run | Paused by the three-consecutive-error early-stop rule; no native approval | Do not spend remaining revision budget on this pairing |
 | Bosnian | Gemma 4 E4B UD-Q4_K_XL | Final protocol: 8/8 pairs | 8/8 materially acceptable after five focused revisions; awkward grammar and occasional Serbian/Ekavian wording recorded | Final A/B: identical pass | Acceptable on this sample; no native approval | Keep as leading Bosnian candidate; seek native review |
-| Greek | TranslateGemma 4B Q8 | Best round: A-D pass across accumulated gates; E/F fail | No single prompt passed A-F; scheduled-bus/traffic-police qualifiers and F escape/arrest/uncertainty remain unreliable | Round-3 A/B: 2/2 pass | Paused after six focused rounds; no native approval | Retain final safety guidance; evaluate another model separately |
-| Greek | SalamandraTA v3 Q5_K_M | Baseline and revision 1 A-C preserved structure; revision 2 B title omitted its source tokens and emitted the prompt/regex | Revision 2 fixed B's legal meaning in the summary, but its title failed the placeholder hard gate | Not run | Disqualified after placeholder corruption; no native approval | Retain the earlier structurally safe guidance; do not configure SalamandraTA for Greek |
-| Greek | LLaMAX3 Q4_K_M / EuroLLM Q4_K_M | Both fixture-A gates failed structure | LLaMAX3 omitted two typed placeholders; EuroLLM invented a placeholder for a time | Not run | Both pairings permanently disqualified; no tournament candidate remains | Keep Greek paused; do not tune structurally unsafe pairings |
-| Greek | Gemma 4 E4B UD-Q4_K_XL | All generated pairs preserved structure | C questioning was fixed, but Polish/Cyrillic contamination persisted through three prompt rounds | Not run under one qualifying prompt | Paused by the three-consecutive-error rule; no native approval | Do not continue Gemma prompt tuning for Greek |
-| Greek | Qwen 9B structured | A-C passed structure under revision 4; D duplicated its municipality token under revisions 4 and 7 | Revisions fixed allegation, plural transit, street relation, legal terminology, closure tense, witness questioning, approximate time, and neutral release; D remained unstable | Not run under one qualifying prompt | Paused after repeated placeholder corruption; no native approval | Retain revision 6 as the safest structurally valid prompt; do not select Qwen for Greek |
 | Romanian | Qwen 9B structured | Final protocol: 8/8 pairs | 8/8 materially acceptable after three focused rounds; recurring grammar/typing defects recorded | Final A/B: 2/2 pass | User-selected/locked to Qwen 9B; no native approval | Keep selected model/adapter; seek catalog/native review |
 
-### Qwen 9B qualification: Greek, Spanish, and Italian
+### Qwen 9B qualification: Spanish and Italian
 
 The next evaluation uses the existing production `structured` adapter with
 `hf.co/bartowski/Qwen_Qwen3.5-9B-GGUF:Q3_K_M`, digest
@@ -465,7 +446,7 @@ The next evaluation uses the existing production `structured` adapter with
 Each request returns title and summary together. This is prompt tuning only;
 model weights, production selections, and route state remain unchanged.
 
-Run Greek, Spanish, then Italian. Start each language with the unchanged shared
+Run Spanish, then Italian. Start each language with the unchanged shared
 prompt and A-C. If those pass, continue D-F and repeat A/B. Otherwise test only
 the reproducibly failing fixtures after short, general English guidance. Allow
 at most ten revisions per language, never retry an unchanged completed output,
@@ -475,45 +456,12 @@ end a pairing before the revision ceiling.
 
 | Language | Baseline | Revisions | Final protocol | Current Qwen decision |
 | --- | --- | ---: | --- | --- |
-| Greek | A-C structurally safe by revision 4; D exposed repeated token duplication | 7/10 explored; revision 6 retained | Not completed | Paused: Qwen duplicated a municipality placeholder twice across focused attempts |
 | Spanish | Shared A-C: 3/3 structural, 1/3 acceptable | 7/10 used | 8/8 structural and materially acceptable | Acceptable on this sample; Qwen is the leading Spanish candidate |
 | Italian | Shared A-C: 3/3 structural; material time, plural-transit, and suspect issues | 4/10 used | 8/8 structural and materially acceptable | Acceptable on this sample; Qwen is the leading Italian candidate |
 
 After each language, update this table and its detailed evidence, commit and
 push, post the complete result to PR #55, and continue automatically. Raw
 responses and review records remain in identity-specific ignored checkpoints.
-
-#### Greek Qwen 9B result: 2026-09-10
-
-The shared-prompt A-C baseline first exposed a deterministic schema problem:
-JSON `maxLength` was applied to model-facing text before long typed placeholders
-were restored, so an otherwise bounded title could be truncated inside a token.
-The translation schema now defers maximum title/summary length checks until
-after exact restoration; a regression test proves that restored reader limits
-remain enforced. This validator repair did not consume a prompt revision.
-
-Seven bounded Greek prompt identities were evaluated. General guidance fixed
-mixed English, explicit allegation framing, plural S-Bahn grammar, on-street
-location, concise headlines, final-conviction terminology, past closure tense,
-neutral witness questioning, approximate time, and neutral release from
-custody. Revision 4 made A-C materially acceptable on assistant review, with
-minor awkward witness and police-operation wording.
-
-Expansion to real fixture D failed exact restoration because Qwen reused the
-single municipality placeholder for ordinary nearby “Munich” text. Revision 5
-added a generic exact-occurrence rule and restored D structurally, but changed
-an approximate time to exact and used prison-specific release wording. Revision
-6 fixed those two meanings and is retained as the safest structurally valid
-prompt, though it added “last” to an unqualified Friday and remained
-grammatically uneven. Revision 7 fixed the weekday wording but duplicated the
-municipality placeholder again. Under the agreed repeated-corruption rule, the
-Qwen/Greek pairing is disqualified without spending the final three revisions.
-
-Greek therefore has no Qwen final eight-pair protocol and remains **paused**.
-The completed outputs, one interrupted revision-5 transport attempt, rendered
-requests, validations, timings, model metadata, and manual reviews remain in
-separate ignored identity-specific checkpoints. No preferred model or route
-state changed, and no native-language approval is claimed.
 
 #### Spanish Qwen 9B result: 2026-09-10
 
@@ -592,52 +540,6 @@ and append-only reviews remain in the ignored identity-specific checkpoints.
 No preferred production model or route state changed, and native-language
 approval remains outstanding.
 
-#### Greek SalamandraTA Q5_K_M final decision: 2026-09-11
-
-The preserved baseline and first focused A-C checkpoints were reviewed without
-regeneration. All six pairs retained their typed placeholders and numbers. Both
-A outputs preserved allegation, examination, timing, route, and unaffected
-U-Bahn meaning but used singular Greek agreement around plural S-Bahnen. Both B
-outputs weakened final conviction to final decision, and both C outputs changed
-neutral witness questioning into interrogation.
-
-A second focused identity kept the official user-only ChatML contract and added
-only general Greek language, transit-number, conviction, and questioning
-distinctions. B's title then translated the requirements themselves, emitted
-Markdown and the placeholder regex, and omitted the title's actual STREET and
-DISTRICT tokens. Its summary was readable and correctly distinguished no
-conviction from final conviction, but the pair was deterministically rejected
-and could not be restored. Because native fields are generated before pair-level
-validation, C's structurally valid title completed before the stop signal was
-delivered; C's summary was not generated and is recorded as interrupted rather
-than scored.
-
-This was a completed model-output failure, not an OOM or transport failure. Q5
-remained loaded and responsive, so Q4 fallback does not apply. The typed-token
-hard gate ends the pairing without spending the remaining six revision slots.
-The code retains the earlier structurally safe Greek guidance and adds a prompt-
-isolation regression test; the unsafe expanded guidance is preserved only in
-the ignored request checkpoint.
-
-SalamandraTA is therefore **disqualified for Greek**. Qwen demonstrated broader
-semantic coverage before repeating municipality placeholders, TranslateGemma
-4B Q8 reached A-D only across mixed prompt identities, and Gemma 4 repeatedly
-mixed foreign scripts. None completed one acceptable eight-pair identity, so
-Greek remains paused and no production model selection changes. This is
-assistant review only, not native approval.
-
-Before merge: review reader catalogs (especially disclosure, attribution, legal
-copy), run the full non-Docker [development suite](development.md), verify admin,
-upgrade migration, retained publications, and paused-language behavior using
-disposable data/recorded responses. Confirm `homelab-infra` permits all public
-prefixes. Update the PR with actual qualified routes, paused languages, evidence,
-and limitations.
-
-During later rollout configure only approved routes, explicitly review inherited
-English settings, verify Gazetteer/model readiness, preserve future-only cutovers,
-and keep historical backfill an operator action. No Docker; no automatic merge
-or deployment.
-
 ## Four-call checkpoint: 2026-09-08
 
 Completed exactly four HY-MT2 calls (English A title/summary, then Ukrainian A
@@ -688,10 +590,6 @@ required stable active-clause roles and allegation wording; its title repeated
 the identical reversal. The run was stopped before another summary generation
 under the three-consecutive-error rule. Bosnian remains paused; no native approval
 is claimed.
-
-Greek has no structurally safe candidate from this tournament: LLaMAX3 omitted
-typed placeholders and EuroLLM invented an unknown one. Both pairings remain
-disqualified without prompt tuning, so the recorded Greek outcome is paused.
 
 ## Hindi tournament decision: 2026-09-09
 
@@ -1925,7 +1823,7 @@ Thus **2/3 new request attempts failed at transport/runtime level (66.7%)**, and
 the only completed output materially failed. This meets the user-defined high
 failure-rate stop condition and the roadmap rule to stop after repeated Ollama
 restarts. Bosnian is hardware-blocked before a complete pair; prompt revisions
-would not address the blocker. Greek and the Croatian TranslateGemma leg inherit
+would not address the blocker. The Croatian TranslateGemma leg inherits
 this candidate-level hardware blocker on the same host and are not repeatedly
 loaded. Their quality remains unassessed, not failed. The durable checkpoint
 preserves the completed response, both EOF attempts, exact requests, timings,
@@ -1965,45 +1863,11 @@ phrases. It also passed deterministic structure but failed meaning/readability.
 This initial gate paused both fallback artifacts for Bosnian. That decision was
 later superseded by the user-authorized six-round Q8 evaluation documented
 below; the baseline remains historical evidence rather than the final Bosnian
-decision. These Bosnian results did not establish Greek or Croatian quality;
-those languages were evaluated independently. The test-only
+decision. These Bosnian results did not establish Croatian quality; that
+language was evaluated independently. The test-only
 readiness selector now permits an explicit TranslateGemma comparison model so
 future artifacts retain exact model/digest/request identities without changing
 production language settings.
-
-## Greek TranslateGemma decision: 2026-09-09
-
-Greek was evaluated independently after the Bosnian gate. Q2_K completed A-C
-without runtime failure but was unusable: A strengthened the allegation and
-mislabeled S-Bahnen as metro, B invented pending accusations and corrupted the
-legal safeguards with non-words, and C contained malformed Greek. The candidate
-was not expanded.
-
-The 4B Q8 baseline completed A-C. B preserved the complete legal meaning and C
-preserved the precision facts, but A inserted Arabic script and broke the
-allegation/actor relationship. Six focused Greek-only guidance rounds then used
-the same native adapter and exact request-identity rules:
-
-| Round | Gate / result |
-| --- | --- |
-| 1 | A removed script leakage but still broke the allegation/actor relationship and broadened examination to treatment |
-| 2 | A fixed allegation, roles, examination, and transit; witness noun became a non-word |
-| 3 | A passed and repeated exactly; B passed and repeated exactly; C-F exposed one-witness, operational, scheduled-bus/traffic-police, and escape/arrest failures |
-| 4 | C still lost one witness; D partly improved; E regressed inpatient care; F remained overlong and materially wrong |
-| 5 | C passed; D retained most details but omitted scene securing; E retained inpatient care but lost route/police qualifiers; F changed Friday to Saturday and confirmed tentative facts |
-| 6 | D passed with grammar caveats; E still lost scheduled-route and traffic-police qualifiers; F still claimed successful escape, was overlong, and did not reliably preserve the arrest/uncertainty details |
-
-All calls completed without EOF or model unloading. Deterministic validation
-correctly rejected overlong F titles, while editorial review independently
-identified their semantic failures. The best results across attempts were A-D,
-but **no single prompt identity passed A-F**. Because round 6 still failed E and
-F, A-C and the repeats were not regenerated under that identity merely to add
-calls after the decision was already negative.
-
-Greek is **paused after six focused rounds**. The code retains the final
-safety-oriented Greek guidance, but that is not route qualification. Every raw
-response, result, and separate assistant review remains in its immutable local
-checkpoint. This is assistant review only, not native approval.
 
 ## Croatian TranslateGemma comparison: 2026-09-09
 
@@ -2157,7 +2021,7 @@ as the safest production starting point, not as route qualification. Q2_K and
 not a memory blocker. Assistant review only; no native approval.
 
 This completes every runnable candidate in the authorized remaining-language
-session. Bosnian, Greek, Croatian/Qwen, and Croatian/TranslateGemma remain
+session. Bosnian, Croatian/Qwen, and Croatian/TranslateGemma remain
 paused for another model or native-guided evaluation rather than further prompt
 growth on the current candidates.
 

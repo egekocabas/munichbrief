@@ -85,8 +85,8 @@ Keep the existing title and summary limits and strict two-field JSON output.
 Generated fields are normalized to Unicode NFC before character-count
 validation and persistence. Tests should include decomposed accents and the
 target alphabet so equivalent text has one stable stored and cache identity.
-For Greek, review tonos and dialytika; for Romanian, require comma-below `ș`
-and `ț` rather than cedilla variants; for Polish, cover its complete extended
+For Romanian, require comma-below `ș` and `ț` rather than cedilla variants;
+for Polish, cover its complete extended
 Latin alphabet; and for Russian, distinguish its Cyrillic repertoire (including
 `Ё`) from Ukrainian. Exercise every CLDR plural category used by the locale,
 including `few` and `many` where applicable.

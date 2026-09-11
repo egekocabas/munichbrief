@@ -170,7 +170,7 @@ func TestHyMT2NativeAdapterAddsOnlyConfiguredTargetGuidance(t *testing.T) {
 }
 
 func TestHyMT2NativeAdapterRejectsUnsupportedReaderLanguages(t *testing.T) {
-	for _, code := range []string{"hr", "bs", "el", "ro"} {
+	for _, code := range []string{"hr", "bs", "ro"} {
 		t.Run(code, func(t *testing.T) {
 			_, err := NewHyMT2NativeAdapter("http://ollama.test:11434", "hy-mt2:test", code, time.Second, 8192, nil)
 			if err == nil || !strings.Contains(err.Error(), "does not officially support target language") {

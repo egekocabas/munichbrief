@@ -103,7 +103,7 @@ go test -run 'TestLiveOllama(UnifiedTranslationPromptContract|RegisteredTranslat
 
 The focused checks cover every registered target, language identities, Munich
 district and street names, required terminology, attribution and uncertainty,
-strict JSON, Han, Devanagari, Greek, and Cyrillic script output, and
+strict JSON, Han, Devanagari, and Cyrillic script output, and
 instruction-like translated data without logging generated text.
 
 See [Translation model evaluation](translation-model-evaluation.md) for the

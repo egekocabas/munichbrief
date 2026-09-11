@@ -119,7 +119,7 @@ requests for native adapters. The model, adapter, and prompt are frozen into
 each job and remain visible in audit history; changing a preference affects
 only future work. English, Turkish,
 Croatian, Italian, Ukrainian, Bosnian, Simplified Chinese, Hindi, Spanish,
-French, Greek, Romanian, Polish, and Russian each receive only the accepted
+French, Romanian, Polish, and Russian each receive only the accepted
 German title and summary.
 
 Before a translation request, the active gazetteer matcher replaces exact

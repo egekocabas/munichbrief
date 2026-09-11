@@ -164,11 +164,9 @@ ContactHeading = { other = "Запитання, виправлення або в
 ContactPublicLead = { other = "Знайшли помилку чи маєте пропозицію?" }
 ContactIssueLink = { other = "Створити звернення на GitHub" }
 ContactPrivateLead = { other = "Щодо конфіденційності або інформації, яку не слід публікувати, напишіть на адресу" }
-SwitchToGreek = { other = "Перейти до грецької версії" }
 SwitchToRomanian = { other = "Перейти до румунської версії" }
 SwitchToPolish = { other = "Перейти до польської версії" }
 SwitchToRussian = { other = "Перейти до російської версії" }
-GreekTranslationStep = { other = "Переклад грецькою" }
 RomanianTranslationStep = { other = "Переклад румунською" }
 PolishTranslationStep = { other = "Переклад польською" }
 RussianTranslationStep = { other = "Переклад російською" }

@@ -107,7 +107,7 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	if page.Code != http.StatusOK || page.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("admin page = %d/%q", page.Code, page.Header().Get("Cache-Control"))
 	}
-	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", "Installed and ready", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/post-processing/process", "/api/admin/ai/automatic-processing", "/api/admin/ai/cancel-all", "Cancel all unfinished work", "/api/admin/ai/status", "/admin/rss-history", "RSS history", "/admin/history", "Pipeline history", "Open reader", "View full history", "Confirm AI request", staticAssets["theme.js"].path, "data-theme-toggle", staticAssets["admin.js"].path, "Active stage", "Canonical pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover", "Independent post-processing queues", "Post-processing only", "Configure translation routes", "Category verification only"} {
+	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", longTestModel, "Installed and ready", "admin-control", "admin-action-button", "sm:grid-cols-2", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/post-processing/process", "/api/admin/ai/automatic-processing", "/api/admin/ai/cancel-all", "Cancel all unfinished work", "/api/admin/ai/status", "/admin/rss-history", "RSS history", "/admin/history", "Pipeline history", "Open reader", "View full history", "Confirm AI request", staticAssets["theme.js"].path, "data-theme-toggle", staticAssets["admin.js"].path, "Active stage", "Canonical pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover", "Independent post-processing queues", "Post-processing only", "Configure translation routes", "Category verification only"} {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("admin page does not contain %q", expected)
 		}
@@ -659,7 +659,7 @@ func TestAdminTranslationOperationsOverviewDrilldownsAndActions(t *testing.T) {
 
 	language := httptest.NewRecorder()
 	handler.ServeHTTP(language, httptest.NewRequest(http.MethodGet, "/admin/translations?language=en&status=all", nil))
-	for _, expected := range []string{presentation.TitleDE, presentation.TitleEN, presentation.SummaryEN, "Published", "Latest attempt", "Failed", "Published provenance", "Attempt provenance", "Queue unpublished", "Rerun all", "All languages"} {
+	for _, expected := range []string{presentation.TitleDE, presentation.TitleEN, presentation.SummaryEN, "Published", "Latest attempt", "Failed", "Published provenance", "Attempt provenance", "Queue unpublished", "Rerun all", "All languages", longTestModel, "admin-control", "admin-control-label", "admin-action-button", "sm:grid-cols-[minmax(0,1fr)_auto]"} {
 		if language.Code != http.StatusOK || !strings.Contains(language.Body.String(), expected) {
 			t.Errorf("translation language view = %d, missing %q", language.Code, expected)
 		}
@@ -1079,7 +1079,7 @@ func TestAdminPipelineHistoryCombinesCanonicalAndPostProcessingJobs(t *testing.T
 	if first.Code != http.StatusOK || first.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("pipeline history = %d/%q", first.Code, first.Header().Get("Cache-Control"))
 	}
-	for _, expected := range []string{"Pipeline history", "Open reader", `aria-current="page"`, "2 job states shown", "category_verification/default", "post-processing · manual", "qwen3.5:4b", "translation/en", "translategemma:4b", "adapter translategemma", "Older →", `data-pipeline-history`, `data-history-poll-interval="2000"`, staticAssets["admin.js"].path} {
+	for _, expected := range []string{"Pipeline history", "Open reader", `aria-current="page"`, "2 job states shown", "category_verification/default", "post-processing · manual", "qwen3.5:4b", "translation/en", "translategemma:4b", "adapter translategemma", "Older →", "admin-history-shell", "admin-provenance", `data-pipeline-history`, `data-history-poll-interval="2000"`, staticAssets["admin.js"].path} {
 		if !strings.Contains(first.Body.String(), expected) {
 			t.Errorf("pipeline history does not contain %q", expected)
 		}

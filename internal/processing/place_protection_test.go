@@ -214,14 +214,14 @@ func TestTranslationValidationDefersProtectedFieldLengthUntilRestoration(t *test
 }
 
 func TestTranslationSchemaDefersFieldLimitsUntilPlaceRestoration(t *testing.T) {
-	translation := TranslationByLanguageMust(t, "el")
+	translation := TranslationByLanguageMust(t, "ro")
 	var schema struct {
 		Properties map[string]map[string]any `json:"properties"`
 	}
 	if err := json.Unmarshal(translation.Step.Schema, &schema); err != nil {
 		t.Fatal(err)
 	}
-	for _, field := range []string{"title_el", "summary_el"} {
+	for _, field := range []string{"title_ro", "summary_ro"} {
 		property := schema.Properties[field]
 		if property["minLength"] != float64(1) {
 			t.Fatalf("%s minimum length = %#v", field, property["minLength"])

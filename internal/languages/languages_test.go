@@ -35,7 +35,6 @@ func TestPreferredCodeUsesBCP47Matching(t *testing.T) {
 		"hi-IN,hi;q=0.9":          "hi",
 		"es-MX,es;q=0.9":          "es",
 		"fr-CA,fr;q=0.9":          "fr",
-		"el-CY,el;q=0.9":          "el",
 		"ro-MD,ro;q=0.9":          "ro",
 		"pl-PL,pl;q=0.9":          "pl",
 		"ru-BY,ru;q=0.9":          "ru",
@@ -61,7 +60,6 @@ func TestRegisteredDateFormatting(t *testing.T) {
 	hi, _ := ByCode(Registered(), "hi")
 	es, _ := ByCode(Registered(), "es")
 	fr, _ := ByCode(Registered(), "fr")
-	el, _ := ByCode(Registered(), "el")
 	ro, _ := ByCode(Registered(), "ro")
 	pl, _ := ByCode(Registered(), "pl")
 	ru, _ := ByCode(Registered(), "ru")
@@ -75,7 +73,7 @@ func TestRegisteredDateFormatting(t *testing.T) {
 		"Turkish": tr.FormatDay(value), "Croatian": hr.FormatDay(value), "Italian": it.FormatDay(value),
 		"Ukrainian": uk.FormatDay(value), "Bosnian": bs.FormatDay(value), "Chinese": zh.FormatDay(value),
 		"Hindi": hi.FormatDay(value), "Spanish": es.FormatDay(value), "French": fr.FormatDay(value),
-		"Greek": el.FormatDay(value), "Romanian": ro.FormatDay(value), "Polish": pl.FormatDay(value), "Russian": ru.FormatDay(value),
+		"Romanian": ro.FormatDay(value), "Polish": pl.FormatDay(value), "Russian": ru.FormatDay(value),
 	} {
 		want := map[string]string{
 			"Turkish": "Pazartesi, 31 Ağustos 2026", "Croatian": "ponedjeljak, 31. kolovoza 2026.",
@@ -83,8 +81,8 @@ func TestRegisteredDateFormatting(t *testing.T) {
 			"Bosnian": "ponedjeljak, 31. august 2026.",
 			"Chinese": "2026年8月31日星期一", "Hindi": "सोमवार, 31 अगस्त 2026",
 			"Spanish": "lunes, 31 de agosto de 2026", "French": "lundi 31 août 2026",
-			"Greek": "Δευτέρα, 31 Αυγούστου 2026", "Romanian": "luni, 31 august 2026",
-			"Polish": "poniedziałek, 31 sierpnia 2026", "Russian": "понедельник, 31 августа 2026 г.",
+			"Romanian": "luni, 31 august 2026",
+			"Polish":   "poniedziałek, 31 sierpnia 2026", "Russian": "понедельник, 31 августа 2026 г.",
 		}[name]
 		if actual != want {
 			t.Errorf("%s day = %q, want %q", name, actual, want)

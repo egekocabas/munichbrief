@@ -41,7 +41,6 @@ SwitchToChinese = { other = "Перейти к версии на упрощён�
 SwitchToHindi = { other = "Перейти к версии на хинди" }
 SwitchToSpanish = { other = "Перейти к испанской версии" }
 SwitchToFrench = { other = "Перейти к французской версии" }
-SwitchToGreek = { other = "Перейти к греческой версии" }
 SwitchToRomanian = { other = "Перейти к румынской версии" }
 SwitchToPolish = { other = "Перейти к польской версии" }
 SwitchToRussian = { other = "Перейти к русской версии" }
@@ -129,7 +128,6 @@ ChineseTranslationStep = { other = "Перевод на упрощённый к�
 HindiTranslationStep = { other = "Перевод на хинди" }
 SpanishTranslationStep = { other = "Перевод на испанский" }
 FrenchTranslationStep = { other = "Перевод на французский" }
-GreekTranslationStep = { other = "Перевод на греческий" }
 RomanianTranslationStep = { other = "Перевод на румынский" }
 PolishTranslationStep = { other = "Перевод на польский" }
 RussianTranslationStep = { other = "Перевод на русский" }

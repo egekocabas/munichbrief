@@ -22,12 +22,11 @@ var salamandraTALanguageNames = map[string]string{
 	"de": "German", "en": "English", "tr": "Turkish", "hr": "Croatian",
 	"it": "Italian", "uk": "Ukrainian", "zh": "Chinese (simplified)",
 	"hi": "Hindi", "es": "Spanish", "fr": "French", "ro": "Romanian",
-	"pl": "Polish", "el": "Greek", "ru": "Russian",
+	"pl": "Polish", "ru": "Russian",
 }
 
 var salamandraTALanguageGuidance = map[string]string{
 	"ru": "Translate German ‘soll … haben’ as an explicitly alleged action, using ‘предположительно’ or equivalent. When present, use ‘полицейская операция’ for ‘Polizeieinsatz’ and express transitive ‘verzögert’ as causing delays, such as ‘задерживает движение’; never use ‘патруль’ or ‘задержал’. Use plural grammar around plural transit placeholders.",
-	"el": "Use ‘αστυνομική επιχείρηση’ for ‘Polizeieinsatz’ and plural grammar around plural transit placeholders. Translate ‘rechtskräftige Verurteilung’ as ‘αμετάκλητη καταδίκη’, never merely ‘τελική απόφαση’. Translate neutral police ‘befragen’ as ‘ρωτώ’ or ‘λαμβάνω κατάθεση’, never ‘ανακρίνω’ unless the German explicitly says interrogation.",
 	"hr": "Every reported-action clause containing German ‘soll’ must remain explicitly alleged with Croatian ‘navodno’. Translate a police operation causing delays without saying it stopped a train, and use plural Croatian grammar around plural transit placeholders.",
 }
 

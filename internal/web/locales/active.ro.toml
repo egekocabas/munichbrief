@@ -84,8 +84,6 @@ other = "Comută la versiunea în hindi"
 other = "Comută la versiunea în spaniolă"
 [SwitchToFrench]
 other = "Comută la versiunea în franceză"
-[SwitchToGreek]
-other = "Comută la versiunea în greacă"
 [SwitchToRomanian]
 other = "Comută la versiunea în română"
 [SwitchToPolish]
@@ -262,8 +260,6 @@ other = "Traducere în hindi"
 other = "Traducere în spaniolă"
 [FrenchTranslationStep]
 other = "Traducere în franceză"
-[GreekTranslationStep]
-other = "Traducere în greacă"
 [RomanianTranslationStep]
 other = "Traducere în română"
 [PolishTranslationStep]

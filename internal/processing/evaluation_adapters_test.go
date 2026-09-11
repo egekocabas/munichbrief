@@ -20,7 +20,7 @@ func TestLLaMAX3NativeAdapterUsesOfficialAlpacaShape(t *testing.T) {
 		if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
 			t.Fatal(err)
 		}
-		want := "Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.\n### Instruction:\nTranslate the following sentences from German to Greek. Output only the translation. Preserve every placeholder matching `__MB_[A-Z_]+_[0-9]{4}__` exactly, character-for-character; translate only the surrounding text.\n### Input:\nEinsatz an der __MB_STREET_0001__\n### Response:"
+		want := "Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.\n### Instruction:\nTranslate the following sentences from German to Russian. Output only the translation. Preserve every placeholder matching `__MB_[A-Z_]+_[0-9]{4}__` exactly, character-for-character; translate only the surrounding text.\n### Input:\nEinsatz an der __MB_STREET_0001__\n### Response:"
 		if !payload.Raw || payload.Prompt != want || payload.Options.Temperature != 0 || payload.Options.NumPredict != evaluationMaxOutputTokens || payload.Options.NumCtx != llamax3ContextLimit {
 			t.Fatalf("generate payload = %#v", payload)
 		}
@@ -28,7 +28,7 @@ func TestLLaMAX3NativeAdapterUsesOfficialAlpacaShape(t *testing.T) {
 		_ = json.NewEncoder(&response).Encode(generateResponse{Model: "llamax3:test", Done: true, Response: "Intervencija u __MB_STREET_0001__"})
 		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(response.Bytes()))}, nil
 	})
-	adapter, err := NewLLaMAX3NativeAdapter("http://ollama.test:11434", "llamax3:test", "el", time.Second, 16384, &http.Client{Transport: transport})
+	adapter, err := NewLLaMAX3NativeAdapter("http://ollama.test:11434", "llamax3:test", "ru", time.Second, 16384, &http.Client{Transport: transport})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +95,7 @@ func TestMADLAD400NativeAdapterUsesOnlyOfficialTargetTokenAndSource(t *testing.T
 		if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
 			t.Fatal(err)
 		}
-		if !payload.Raw || payload.Prompt != "<2el> Einsatz an der __MB_STREET_0001__" {
+		if !payload.Raw || payload.Prompt != "<2hr> Einsatz an der __MB_STREET_0001__" {
 			t.Fatalf("MADLAD payload = %#v", payload)
 		}
 		if payload.Options.Temperature != 0 || payload.Options.NumPredict != madlad400MaxOutputTokens || payload.Options.NumCtx != madlad400ContextLimit {
@@ -105,25 +105,16 @@ func TestMADLAD400NativeAdapterUsesOnlyOfficialTargetTokenAndSource(t *testing.T
 			t.Fatalf("MADLAD prompt contains instructions: %q", payload.Prompt)
 		}
 		var response bytes.Buffer
-		_ = json.NewEncoder(&response).Encode(generateResponse{Model: "madlad:test", Done: true, Response: "Επιχείρηση στην __MB_STREET_0001__"})
+		_ = json.NewEncoder(&response).Encode(generateResponse{Model: "madlad:test", Done: true, Response: "Intervencija u __MB_STREET_0001__"})
 		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(response.Bytes()))}, nil
 	})
-	adapter, err := NewMADLAD400NativeAdapter("http://ollama.test", "madlad:test", "el", time.Second, 8192, &http.Client{Transport: transport})
+	adapter, err := NewMADLAD400NativeAdapter("http://ollama.test", "madlad:test", "hr", time.Second, 8192, &http.Client{Transport: transport})
 	if err != nil {
 		t.Fatal(err)
 	}
 	translated, model, err := adapter.Translate(context.Background(), " Einsatz an der __MB_STREET_0001__ ")
-	if err != nil || model != "madlad:test" || translated != "Επιχείρηση στην __MB_STREET_0001__" {
+	if err != nil || model != "madlad:test" || translated != "Intervencija u __MB_STREET_0001__" {
 		t.Fatalf("translation=%q model=%q err=%v", translated, model, err)
-	}
-}
-
-func TestGemma4GreekGuidanceCoversObservedGeneralFailures(t *testing.T) {
-	guidance := gemma4LanguageGuidance["el"]
-	for _, required := range []string{"Greek alphabet", "Cyrillic", "αστυνομική επιχείρηση", "παίρνω κατάθεση", "συλλαμβάνω"} {
-		if !strings.Contains(guidance, required) {
-			t.Errorf("Greek guidance missing %q: %s", required, guidance)
-		}
 	}
 }
 

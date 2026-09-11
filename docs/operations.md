@@ -173,7 +173,7 @@ hash and supported pipeline lifecycle, and never renders stored originals. Only
 a complete current v2 run is eligible; v1 and imported legacy output are
 retained for audit but never selected. Back up SQLite
 before deploying a migration. Reader pages use explicit `/de`, `/en`, `/tr`,
-`/hr`, `/it`, `/uk`, `/bs`, `/zh`, `/hi`, `/es`, `/fr`, `/el`, `/ro`, `/pl`,
+`/hr`, `/it`, `/uk`, `/bs`, `/zh`, `/hi`, `/es`, `/fr`, `/ro`, `/pl`,
 and `/ru` paths; visiting any registered path refreshes a one-year, HTTP-only
 preference cookie used by the root and legacy-route
 redirects. Enable secure cookies behind TLS.

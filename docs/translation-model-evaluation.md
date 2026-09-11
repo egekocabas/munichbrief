@@ -5,7 +5,7 @@ The dated experiments below are historical evidence, not current approvals.
 Their future-work recommendations are superseded by that roadmap. Production
 uses typed Gazetteer protection and durable per-language model/adapter settings.
 Stored model output is plain text; older Markdown experiments do not describe
-the current contract. The former Croatian/Bosnian/Greek Q3_K_S recommendation
+the current contract. The former Croatian/Bosnian Q3_K_S recommendation
 is superseded: that artifact was hardware-blocked, while Q2_K and 4B Q8 loaded
 successfully but failed the Bosnian fixture-A meaning/readability gate. See the
 roadmap for exact evidence and current per-language status.
@@ -73,7 +73,7 @@ after the source-data heading. The adapter applies Tencent's recommended
 
 Of MunichBrief's registered translated languages, Hy-MT2 officially supports
 English, Turkish, Italian, Ukrainian, Chinese, Hindi, Spanish, French, Polish,
-and Russian. It does not list Croatian, Bosnian, Greek, or Romanian; production
+and Russian. It does not list Croatian, Bosnian, or Romanian; production
 routing rejects those targets instead of attempting an undocumented fallback.
 The adapter is available as an explicit per-language choice but has no automatic
 default and still requires live and native quality review.
@@ -111,7 +111,7 @@ shared provider is configured with a larger context.
 
 Of MunichBrief's translated reader languages, Seed-X officially supports
 English, Turkish, Croatian, Italian, Ukrainian, Chinese, Spanish, French,
-Romanian, Polish, and Russian. It does not list Bosnian, Hindi, or Greek; the
+Romanian, Polish, and Russian. It does not list Bosnian or Hindi; the
 adapter rejects those targets. ByteDance recommends against unofficial
 quantizations, so the downloaded third-party Q5_K_M file must remain an
 evaluation candidate rather than a production default.
@@ -174,8 +174,7 @@ output. Title and summary are separate calls, as they are in the application.
 HY-MT2 covers the English control plus Ukrainian, Hindi, and Russian with two
 repetitions at Tencent's sampling settings (48 field calls). Seed-X covers the
 English control plus Croatian, Romanian, and Ukrainian with one greedy run (24
-field calls). Bosnian and Greek are absent because neither model officially
-supports them.
+field calls). Bosnian is absent because neither model officially supports it.
 
 The run manifest pins requested model names and resolved Ollama digests, adapter
 and prompt versions, generation settings, fixture content and hashes, languages,
@@ -238,7 +237,7 @@ artifact without another database migration.
 ## SalamandraTA v3 request contract and Q5 gate
 
 SalamandraTA-7b-instruct v3 officially supports German source translation into
-Russian, Croatian, Greek, and Hindi. It uses a user-only ChatML conversation and
+Russian, Croatian, and Hindi. It uses a user-only ChatML conversation and
 the fixed English general-translation form `Translate the following text from
 {source} into {target}`, followed by labelled source text and the target label.
 The `SalamandraTANativeAdapter` keeps that trained shape, adds one concise typed-
@@ -259,9 +258,9 @@ preserved both allegation framing and the headline's operation/delay relation.
 Croatian produced relevant output through A-D, then corrupted fixture E's
 `__MB_TRANSIT_0001__` into the literal regex-shaped
 `__MB_[A-Z_]+_[0-9]{4}__`. Testing stopped immediately under the placeholder
-hard gate; E summary, F, repeats, further Greek work, and Hindi tuning were not
-run. Greek A-C and Hindi A preserved placeholders, but their quality decisions
-remain incomplete. No SalamandraTA route is qualified by this experiment.
+hard gate; E summary, F, repeats, and Hindi tuning were not run. Hindi A
+preserved placeholders, but its quality decision remains incomplete. No
+SalamandraTA route is qualified by this experiment.
 
 Primary references:
 
@@ -276,7 +275,7 @@ The next tournament retains the production typed-placeholder and queued-worker
 gate while following each model family's trained request shape. LLaMAX3 uses its
 documented raw Alpaca template and supports all five remaining targets. EuroLLM
 uses its official labelled-source ChatML evaluation prompt and supports Croatian,
-Greek, Hindi, and Russian, but not Bosnian. Tower+ supports Hindi and Russian;
+Hindi, and Russian, but not Bosnian. Tower+ supports Hindi and Russian;
 TowerInstruct-v0.2 supports Russian among the remaining targets. Both Tower
 families use user-only labelled-source ChatML without a system message. The
 evaluated TowerInstruct GGUF template unconditionally inserts an empty system

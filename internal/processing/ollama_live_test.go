@@ -290,9 +290,6 @@ func TestLiveOllamaRegisteredTranslationTargets(t *testing.T) {
 			if target.Language == "uk" && !strings.ContainsFunc(combined, func(character rune) bool { return unicode.Is(unicode.Cyrillic, character) }) {
 				t.Error("Ukrainian translation contains no Cyrillic characters")
 			}
-			if target.Language == "el" && !strings.ContainsFunc(combined, func(character rune) bool { return unicode.Is(unicode.Greek, character) }) {
-				t.Error("Greek translation contains no Greek characters")
-			}
 			if target.Language == "ru" && !strings.ContainsFunc(combined, func(character rune) bool { return unicode.Is(unicode.Cyrillic, character) }) {
 				t.Error("Russian translation contains no Cyrillic characters")
 			}

@@ -164,11 +164,9 @@ ContactHeading = { other = "问题、更正或反馈" }
 ContactPublicLead = { other = "发现错误或有建议？" }
 ContactIssueLink = { other = "在 GitHub 上提交问题" }
 ContactPrivateLead = { other = "如有隐私相关问题或任何不宜公开分享的事项，请发送电子邮件至" }
-SwitchToGreek = { other = "切换到希腊语版本" }
 SwitchToRomanian = { other = "切换到罗马尼亚语版本" }
 SwitchToPolish = { other = "切换到波兰语版本" }
 SwitchToRussian = { other = "切换到俄语版本" }
-GreekTranslationStep = { other = "希腊语翻译" }
 RomanianTranslationStep = { other = "罗马尼亚语翻译" }
 PolishTranslationStep = { other = "波兰语翻译" }
 RussianTranslationStep = { other = "俄语翻译" }

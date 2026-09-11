@@ -173,19 +173,6 @@ var registered = []Definition{
 		},
 	},
 	{
-		Code: "el", Tag: language.MustParse("el-GR"), DisplayName: "Ελληνικά", TranslationName: "Greek", Catalog: "locales/active.el.toml", OpenGraphLocale: "el_GR",
-		SwitchMessageID: "SwitchToGreek", StepMessageID: "GreekTranslationStep",
-		FormatDate: func(value time.Time) string {
-			return value.Format("02") + " " + greekMonths[value.Month()] + " " + value.Format("2006")
-		},
-		FormatDay: func(value time.Time) string {
-			return greekWeekdays[value.Weekday()] + ", " + value.Format("02") + " " + greekMonths[value.Month()] + " " + value.Format("2006")
-		},
-		FormatDateTime: func(value time.Time) string {
-			return value.Format("02") + " " + greekMonths[value.Month()] + value.Format(" 2006, 15:04 MST")
-		},
-	},
-	{
 		Code: "ro", Tag: language.MustParse("ro-RO"), DisplayName: "Română", TranslationName: "Romanian", Catalog: "locales/active.ro.toml", OpenGraphLocale: "ro_RO",
 		SwitchMessageID: "SwitchToRomanian", StepMessageID: "RomanianTranslationStep",
 		FormatDate: func(value time.Time) string {
@@ -328,17 +315,6 @@ var frenchMonths = map[time.Month]string{
 var frenchWeekdays = map[time.Weekday]string{
 	time.Sunday: "dimanche", time.Monday: "lundi", time.Tuesday: "mardi", time.Wednesday: "mercredi",
 	time.Thursday: "jeudi", time.Friday: "vendredi", time.Saturday: "samedi",
-}
-
-var greekMonths = map[time.Month]string{
-	time.January: "Ιανουαρίου", time.February: "Φεβρουαρίου", time.March: "Μαρτίου", time.April: "Απριλίου",
-	time.May: "Μαΐου", time.June: "Ιουνίου", time.July: "Ιουλίου", time.August: "Αυγούστου",
-	time.September: "Σεπτεμβρίου", time.October: "Οκτωβρίου", time.November: "Νοεμβρίου", time.December: "Δεκεμβρίου",
-}
-
-var greekWeekdays = map[time.Weekday]string{
-	time.Sunday: "Κυριακή", time.Monday: "Δευτέρα", time.Tuesday: "Τρίτη", time.Wednesday: "Τετάρτη",
-	time.Thursday: "Πέμπτη", time.Friday: "Παρασκευή", time.Saturday: "Σάββατο",
 }
 
 var romanianMonths = map[time.Month]string{

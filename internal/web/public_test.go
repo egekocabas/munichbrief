@@ -737,7 +737,7 @@ func TestLocalizedRoutesAndLanguagePreference(t *testing.T) {
 	if !strings.Contains(english.Body.String(), `href="/de/about?page=2"`) || !strings.Contains(english.Body.String(), `hreflang="de-DE"`) {
 		t.Fatal("English page does not preserve path and query in its language switch")
 	}
-	for _, expected := range []string{`<details class="language-menu`, `max-h-[calc(100dvh-7rem)]`, "Deutsch", "Türkçe", "Hrvatski", "Italiano", "Українська", "Bosanski", "简体中文", "हिन्दी", "Español", "Français", "Ελληνικά", "Română", "Polski", "Русский"} {
+	for _, expected := range []string{`<details class="language-menu`, `max-h-[calc(100dvh-7rem)]`, "Deutsch", "Türkçe", "Hrvatski", "Italiano", "Українська", "Bosanski", "简体中文", "हिन्दी", "Español", "Français", "Română", "Polski", "Русский"} {
 		if !strings.Contains(english.Body.String(), expected) {
 			t.Errorf("compact language menu does not contain %q", expected)
 		}
@@ -780,7 +780,6 @@ func TestLocalizedRoutesAndLanguagePreference(t *testing.T) {
 		{path: "/hi/about", tag: "hi-IN", copy: "MunichBrief कैसे काम करता है"},
 		{path: "/es/about", tag: "es-ES", copy: "Cómo funciona MunichBrief"},
 		{path: "/fr/about", tag: "fr-FR", copy: "Comment fonctionne MunichBrief"},
-		{path: "/el/about", tag: "el-GR", copy: "Πώς λειτουργεί το MunichBrief"},
 		{path: "/ro/about", tag: "ro-RO", copy: "Cum funcționează MunichBrief"},
 		{path: "/pl/about", tag: "pl-PL", copy: "Jak działa MunichBrief"},
 		{path: "/ru/about", tag: "ru-RU", copy: "Как работает MunichBrief"},
@@ -877,8 +876,6 @@ func TestTranslationCatalogsAreCompleteAndPluralized(t *testing.T) {
 		{language: "es", count: 2, expected: "2 informes"},
 		{language: "fr", count: 1, expected: "1 rapport"},
 		{language: "fr", count: 2, expected: "2 rapports"},
-		{language: "el", count: 1, expected: "1 αναφορά"},
-		{language: "el", count: 2, expected: "2 αναφορές"},
 		{language: "ro", count: 1, expected: "1 informare"},
 		{language: "ro", count: 2, expected: "2 informări"},
 		{language: "ro", count: 20, expected: "20 de informări"},
@@ -927,7 +924,6 @@ func TestReaderCatalogsAreUTF8NFCAndContainRepresentativeCharacters(t *testing.T
 		"hi": "अआईउएकगचजटडतदनपबमयरलवशसह़ँ",
 		"es": "áéíóúñ¿",
 		"fr": "àçéèôœ",
-		"el": "άέήίόύώϊ",
 		"ro": "ăâîșț",
 		"pl": "ąćęłńóśźż",
 		"ru": "ёйщыэюя",

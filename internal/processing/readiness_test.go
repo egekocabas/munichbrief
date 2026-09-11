@@ -308,7 +308,7 @@ func TestQwenQualificationLanguagesUseStructuredProductionContract(t *testing.T)
 		"title_de":   "Einsatz an der __MB_STREET_0001__",
 		"summary_de": "Die __MB_STREET_0001__ blieb gesperrt.",
 	}}
-	for _, language := range []string{"el", "es", "it"} {
+	for _, language := range []string{"es", "it"} {
 		t.Run(language, func(t *testing.T) {
 			requests := readinessExpectedRequests(t, "http://ollama.test", model, TranslationAdapterStructured, language, 8192, input)
 			if len(requests) != 1 {

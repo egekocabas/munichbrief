@@ -164,11 +164,9 @@ ContactHeading = { other = "Preguntas, correcciones o comentarios" }
 ContactPublicLead = { other = "¿Has encontrado un error o tienes una sugerencia?" }
 ContactIssueLink = { other = "Abrir una incidencia en GitHub" }
 ContactPrivateLead = { other = "Para cuestiones de privacidad o cualquier asunto que no deba compartirse públicamente, escribe a" }
-SwitchToGreek = { other = "Cambiar a la versión griega" }
 SwitchToRomanian = { other = "Cambiar a la versión rumana" }
 SwitchToPolish = { other = "Cambiar a la versión polaca" }
 SwitchToRussian = { other = "Cambiar a la versión rusa" }
-GreekTranslationStep = { other = "Traducción al griego" }
 RomanianTranslationStep = { other = "Traducción al rumano" }
 PolishTranslationStep = { other = "Traducción al polaco" }
 RussianTranslationStep = { other = "Traducción al ruso" }

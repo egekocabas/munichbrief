@@ -32,7 +32,6 @@ required_patterns=(
   'path: /hi'
   'path: /es'
   'path: /fr'
-  'path: /el'
   'path: /ro'
   'path: /pl'
   'path: /ru'

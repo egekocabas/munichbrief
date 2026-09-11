@@ -135,10 +135,10 @@ func TestEvaluationAdapterMigrationPreservesTranslationSettings(t *testing.T) {
 	if err != nil || len(settings) != 2 || settings[0].PreferredModel != "salamandra:model" || settings[0].AdapterKey != "salamandra-ta" || settings[1].PreferredModel != "tower:model" || settings[1].AdapterKey != "tower-instruct" {
 		t.Fatalf("preserved settings = %#v/%v", settings, err)
 	}
-	if err := database.EnsureTranslationLanguageSettings(ctx, []string{"bs", "el", "hr", "hi", "ru"}, "en", time.Now()); err != nil {
+	if err := database.EnsureTranslationLanguageSettings(ctx, []string{"bs", "hr", "hi", "ru"}, "en", time.Now()); err != nil {
 		t.Fatal(err)
 	}
-	for language, adapter := range map[string]string{"bs": "madlad400", "el": "gemma4", "hr": "eurollm", "hi": "tower-plus", "ru": "tower-instruct"} {
+	for language, adapter := range map[string]string{"bs": "madlad400", "hr": "eurollm", "hi": "tower-plus", "ru": "tower-instruct"} {
 		if err := database.SetTranslationLanguageSetting(ctx, language, adapter+":test", adapter, time.Now()); err != nil {
 			t.Fatalf("select %s after upgrade: %v", adapter, err)
 		}

@@ -127,8 +127,6 @@ other = "Switch to the Spanish version"
 [SwitchToFrench]
 other = "Switch to the French version"
 
-[SwitchToGreek]
-other = "Switch to the Greek version"
 
 [SwitchToRomanian]
 other = "Switch to the Romanian version"
@@ -392,8 +390,6 @@ other = "Spanish translation"
 [FrenchTranslationStep]
 other = "French translation"
 
-[GreekTranslationStep]
-other = "Greek translation"
 
 [RomanianTranslationStep]
 other = "Romanian translation"

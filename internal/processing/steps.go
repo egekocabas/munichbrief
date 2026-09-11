@@ -970,7 +970,7 @@ func validateTargetScript(language, title, summary string) error {
 		"en": unicode.Latin, "tr": unicode.Latin, "hr": unicode.Latin,
 		"it": unicode.Latin, "bs": unicode.Latin, "es": unicode.Latin,
 		"fr": unicode.Latin, "ro": unicode.Latin, "pl": unicode.Latin,
-		"zh": unicode.Han, "hi": unicode.Devanagari, "el": unicode.Greek,
+		"zh": unicode.Han, "hi": unicode.Devanagari,
 		"uk": unicode.Cyrillic, "ru": unicode.Cyrillic,
 	}[language]
 	if target == nil {

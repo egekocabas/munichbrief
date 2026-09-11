@@ -87,7 +87,7 @@ func TestSeedXNativeAdapterMapsEverySupportedReaderLanguage(t *testing.T) {
 }
 
 func TestSeedXNativeAdapterRejectsUnsupportedReaderLanguages(t *testing.T) {
-	for _, code := range []string{"bs", "hi", "el"} {
+	for _, code := range []string{"bs", "hi"} {
 		t.Run(code, func(t *testing.T) {
 			_, err := NewSeedXNativeAdapter("http://ollama.test:11434", "seed-x:test", code, time.Second, 8192, nil)
 			if err == nil || !strings.Contains(err.Error(), "does not officially support target language") {

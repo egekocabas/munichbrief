@@ -41,7 +41,6 @@ SwitchToChinese = { other = "Przejdź do wersji chińskiej uproszczonej" }
 SwitchToHindi = { other = "Przejdź do wersji hindi" }
 SwitchToSpanish = { other = "Przejdź do wersji hiszpańskiej" }
 SwitchToFrench = { other = "Przejdź do wersji francuskiej" }
-SwitchToGreek = { other = "Przejdź do wersji greckiej" }
 SwitchToRomanian = { other = "Przejdź do wersji rumuńskiej" }
 SwitchToPolish = { other = "Przejdź do wersji polskiej" }
 SwitchToRussian = { other = "Przejdź do wersji rosyjskiej" }
@@ -129,7 +128,6 @@ ChineseTranslationStep = { other = "Tłumaczenie na chiński uproszczony" }
 HindiTranslationStep = { other = "Tłumaczenie na hindi" }
 SpanishTranslationStep = { other = "Tłumaczenie hiszpańskie" }
 FrenchTranslationStep = { other = "Tłumaczenie francuskie" }
-GreekTranslationStep = { other = "Tłumaczenie greckie" }
 RomanianTranslationStep = { other = "Tłumaczenie rumuńskie" }
 PolishTranslationStep = { other = "Tłumaczenie polskie" }
 RussianTranslationStep = { other = "Tłumaczenie rosyjskie" }

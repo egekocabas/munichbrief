@@ -164,11 +164,9 @@ ContactHeading = { other = "Pitanja, ispravci ili povratne informacije" }
 ContactPublicLead = { other = "Pronašli ste pogrešku ili imate prijedlog?" }
 ContactIssueLink = { other = "Otvorite prijavu na GitHubu" }
 ContactPrivateLead = { other = "Za pitanja privatnosti ili sadržaj koji se ne smije javno dijeliti pošaljite e-poštu na" }
-SwitchToGreek = { other = "Prijeđi na grčku verziju" }
 SwitchToRomanian = { other = "Prijeđi na rumunjsku verziju" }
 SwitchToPolish = { other = "Prijeđi na poljsku verziju" }
 SwitchToRussian = { other = "Prijeđi na rusku verziju" }
-GreekTranslationStep = { other = "Grčki prijevod" }
 RomanianTranslationStep = { other = "Rumunjski prijevod" }
 PolishTranslationStep = { other = "Poljski prijevod" }
 RussianTranslationStep = { other = "Ruski prijevod" }

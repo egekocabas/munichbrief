@@ -88,7 +88,7 @@ func TestTemporarySixCaseAttempt2(t *testing.T) {
 		model     string
 		languages []string
 	}{
-		{"translategemma:4b", []string{"en", "tr", "hr", "it", "bs", "zh", "es", "fr", "el", "pl"}},
+		{"translategemma:4b", []string{"en", "tr", "hr", "it", "bs", "zh", "es", "fr", "pl"}},
 		{"qwen3.5:4b", []string{"uk", "hi", "ru"}},
 		{"hf.co/bartowski/Qwen_Qwen3.5-9B-GGUF:Q3_K_M", []string{"ro"}},
 	}
@@ -236,7 +236,7 @@ func validateAttempt2Result(language string, fixture attempt2Result, protected g
 			failures = append(failures, fmt.Sprintf("missing restored place %q in %s", replacement.Original, replacement.Field))
 		}
 	}
-	if target := map[string]*unicode.RangeTable{"zh": unicode.Han, "hi": unicode.Devanagari, "uk": unicode.Cyrillic, "ru": unicode.Cyrillic, "el": unicode.Greek}[language]; target != nil && !strings.ContainsFunc(combined, func(character rune) bool { return unicode.Is(target, character) }) {
+	if target := map[string]*unicode.RangeTable{"zh": unicode.Han, "hi": unicode.Devanagari, "uk": unicode.Cyrillic, "ru": unicode.Cyrillic}[language]; target != nil && !strings.ContainsFunc(combined, func(character rune) bool { return unicode.Is(target, character) }) {
 		failures = append(failures, "missing expected target script")
 	}
 	sort.Strings(failures)

@@ -35,7 +35,6 @@ func TestRegisteredPipelineStepsAreStableAndOrdered(t *testing.T) {
 		{"hi", HindiTranslationPromptVersion},
 		{"es", SpanishTranslationPromptVersion},
 		{"fr", FrenchTranslationPromptVersion},
-		{"el", GreekTranslationPromptVersion},
 		{"ro", RomanianTranslationPromptVersion},
 		{"pl", PolishTranslationPromptVersion},
 		{"ru", RussianTranslationPromptVersion},

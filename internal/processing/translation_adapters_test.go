@@ -17,7 +17,7 @@ func TestTranslationAdapterSupportMatchesNativeContracts(t *testing.T) {
 			t.Errorf("HY-MT2 should support %s", code)
 		}
 	}
-	for _, code := range []string{"hr", "bs", "el", "ro"} {
+	for _, code := range []string{"hr", "bs", "ro"} {
 		if TranslationAdapterSupports(TranslationAdapterHyMT2, code) {
 			t.Errorf("HY-MT2 should not be offered for %s", code)
 		}
@@ -27,12 +27,12 @@ func TestTranslationAdapterSupportMatchesNativeContracts(t *testing.T) {
 			t.Errorf("Seed-X should support %s", code)
 		}
 	}
-	for _, code := range []string{"bs", "hi", "el"} {
+	for _, code := range []string{"bs", "hi"} {
 		if TranslationAdapterSupports(TranslationAdapterSeedX, code) {
 			t.Errorf("Seed-X should not be offered for %s", code)
 		}
 	}
-	for _, code := range []string{"en", "tr", "hr", "it", "uk", "zh", "hi", "es", "fr", "ro", "pl", "el", "ru"} {
+	for _, code := range []string{"en", "tr", "hr", "it", "uk", "zh", "hi", "es", "fr", "ro", "pl", "ru"} {
 		if !TranslationAdapterSupports(TranslationAdapterSalamandraTA, code) {
 			t.Errorf("SalamandraTA should support %s", code)
 		}
@@ -40,12 +40,12 @@ func TestTranslationAdapterSupportMatchesNativeContracts(t *testing.T) {
 	if TranslationAdapterSupports(TranslationAdapterSalamandraTA, "bs") {
 		t.Error("SalamandraTA should not be offered for bs")
 	}
-	for _, code := range []string{"ru", "hr", "el", "hi", "bs"} {
+	for _, code := range []string{"ru", "hr", "hi", "bs"} {
 		if !TranslationAdapterSupports(TranslationAdapterLLaMAX3, code) {
 			t.Errorf("LLaMAX3 should support %s", code)
 		}
 	}
-	for _, code := range []string{"ru", "hr", "el", "hi"} {
+	for _, code := range []string{"ru", "hr", "hi"} {
 		if !TranslationAdapterSupports(TranslationAdapterEuroLLM, code) {
 			t.Errorf("EuroLLM should support %s", code)
 		}
@@ -58,7 +58,7 @@ func TestTranslationAdapterSupportMatchesNativeContracts(t *testing.T) {
 			t.Errorf("Tower+ should support %s", code)
 		}
 	}
-	for _, code := range []string{"hr", "el", "bs"} {
+	for _, code := range []string{"hr", "bs"} {
 		if TranslationAdapterSupports(TranslationAdapterTowerPlus, code) {
 			t.Errorf("Tower+ should not support %s", code)
 		}
@@ -66,17 +66,17 @@ func TestTranslationAdapterSupportMatchesNativeContracts(t *testing.T) {
 	if !TranslationAdapterSupports(TranslationAdapterTowerInstruct, "ru") {
 		t.Error("TowerInstruct should support ru")
 	}
-	for _, code := range []string{"hr", "el", "hi", "bs"} {
+	for _, code := range []string{"hr", "hi", "bs"} {
 		if TranslationAdapterSupports(TranslationAdapterTowerInstruct, code) {
 			t.Errorf("TowerInstruct should not support %s", code)
 		}
 	}
-	for _, code := range []string{"bs", "el", "hi", "hr", "ru"} {
+	for _, code := range []string{"bs", "hi", "hr", "ru"} {
 		if !TranslationAdapterSupports(TranslationAdapterMADLAD400, code) {
 			t.Errorf("MADLAD-400 should support %s", code)
 		}
 	}
-	for _, code := range []string{"bs", "el", "hi", "hr", "ru", "es", "it"} {
+	for _, code := range []string{"bs", "hi", "hr", "ru", "es", "it"} {
 		if !TranslationAdapterSupports(TranslationAdapterGemma4, code) {
 			t.Errorf("Gemma 4 should support %s", code)
 		}

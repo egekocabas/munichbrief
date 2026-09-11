@@ -42,7 +42,7 @@ func TestSalamandraTANativeAdapterUsesOfficialChatMLTranslationShape(t *testing.
 }
 
 func TestSalamandraTANativeAdapterSupportsRequestedLanguages(t *testing.T) {
-	for _, code := range []string{"ru", "hr", "el", "hi"} {
+	for _, code := range []string{"ru", "hr", "hi"} {
 		t.Run(code, func(t *testing.T) {
 			if _, err := NewSalamandraTANativeAdapter("http://ollama.test:11434", "salamandra:test", code, time.Second, 8192, nil); err != nil {
 				t.Fatal(err)
@@ -51,30 +51,6 @@ func TestSalamandraTANativeAdapterSupportsRequestedLanguages(t *testing.T) {
 	}
 	if _, err := NewSalamandraTANativeAdapter("http://ollama.test:11434", "salamandra:test", "bs", time.Second, 8192, nil); err == nil || !strings.Contains(err.Error(), "does not officially support") {
 		t.Fatalf("unsupported Bosnian error = %v", err)
-	}
-}
-
-func TestSalamandraTAGreekGuidanceIsIsolated(t *testing.T) {
-	greek := salamandraTANativePrompt("German", "Greek", salamandraTALanguageGuidance["el"], "Quelle")
-	for _, expected := range []string{
-		"plural grammar around plural transit placeholders",
-		"‘αμετάκλητη καταδίκη’",
-		"never merely ‘τελική απόφαση’",
-		"‘λαμβάνω κατάθεση’",
-		"never ‘ανακρίνω’",
-	} {
-		if !strings.Contains(greek, expected) {
-			t.Fatalf("Greek guidance missing %q: %q", expected, greek)
-		}
-	}
-	for code, guidance := range salamandraTALanguageGuidance {
-		if code == "el" {
-			continue
-		}
-		rendered := salamandraTANativePrompt("German", salamandraTALanguageNames[code], guidance, "Quelle")
-		if strings.Contains(rendered, "αμετάκλητη καταδίκη") || strings.Contains(rendered, "λαμβάνω κατάθεση") {
-			t.Fatalf("Greek guidance leaked into %s: %q", code, rendered)
-		}
 	}
 }
 
