@@ -75,7 +75,7 @@ only this window. The CLI still requires the deployment-level
 `MUNICHBRIEF_AI_ENABLED=true` gate. Processing remains sequential and retains
 privacy validation, the circuit breaker, and normal retry delays. A command-line
 request is picked up by the running server on its next idle worker check.
-Each request freezes the configured model and adapter for every enabled reader
+Each request freezes the configured model and adapter for every selected reader
 language; languages without a selected model remain paused.
 
 The protected admin dashboard also has a durable automatic-processing master
@@ -90,6 +90,16 @@ finish-after-close rule.
 If a scheduled or continuation cycle is waiting on a retry or circuit breaker,
 a queued explicit canonical request takes its running lease and the automatic
 cycle resumes afterward with its accepted results intact.
+
+The Verifications and Translations pages provide a second, narrower durable
+gate for each registered post-processing scope. Verification scopes and English
+translation start enabled; all other translation languages start disabled.
+Disabling one scope marks its pending and retrying scheduled jobs as skipped
+with `scope_disabled`. Its running job finishes, other scopes are unaffected,
+and explicit manual rechecks or translations remain available. Enabling a scope
+does not wake the worker or enqueue inside the admin request. The next normal
+discovery pass uses the unchanged cutover and queues eligible work accumulated
+while the scope was disabled.
 
 “Cancel all unfinished work” is the immediate-stop operation. It disables
 automatic processing, interrupts the current Ollama request, and terminalizes
@@ -225,6 +235,10 @@ purpose: when a replacement fails, the retained earlier success remains
 published while the newest attempt also appears under attention and the
 replacement-warning count.
 
+The translation overview also shows and changes automatic eligibility for each
+language independently. Model and adapter preferences remain stored while a
+language is disabled, and the switch never removes published translations.
+
 Language drill-down filters are `all`, `published`, `unpublished`,
 `never_queued`, `active`, and `attention`. Incident drill-down shows the German
 canonical presentation plus each registered language's effective output,
@@ -267,11 +281,12 @@ terminal failure leaves the prior successful assistance result effective, or
 the original metadata when there has been no success, and does not block
 category verification, translation, or German publication.
 
-The verifier scope uses the registry's persisted enablement cutover. New
-presentations are queued automatically once its preferred model is configured.
+The verifier scope uses the registry's persisted cutover and automatic-work
+gate. New presentations are queued automatically once its preferred model is
+configured and the scope is enabled.
 Existing presentations are not backfilled automatically; use the protected
-post-processing “process all” control in the admin dashboard. No SQL migration
-is required for this rollout.
+post-processing “process all” control in the admin dashboard. Migration `021`
+adds the per-scope gate without changing existing cutovers or job history.
 
 Category verification is correction-only. Its model receives the privacy-safe
 German title and summary plus a German category label. German labels are mapped

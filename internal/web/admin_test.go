@@ -381,6 +381,7 @@ func TestAdminProcessingReturnsUnavailableWhenAIIsDisabled(t *testing.T) {
 		{method: http.MethodPost, path: "/api/admin/ai/automatic-processing", body: "enabled=false"},
 		{method: http.MethodPost, path: "/api/admin/ai/cancel-all", body: "confirmed=true"},
 		{method: http.MethodPost, path: "/api/admin/ai/post-processing/process", body: "confirmed=true&processor=translation&scope=en&target=all&model=qwen3.5%3A4b"},
+		{method: http.MethodPost, path: "/api/admin/ai/post-processing/enabled", body: "confirmed=true&processor=translation&scope=en&enabled=false"},
 		{method: http.MethodPost, path: "/api/admin/ai/translations/process", body: "confirmed=true&language=en&action=all&model=qwen3.5%3A4b"},
 	} {
 		response := httptest.NewRecorder()
@@ -1476,6 +1477,59 @@ func TestVisiblePostProcessingModelDistinguishesZeroAttemptSkip(t *testing.T) {
 	generatedAt := time.Now()
 	if visible := visiblePostProcessingModel(model, "skipped", 0, &generatedAt); visible != model {
 		t.Fatalf("retained successful model = %q", visible)
+	}
+}
+
+func TestAdminControlsAutomaticPostProcessingPerScope(t *testing.T) {
+	database := fixtureStore(t)
+	server := adminTestServer(t, database, nil)
+	handler := server.Handler()
+
+	translations := httptest.NewRecorder()
+	handler.ServeHTTP(translations, httptest.NewRequest(http.MethodGet, "/admin/translations", nil))
+	for _, expected := range []string{"Automatic", "Automatic translation can be controlled per language", "enabling is picked up by the next normal check", `/api/admin/ai/post-processing/enabled`, `name="scope" type="hidden" value="en"`, "Enabled", `name="scope" type="hidden" value="ru"`, "Disabled"} {
+		if translations.Code != http.StatusOK || !strings.Contains(translations.Body.String(), expected) {
+			t.Errorf("translation controls do not contain %q", expected)
+		}
+	}
+
+	disable := httptest.NewRecorder()
+	handler.ServeHTTP(disable, formRequest(http.MethodPost, "/api/admin/ai/post-processing/enabled", "confirmed=true&processor=category_verification&scope=default&enabled=false"))
+	if disable.Code != http.StatusSeeOther || !strings.Contains(disable.Header().Get("Location"), "/admin/verifications?") || !strings.Contains(disable.Header().Get("Location"), "automatic_enabled=false") {
+		t.Fatalf("disable redirect = %d %q", disable.Code, disable.Header().Get("Location"))
+	}
+	settings, err := database.PostProcessingScopeSettings(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, setting := range settings {
+		if setting.ProcessorKey == processing.CategoryVerificationStep && setting.ScopeKey == processing.DefaultPostProcessingScope && setting.Enabled {
+			t.Fatalf("category verification remains enabled: %#v", setting)
+		}
+	}
+
+	invalid := httptest.NewRecorder()
+	handler.ServeHTTP(invalid, formRequest(http.MethodPost, "/api/admin/ai/post-processing/enabled", "confirmed=true&processor=translation&scope=en&enabled=1"))
+	if invalid.Code != http.StatusBadRequest {
+		t.Fatalf("non-boolean enabled status = %d", invalid.Code)
+	}
+	unknown := httptest.NewRecorder()
+	handler.ServeHTTP(unknown, formRequest(http.MethodPost, "/api/admin/ai/post-processing/enabled", "confirmed=true&processor=translation&scope=missing&enabled=false"))
+	if unknown.Code != http.StatusBadRequest {
+		t.Fatalf("unknown scope status = %d", unknown.Code)
+	}
+	unconfirmed := httptest.NewRecorder()
+	handler.ServeHTTP(unconfirmed, formRequest(http.MethodPost, "/api/admin/ai/post-processing/enabled", "processor=translation&scope=en&enabled=false"))
+	if unconfirmed.Code != http.StatusBadRequest {
+		t.Fatalf("unconfirmed scope update status = %d", unconfirmed.Code)
+	}
+	protected := adminTestServer(t, database, []string{"munichbrief.de"})
+	crossSite := httptest.NewRecorder()
+	crossSiteRequest := formRequest(http.MethodPost, "/api/admin/ai/post-processing/enabled", "confirmed=true&processor=translation&scope=en&enabled=false")
+	crossSiteRequest.Header.Set("Origin", "https://evil.invalid")
+	protected.Handler().ServeHTTP(crossSite, crossSiteRequest)
+	if crossSite.Code != http.StatusForbidden {
+		t.Fatalf("cross-site scope update status = %d", crossSite.Code)
 	}
 }
 

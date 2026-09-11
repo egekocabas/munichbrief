@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -102,6 +103,13 @@ func TestUnifiedPostProcessingMigrationPreservesAuditAndCutsReadersToV2(t *testi
 	if err := database.EnsureTranslationLanguageSettings(ctx, []string{"en", "uk"}, "en", time.Date(2026, 8, 29, 9, 0, 0, 0, time.UTC)); err != nil {
 		t.Fatal(err)
 	}
+	if err := database.EnsurePostProcessingScopes(ctx, []PostProcessingScope{
+		{ProcessorKey: "translation", ScopeKey: "en"},
+		{ProcessorKey: "translation", ScopeKey: "uk"},
+		{ProcessorKey: "public_assistance_verification", ScopeKey: "default"},
+	}, time.Date(2026, 8, 29, 9, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatal(err)
+	}
 	var jobs, values, plans int
 	if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM post_processing_jobs`).Scan(&jobs); err != nil || jobs != 13 {
 		t.Fatalf("migrated jobs = %d, err=%v", jobs, err)
@@ -126,6 +134,16 @@ func TestUnifiedPostProcessingMigrationPreservesAuditAndCutsReadersToV2(t *testi
 		var automaticAfter string
 		if err := database.db.QueryRowContext(ctx, `SELECT automatic_after FROM post_processing_scopes WHERE processor_key=?`, processor).Scan(&automaticAfter); err != nil || automaticAfter != want {
 			t.Fatalf("migrated %s cutover = %q/%v, want %q", processor, automaticAfter, err, want)
+		}
+	}
+	for identity, want := range map[string]bool{
+		"translation/en": true, "translation/uk": false,
+		"category_verification/default": true, "public_assistance_verification/default": true,
+	} {
+		parts := strings.SplitN(identity, "/", 2)
+		var enabled int
+		if err := database.db.QueryRowContext(ctx, `SELECT enabled FROM post_processing_scopes WHERE processor_key=? AND scope_key=?`, parts[0], parts[1]).Scan(&enabled); err != nil || (enabled == 1) != want {
+			t.Fatalf("migrated %s enabled = %d/%v, want %t", identity, enabled, err, want)
 		}
 	}
 	for _, table := range []string{"presentation_translations", "presentation_category_verifications", "translation_language_cutovers", "category_verification_cutover"} {

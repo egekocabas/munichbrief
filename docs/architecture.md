@@ -218,8 +218,17 @@ Operator queue submissions, runtime-switch changes, and cancellation are
 serialized at their database mutation boundary, so a concurrent manual request
 is deterministically either included in the cancellation or accepted afterward.
 
+Every registered post-processing scope also has a durable automatic-work gate.
+Verification scopes and English translation start enabled; other translation
+languages start disabled. Scheduled enqueueing checks that gate transactionally,
+and a pending automatic job is checked again before claim. Disabling a scope
+skips its pending and retrying scheduled jobs with `scope_disabled`, while a job
+already running and all manual work remain eligible. Re-enabling does not wake
+the worker or move the scope cutover; the next ordinary discovery pass therefore
+finds work accumulated while the scope was disabled.
+
 The v2 migration records an automatic-scheduling cutover. Each registered
-processor scope also has a persisted enablement time. The public-assistance
+processor scope also has a persisted automatic cutover. The public-assistance
 scope begins automatic work only for presentations completed after its first
 deployment-time registration; operators use the admin “process all” action for
 older presentations, with no automatic historical backfill or operator-run

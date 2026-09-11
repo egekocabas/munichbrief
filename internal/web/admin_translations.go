@@ -368,6 +368,7 @@ func adminTranslationRoutes(processor *processing.PostProcessorModelStatus, mode
 			PreferredModel: scope.PreferredModel,
 			AdapterKey:     scope.AdapterKey,
 			Available:      scope.PreferredAvailable,
+			Enabled:        scope.Enabled,
 		}
 		preferredListed := false
 		for _, model := range models {
@@ -429,6 +430,23 @@ func adminTranslationAttemptLabel(status, reason string, attempts int) string {
 }
 
 func (data *adminTranslationsPage) setNotice(query url.Values) {
+	if scope := query.Get("automatic_scope"); scope != "" && query.Get("automatic_processor") == processing.TranslationModelStep {
+		label := scope
+		for _, item := range data.Languages {
+			if item.Language == scope {
+				label = item.DisplayName
+				break
+			}
+		}
+		enabled := query.Get("automatic_enabled") == "true"
+		skipped, _ := nonNegativeQueryIntValues(query, "automatic_skipped")
+		state := "disabled"
+		if enabled {
+			state = "enabled"
+		}
+		data.Notice = fmt.Sprintf("Automatic translation for %s is %s. %d queued automatic job(s) were skipped; manual translation actions remain available.", label, state, skipped)
+		return
+	}
 	if language := query.Get("preference_language"); language != "" {
 		label := language
 		for _, item := range data.Languages {
@@ -496,6 +514,7 @@ type adminTranslationRouteView struct {
 	AdapterKey     string
 	AdapterLabel   string
 	Available      bool
+	Enabled        bool
 	Models         []adminTranslationModelOption
 	Adapters       []adminTranslationAdapterOption
 }

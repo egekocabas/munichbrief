@@ -489,6 +489,78 @@ func (s *Server) processPostProcessing(response http.ResponseWriter, request *ht
 	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
 }
 
+func (s *Server) updatePostProcessingScopeEnabled(response http.ResponseWriter, request *http.Request) {
+	if !s.preparePostProcessingMutation(response, request, "post-processing setting") {
+		return
+	}
+	processorKey := strings.TrimSpace(request.PostForm.Get("processor"))
+	scopeKey := strings.TrimSpace(request.PostForm.Get("scope"))
+	enabledValue := strings.TrimSpace(request.PostForm.Get("enabled"))
+	if processorKey == "" || scopeKey == "" || (enabledValue != "true" && enabledValue != "false") {
+		http.Error(response, "processor, scope, and a strict enabled value are required", http.StatusBadRequest)
+		return
+	}
+	enabled := enabledValue == "true"
+	models, err := s.options.Processor.ModelStatus(request.Context())
+	if err != nil {
+		s.internalError(response, request, "read post-processing registry", err)
+		return
+	}
+	var selected *processing.PostProcessorModelStatus
+	for index := range models.PostProcessors {
+		if models.PostProcessors[index].Key != processorKey {
+			continue
+		}
+		for _, scope := range models.PostProcessors[index].Scopes {
+			if scope.Key == scopeKey {
+				selected = &models.PostProcessors[index]
+				break
+			}
+		}
+	}
+	if selected == nil {
+		http.Error(response, "unsupported post-processing processor or scope", http.StatusBadRequest)
+		return
+	}
+	if selected.Verification == nil && processorKey != processing.TranslationModelStep {
+		http.Error(response, "unsupported post-processing settings page", http.StatusBadRequest)
+		return
+	}
+	skipped, err := s.options.Processor.SetPostProcessingScopeEnabled(request.Context(), processorKey, scopeKey, enabled)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			http.Error(response, "unsupported post-processing processor or scope", http.StatusBadRequest)
+			return
+		}
+		s.internalError(response, request, "update post-processing setting", err)
+		return
+	}
+	target := &url.URL{Path: "/admin/translations"}
+	if selected.Verification != nil {
+		target = &url.URL{Path: "/admin/verifications"}
+		if request.PostForm.Get("return_detail") == "true" {
+			filter, ok := requestedAdminVerificationFilter(request.PostForm.Get("return_status"))
+			if !ok {
+				filter = store.AdminVerificationsAttention
+			}
+			target, _ = url.Parse(adminVerificationsURL(processorKey, scopeKey, filter, positiveFormInt(request.PostForm.Get("return_page"))))
+		}
+	} else if request.PostForm.Get("return_detail") == "true" {
+		filter, ok := requestedAdminTranslationFilter(request.PostForm.Get("return_status"))
+		if !ok {
+			filter = store.AdminTranslationsUnpublished
+		}
+		target, _ = url.Parse(adminTranslationsLanguageURL(scopeKey, filter, positiveFormInt(request.PostForm.Get("return_page"))))
+	}
+	query := target.Query()
+	query.Set("automatic_processor", processorKey)
+	query.Set("automatic_scope", scopeKey)
+	query.Set("automatic_enabled", enabledValue)
+	query.Set("automatic_skipped", strconv.Itoa(skipped))
+	target.RawQuery = query.Encode()
+	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
+}
+
 func postProcessingReturnURL(form url.Values, processorKey, scopeKey string, verificationProcessor bool) (*url.URL, error) {
 	switch strings.TrimSpace(form.Get("return_to")) {
 	case "":

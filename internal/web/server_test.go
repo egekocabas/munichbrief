@@ -153,16 +153,21 @@ func (p fakeProcessingRequester) ModelStatus(ctx context.Context) (processing.Pi
 	for _, setting := range settings {
 		byCode[setting.LanguageCode] = setting
 	}
+	scopeSettings, _ := p.database.PostProcessingScopeSettings(ctx)
+	scopeEnabled := make(map[string]bool, len(scopeSettings))
+	for _, setting := range scopeSettings {
+		scopeEnabled[setting.ProcessorKey+"/"+setting.ScopeKey] = setting.Enabled
+	}
 	for _, translation := range processing.RegisteredTranslations() {
 		setting := byCode[translation.Language]
 		translationScopes = append(translationScopes, processing.PostProcessorScopeStatus{
 			Key: translation.Language, DisplayName: translation.DisplayName, StepKey: translation.Step.Key, PromptVersion: translation.Step.PromptVersion,
-			PreferredModel: setting.PreferredModel, AdapterKey: setting.AdapterKey, PreferredAvailable: setting.PreferredModel != "",
+			PreferredModel: setting.PreferredModel, AdapterKey: setting.AdapterKey, PreferredAvailable: setting.PreferredModel != "", Enabled: scopeEnabled[processing.TranslationModelStep+"/"+translation.Language],
 		})
 	}
 	postProcessors := []processing.PostProcessorModelStatus{
-		{Key: processing.PublicAssistanceVerificationStep, DisplayName: "Public assistance verification", Description: "Verify public assistance metadata.", ModelSettingKey: processing.PublicAssistanceVerificationStep, Manual: true, Preferred: "qwen3.5:4b", PreferredAvailable: true, Scopes: []processing.PostProcessorScopeStatus{{Key: "default", DisplayName: "Default"}}, Verification: assistance.Verification},
-		{Key: processing.CategoryVerificationStep, DisplayName: "Category verification", Description: "Verify categories.", ModelSettingKey: processing.CategoryVerificationStep, Manual: true, Preferred: "qwen3.5:4b", PreferredAvailable: true, Scopes: []processing.PostProcessorScopeStatus{{Key: "default", DisplayName: "Default"}}, Verification: category.Verification},
+		{Key: processing.PublicAssistanceVerificationStep, DisplayName: "Public assistance verification", Description: "Verify public assistance metadata.", ModelSettingKey: processing.PublicAssistanceVerificationStep, Manual: true, Preferred: "qwen3.5:4b", PreferredAvailable: true, Scopes: []processing.PostProcessorScopeStatus{{Key: "default", DisplayName: "Default", Enabled: scopeEnabled[processing.PublicAssistanceVerificationStep+"/default"]}}, Verification: assistance.Verification},
+		{Key: processing.CategoryVerificationStep, DisplayName: "Category verification", Description: "Verify categories.", ModelSettingKey: processing.CategoryVerificationStep, Manual: true, Preferred: "qwen3.5:4b", PreferredAvailable: true, Scopes: []processing.PostProcessorScopeStatus{{Key: "default", DisplayName: "Default", Enabled: scopeEnabled[processing.CategoryVerificationStep+"/default"]}}, Verification: category.Verification},
 		{Key: processing.TranslationModelStep, DisplayName: "Translations", Description: "Translate presentations.", ModelSettingKey: processing.TranslationModelStep, Manual: true, PreferredAvailable: true, PerScopeSettings: true, Scopes: translationScopes},
 	}
 	return processing.PipelineModelStatus{Steps: defaultTestStepStatus("qwen3.5:4b"), PostProcessors: postProcessors, Models: []string{"granite4:3b", longTestModel, "qwen3.5:4b"}, CatalogAvailable: true, Ready: true}, nil
@@ -186,6 +191,16 @@ func (p fakeProcessingRequester) SetTranslationLanguageSetting(ctx context.Conte
 		return store.ErrNotFound
 	}
 	return p.database.SetTranslationLanguageSetting(ctx, language, model, adapter, time.Now())
+}
+
+func (p fakeProcessingRequester) SetPostProcessingScopeEnabled(ctx context.Context, processor, scope string, enabled bool) (int, error) {
+	if p.err != nil {
+		return 0, p.err
+	}
+	if p.database == nil {
+		return 0, store.ErrNotFound
+	}
+	return p.database.SetPostProcessingScopeEnabled(ctx, processor, scope, enabled, time.Now())
 }
 
 func (p fakeProcessingRequester) RequestPostProcessing(ctx context.Context, request processing.PostProcessingRequest) (int, error) {
@@ -266,6 +281,9 @@ func adminTestServer(t *testing.T, database *store.Store, publicHosts []string) 
 		translationCodes = append(translationCodes, translation.Language)
 	}
 	if err := database.EnsureTranslationLanguageSettings(context.Background(), translationCodes, processing.EnglishLanguage, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if err := database.EnsurePostProcessingScopes(context.Background(), processing.DefaultPostProcessorRegistry().StoreScopes(), time.Now()); err != nil {
 		t.Fatal(err)
 	}
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))

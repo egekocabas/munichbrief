@@ -110,6 +110,7 @@ type ProcessingRequester interface {
 	ModelStatus(context.Context) (processing.PipelineModelStatus, error)
 	SetPreferredStepModel(context.Context, string, string) error
 	SetTranslationLanguageSetting(context.Context, string, string, string) error
+	SetPostProcessingScopeEnabled(context.Context, string, string, bool) (int, error)
 	RequestPostProcessing(context.Context, processing.PostProcessingRequest) (int, error)
 	Status(context.Context) (processing.PipelineRuntimeStatus, error)
 	SetAutomaticProcessing(context.Context, bool) error
@@ -311,6 +312,7 @@ func (s *Server) Handler() http.Handler {
 		mux.HandleFunc("POST /api/admin/ai/reprocess-all", s.reprocessAll)
 		mux.HandleFunc("POST /api/admin/ai/step-model", s.updatePreferredStepModel)
 		mux.HandleFunc("POST /api/admin/ai/post-processing/process", s.processPostProcessing)
+		mux.HandleFunc("POST /api/admin/ai/post-processing/enabled", s.updatePostProcessingScopeEnabled)
 		mux.HandleFunc("POST /api/admin/ai/translations/process", s.processTranslations)
 		mux.HandleFunc("POST /api/admin/ai/translations/preference", s.updateTranslationPreference)
 		mux.HandleFunc("POST /api/admin/ai/automatic-processing", s.updateAutomaticProcessing)

@@ -1644,6 +1644,9 @@ func configureAllTestTranslationRoutes(t *testing.T, ctx context.Context, worker
 		if err := worker.SetTranslationLanguageSetting(ctx, translation.Language, model, TranslationAdapterStructured); err != nil {
 			t.Fatalf("configure %s translation route: %v", translation.Language, err)
 		}
+		if _, err := worker.SetPostProcessingScopeEnabled(ctx, TranslationModelStep, translation.Language, true); err != nil {
+			t.Fatalf("enable %s translation route: %v", translation.Language, err)
+		}
 	}
 }
 

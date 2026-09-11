@@ -35,6 +35,8 @@ type PipelineRepository interface {
 	PipelineSnapshot(context.Context, string, []string, []store.PostProcessingCounterSpec, time.Time) (store.PipelineSnapshot, error)
 	PipelineStepModel(context.Context, int64, int) (string, string, error)
 	EnsurePostProcessingScopes(context.Context, []store.PostProcessingScope, time.Time) error
+	PostProcessingScopeSettings(context.Context) ([]store.PostProcessingScopeSetting, error)
+	SetPostProcessingScopeEnabled(context.Context, string, string, bool, time.Time) (int, error)
 	QueuePostProcessingForRun(context.Context, int64, []store.PostProcessingPlan, string, bool, time.Time) (int, error)
 	QueueIncidentPostProcessing(context.Context, int64, []store.PostProcessingPlan, time.Time) (int, error)
 	QueuePostProcessingForAll(context.Context, string, []store.PostProcessingPlan, bool, time.Time) (int, error)
@@ -164,13 +166,15 @@ type PipelineModelStatus struct {
 }
 
 type PostProcessorScopeStatus struct {
-	Key                string `json:"key"`
-	DisplayName        string `json:"display_name"`
-	StepKey            string `json:"step_key"`
-	PromptVersion      string `json:"prompt_version"`
-	PreferredModel     string `json:"preferred_model,omitempty"`
-	AdapterKey         string `json:"adapter_key,omitempty"`
-	PreferredAvailable bool   `json:"preferred_available"`
+	Key                string    `json:"key"`
+	DisplayName        string    `json:"display_name"`
+	StepKey            string    `json:"step_key"`
+	PromptVersion      string    `json:"prompt_version"`
+	PreferredModel     string    `json:"preferred_model,omitempty"`
+	AdapterKey         string    `json:"adapter_key,omitempty"`
+	PreferredAvailable bool      `json:"preferred_available"`
+	Enabled            bool      `json:"enabled"`
+	EnabledUpdatedAt   time.Time `json:"enabled_updated_at"`
 }
 
 type PostProcessorModelStatus struct {
@@ -362,6 +366,22 @@ func (w *PipelineWorker) SetTranslationLanguageSetting(ctx context.Context, lang
 	return nil
 }
 
+// SetPostProcessingScopeEnabled changes automatic eligibility at a job
+// boundary. It intentionally does not wake the worker: enabling is observed by
+// the next ordinary post-processing discovery cycle.
+func (w *PipelineWorker) SetPostProcessingScopeEnabled(ctx context.Context, processorKey, scopeKey string, enabled bool) (int, error) {
+	if _, _, found := w.postProcessors.Scope(processorKey, scopeKey); !found {
+		return 0, store.ErrNotFound
+	}
+	w.executionMu.Lock()
+	defer w.executionMu.Unlock()
+	skipped, err := w.repository.SetPostProcessingScopeEnabled(ctx, processorKey, scopeKey, enabled, w.clock())
+	if err == nil {
+		w.logger.Info("automatic AI post-processing scope changed", "processor", processorKey, "scope", scopeKey, "enabled", enabled, "skipped_jobs", skipped)
+	}
+	return skipped, err
+}
+
 func (w *PipelineWorker) configuredTranslationPlans(ctx context.Context, scopeKeys []string) ([]store.PostProcessingPlan, error) {
 	settings, err := w.repository.TranslationLanguageSettings(ctx)
 	if err != nil {
@@ -482,11 +502,21 @@ func (w *PipelineWorker) ModelStatus(ctx context.Context) (PipelineModelStatus, 
 	for _, setting := range translationSettings {
 		translationByCode[setting.LanguageCode] = setting
 	}
+	scopeSettings, err := w.repository.PostProcessingScopeSettings(ctx)
+	if err != nil {
+		return PipelineModelStatus{}, err
+	}
+	type scopeIdentity struct{ processor, scope string }
+	scopeByIdentity := make(map[scopeIdentity]store.PostProcessingScopeSetting, len(scopeSettings))
+	for _, setting := range scopeSettings {
+		scopeByIdentity[scopeIdentity{processor: setting.ProcessorKey, scope: setting.ScopeKey}] = setting
+	}
 	for _, definition := range w.postProcessors.Definitions() {
 		model := byKey[definition.ModelSettingKey]
 		item := PostProcessorModelStatus{Key: definition.Key, DisplayName: definition.DisplayName, Description: definition.Description, ModelSettingKey: definition.ModelSettingKey, Manual: definition.Manual, Preferred: model, PreferredAvailable: model != "" && catalog.Available() && catalog.Has(model), Verification: clonePostProcessorVerification(definition.Verification)}
 		for _, scope := range definition.Scopes {
-			scopeStatus := PostProcessorScopeStatus{Key: scope.Key, DisplayName: scope.DisplayName, StepKey: scope.Step.Key, PromptVersion: scope.Step.PromptVersion}
+			scopeSetting := scopeByIdentity[scopeIdentity{processor: definition.Key, scope: scope.Key}]
+			scopeStatus := PostProcessorScopeStatus{Key: scope.Key, DisplayName: scope.DisplayName, StepKey: scope.Step.Key, PromptVersion: scope.Step.PromptVersion, Enabled: scopeSetting.Enabled, EnabledUpdatedAt: scopeSetting.EnabledUpdatedAt}
 			if definition.Key == TranslationModelStep {
 				setting := translationByCode[scope.Key]
 				scopeStatus.PreferredModel = setting.PreferredModel

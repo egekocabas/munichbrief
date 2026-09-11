@@ -15,6 +15,10 @@ const PipelineVersion = "incident-pipeline-v2"
 // because one of its declared required inputs was unavailable.
 const PostProcessingStatusReasonMissingInput = "missing_input"
 
+// PostProcessingStatusReasonScopeDisabled identifies automatic work skipped
+// because its processor scope was disabled before execution.
+const PostProcessingStatusReasonScopeDisabled = "scope_disabled"
+
 // ProcessingStatusReasonOperatorCanceled identifies unfinished work explicitly
 // canceled by an administrator without exposing any job input or output.
 const ProcessingStatusReasonOperatorCanceled = "operator_canceled"
@@ -77,10 +81,20 @@ type PostProcessingPlan struct {
 	InputKinds    []string
 }
 
-// PostProcessingScope is one automatically enabled registry scope.
+// PostProcessingScope identifies one registered automatic/manual work scope.
 type PostProcessingScope struct {
 	ProcessorKey string
 	ScopeKey     string
+}
+
+// PostProcessingScopeSetting is the durable automatic-work gate for one
+// registered processor scope. Manual requests intentionally bypass it.
+type PostProcessingScopeSetting struct {
+	ProcessorKey     string    `json:"processor_key"`
+	ScopeKey         string    `json:"scope_key"`
+	Enabled          bool      `json:"enabled"`
+	AutomaticAfter   time.Time `json:"automatic_after"`
+	EnabledUpdatedAt time.Time `json:"enabled_updated_at"`
 }
 
 // PostProcessingScopeContract identifies the current prompt and exact

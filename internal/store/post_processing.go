@@ -9,8 +9,8 @@ import (
 	"time"
 )
 
-// EnsurePostProcessingScopes records the first automatic-enablement time for
-// every registered processor scope without moving an existing cutover.
+// EnsurePostProcessingScopes records the first automatic-enablement time and
+// default gate for every registered scope without overwriting operator choices.
 func (s *Store) EnsurePostProcessingScopes(ctx context.Context, scopes []PostProcessingScope, now time.Time) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -30,7 +30,8 @@ func (s *Store) EnsurePostProcessingScopes(ctx context.Context, scopes []PostPro
 			continue
 		}
 		seen[identity] = struct{}{}
-		if _, err := tx.ExecContext(ctx, `INSERT INTO post_processing_scopes(processor_key,scope_key,automatic_after) VALUES(?,?,?) ON CONFLICT(processor_key,scope_key) DO NOTHING`, scope.ProcessorKey, scope.ScopeKey, formatted); err != nil {
+		enabled := scope.ProcessorKey != "translation" || scope.ScopeKey == "en"
+		if _, err := tx.ExecContext(ctx, `INSERT INTO post_processing_scopes(processor_key,scope_key,automatic_after,enabled,enabled_updated_at) VALUES(?,?,?,?,?) ON CONFLICT(processor_key,scope_key) DO NOTHING`, scope.ProcessorKey, scope.ScopeKey, formatted, boolInt(enabled), formatted); err != nil {
 			return fmt.Errorf("ensure post-processing scope %s/%s: %w", scope.ProcessorKey, scope.ScopeKey, err)
 		}
 	}
@@ -38,6 +39,81 @@ func (s *Store) EnsurePostProcessingScopes(ctx context.Context, scopes []PostPro
 		return fmt.Errorf("commit post-processing scope initialization: %w", err)
 	}
 	return nil
+}
+
+// PostProcessingScopeSettings lists the automatic-work gates without changing
+// their cutovers or triggering discovery.
+func (s *Store) PostProcessingScopeSettings(ctx context.Context) ([]PostProcessingScopeSetting, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT processor_key,scope_key,automatic_after,enabled,enabled_updated_at FROM post_processing_scopes ORDER BY processor_key,scope_key`)
+	if err != nil {
+		return nil, fmt.Errorf("list post-processing scope settings: %w", err)
+	}
+	defer rows.Close()
+	var settings []PostProcessingScopeSetting
+	for rows.Next() {
+		var setting PostProcessingScopeSetting
+		var automaticAfter, updatedAt string
+		var enabled int
+		if err := rows.Scan(&setting.ProcessorKey, &setting.ScopeKey, &automaticAfter, &enabled, &updatedAt); err != nil {
+			return nil, fmt.Errorf("scan post-processing scope setting: %w", err)
+		}
+		setting.Enabled = enabled == 1
+		setting.AutomaticAfter, err = time.Parse(time.RFC3339Nano, automaticAfter)
+		if err != nil {
+			return nil, fmt.Errorf("parse post-processing automatic cutover: %w", err)
+		}
+		setting.EnabledUpdatedAt, err = time.Parse(time.RFC3339Nano, updatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("parse post-processing enabled update time: %w", err)
+		}
+		settings = append(settings, setting)
+	}
+	return settings, rows.Err()
+}
+
+// SetPostProcessingScopeEnabled changes automatic eligibility and terminalizes
+// queued automatic work on disable. Running and manual work are left intact.
+func (s *Store) SetPostProcessingScopeEnabled(ctx context.Context, processorKey, scopeKey string, enabled bool, now time.Time) (int, error) {
+	processorKey, scopeKey = strings.TrimSpace(processorKey), strings.TrimSpace(scopeKey)
+	if processorKey == "" || scopeKey == "" {
+		return 0, errors.New("post-processing processor and scope are required")
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+	formatted := formatTime(now.UTC())
+	result, err := tx.ExecContext(ctx, `UPDATE post_processing_scopes SET enabled=?,enabled_updated_at=? WHERE processor_key=? AND scope_key=?`, boolInt(enabled), formatted, processorKey, scopeKey)
+	if err != nil {
+		return 0, fmt.Errorf("set post-processing scope enabled: %w", err)
+	}
+	if affected, _ := result.RowsAffected(); affected != 1 {
+		return 0, ErrNotFound
+	}
+	skipped := int64(0)
+	if !enabled {
+		result, err = tx.ExecContext(ctx, `UPDATE post_processing_jobs SET status='skipped',status_reason=?,status_detail=NULL,next_retry_at=NULL,failure_kind=NULL,error_message=NULL,started_at=NULL,completed_at=?,updated_at=? WHERE processor_key=? AND scope_key=? AND request_kind='scheduled' AND status='pending'`, PostProcessingStatusReasonScopeDisabled, formatted, formatted, processorKey, scopeKey)
+		if err != nil {
+			return 0, fmt.Errorf("skip disabled post-processing jobs: %w", err)
+		}
+		skipped, _ = result.RowsAffected()
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return int(skipped), nil
+}
+
+func postProcessingScopeEnabledTx(ctx context.Context, tx *sql.Tx, processorKey, scopeKey string) (bool, error) {
+	var enabled int
+	if err := tx.QueryRowContext(ctx, `SELECT enabled FROM post_processing_scopes WHERE processor_key=? AND scope_key=?`, processorKey, scopeKey).Scan(&enabled); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, ErrNotFound
+		}
+		return false, err
+	}
+	return enabled == 1, nil
 }
 
 // QueuePostProcessingForRun creates independent jobs for one completed current
@@ -75,6 +151,15 @@ func (s *Store) QueuePostProcessingForRun(ctx context.Context, runID int64, plan
 	}
 	count := 0
 	for _, plan := range plans {
+		if requestKind == "scheduled" {
+			enabled, err := postProcessingScopeEnabledTx(ctx, tx, plan.ProcessorKey, plan.ScopeKey)
+			if err != nil {
+				return 0, err
+			}
+			if !enabled {
+				continue
+			}
+		}
 		queued, err := queuePostProcessingTx(ctx, tx, runID, incidentID, sourceHash, plan, requestKind, force, now)
 		if err != nil {
 			return 0, err
@@ -155,6 +240,15 @@ func (s *Store) queuePostProcessingForAll(ctx context.Context, sourceMode string
 		}
 		if unpublishedTranslationsOnly && plan.ProcessorKey != "translation" {
 			return 0, errors.New("unpublished selection requires the translation processor")
+		}
+		if requestKind == "scheduled" {
+			enabled, err := postProcessingScopeEnabledTx(ctx, tx, plan.ProcessorKey, plan.ScopeKey)
+			if err != nil {
+				return 0, err
+			}
+			if !enabled {
+				continue
+			}
 		}
 		cutover := ""
 		args := []any{PipelineVersion}
@@ -273,8 +367,8 @@ func queuePostProcessingTx(ctx context.Context, tx *sql.Tx, runID, incidentID in
 	if err := tx.QueryRowContext(ctx, `SELECT
 		COALESCE(SUM(CASE WHEN status IN ('pending','running') THEN 1 ELSE 0 END),0),
 		COALESCE(SUM(CASE WHEN status='succeeded' THEN 1 ELSE 0 END),0),
-		COALESCE(SUM(CASE WHEN status='skipped' AND input_hash=? THEN 1 ELSE 0 END),0)
-		FROM post_processing_jobs WHERE presentation_run_id=? AND processor_key=? AND scope_key=?`, inputHash, runID, plan.ProcessorKey, plan.ScopeKey).Scan(&active, &succeeded, &matchingSkip); err != nil {
+		COALESCE(SUM(CASE WHEN status='skipped' AND status_reason=? AND input_hash=? THEN 1 ELSE 0 END),0)
+		FROM post_processing_jobs WHERE presentation_run_id=? AND processor_key=? AND scope_key=?`, PostProcessingStatusReasonMissingInput, inputHash, runID, plan.ProcessorKey, plan.ScopeKey).Scan(&active, &succeeded, &matchingSkip); err != nil {
 		return false, err
 	}
 	if active > 0 || (!force && (succeeded > 0 || matchingSkip > 0)) {
@@ -421,6 +515,14 @@ func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string,
 		)`, formatted, formatted, PipelineVersion); err != nil {
 		return PostProcessingJob{}, false, err
 	}
+	if _, err := tx.ExecContext(ctx, `UPDATE post_processing_jobs SET status='skipped',status_reason=?,status_detail=NULL,
+		next_retry_at=NULL,failure_kind=NULL,error_message=NULL,started_at=NULL,completed_at=?,updated_at=?
+		WHERE processor_key=? AND request_kind='scheduled' AND status='pending'
+		AND EXISTS (SELECT 1 FROM post_processing_scopes scope WHERE scope.processor_key=post_processing_jobs.processor_key
+			AND scope.scope_key=post_processing_jobs.scope_key AND scope.enabled=0)`,
+		PostProcessingStatusReasonScopeDisabled, formatted, formatted, processorKey); err != nil {
+		return PostProcessingJob{}, false, err
+	}
 	blockedCondition := ""
 	args := []any{processorKey, formatted, boolInt(allowScheduled)}
 	if len(blockedModels) > 0 {
@@ -435,7 +537,8 @@ func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string,
 		FROM post_processing_jobs job JOIN presentation_runs r ON r.id=job.presentation_run_id
 		JOIN incidents i ON i.id=r.incident_id AND i.content_hash=r.source_hash
 		WHERE job.processor_key=? AND job.status='pending' AND (job.next_retry_at IS NULL OR job.next_retry_at<=?)
-		AND (job.request_kind='manual' OR (? AND (SELECT automatic_processing_enabled FROM ai_runtime_control WHERE id=1)=1))`+blockedCondition+`
+		AND (job.request_kind='manual' OR (? AND (SELECT automatic_processing_enabled FROM ai_runtime_control WHERE id=1)=1
+			AND EXISTS (SELECT 1 FROM post_processing_scopes scope WHERE scope.processor_key=job.processor_key AND scope.scope_key=job.scope_key AND scope.enabled=1)))`+blockedCondition+`
 		ORDER BY CASE job.request_kind WHEN 'manual' THEN 0 WHEN 'scheduled' THEN 1 ELSE 2 END,job.created_at,job.id LIMIT 1`, args...).Scan(
 		&job.ID, &job.PresentationRunID, &job.IncidentID, &job.ProcessorKey, &job.ScopeKey, &job.RequestKind,
 		&job.ModelIdentity, &job.AdapterKey, &job.PromptVersion, &job.InputHash, &job.AttemptCount,
