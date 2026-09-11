@@ -181,6 +181,9 @@ func parseFeatureProperties(data []byte, convert func(map[string]any, string) []
 	if err := decoder.Decode(&collection); err != nil {
 		return nil, err
 	}
+	if err := requireJSONEOF(decoder); err != nil {
+		return nil, err
+	}
 	var entries []Entry
 	for index, feature := range collection.Features {
 		id := fmt.Sprint(feature.ID)
@@ -300,14 +303,36 @@ func parseOSM(source string, data []byte) ([]Entry, error) {
 			id := element.Type + "/" + strconv.FormatInt(element.ID, 10)
 			entries = append(entries, entriesForNames(source, id, kind, 40, stringMapAny(element.Tags), "official_name", "name", "name:de", "short_name", "alt_name")...)
 		}
-		if _, err := decoder.Token(); err != nil {
+		if token, err := decoder.Token(); err != nil || token != json.Delim(']') {
+			if err == nil {
+				err = errors.New("OSM elements must end with an array delimiter")
+			}
 			return nil, err
 		}
 	}
 	if !foundElements {
 		return nil, errors.New("OSM response has no elements array")
 	}
+	if token, err := decoder.Token(); err != nil || token != json.Delim('}') {
+		if err == nil {
+			err = errors.New("OSM response must end with an object delimiter")
+		}
+		return nil, err
+	}
+	if err := requireJSONEOF(decoder); err != nil {
+		return nil, err
+	}
 	return entries, nil
+}
+
+func requireJSONEOF(decoder *json.Decoder) error {
+	var trailing any
+	if err := decoder.Decode(&trailing); errors.Is(err, io.EOF) {
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("JSON response has trailing data: %w", err)
+	}
+	return errors.New("JSON response contains more than one value")
 }
 
 func osmKind(source string, tags map[string]string) string {

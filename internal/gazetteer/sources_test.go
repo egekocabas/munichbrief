@@ -48,6 +48,26 @@ func TestOfficialAndOSMParsersUseExpectedFields(t *testing.T) {
 	}
 }
 
+func TestJSONGazetteerParsersRejectIncompleteOrTrailingPayloads(t *testing.T) {
+	tests := []struct {
+		name  string
+		parse func([]byte) ([]Entry, error)
+		data  string
+	}{
+		{name: "official trailing value", parse: parseMunichStreets, data: `{"features":[]} {"unexpected":true}`},
+		{name: "official trailing garbage", parse: parseMunichDistricts, data: `{"features":[]} broken`},
+		{name: "OSM truncated object", parse: func(data []byte) ([]Entry, error) { return parseOSM("osm_transit", data) }, data: `{"elements":[]`},
+		{name: "OSM trailing value", parse: func(data []byte) ([]Entry, error) { return parseOSM("osm_transit", data) }, data: `{"elements":[]} []`},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if entries, err := test.parse([]byte(test.data)); err == nil {
+				t.Fatalf("parser accepted malformed response: %#v", entries)
+			}
+		})
+	}
+}
+
 func TestGeoNamesParserFiltersAdministrativeCodesAndFeatureTypes(t *testing.T) {
 	line := func(id, name, feature, admin3 string) string {
 		fields := []string{id, name, name, "", "0", "0", "P", feature, "DE", "", "02", "091", admin3, "", "0", "0", "0", "Europe/Berlin", "2026-01-01"}
