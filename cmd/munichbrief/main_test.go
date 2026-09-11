@@ -86,6 +86,15 @@ func TestRunAIProcessQueuesNeverStartedIncident(t *testing.T) {
 	if err := database.SetPipelineStepModel(ctx, processing.TranslationModelStep, "qwen3.5:4b", now); err != nil {
 		t.Fatal(err)
 	}
+	if err := database.EnsureTranslationLanguageSettings(ctx, registeredTranslationCodes(), processing.EnglishLanguage, now); err != nil {
+		t.Fatal(err)
+	}
+	if err := database.SetTranslationLanguageSetting(ctx, "en", "hy-mt2:7b", processing.TranslationAdapterHyMT2, now); err != nil {
+		t.Fatal(err)
+	}
+	if err := database.SetTranslationLanguageSetting(ctx, "ro", "translategemma:12b", processing.TranslationAdapterTranslateGemma, now); err != nil {
+		t.Fatal(err)
+	}
 	if err := database.SetAutomaticProcessing(ctx, false, now); err != nil {
 		t.Fatal(err)
 	}
@@ -111,6 +120,17 @@ func TestRunAIProcessQueuesNeverStartedIncident(t *testing.T) {
 	control, err := database.AIControl(ctx)
 	if err != nil || control.AutomaticProcessingEnabled {
 		t.Fatalf("runtime control changed by manual CLI request = %#v/%v", control, err)
+	}
+	cycle, found, err := database.ActivateNextPipelineCycle(ctx, "fixture", nil, false, time.Now())
+	if err != nil || !found || cycle.Kind != "manual" {
+		t.Fatalf("activate CLI cycle = %#v/%t/%v", cycle, found, err)
+	}
+	postPlans, err := database.CyclePostProcessingPlans(ctx, cycle.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(postPlans) != 2 || postPlans[0].ScopeKey != "en" || postPlans[0].Model != "hy-mt2:7b" || postPlans[0].AdapterKey != processing.TranslationAdapterHyMT2 || postPlans[1].ScopeKey != "ro" || postPlans[1].Model != "translategemma:12b" || postPlans[1].AdapterKey != processing.TranslationAdapterTranslateGemma {
+		t.Fatalf("CLI translation plans = %#v", postPlans)
 	}
 }
 

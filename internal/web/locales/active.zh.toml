@@ -1,0 +1,172 @@
+SiteDescription = { other = "通过官方慕尼黑警方通报的 AI 摘要及时了解情况。" }
+BrandTagline = { other = "慕尼黑一览" }
+SocialImageAlt = { other = "以慕尼黑奥林匹克公园为背景的 MunichBrief 预览图。" }
+SocialIncidentLabel = { other = "事件" }
+Timeline = { other = "最新动态" }
+About = { other = "关于" }
+PrimaryNavigation = { other = "主导航" }
+SkipToContent = { other = "跳至内容" }
+DarkMode = { other = "深色模式" }
+NoticeLabel = { other = "重要提示" }
+NoticeLead = { other = "独立且非官方。" }
+FixtureNotice = { other = "此视图仅包含合成测试数据。" }
+LiveNotice = { other = "本网站使用 AI 对警方官方通报进行摘要、分类和信息提取。内容可能有误，通报也可能在发布后更新。" }
+AuthorityNotice = { other = "最新官方信息始终具有权威性，并适用无罪推定原则。" }
+ReviewNotice = { other = "审查模式：可能显示未经匿名处理的原文。请勿公开。" }
+AIGeneratedContent = { other = "AI 生成的内容" }
+AIFixtureLabelPreview = { other = "标签预览——此合成测试内容尚未经过 AI 处理" }
+AIDisclosureTitle = { other = "AI 生成的内容" }
+AIDisclosureFixtureCopy = { other = "本地预览：此页面使用合成测试内容。" }
+AIDisclosureCopy = { other = "MunichBrief 使用本地运行的 AI，根据慕尼黑警方官方通报生成标题、摘要、译文、类别和结构化信息，例如所报告的区域、时间以及警方是否请求公众协助。AI 生成或推断的信息可能有误，原通报更新后也可能过时。每个事件页面都会标明并链接到警方官方来源；权威信息请以该来源为准。MunichBrief 是独立项目，与巴伐利亚警方无隶属关系。在未经依法证明有罪之前，所有被提及者均应被推定无罪。" }
+AIDisclosurePreferenceCopy = { other = "选择“知道了”后，此提示将被记住 30 天。" }
+AIDisclosureLearnMore = { other = "有关 MunichBrief 及其工作方式的更多信息，请参阅“关于”页面。" }
+AIDisclosureGotIt = { other = "知道了" }
+AITransparencyEU = { other = "AI 透明度与欧盟指南" }
+AITransparencyEUCopy = { other = "MunichBrief 使用欧盟“完全由 AI 生成”标签，因为欧盟委员会指南明确将 AI 生成的新闻摘要列为适用场景。可见标签和机器可读的来源信息有助于提高透明度，但使用该图标本身并不证明符合法律要求，也不表示 MunichBrief 已签署自愿性的《行为准则》。" }
+EUIconGuidance = { other = "欧盟图标指南" }
+EUCodePractice = { other = "欧盟行为准则" }
+Footer = { other = "MunichBrief 独立于巴伐利亚警方。不使用分析工具、用户账户或广告。" }
+Built = { other = "构建" }
+Language = { other = "语言" }
+German = { other = "德语" }
+English = { other = "英语" }
+SwitchToGerman = { other = "切换至德语版本" }
+SwitchToEnglish = { other = "切换至英语版本" }
+SwitchToTurkish = { other = "切换至土耳其语版本" }
+SwitchToCroatian = { other = "切换至克罗地亚语版本" }
+SwitchToItalian = { other = "切换至意大利语版本" }
+SwitchToUkrainian = { other = "切换至乌克兰语版本" }
+SwitchToBosnian = { other = "切换至波斯尼亚语版本" }
+SwitchToChinese = { other = "切换至简体中文版本" }
+SwitchToHindi = { other = "切换至印地语版本" }
+SwitchToSpanish = { other = "切换至西班牙语版本" }
+SwitchToFrench = { other = "切换至法语版本" }
+HeroEyebrowFixture = { other = "本地原型" }
+HeroEyebrowLive = { other = "慕尼黑警方通报" }
+HeroTitle = { other = "慕尼黑警方最新通报的事件" }
+HeroCopy = { other = "根据警方官方通报整理的清晰本地事件概览。" }
+FixtureIncidents = { other = "合成测试通报" }
+LatestIncidents = { other = "最新事件" }
+Reports = { other = "{{.Count}} 条通报" }
+ShownTotal = { other = "显示 {{.Shown}} 条 / 共 {{.Total}} 条" }
+Report = { other = "警方通报" }
+SourceMetadata = { other = "来源元数据" }
+ReadIncident = { other = "阅读通报" }
+OpenOfficialSource = { other = "打开官方来源" }
+OpenOfficialPoliceRelease = { other = "打开警方官方通报" }
+Newer = { other = "较新" }
+Older = { other = "较早" }
+Page = { other = "第" }
+Of = { other = "页，共" }
+NoIncidents = { other = "暂无通报" }
+NoFixtureCopy = { other = "运行测试数据导入以填充此视图。" }
+NoLiveCopy = { other = "同步程序尚未发现时间范围内的通报。" }
+BodyUnavailable = { other = "通报正文暂不可用。MunichBrief 正在重试；请暂时查阅官方来源。" }
+SourceRefreshFailed = { other = "上次来源刷新失败；已保存的副本仍可使用。" }
+Back = { other = "返回" }
+Breadcrumb = { other = "面包屑导航" }
+PublishedWithin = { other = "发布于" }
+Published = { other = "已发布" }
+LastProcessed = { other = "最后处理" }
+Model = { other = "模型" }
+PromptVersion = { other = "提示词版本" }
+Category = { other = "类别" }
+CategoryTraffic = { other = "交通" }
+CategoryTheftBurglary = { other = "盗窃与入室盗窃" }
+CategoryRobberyExtortion = { other = "抢劫与敲诈" }
+CategoryViolence = { other = "暴力" }
+CategorySexualOffense = { other = "性犯罪" }
+CategoryFraudCyber = { other = "诈骗与网络犯罪" }
+CategoryDrugs = { other = "毒品" }
+CategoryFireHazard = { other = "火灾与危险情况" }
+CategoryPropertyDamage = { other = "财物损坏" }
+CategoryMissingWanted = { other = "失踪与通缉人员" }
+CategoryPoliceOperation = { other = "警方行动" }
+CategoryOther = { other = "其他" }
+Area = { other = "区域" }
+ReportKind = { other = "通报类型" }
+PublicAssistance = { other = "公众协助" }
+PublicAssistanceRequested = { other = "警方请求公众协助" }
+PublicAssistanceNeeded = { other = "需要公众协助" }
+PublicAssistanceSourceCopy = { other = "相关说明、联系方式和更多详情仅见官方来源。" }
+TimeStatedInReport = { other = "通报所述时间" }
+DayPartMorning = { other = "早晨" }
+DayPartMidday = { other = "中午" }
+DayPartAfternoon = { other = "下午" }
+DayPartEvening = { other = "晚上" }
+DayPartNight = { other = "夜间" }
+ReportKindIncident = { other = "事件" }
+ReportKindFollowUp = { other = "后续通报" }
+ReportKindMissingPerson = { other = "失踪人员通报" }
+ReportKindWantedPerson = { other = "通缉人员通报" }
+ReportKindPublicWarning = { other = "公众警告" }
+ReportKindOther = { other = "其他通报" }
+AssistanceWitnessObservations = { other = "目击情况" }
+AssistanceIdentifyPerson = { other = "确认人员身份" }
+AssistanceLocatePerson = { other = "寻找人员" }
+AssistancePhotoVideo = { other = "照片或视频" }
+AssistanceVehicleInformation = { other = "车辆信息" }
+AssistancePropertyInformation = { other = "物品信息" }
+AssistanceOtherInformation = { other = "其他信息" }
+AIProcessing = { other = "AI 处理" }
+Step = { other = "步骤" }
+Translation = { other = "翻译" }
+IncidentMetadataStep = { other = "事件元数据" }
+GermanPresentationStep = { other = "德语内容生成" }
+PublicAssistanceVerificationStep = { other = "公众协助请求验证" }
+CategoryVerificationStep = { other = "类别验证" }
+EnglishTranslationStep = { other = "英语翻译" }
+TurkishTranslationStep = { other = "土耳其语翻译" }
+CroatianTranslationStep = { other = "克罗地亚语翻译" }
+ItalianTranslationStep = { other = "意大利语翻译" }
+UkrainianTranslationStep = { other = "乌克兰语翻译" }
+BosnianTranslationStep = { other = "波斯尼亚语翻译" }
+ChineseTranslationStep = { other = "简体中文翻译" }
+HindiTranslationStep = { other = "印地语翻译" }
+SpanishTranslationStep = { other = "西班牙语翻译" }
+FrenchTranslationStep = { other = "法语翻译" }
+StagedPipeline = { other = "分阶段处理流程" }
+MetadataFirstPipeline = { other = "元数据优先处理流程 v2" }
+Generated = { other = "生成于" }
+AISummary = { other = "AI 生成的摘要" }
+VerifySource = { other = "请在最新官方信息中核实重要详情。" }
+OriginalGerman = { other = "德语原文" }
+OriginalQACopy = { other = "仅在受限审查模式中供质量检查使用。" }
+AuthoritativeSource = { other = "权威来源" }
+FixtureSourceCopy = { other = "此页面使用合成测试内容。" }
+LiveSourceCopy = { other = "此内容为非官方呈现，巴伐利亚警方通报仍为权威来源。" }
+NotProcessed = { other = "尚未摘要或翻译" }
+Queued = { other = "AI 摘要与翻译已排队" }
+Running = { other = "正在生成 AI 摘要与翻译" }
+Retrying = { other = "AI 暂时不可用；已安排重试" }
+NeedsReview = { other = "AI 输出需要审查" }
+OriginalShown = { other = "当前显示德语原始通报。" }
+AboutTitle = { other = "MunichBrief 的工作方式" }
+Methodology = { other = "关于 MunichBrief" }
+AboutIntro = { other = "MunichBrief 将慕尼黑警方官方通报转化为多种读者语言的清晰结构化事件摘要。" }
+FromReleaseToIncident = { other = "从通报到事件" }
+Discover = { other = "发现" }
+DiscoverCopy = { other = "新通报仅通过慕尼黑警方官方 RSS 源发现。" }
+Organize = { other = "整理" }
+OrganizeCopy = { other = "包含多则报告的通报按官方报告编号拆分；单独发布的报告仍保持独立。" }
+Summarize = { other = "摘要" }
+SummarizeCopy = { other = "本地 AI 模型提取类别、地点、日期和公众协助请求等信息，然后生成尽量减少个人数据的德语摘要。" }
+TranslatePublish = { other = "翻译与发布" }
+TranslatePublishCopy = { other = "通过自动处理检查的德语摘要会被翻译成可用的读者语言。只有处理流程成功完成后，公共页面才会显示 AI 生成的内容。" }
+AccuracyOfficialInformation = { other = "准确性与官方信息" }
+AccuracyOfficialInformationCopy = { other = "AI 生成的摘要和提取的信息可能有误。警方通报可能在发布后更新。最新官方信息始终具有权威性，并适用无罪推定原则。" }
+PrivacyDataHandling = { other = "隐私与数据处理" }
+PrivacyCopy = { other = "MunichBrief 不设账户，不使用分析工具或广告。一个必要 Cookie 会将所选语言保存一年。选择“知道了”后，第一方偏好 Cookie 会将 AI 提示记住 30 天。所选配色主题仅保存在您的浏览器中。" }
+DataHandlingCopy = { other = "提取的德语来源文本存储在本地。受限审查模式可显示原文和处理状态以便质量控制；公共模式不会显示已存储的原文。" }
+IndependenceLegalReview = { other = "独立性与法律审查" }
+IndependenceLegalReviewCopy = { other = "MunichBrief 独立于巴伐利亚警方。技术保障不能替代法律审查。数据保留、合法依据、与违法行为有关的数据及适用的新闻业例外均需持续审查。" }
+ContactHeading = { other = "问题、更正或反馈" }
+ContactPublicLead = { other = "发现错误或有建议？" }
+ContactIssueLink = { other = "在 GitHub 上提交问题" }
+ContactPrivateLead = { other = "如有隐私相关问题或任何不宜公开分享的事项，请发送电子邮件至" }
+SwitchToRomanian = { other = "切换到罗马尼亚语版本" }
+SwitchToPolish = { other = "切换到波兰语版本" }
+SwitchToRussian = { other = "切换到俄语版本" }
+RomanianTranslationStep = { other = "罗马尼亚语翻译" }
+PolishTranslationStep = { other = "波兰语翻译" }
+RussianTranslationStep = { other = "俄语翻译" }

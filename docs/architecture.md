@@ -1,9 +1,10 @@
 # Architecture
 
-MunichBrief is one Go process with a single SQLite writer. It combines source
-discovery, bounded article fetching, deterministic parsing, asynchronous AI
-processing, and server-rendered delivery without sharing the database between
-replicas.
+MunichBrief is one Go process with one connection per SQLite database. The main
+database holds incidents and processing state; a separate rebuildable database
+holds place-name generations. The process combines source discovery, bounded
+article fetching, deterministic parsing, asynchronous AI processing, and
+server-rendered delivery without sharing either database between replicas.
 
 ## Components
 
@@ -16,6 +17,9 @@ replicas.
   records and hashes the retained source representation.
 - `internal/ingest` coordinates conditional synchronization, refresh policy,
   retries, persistence, and source metrics.
+- `internal/gazetteer` conditionally downloads official Munich, GeoNames, and
+  OpenStreetMap place data; activates validated generations in a separate
+  SQLite database; and exposes an immutable Unicode-aware matcher.
 - `internal/store` owns migrations, SQLite transactions, presentation queries,
   processing cycles, and consistent backups.
 - `internal/processing` defines the staged prompt registry, Ollama clients,
@@ -107,14 +111,48 @@ failed recheck leaves the previous successful result effective, or falls back
 to the immutable original metadata category when no verification has succeeded.
 
 Translation scopes are generated from registered languages. Each language owns
-an immutable prompt, schema, validator, generator, and enablement cutover, while
-all languages share one preferred translation model. English is currently the
-only target and receives only the accepted German title and summary.
+an immutable prompt version, schema, validator, generator, and enablement
+cutover. A durable per-language route selects an exact installed model and one
+of the adapters supported for that target: structured chat, TranslateGemma's
+native contract, or HY-MT2's native contract. Title and summary remain separate
+requests for native adapters. The model, adapter, and prompt are frozen into
+each job and remain visible in audit history; changing a preference affects
+only future work. English, Turkish,
+Croatian, Italian, Ukrainian, Bosnian, Simplified Chinese, Hindi, Spanish,
+French, Romanian, Polish, and Russian each receive only the accepted
+German title and summary.
+
+Before a translation request, the active gazetteer matcher replaces exact
+Munich-area streets, districts, neighbourhoods, municipalities, transit names,
+parks, squares, and landmarks with opaque tokens. It uses leftmost-longest
+Aho–Corasick matching plus Unicode word boundaries; ambiguous common nouns
+require location context. Each unique spelling receives one stable token, which
+may occur repeatedly across the title and summary. The model must preserve the
+exact token occurrence count in each field; target-language word order and an
+apostrophe-delimited grammatical suffix are allowed while the token itself
+remains intact. The application rejects missing, duplicated, moved, modified,
+or invented tokens and restores the exact NFC-normalized German spelling before
+ordinary validation and persistence. If no valid generation is loaded,
+translation job claims pause while German processing, existing publications,
+and readiness continue.
+
+The gazetteer database records immutable generations and source provenance.
+Refreshes require every fixed HTTPS source to pass size, schema, and count
+checks before activation. Conditional validators are bound to the source URL
+and a versioned parser contract, so source or parsing changes force a complete
+download. Any source or matcher failure leaves the last successful generation
+active. The database is rebuildable and is not part of the incident database
+backup.
+
+The protected `/admin/gazetteer` page exposes bounded source health, the active
+entry count, refresh timing, source contracts and hashes, retained generations,
+and deterministic overrides. It deliberately does not load or render the full
+name set or downloaded payloads.
 
 Application code localizes metadata labels. Each step declares its ordered
 input kinds; the worker passes only those values and hashes the actual inputs
 with prompt version and model identity. A metadata change therefore invalidates
-the German-stage input without exposing source text to the English stage. Each
+the German-stage input without exposing source text to any translation stage. Each
 job stores its prompt version, model identity, input hash, timestamps, status,
 and safe failure category. Reader pages label extracted timing neutrally as a
 time stated in the report.
@@ -180,11 +218,24 @@ Operator queue submissions, runtime-switch changes, and cancellation are
 serialized at their database mutation boundary, so a concurrent manual request
 is deterministically either included in the cancellation or accepted afterward.
 
+Every registered post-processor also has a durable processor-wide automatic
+gate, followed by its per-scope gate. Automatic translation therefore requires
+the global runtime switch, the translation processor switch, and the target
+language switch. Processor gates start enabled; verification scopes and English
+translation start enabled, while other translation languages start disabled.
+Scheduled enqueueing and the final claim check enforce all applicable gates
+transactionally. Disabling the processor skips its pending and retrying jobs
+with `processor_disabled`; disabling one scope uses `scope_disabled`. A job
+already running and all manual work remain eligible. Re-enabling either narrow
+gate does not wake the worker or move a scope cutover, so the next ordinary
+discovery pass finds work accumulated while it was disabled.
+
 The v2 migration records an automatic-scheduling cutover. Each registered
-processor scope also has a persisted enablement time. The public-assistance
+processor scope also has a persisted automatic cutover. The public-assistance
 scope begins automatic work only for presentations completed after its first
 deployment-time registration; operators use the admin “process all” action for
-older presentations, with no automatic historical backfill or schema migration.
+older presentations, with no automatic historical backfill or operator-run
+data migration.
 Existing translation and category-verification attempts are migrated into
 unified jobs and named values for audit, including imported and superseded
 records, but only complete current
@@ -213,6 +264,12 @@ The same registry supplies exact BCP-47 document tags and stable route/scope
 codes; target-specific prompts feed a generic translation-step factory. See
 [Adding a reader language](adding-a-language.md) for the cross-repository
 extension and rollout contract.
+
+Social previews use embedded OFL-licensed fonts. The default Go font covers the
+Latin and Cyrillic readers; Noto Sans SC covers Simplified Chinese, and Noto
+Sans Devanagari is rendered through a pure-Go OpenType shaping engine so Hindi
+vowel marks and conjuncts retain their proper glyph order. Font bytes are part
+of the renderer cache identity.
 
 Reader queries choose content and metadata from one presentation run. The
 effective category is the newest successful verification for that run, or its

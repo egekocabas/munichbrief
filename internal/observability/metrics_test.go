@@ -17,6 +17,11 @@ func TestMetricsExposeSynchronizationAndHTTPState(t *testing.T) {
 	metrics.RecordFeedSuccess(true, 2, 1, 3, 4, time.Unix(1234, 0))
 	metrics.RecordFeedDuration(1500 * time.Millisecond)
 	metrics.SetNextFeedSync(time.Unix(2345, 0))
+	metrics.RecordGazetteerAttempt()
+	metrics.RecordGazetteerFailure()
+	metrics.RecordGazetteerSuccess(time.Unix(3456, 0), 11930)
+	metrics.RecordGazetteerDuration(2500 * time.Millisecond)
+	metrics.SetNextGazetteerRefresh(time.Unix(4567, 0))
 	metrics.ObserveSourceResponse("feed", http.StatusNotModified)
 	metrics.ObserveSourceResponse("article", 0)
 	metrics.SetProcessorAvailable(false)
@@ -45,6 +50,12 @@ func TestMetricsExposeSynchronizationAndHTTPState(t *testing.T) {
 		"munichbrief_next_feed_sync_timestamp_seconds 2345",
 		"munichbrief_feed_sync_duration_seconds_sum 1.500000",
 		"munichbrief_feed_sync_duration_seconds_count 1",
+		"munichbrief_gazetteer_refresh_attempts_total 1",
+		"munichbrief_gazetteer_refresh_failures_total 1",
+		"munichbrief_gazetteer_last_success_timestamp_seconds 3456",
+		"munichbrief_gazetteer_next_refresh_timestamp_seconds 4567",
+		"munichbrief_gazetteer_entries 11930",
+		"munichbrief_gazetteer_refresh_duration_seconds_sum 2.500000",
 		`munichbrief_http_responses_total{class="5xx"} 1`,
 		`munichbrief_source_http_responses_total{resource="feed",class="3xx"} 1`,
 		`munichbrief_source_http_responses_total{resource="article",class="error"} 1`,

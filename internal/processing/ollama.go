@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -68,13 +69,27 @@ func (p *OllamaGeneratorProvider) StepGenerator(model string) (StepGenerator, er
 	return NewOllamaClient(p.baseURL, model, p.timeout, p.contextSize, p.baseClient)
 }
 
+func (p *OllamaGeneratorProvider) StepGeneratorFor(model, adapter string) (StepGenerator, error) {
+	if strings.TrimSpace(model) == "" {
+		return nil, errors.New("ollama model is required")
+	}
+	if adapter == "" || adapter == TranslationAdapterStructured {
+		return p.StepGenerator(model)
+	}
+	if adapter != TranslationAdapterTranslateGemma && adapter != TranslationAdapterHyMT2 && adapter != TranslationAdapterSeedX && adapter != TranslationAdapterSalamandraTA && adapter != TranslationAdapterLLaMAX3 && adapter != TranslationAdapterEuroLLM && adapter != TranslationAdapterTowerPlus && adapter != TranslationAdapterTowerInstruct && adapter != TranslationAdapterMADLAD400 && adapter != TranslationAdapterGemma4 {
+		return nil, fmt.Errorf("unknown translation adapter %q", adapter)
+	}
+	return &nativeTranslationStepGenerator{provider: p, model: strings.TrimSpace(model), adapter: adapter}, nil
+}
+
 // OllamaClient calls one model and treats every response as untrusted until the
 // registered step's schema and validator both accept it.
 type OllamaClient struct {
-	endpoint    string
-	model       string
-	contextSize int
-	client      *http.Client
+	endpoint         string
+	generateEndpoint string
+	model            string
+	contextSize      int
+	client           *http.Client
 }
 
 type chatRequest struct {
@@ -82,7 +97,7 @@ type chatRequest struct {
 	Messages  []chatMessage   `json:"messages"`
 	Stream    bool            `json:"stream"`
 	Think     bool            `json:"think"`
-	Format    json.RawMessage `json:"format"`
+	Format    json.RawMessage `json:"format,omitempty"`
 	Options   chatOptions     `json:"options"`
 	KeepAlive string          `json:"keep_alive"`
 }
@@ -93,14 +108,34 @@ type chatMessage struct {
 }
 
 type chatOptions struct {
-	Temperature float64 `json:"temperature"`
-	NumCtx      int     `json:"num_ctx"`
+	Temperature   float64 `json:"temperature"`
+	TopP          float64 `json:"top_p,omitempty"`
+	TopK          int     `json:"top_k,omitempty"`
+	RepeatPenalty float64 `json:"repeat_penalty,omitempty"`
+	NumPredict    int     `json:"num_predict,omitempty"`
+	NumCtx        int     `json:"num_ctx"`
 }
 
 type chatResponse struct {
 	Model   string      `json:"model"`
 	Message chatMessage `json:"message"`
 	Done    bool        `json:"done"`
+}
+
+type generateRequest struct {
+	Model     string      `json:"model"`
+	Prompt    string      `json:"prompt"`
+	Stream    bool        `json:"stream"`
+	Think     bool        `json:"think"`
+	Raw       bool        `json:"raw"`
+	Options   chatOptions `json:"options"`
+	KeepAlive string      `json:"keep_alive"`
+}
+
+type generateResponse struct {
+	Model    string `json:"model"`
+	Response string `json:"response"`
+	Done     bool   `json:"done"`
 }
 
 func NewOllamaClient(baseURL, model string, timeout time.Duration, contextSize int, baseClient *http.Client) (*OllamaClient, error) {
@@ -121,8 +156,15 @@ func NewOllamaClient(baseURL, model string, timeout time.Duration, contextSize i
 		httpClient = &clone
 		httpClient.Timeout = timeout
 	}
-	parsed.Path = strings.TrimRight(parsed.Path, "/") + "/api/chat"
-	return &OllamaClient{endpoint: parsed.String(), model: strings.TrimSpace(model), contextSize: contextSize, client: httpClient}, nil
+	basePath := strings.TrimRight(parsed.Path, "/")
+	chatURL := *parsed
+	chatURL.Path = basePath + "/api/chat"
+	generateURL := *parsed
+	generateURL.Path = basePath + "/api/generate"
+	return &OllamaClient{
+		endpoint: chatURL.String(), generateEndpoint: generateURL.String(), model: strings.TrimSpace(model),
+		contextSize: contextSize, client: httpClient,
+	}, nil
 }
 
 func (c *OllamaClient) ModelIdentity() string { return c.model }
@@ -157,6 +199,10 @@ func (c *OllamaClient) GenerateStep(ctx context.Context, step StepDefinition, in
 }
 
 func (c *OllamaClient) chat(ctx context.Context, userOnly bool, system, user string, schema json.RawMessage) (string, string, error) {
+	return c.chatWithOptions(ctx, userOnly, system, user, schema, chatOptions{Temperature: 0, NumCtx: c.contextSize})
+}
+
+func (c *OllamaClient) chatWithOptions(ctx context.Context, userOnly bool, system, user string, schema json.RawMessage, options chatOptions) (string, string, error) {
 	if userOnly && strings.TrimSpace(system) != "" {
 		return "", "", errorOf(ErrorConfiguration, "user-only Ollama prompt cannot include a system message")
 	}
@@ -171,7 +217,7 @@ func (c *OllamaClient) chat(ctx context.Context, userOnly bool, system, user str
 		Model:    c.model,
 		Messages: messages,
 		Stream:   false, Think: false, Format: schema,
-		Options: chatOptions{Temperature: 0, NumCtx: c.contextSize}, KeepAlive: "10m",
+		Options: options, KeepAlive: "10m",
 	})
 	if err != nil {
 		return "", "", errorOf(ErrorOutput, "encode ollama request: %v", err)
@@ -212,6 +258,50 @@ func (c *OllamaClient) chat(ctx context.Context, userOnly bool, system, user str
 	return result.Message.Content, modelIdentity, nil
 }
 
+func (c *OllamaClient) rawGenerate(ctx context.Context, prompt string, options chatOptions) (string, string, error) {
+	payload, err := json.Marshal(generateRequest{
+		Model: c.model, Prompt: prompt, Stream: false, Think: false, Raw: true,
+		Options: options, KeepAlive: "10m",
+	})
+	if err != nil {
+		return "", "", errorOf(ErrorOutput, "encode ollama request: %v", err)
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, c.generateEndpoint, bytes.NewReader(payload))
+	if err != nil {
+		return "", "", errorOf(ErrorConfiguration, "create ollama request: %v", err)
+	}
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Accept", "application/json")
+	response, err := c.client.Do(request)
+	if err != nil {
+		return "", "", errorOf(ErrorTransient, "call Ollama: %v", err)
+	}
+	defer response.Body.Close()
+	bodyBytes, err := readBounded(response.Body, 1<<20)
+	if err != nil {
+		return "", "", errorOf(ErrorTransient, "read ollama response: %v", err)
+	}
+	if response.StatusCode != http.StatusOK {
+		kind := ErrorConfiguration
+		if response.StatusCode == http.StatusRequestTimeout || response.StatusCode == http.StatusTooManyRequests || response.StatusCode >= 500 {
+			kind = ErrorTransient
+		}
+		return "", "", errorOf(kind, "Ollama returned HTTP %d", response.StatusCode)
+	}
+	var result generateResponse
+	if err := json.Unmarshal(bodyBytes, &result); err != nil {
+		return "", "", errorOf(ErrorOutput, "decode ollama response: %v", err)
+	}
+	if !result.Done {
+		return "", "", errorOf(ErrorTransient, "ollama response was incomplete")
+	}
+	modelIdentity := strings.TrimSpace(result.Model)
+	if modelIdentity == "" {
+		modelIdentity = c.model
+	}
+	return result.Response, modelIdentity, nil
+}
+
 var privacyDetectors = []struct {
 	label      string
 	expression *regexp.Regexp
@@ -222,10 +312,52 @@ var privacyDetectors = []struct {
 	{label: "telephone number", expression: regexp.MustCompile(`(?:\+49|\b0)[\d ()/.-]{7,}\d\b`)},
 	{label: "date of birth", expression: regexp.MustCompile(`(?i)(?:geboren(?: am)?|geburtsdatum|born(?: on)?)\s*:?\s*\d{1,2}[./-]\d{1,2}[./-](?:19|20)?\d{2}\b`)},
 	{label: "exact age", expression: regexp.MustCompile(`(?i)\b\d{1,3}[- ]?(?:jährig(?:e[rsn]?)?|year[- ]old)\b`)},
-	{label: "precise street address", expression: regexp.MustCompile(`(?i)\b[[:alpha:]ÄÖÜäöüß-]+(?:straße|strasse|str\.|weg|platz|allee|gasse)\s+\d+[a-z]?\b`)},
 	{label: "vehicle registration", expression: regexp.MustCompile(`\b[A-ZÄÖÜ]{1,3}-[A-Z]{1,2}\s?\d{1,4}\b`)},
 	{label: "case number", expression: regexp.MustCompile(`(?i)(?:aktenzeichen|vorgangsnummer|case(?: number)?|reference)\s*:?\s*(?:[A-Z]{1,10}[-/]?)?\d[A-Z0-9/-]{3,}`)},
 	{label: "redaction marker", expression: regexp.MustCompile(`(?i)\[private detail omitted\]`)},
+}
+
+var (
+	preciseStreetAddressPattern   = regexp.MustCompile(`(?i)\b[[:alpha:]ÄÖÜäöüß-]+(?:straße|strasse|str\.|weg|platz|allee|gasse)\s+(\d+)([a-z]?)\b`)
+	localizedMonthAfterDayPattern = regexp.MustCompile(`(?i)^(?:[.,]\s*|\s+)(?:de\s+)?(?:` +
+		`january|february|march|april|may|june|july|august|september|october|november|december|` +
+		`januar|februar|märz|mai|juni|juli|oktober|dezember|` +
+		`ocak|şubat|mart|nisan|mayıs|haziran|temmuz|ağustos|eylül|ekim|kasım|aralık|` +
+		`siječnja|veljače|ožujka|travnja|svibnja|lipnja|srpnja|kolovoza|rujna|listopada|studenoga|prosinca|` +
+		`gennaio|febbraio|marzo|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre|` +
+		`січня|лютого|березня|квітня|травня|червня|липня|серпня|вересня|жовтня|листопада|грудня|` +
+		`januar|februar|mart|april|maj|juni|juli|avgust|august|septembar|oktobar|novembar|decembar|` +
+		`januara|februara|marta|aprila|maja|juna|jula|avgusta|septembra|oktobra|novembra|decembra|` +
+		`जनवरी|फ़रवरी|मार्च|अप्रैल|मई|जून|जुलाई|अगस्त|सितंबर|अक्टूबर|नवंबर|दिसंबर|` +
+		`enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|` +
+		`janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre|` +
+		`ianuarie|februarie|martie|aprilie|mai|iunie|iulie|august|septembrie|octombrie|noiembrie|decembrie|` +
+		`stycznia|lutego|marca|kwietnia|maja|czerwca|lipca|sierpnia|września|października|listopada|grudnia|` +
+		`января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря` +
+		`)(?:\s+de)?\s+\d{4}\b`)
+	eastAsianDateAfterYearPattern = regexp.MustCompile(`^年(?:1[0-2]|[1-9])月(?:3[01]|[12]\d|[1-9])日`)
+)
+
+func containsPreciseStreetAddress(value string) bool {
+	for _, indices := range preciseStreetAddressPattern.FindAllStringSubmatchIndex(value, -1) {
+		number, err := strconv.Atoi(value[indices[2]:indices[3]])
+		if err != nil {
+			return true
+		}
+		// A letter suffix is an address component, never part of a calendar day.
+		if indices[4] >= 0 && indices[4] != indices[5] {
+			return true
+		}
+		tail := value[indices[1]:]
+		if number >= 1 && number <= 31 && localizedMonthAfterDayPattern.MatchString(tail) {
+			continue
+		}
+		if number >= 1900 && number <= 2100 && eastAsianDateAfterYearPattern.MatchString(tail) {
+			continue
+		}
+		return true
+	}
+	return false
 }
 
 var sourceSensitiveDetectors = []*regexp.Regexp{

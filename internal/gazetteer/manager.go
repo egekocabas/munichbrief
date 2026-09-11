@@ -1,0 +1,301 @@
+package gazetteer
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"log/slog"
+	"math/rand/v2"
+	"sort"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"golang.org/x/text/unicode/norm"
+)
+
+type Observer interface {
+	RecordGazetteerAttempt()
+	RecordGazetteerFailure()
+	RecordGazetteerSuccess(time.Time, int)
+	RecordGazetteerDuration(time.Duration)
+	SetNextGazetteerRefresh(time.Time)
+}
+
+type Manager struct {
+	store          *Store
+	fetcher        *Fetcher
+	sources        []SourceDefinition
+	interval       time.Duration
+	clock          func() time.Time
+	logger         *slog.Logger
+	observer       Observer
+	matcher        atomic.Pointer[Matcher]
+	ready          atomic.Bool
+	refreshing     atomic.Bool
+	manualRequests chan struct{}
+	refreshMu      sync.Mutex
+}
+
+// RefreshRequestResult describes whether a manual refresh was queued. Requests
+// are coalesced so the admin action cannot build an unbounded refresh backlog.
+type RefreshRequestResult string
+
+const (
+	RefreshRequestAccepted RefreshRequestResult = "accepted"
+	RefreshRequestRunning  RefreshRequestResult = "running"
+	RefreshRequestPending  RefreshRequestResult = "pending"
+)
+
+func NewManager(ctx context.Context, store *Store, fetcher *Fetcher, sources []SourceDefinition, interval time.Duration, observer Observer, logger *slog.Logger) (*Manager, error) {
+	if store == nil || fetcher == nil || len(sources) == 0 || interval < time.Hour {
+		return nil, errors.New("gazetteer manager requires store, fetcher, sources, and interval of at least one hour")
+	}
+	if logger == nil {
+		logger = slog.Default()
+	}
+	if err := store.recoverInterruptedRefreshes(ctx, time.Now()); err != nil {
+		return nil, fmt.Errorf("recover interrupted gazetteer refreshes: %w", err)
+	}
+	manager := &Manager{store: store, fetcher: fetcher, sources: append([]SourceDefinition(nil), sources...), interval: interval, clock: time.Now, observer: observer, logger: logger, manualRequests: make(chan struct{}, 1)}
+	entries, err := store.ActiveEntries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("load active gazetteer: %w", err)
+	}
+	if len(entries) > 0 {
+		matcher, err := NewMatcher(entries)
+		if err != nil {
+			return nil, fmt.Errorf("build active gazetteer matcher: %w", err)
+		}
+		manager.matcher.Store(matcher)
+		manager.ready.Store(true)
+		if observer != nil {
+			status, statusErr := store.Status(ctx)
+			if statusErr != nil {
+				return nil, fmt.Errorf("load active gazetteer status: %w", statusErr)
+			}
+			observer.RecordGazetteerSuccess(status.LastSuccess, len(entries))
+			observer.SetNextGazetteerRefresh(status.NextRefresh)
+		}
+	}
+	return manager, nil
+}
+
+func (m *Manager) Ready() bool { return m != nil && m.ready.Load() }
+
+func (m *Manager) Protect(title, summary string) (Protected, error) {
+	if m == nil || !m.ready.Load() {
+		return Protected{}, errors.New("gazetteer is not ready")
+	}
+	return m.matcher.Load().ProtectWithOptions(title, summary, ProtectionOptions{Mode: ProtectionTyped})
+}
+
+func (m *Manager) Refresh(ctx context.Context) (RefreshResult, error) {
+	return m.refresh(ctx, RefreshTriggerManual)
+}
+
+// RequestRefresh asks the manager's background loop to run a manual refresh.
+// It returns immediately; an active or already queued refresh is not duplicated.
+func (m *Manager) RequestRefresh() RefreshRequestResult {
+	if m == nil || m.refreshing.Load() {
+		return RefreshRequestRunning
+	}
+	select {
+	case m.manualRequests <- struct{}{}:
+		return RefreshRequestAccepted
+	default:
+		return RefreshRequestPending
+	}
+}
+
+func (m *Manager) refresh(ctx context.Context, trigger RefreshTrigger) (RefreshResult, error) {
+	m.refreshMu.Lock()
+	defer m.refreshMu.Unlock()
+	m.refreshing.Store(true)
+	defer m.refreshing.Store(false)
+	started := m.clock()
+	succeeded := false
+	defer func() {
+		if m.observer == nil {
+			return
+		}
+		m.observer.RecordGazetteerDuration(m.clock().Sub(started))
+		if !succeeded {
+			m.observer.RecordGazetteerFailure()
+		}
+	}()
+	next := started.Add(m.interval)
+	if m.observer != nil {
+		m.observer.RecordGazetteerAttempt()
+		m.observer.SetNextGazetteerRefresh(next)
+	}
+	runID, err := m.store.BeginRefresh(ctx, trigger, m.sources, started, next)
+	if err != nil {
+		return RefreshResult{}, fmt.Errorf("record gazetteer refresh start: %w", err)
+	}
+	fail := func(source *SourceDefinition, stage string, diagnostic SourceFetchDiagnostic, failure error) error {
+		if historyErr := m.store.FailRefresh(ctx, runID, source, stage, diagnostic, failure, m.clock()); historyErr != nil {
+			return errors.Join(failure, fmt.Errorf("record gazetteer refresh failure: %w", historyErr))
+		}
+		return failure
+	}
+	var snapshots []SourceSnapshot
+	allNotModified := true
+	for _, source := range m.sources {
+		sourceStarted := m.clock()
+		if err := m.store.StartRefreshSource(ctx, runID, source.Key, sourceStarted); err != nil {
+			return RefreshResult{}, fail(&source, "storage", SourceFetchDiagnostic{}, fmt.Errorf("record %s source start: %w", source.Key, err))
+		}
+		snapshot, notModified, diagnostic, err := m.fetcher.FetchWithDiagnostics(ctx, source)
+		if err != nil {
+			return RefreshResult{}, fail(&source, diagnostic.FailureStage, diagnostic, err)
+		}
+		if err := m.store.CompleteRefreshSource(ctx, runID, snapshot, notModified, diagnostic, m.clock()); err != nil {
+			return RefreshResult{}, fail(&source, "storage", diagnostic, fmt.Errorf("record %s source completion: %w", source.Key, err))
+		}
+		allNotModified = allNotModified && notModified
+		snapshots = append(snapshots, snapshot)
+	}
+	overrides, err := m.store.Overrides(ctx)
+	if err != nil {
+		return RefreshResult{}, fail(nil, "overrides", SourceFetchDiagnostic{}, err)
+	}
+	entries := mergeEntries(snapshots, overrides)
+	matcher, err := NewMatcher(entries)
+	if err != nil {
+		return RefreshResult{}, fail(nil, "matcher", SourceFetchDiagnostic{}, err)
+	}
+	aggregateHash := aggregateSourceHash(snapshots, overrides)
+	generationID, changed, err := m.store.ActivateRefresh(ctx, runID, snapshots, entries, aggregateHash, m.clock(), next)
+	if err != nil {
+		return RefreshResult{}, fail(nil, "activation", SourceFetchDiagnostic{}, err)
+	}
+	if changed || !m.ready.Load() {
+		m.matcher.Store(matcher)
+		m.ready.Store(true)
+	}
+	finished := m.clock()
+	if m.observer != nil {
+		m.observer.RecordGazetteerSuccess(finished, len(entries))
+	}
+	succeeded = true
+	m.logger.Info("gazetteer refresh completed", "generation_id", generationID, "entries", len(entries), "changed", changed, "all_not_modified", allNotModified, "duration", finished.Sub(started).Round(time.Millisecond))
+	return RefreshResult{GenerationID: generationID, EntryCount: len(entries), NotModified: !changed, Duration: finished.Sub(started)}, nil
+}
+
+func (m *Manager) Run(ctx context.Context) {
+	delay := time.Duration(0)
+	failures := 0
+	first := true
+	for {
+		trigger := RefreshTriggerScheduled
+		if first {
+			trigger = RefreshTriggerStartup
+		} else if failures > 0 {
+			trigger = RefreshTriggerRetry
+		}
+		if delay > 0 {
+			timer := time.NewTimer(delay)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return
+			case <-m.manualRequests:
+				if !timer.Stop() {
+					select {
+					case <-timer.C:
+					default:
+					}
+				}
+				trigger = RefreshTriggerManual
+			case <-timer.C:
+			}
+		}
+		first = false
+		_, err := m.refresh(ctx, trigger)
+		if err != nil {
+			m.logger.Error("gazetteer refresh failed; keeping last successful generation", "error", err)
+			failures++
+			delay = 5 * time.Minute * time.Duration(1<<min(failures-1, 6))
+			if delay > 6*time.Hour {
+				delay = 6 * time.Hour
+			}
+			next := m.clock().Add(delay)
+			_ = m.store.SetNextRefresh(ctx, next)
+			if m.observer != nil {
+				m.observer.SetNextGazetteerRefresh(next)
+			}
+			continue
+		}
+		failures = 0
+		jitter := time.Duration(rand.Int64N(int64(m.interval/10)*2+1)) - m.interval/10
+		delay = m.interval + jitter
+		next := m.clock().Add(delay)
+		_ = m.store.SetNextRefresh(ctx, next)
+		if m.observer != nil {
+			m.observer.SetNextGazetteerRefresh(next)
+		}
+	}
+}
+
+func mergeEntries(snapshots []SourceSnapshot, overrides map[string]string) []Entry {
+	merged := make(map[string]Entry)
+	for _, snapshot := range snapshots {
+		for _, entry := range snapshot.Entries {
+			entry.Name = norm.NFC.String(strings.TrimSpace(entry.Name))
+			if !validName(entry.Name) || overrides[entry.Name] == "exclude" {
+				continue
+			}
+			for index := range entry.Sources {
+				if entry.Sources[index].Kind == "" {
+					entry.Sources[index].Kind = entry.Kind
+				}
+				if entry.Sources[index].Priority == 0 {
+					entry.Sources[index].Priority = entry.Priority
+				}
+				entry.Sources[index].RequiresContext = entry.Sources[index].RequiresContext || entry.RequiresContext
+			}
+			if letterCount(entry.Name) < 3 {
+				entry.RequiresContext = true
+			}
+			if overrides[entry.Name] == "context" {
+				entry.RequiresContext = true
+			}
+			current, found := merged[entry.Name]
+			if !found {
+				merged[entry.Name] = entry
+				continue
+			}
+			current.Sources = append(current.Sources, entry.Sources...)
+			if entry.Priority < current.Priority {
+				current.Kind, current.Priority = entry.Kind, entry.Priority
+			}
+			current.RequiresContext = current.RequiresContext || entry.RequiresContext
+			merged[entry.Name] = current
+		}
+	}
+	entries := make([]Entry, 0, len(merged))
+	for _, entry := range merged {
+		entries = append(entries, entry)
+	}
+	sort.Slice(entries, func(i, j int) bool { return entries[i].Name < entries[j].Name })
+	return entries
+}
+
+func aggregateSourceHash(snapshots []SourceSnapshot, overrides map[string]string) string {
+	parts := make([]string, 0, len(snapshots)+len(overrides)+1)
+	parts = append(parts, "source-contract:"+sourceContractVersion)
+	for _, snapshot := range snapshots {
+		definition := snapshot.Definition
+		parts = append(parts, fmt.Sprintf("source:%s:%s:%s:%s:%s:%d:%d:%d:%s", definition.Key, definition.URL, definition.DisplayName, definition.License, definition.Attribution, definition.MinimumRows, definition.MaximumRows, definition.MaximumSize, snapshot.ContentHash))
+	}
+	for name, action := range overrides {
+		parts = append(parts, "override:"+name+":"+action)
+	}
+	sort.Strings(parts)
+	hash := sha256.Sum256([]byte(strings.Join(parts, "\n")))
+	return hex.EncodeToString(hash[:])
+}

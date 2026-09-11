@@ -21,6 +21,10 @@ Operational commands use the same environment configuration:
 ```bash
 go run ./cmd/munichbrief migrate
 
+go run ./cmd/munichbrief gazetteer status
+
+go run ./cmd/munichbrief gazetteer refresh
+
 MUNICHBRIEF_SOURCE_MODE=live \
 MUNICHBRIEF_DATABASE_PATH=.data/munichbrief-live.db \
 go run ./cmd/munichbrief sync
@@ -37,6 +41,18 @@ go run ./cmd/munichbrief ai-process --all
 The reader listens on `127.0.0.1:8080` and metrics listen separately on
 `127.0.0.1:9090`. The reader provides `/healthz` and `/readyz`; only the
 metrics listener provides `/metrics`.
+
+Live mode enables the separate place-name gazetteer by default. It refreshes
+immediately at startup and weekly thereafter, using conditional HTTP requests
+and retaining the last successful generation on any failure. Set
+`MUNICHBRIEF_GAZETTEER_ENABLED=false` only for offline diagnostics; production
+servers pause the translation processor while the gazetteer is explicitly
+disabled so place-name protection cannot be bypassed. Canonical German and
+other independent processors can continue. `gazetteer status` is network-free, while
+`gazetteer refresh` performs one bounded refresh regardless of the scheduler
+setting. The rebuildable database defaults to
+`.data/munichbrief-gazetteer.db`; deleting it removes no incident or translated
+content, but new translation claims pause until the next successful refresh.
 
 The AI worker automatically considers incidents created after the persisted v2
 cutover. It freezes a canonical cycle, processes all metadata-extraction jobs,
@@ -59,6 +75,8 @@ only this window. The CLI still requires the deployment-level
 `MUNICHBRIEF_AI_ENABLED=true` gate. Processing remains sequential and retains
 privacy validation, the circuit breaker, and normal retry delays. A command-line
 request is picked up by the running server on its next idle worker check.
+Each request freezes the configured model and adapter for every selected reader
+language; languages without a selected model remain paused.
 
 The protected admin dashboard also has a durable automatic-processing master
 switch. Disabling it overrides an open window for scheduled canonical work and
@@ -73,6 +91,20 @@ If a scheduled or continuation cycle is waiting on a retry or circuit breaker,
 a queued explicit canonical request takes its running lease and the automatic
 cycle resumes afterward with its accepted results intact.
 
+The Verifications and Translations pages provide narrower durable gates below
+the global runtime switch. The Translations page has a translation-wide switch
+and one switch per reader language. Automatic translation runs only when the
+global, translation-wide, and language switches are all enabled. Processor
+gates start enabled; verification scopes and English translation start enabled,
+while all other translation languages start disabled. Disabling the
+translation-wide gate marks pending and retrying scheduled translations as
+skipped with `processor_disabled`; disabling one language uses `scope_disabled`.
+Running jobs finish, unrelated processors are unaffected, and explicit manual
+rechecks or translations remain available. Enabling either narrow gate does not
+wake the worker or enqueue inside the admin request. The next normal discovery
+pass uses unchanged cutovers and queues eligible work accumulated while the gate
+was disabled.
+
 “Cancel all unfinished work” is the immediate-stop operation. It disables
 automatic processing, interrupts the current Ollama request, and terminalizes
 waiting, queued, retrying, and running canonical and post-processing jobs as
@@ -82,13 +114,15 @@ can be requested immediately afterward; automatic eligibility is rediscovered
 only after the master switch is enabled again.
 
 The protected admin dashboard stores one preferred model for each canonical
-step and each registered post-processor. Translation scopes share their
-processor model setting. Fresh
-databases start unconfigured; upgraded databases migrate the former German
-preference to both canonical steps and rename the former English preference to
-the shared translation setting. A missing public-assistance, category, or
-translation model pauses only that independent processor without pausing German
-processing or another processor. The dashboard
+step and ordinary registered post-processor. `/admin/translations` stores an
+independent model and adapter for every reader language. Fresh databases start
+unconfigured; on upgrade, only the pre-existing English target inherits the
+former shared translation model under the structured adapter. Newly registered
+languages remain paused until an operator chooses a reviewed route, and later
+startup checks never overwrite that choice. New jobs freeze the route, while
+queued jobs do not change when a preference changes. A missing public-assistance, category, or
+language-specific translation model pauses only that independent processor
+without pausing German processing or another processor. The dashboard
 displays the automatic v2 and registered processor-scope cutovers. The server refreshes Ollama's
 `/api/tags` every 30 seconds; scheduled processing pauses until all required
 models are installed, while priority manual cycles retain their per-step model
@@ -137,16 +171,39 @@ snapshots are served only through protected admin routes with no-store headers.
 Snapshots have no automatic expiry and increase database/backup storage; see
 [retention policy](source-policy.md#retention).
 
+Gazetteer metrics report attempts, failures, last success, next refresh, active
+entry count, and refresh duration. Source responses and errors are logged
+without downloaded payloads. The fixed sources are Landeshauptstadt München –
+GeodatenService (`dl-de/by-2.0`), GeoNames (`CC BY 4.0`), and OpenStreetMap
+contributors (`ODbL 1.0`). Public HTTPS egress must remain enabled for refresh.
+The protected `/admin/gazetteer` view shows the same operational state plus
+the latest health diagnosis, active entry counts by type, paginated refresh
+history, and per-source outcomes. Failed attempts show the exact sanitized
+stage and public-source diagnostic while confirming whether the previous valid
+generation remains active. Startup recovers an abandoned attempt as
+`interrupted`, preserving completed sources and marking sources that were never
+reached. The newest 500 completed attempts and every running attempt are
+retained in the rebuildable Gazetteer database. Diagnostics are limited to 2
+KiB and never include response bodies, downloaded place-name payloads,
+credentials or incident text. It also shows bounded source provenance,
+retained generations, and overrides, but never the complete name set. An
+authenticated operator can request a refresh from the page. The request is
+asynchronous, uses the same serialized manager and durable history as scheduled
+refreshes, and coalesces duplicate requests while work is running or queued.
+The `munichbrief gazetteer refresh` command remains available for a synchronous
+one-shot operational attempt.
+
 `review` presentation mode displays stored German source text and processing
 states and is intended for local fixture development. `public` mode fails closed: it
 lists only incidents with a privacy-safe presentation from the active source
 hash and supported pipeline lifecycle, and never renders stored originals. Only
 a complete current v2 run is eligible; v1 and imported legacy output are
 retained for audit but never selected. Back up SQLite
-before deploying a migration. German and English pages use explicit `/de` and
-`/en` paths; visiting either path refreshes one one-year, HTTP-only preference
-cookie used by the root and legacy-route redirects. Enable secure cookies
-behind TLS.
+before deploying a migration. Reader pages use explicit `/de`, `/en`, `/tr`,
+`/hr`, `/it`, `/uk`, `/bs`, `/zh`, `/hi`, `/es`, `/fr`, `/ro`, `/pl`,
+and `/ru` paths; visiting any registered path refreshes a one-year, HTTP-only
+preference cookie used by the root and legacy-route
+redirects. Enable secure cookies behind TLS.
 Additional languages use the same registry-driven contract and require an
 explicit public ingress prefix. Follow [Adding a reader language](adding-a-language.md)
 for the safe ingress-first rollout and manual historical backfill.
@@ -195,16 +252,24 @@ purpose: when a replacement fails, the retained earlier success remains
 published while the newest attempt also appears under attention and the
 replacement-warning count.
 
+The translation overview shows the translation-wide automatic gate and the
+independent gate for each language. Model and adapter preferences remain stored
+while either gate is disabled, and neither switch removes published
+translations.
+
 Language drill-down filters are `all`, `published`, `unpublished`,
 `never_queued`, `active`, and `attention`. Incident drill-down shows the German
 canonical presentation plus each registered language's effective output,
-published provenance, latest attempt, and retry action. **Queue unpublished**
+published model/adapter/prompt provenance, latest-attempt provenance, and retry
+action. The overview stores one preferred installed model and supported adapter
+per language; unavailable routes are visibly paused. **Queue unpublished**
 transactionally queues current German presentations that have no publishable
 translation, excluding active and already-published work. **Rerun all** creates
 manual replacements for every eligible presentation except active work. Both
-bulk actions and an incident retry require an installed model and an explicit
-confirmation; they bypass the automatic-processing switch and cutover without
-changing either. Historical work is therefore always an operator decision.
+bulk actions and an incident retry require an installed model, supported
+adapter, and explicit confirmation; they bypass the automatic-processing switch
+and cutover without changing either. Historical work is therefore always an
+operator decision.
 
 The translation operations region refreshes from its current URL every five
 seconds, preserving its filter, page, incident view, and scroll position. It
@@ -234,11 +299,13 @@ terminal failure leaves the prior successful assistance result effective, or
 the original metadata when there has been no success, and does not block
 category verification, translation, or German publication.
 
-The verifier scope uses the registry's persisted enablement cutover. New
-presentations are queued automatically once its preferred model is configured.
+The verifier scope uses the registry's persisted cutover and automatic-work
+gate. New presentations are queued automatically once its preferred model is
+configured and the scope is enabled.
 Existing presentations are not backfilled automatically; use the protected
-post-processing “process all” control in the admin dashboard. No SQL migration
-is required for this rollout.
+post-processing “process all” control in the admin dashboard. Migration `021`
+adds per-scope gates, and migration `022` adds processor-wide gates; neither
+changes existing cutovers or job history.
 
 Category verification is correction-only. Its model receives the privacy-safe
 German title and summary plus a German category label. German labels are mapped

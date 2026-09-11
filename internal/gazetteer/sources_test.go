@@ -1,0 +1,184 @@
+package gazetteer
+
+import (
+	"archive/zip"
+	"bytes"
+	"context"
+	"io"
+	"net/http"
+	"net/url"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+)
+
+func TestDefaultLandmarkSourceCoversNamedNaturalAreas(t *testing.T) {
+	for _, source := range DefaultSources() {
+		if source.Key != "osm_landmarks" {
+			continue
+		}
+		parsed, err := url.Parse(source.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		query := parsed.Query().Get("data")
+		for _, expected := range []string{"[natural~", "[landuse~", "[boundary~"} {
+			if !strings.Contains(query, expected) {
+				t.Fatalf("landmark query omitted %q: %s", expected, query)
+			}
+		}
+		return
+	}
+	t.Fatal("osm_landmarks source is missing")
+}
+
+func TestOfficialAndOSMParsersUseExpectedFields(t *testing.T) {
+	streets, err := parseMunichStreets([]byte(`{"features":[{"id":"street.1","properties":{"strassenname":"Ingolstädter Straße"}}]}`))
+	if err != nil || len(streets) != 1 || streets[0].Name != "Ingolstädter Straße" || streets[0].Kind != KindStreet {
+		t.Fatalf("streets = %#v, err=%v", streets, err)
+	}
+	districts, err := parseMunichDistricts([]byte(`{"features":[{"id":"district.1","properties":{"sb_name":"Ramersdorf-Perlach"}}]}`))
+	if err != nil || len(districts) != 1 || districts[0].Kind != KindDistrict {
+		t.Fatalf("districts = %#v, err=%v", districts, err)
+	}
+	osm, err := parseOSM("osm_transit", []byte(`{"elements":[{"type":"node","id":42,"tags":{"name":"München Hauptbahnhof","name:en":"Munich Central Station","alt_name":"Hauptbahnhof"}}]}`))
+	if err != nil || len(osm) != 2 || osm[0].Kind != KindTransit {
+		t.Fatalf("OSM = %#v, err=%v", osm, err)
+	}
+}
+
+func TestJSONGazetteerParsersRejectIncompleteOrTrailingPayloads(t *testing.T) {
+	tests := []struct {
+		name  string
+		parse func([]byte) ([]Entry, error)
+		data  string
+	}{
+		{name: "official trailing value", parse: parseMunichStreets, data: `{"features":[]} {"unexpected":true}`},
+		{name: "official trailing garbage", parse: parseMunichDistricts, data: `{"features":[]} broken`},
+		{name: "OSM truncated object", parse: func(data []byte) ([]Entry, error) { return parseOSM("osm_transit", data) }, data: `{"elements":[]`},
+		{name: "OSM trailing value", parse: func(data []byte) ([]Entry, error) { return parseOSM("osm_transit", data) }, data: `{"elements":[]} []`},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if entries, err := test.parse([]byte(test.data)); err == nil {
+				t.Fatalf("parser accepted malformed response: %#v", entries)
+			}
+		})
+	}
+}
+
+func TestGeoNamesParserFiltersAdministrativeCodesAndFeatureTypes(t *testing.T) {
+	line := func(id, name, feature, admin3 string) string {
+		fields := []string{id, name, name, "", "0", "0", "P", feature, "DE", "", "02", "091", admin3, "", "0", "0", "0", "Europe/Berlin", "2026-01-01"}
+		return strings.Join(fields, "\t") + "\n"
+	}
+	var archive bytes.Buffer
+	writer := zip.NewWriter(&archive)
+	file, _ := writer.Create("DE.txt")
+	_, _ = file.Write([]byte(line("1", "Oberhaching", "PPLA4", "09184") + line("2", "Geiselgasteig", "PPL", "09184") + line("3", "Berlin", "PPLC", "11000")))
+	_ = writer.Close()
+	entries, err := parseGeoNames(archive.Bytes())
+	if err != nil || len(entries) != 2 || entries[0].Name != "Oberhaching" || entries[0].Sources[0].Kind != KindMunicipality || entries[1].Name != "Geiselgasteig" {
+		t.Fatalf("GeoNames = %#v, err=%v", entries, err)
+	}
+}
+
+func TestFetcherConditionalRequestAndSizeLimit(t *testing.T) {
+	ctx := context.Background()
+	store, err := Open(ctx, filepath.Join(t.TempDir(), "gazetteer.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	requests := 0
+	client := &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		requests++
+		if request.Header.Get("If-None-Match") == `"one"` {
+			return &http.Response{StatusCode: http.StatusNotModified, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(""))}, nil
+		}
+		return &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Etag": []string{`"one"`}}, Body: io.NopCloser(strings.NewReader(`{"features":[{"id":"1","properties":{"strassenname":"Ganghoferstraße"}}]}`))}, nil
+	})}
+	definition := SourceDefinition{Key: "munich_streets", DisplayName: "Test", URL: "https://example.test/source", License: "test", Attribution: "test", MinimumRows: 1, MaximumRows: 2, MaximumSize: 1024, Parse: parseMunichStreets}
+	fetcher, _ := NewFetcher(client, "MunichBrief/test", store)
+	snapshot, unchanged, err := fetcher.Fetch(ctx, definition)
+	if err != nil || unchanged {
+		t.Fatalf("first fetch unchanged=%v err=%v", unchanged, err)
+	}
+	entries := mergeEntries([]SourceSnapshot{snapshot}, nil)
+	if _, _, err := store.Activate(ctx, []SourceSnapshot{snapshot}, entries, "hash-one", time.Now(), time.Now().Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	second, unchanged, err := fetcher.Fetch(ctx, definition)
+	if err != nil || !unchanged || len(second.Entries) != 1 || second.Entries[0].Kind != KindStreet || second.Entries[0].Priority != 10 || requests != 2 {
+		t.Fatalf("conditional fetch = %#v unchanged=%v requests=%d err=%v", second, unchanged, requests, err)
+	}
+}
+
+func TestFetcherRefetchesWhenSourceContractChanges(t *testing.T) {
+	ctx := context.Background()
+	store, err := Open(ctx, filepath.Join(t.TempDir(), "gazetteer.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	definition := SourceDefinition{Key: "custom", DisplayName: "Test", URL: "https://example.test/source", License: "test", Attribution: "test", MinimumRows: 1, MaximumRows: 2, MaximumSize: 1024, Parse: func([]byte) ([]Entry, error) {
+		return []Entry{{Name: "Schwabing", Kind: KindNeighbourhood, Priority: 17, Sources: []EntrySource{{Key: "custom", ExternalID: "1", Kind: KindNeighbourhood, Priority: 17}}}}, nil
+	}}
+	entry := definitionMustParse(t, definition, []byte("current"))[0]
+	snapshot := SourceSnapshot{Definition: definition, ContentHash: "old-hash", ETag: `"old"`, FetchedAt: time.Now(), Entries: []Entry{entry}}
+	if _, _, err := store.Activate(ctx, []SourceSnapshot{snapshot}, []Entry{entry}, "old-aggregate", time.Now(), time.Now().Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.db.ExecContext(ctx, `UPDATE gazetteer_sources SET contract_version='old-contract' WHERE source_key='custom'`); err != nil {
+		t.Fatal(err)
+	}
+	client := &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		if request.Header.Get("If-None-Match") != "" {
+			t.Fatalf("stale parser contract reused HTTP validator: %q", request.Header.Get("If-None-Match"))
+		}
+		return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader("current"))}, nil
+	})}
+	fetcher, _ := NewFetcher(client, "MunichBrief/test", store)
+	fetched, unchanged, err := fetcher.Fetch(ctx, definition)
+	if err != nil || unchanged || len(fetched.Entries) != 1 || fetched.Entries[0].Priority != 17 {
+		t.Fatalf("contract refetch = %#v unchanged=%v err=%v", fetched, unchanged, err)
+	}
+}
+
+func definitionMustParse(t *testing.T, definition SourceDefinition, data []byte) []Entry {
+	t.Helper()
+	entries, err := definition.Parse(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return entries
+}
+
+func TestFetcherRejectsOversizedAndImplausibleResponses(t *testing.T) {
+	ctx := context.Background()
+	store, err := Open(ctx, filepath.Join(t.TempDir(), "gazetteer.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	client := &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader("12345"))}, nil
+	})}
+	fetcher, _ := NewFetcher(client, "MunichBrief/test", store)
+	definition := SourceDefinition{Key: "bounded", DisplayName: "Bounded", URL: "https://example.test/source", License: "test", Attribution: "test", MinimumRows: 1, MaximumRows: 2, MaximumSize: 4, Parse: func([]byte) ([]Entry, error) { return nil, nil }}
+	if _, _, diagnostic, err := fetcher.FetchWithDiagnostics(ctx, definition); err == nil || !strings.Contains(err.Error(), "exceeds") || diagnostic.FailureStage != "response_size" || diagnostic.ResponseSize != 5 || diagnostic.HTTPStatus != http.StatusOK {
+		t.Fatalf("oversized fetch diagnostic = %#v, error = %v", diagnostic, err)
+	}
+	client.Transport = roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader("{}"))}, nil
+	})
+	definition.MaximumSize = 10
+	if _, _, diagnostic, err := fetcher.FetchWithDiagnostics(ctx, definition); err == nil || !strings.Contains(err.Error(), "outside safety range") || diagnostic.FailureStage != "row_count" || diagnostic.RowCount != 0 {
+		t.Fatalf("implausible row count diagnostic = %#v, error = %v", diagnostic, err)
+	}
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(request *http.Request) (*http.Response, error) { return f(request) }

@@ -1,0 +1,172 @@
+SiteDescription = { other = "Münih Polisinin resmî bildirimlerinin yapay zekâ özetleriyle bilgi sahibi olun." }
+BrandTagline = { other = "Bir bakışta Münih" }
+SocialImageAlt = { other = "Münih Olimpiyat Parkı’nı gösteren MunichBrief önizlemesi." }
+SocialIncidentLabel = { other = "Olay" }
+Timeline = { other = "Güncel" }
+About = { other = "Hakkında" }
+PrimaryNavigation = { other = "Ana gezinme" }
+SkipToContent = { other = "İçeriğe geç" }
+DarkMode = { other = "Karanlık mod" }
+NoticeLabel = { other = "Önemli uyarı" }
+NoticeLead = { other = "Bağımsız ve resmî değildir." }
+FixtureNotice = { other = "Bu görünüm yalnızca sentetik test verileri içerir." }
+LiveNotice = { other = "Resmî polis bildirimlerini özetlemek, kategorilere ayırmak ve ayrıntıları çıkarmak için yapay zekâ kullanılır. Hatalar oluşabilir ve bildirimler yayımlandıktan sonra güncellenebilir." }
+AuthorityNotice = { other = "En güncel resmî bilgiler esas alınır ve masumiyet karinesi geçerlidir." }
+ReviewNotice = { other = "İnceleme modu: anonimleştirilmemiş özgün metin görünebilir. Herkese açık olarak sunmayın." }
+AIGeneratedContent = { other = "Yapay zekâ tarafından oluşturulan içerik" }
+AIFixtureLabelPreview = { other = "Etiket önizlemesi — bu sentetik test içeriği yapay zekâ ile işlenmemiştir" }
+AIDisclosureTitle = { other = "Yapay zekâ tarafından oluşturulan içerik" }
+AIDisclosureFixtureCopy = { other = "Yerel önizleme: bu sayfa sentetik test içeriği kullanır." }
+AIDisclosureCopy = { other = "MunichBrief, Münih Polisinin resmî bildirimlerinden başlıklar, özetler, çeviriler, kategoriler ve bildirilen yer ile zaman veya polisin halktan yardım isteyip istemediği gibi yapılandırılmış ayrıntılar oluşturmak için yerel olarak çalıştırılan yapay zekâ kullanır. Yapay zekâ tarafından oluşturulan veya çıkarılan bilgiler hata içerebilir ya da özgün bildirim güncellendiğinde eskiyebilir. Her olay sayfası resmî polis kaynağını belirtir ve bağlantısını verir; doğrulanmış bilgi için lütfen bu kaynağa başvurun. MunichBrief bağımsız bir projedir ve Bavyera Polisiyle bağlantılı değildir. Adı geçen herkes, suçluluğu kanıtlanana kadar masum kabul edilir." }
+AIDisclosurePreferenceCopy = { other = "“Anladım” seçildiğinde bu uyarı 30 gün boyunca hatırlanır." }
+AIDisclosureLearnMore = { other = "MunichBrief ve çalışma biçimi hakkında daha fazla bilgi Hakkında sayfasındadır." }
+AIDisclosureGotIt = { other = "Anladım" }
+AITransparencyEU = { other = "Yapay zekâ şeffaflığı ve AB rehberi" }
+AITransparencyEUCopy = { other = "MunichBrief, Avrupa Komisyonu rehberinde yapay zekâ tarafından oluşturulan haber özetleri açıkça bir kullanım alanı olarak belirtildiği için AB Tamamen Yapay Zekâ Tarafından Oluşturuldu etiketini kullanır. Görünür etiketler ve makinece okunabilir kaynak bilgileri şeffaflığı destekler; ancak simgenin kullanılması tek başına yasal uygunluk sağlamaz veya MunichBrief’in gönüllü Uygulama Kuralları’nı imzaladığı anlamına gelmez." }
+EUIconGuidance = { other = "AB simge rehberi" }
+EUCodePractice = { other = "AB Uygulama Kuralları" }
+Footer = { other = "MunichBrief, Bavyera Polisinden bağımsızdır. Analiz, hesap veya reklam yoktur." }
+Built = { other = "Derleme" }
+Language = { other = "Dil" }
+German = { other = "Almanca" }
+English = { other = "İngilizce" }
+SwitchToGerman = { other = "Almanca sürüme geç" }
+SwitchToEnglish = { other = "İngilizce sürüme geç" }
+SwitchToTurkish = { other = "Türkçe sürüme geç" }
+SwitchToCroatian = { other = "Hırvatça sürüme geç" }
+SwitchToItalian = { other = "İtalyanca sürüme geç" }
+SwitchToUkrainian = { other = "Ukraynaca sürüme geç" }
+SwitchToBosnian = { other = "Boşnakça sürüme geç" }
+SwitchToChinese = { other = "Basitleştirilmiş Çince sürüme geç" }
+SwitchToHindi = { other = "Hintçe sürüme geç" }
+SwitchToSpanish = { other = "İspanyolca sürüme geç" }
+SwitchToFrench = { other = "Fransızca sürüme geç" }
+HeroEyebrowFixture = { other = "Yerel prototip" }
+HeroEyebrowLive = { other = "Münih Polisi bildirimleri" }
+HeroTitle = { other = "Münih Polisi tarafından bildirilen son olaylar" }
+HeroCopy = { other = "Resmî polis bildirimlerinden özetlenen yerel olayların açık bir görünümü." }
+FixtureIncidents = { other = "Sentetik bildirimler" }
+LatestIncidents = { other = "Son olaylar" }
+Reports = { one = "{{.Count}} bildirim", other = "{{.Count}} bildirim" }
+ShownTotal = { other = "{{.Shown}} gösteriliyor / toplam {{.Total}}" }
+Report = { other = "Polis bildirimi" }
+SourceMetadata = { other = "Kaynak üst verileri" }
+ReadIncident = { other = "Bildirimi oku" }
+OpenOfficialSource = { other = "Resmî kaynağı aç" }
+OpenOfficialPoliceRelease = { other = "Resmî polis bildirimini aç" }
+Newer = { other = "Daha yeni" }
+Older = { other = "Daha eski" }
+Page = { other = "Sayfa" }
+Of = { other = "/" }
+NoIncidents = { other = "Henüz bildirim yok" }
+NoFixtureCopy = { other = "Bu görünümü doldurmak için test verisi içe aktarımını çalıştırın." }
+NoLiveCopy = { other = "Eşitleyici henüz geçerli zaman aralığında bir bildirim bulmadı." }
+BodyUnavailable = { other = "Bildirim metni henüz kullanılamıyor. MunichBrief yeniden deniyor; bu sırada resmî kaynağı kullanın." }
+SourceRefreshFailed = { other = "Son kaynak yenilemesi başarısız oldu; kaydedilmiş bu kopya kullanılabilir durumda." }
+Back = { other = "Geri" }
+Breadcrumb = { other = "İçerik haritası" }
+PublishedWithin = { other = "Yayımlandığı yer" }
+Published = { other = "Yayımlandı" }
+LastProcessed = { other = "Son işlenme" }
+Model = { other = "Model" }
+PromptVersion = { other = "İstem sürümü" }
+Category = { other = "Kategori" }
+CategoryTraffic = { other = "Trafik" }
+CategoryTheftBurglary = { other = "Hırsızlık ve konut dokunulmazlığının ihlali" }
+CategoryRobberyExtortion = { other = "Yağma ve şantaj" }
+CategoryViolence = { other = "Şiddet" }
+CategorySexualOffense = { other = "Cinsel suçlar" }
+CategoryFraudCyber = { other = "Dolandırıcılık ve siber suç" }
+CategoryDrugs = { other = "Uyuşturucu" }
+CategoryFireHazard = { other = "Yangın ve tehlikeler" }
+CategoryPropertyDamage = { other = "Mala zarar verme" }
+CategoryMissingWanted = { other = "Kayıp ve aranan kişiler" }
+CategoryPoliceOperation = { other = "Polis operasyonu" }
+CategoryOther = { other = "Diğer" }
+Area = { other = "Bölge" }
+ReportKind = { other = "Bildirim türü" }
+PublicAssistance = { other = "Halktan yardım" }
+PublicAssistanceRequested = { other = "Polis halktan yardım istiyor" }
+PublicAssistanceNeeded = { other = "Halkın yardımı gerekiyor" }
+PublicAssistanceSourceCopy = { other = "Talimatlar, iletişim yolları ve diğer ayrıntılar yalnızca resmî kaynakta bulunur." }
+TimeStatedInReport = { other = "Olay zamanı" }
+DayPartMorning = { other = "sabah" }
+DayPartMidday = { other = "öğle" }
+DayPartAfternoon = { other = "öğleden sonra" }
+DayPartEvening = { other = "akşam" }
+DayPartNight = { other = "gece" }
+ReportKindIncident = { other = "Olay" }
+ReportKindFollowUp = { other = "Takip bildirimi" }
+ReportKindMissingPerson = { other = "Kayıp kişi bildirimi" }
+ReportKindWantedPerson = { other = "Aranan kişi bildirimi" }
+ReportKindPublicWarning = { other = "Kamu uyarısı" }
+ReportKindOther = { other = "Diğer bildirim" }
+AssistanceWitnessObservations = { other = "Tanık gözlemleri" }
+AssistanceIdentifyPerson = { other = "Bir kişiyi teşhis etme" }
+AssistanceLocatePerson = { other = "Bir kişinin yerini belirleme" }
+AssistancePhotoVideo = { other = "Fotoğraf veya video materyali" }
+AssistanceVehicleInformation = { other = "Araç bilgileri" }
+AssistancePropertyInformation = { other = "Eşya bilgileri" }
+AssistanceOtherInformation = { other = "Diğer bilgiler" }
+AIProcessing = { other = "Yapay zekâ işleme" }
+Step = { other = "Adım" }
+Translation = { other = "Çeviri" }
+IncidentMetadataStep = { other = "Olay üst verileri" }
+GermanPresentationStep = { other = "Almanca sunum" }
+PublicAssistanceVerificationStep = { other = "Halktan yardım doğrulaması" }
+CategoryVerificationStep = { other = "Kategori doğrulaması" }
+EnglishTranslationStep = { other = "İngilizce çeviri" }
+TurkishTranslationStep = { other = "Türkçe çeviri" }
+CroatianTranslationStep = { other = "Hırvatça çeviri" }
+ItalianTranslationStep = { other = "İtalyanca çeviri" }
+UkrainianTranslationStep = { other = "Ukraynaca çeviri" }
+BosnianTranslationStep = { other = "Boşnakça çeviri" }
+ChineseTranslationStep = { other = "Basitleştirilmiş Çince çeviri" }
+HindiTranslationStep = { other = "Hintçe çeviri" }
+SpanishTranslationStep = { other = "İspanyolca çeviri" }
+FrenchTranslationStep = { other = "Fransızca çeviri" }
+StagedPipeline = { other = "Aşamalı işlem hattı" }
+MetadataFirstPipeline = { other = "Önce üst veri işlem hattı v2" }
+Generated = { other = "Oluşturuldu" }
+AISummary = { other = "Yapay zekâ özeti" }
+VerifySource = { other = "Önemli ayrıntıları en güncel resmî bilgilerle doğrulayın." }
+OriginalGerman = { other = "Özgün Almanca metin" }
+OriginalQACopy = { other = "Yalnızca kısıtlı inceleme modunda kalite kontrolü için görünür." }
+AuthoritativeSource = { other = "Yetkili kaynak" }
+FixtureSourceCopy = { other = "Bu sayfa sentetik test içeriği kullanır." }
+LiveSourceCopy = { other = "Bu, resmî olmayan bir sunumdur. Bavyera Polisi bildirimi esas alınır." }
+NotProcessed = { other = "Henüz özetlenmedi veya çevrilmedi" }
+Queued = { other = "Yapay zekâ özeti ve çeviri sıraya alındı" }
+Running = { other = "Yapay zekâ özeti ve çeviri işleniyor" }
+Retrying = { other = "Yapay zekâ geçici olarak kullanılamıyor; yeniden deneme planlandı" }
+NeedsReview = { other = "Yapay zekâ çıktısının incelenmesi gerekiyor" }
+OriginalShown = { other = "Özgün Almanca bildirim gösteriliyor." }
+AboutTitle = { other = "MunichBrief nasıl çalışır?" }
+Methodology = { other = "MunichBrief hakkında" }
+AboutIntro = { other = "MunichBrief, Münih Polisinin resmî bildirimlerini birden fazla okuma dilinde açık ve yapılandırılmış olay özetlerine dönüştürür." }
+FromReleaseToIncident = { other = "Bildirimden olaya" }
+Discover = { other = "Keşfet" }
+DiscoverCopy = { other = "Yeni bildirimler yalnızca Münih Polisinin resmî RSS akışı üzerinden bulunur." }
+Organize = { other = "Düzenle" }
+OrganizeCopy = { other = "Birden fazla rapor içeren bildirimler resmî rapor numaralarına göre ayrılır. Ayrı yayımlanan raporlar ayrı kalır." }
+Summarize = { other = "Özetle" }
+SummarizeCopy = { other = "Yerel yapay zekâ modelleri kategori, yer, tarih ve halktan yardım talepleri gibi ayrıntıları çıkarır, ardından verileri en aza indirilmiş bir Almanca özet oluşturur." }
+TranslatePublish = { other = "Çevir ve yayımla" }
+TranslatePublishCopy = { other = "Otomatik işleme kontrollerini geçen Almanca özetler mevcut okuma dillerine çevrilir. Herkese açık sayfalar, yapay zekâ tarafından oluşturulan içeriği yalnızca işlem hattı başarıyla tamamlandıktan sonra gösterir." }
+AccuracyOfficialInformation = { other = "Doğruluk ve resmî bilgiler" }
+AccuracyOfficialInformationCopy = { other = "Yapay zekâ özetleri ve çıkarılan ayrıntılar hata içerebilir. Polis bildirimleri yayımlandıktan sonra güncellenebilir. En güncel resmî bilgiler esas alınır ve masumiyet karinesi geçerlidir." }
+PrivacyDataHandling = { other = "Gizlilik ve veri işleme" }
+PrivacyCopy = { other = "MunichBrief’te hesap, analiz veya reklam yoktur. Gerekli bir çerez seçilen dili bir yıl saklar. “Anladım”ı seçtikten sonra birinci taraf tercih çerezi yapay zekâ açıklamasını 30 gün hatırlar. Seçilen renk teması tarayıcınızda yerel olarak saklanır." }
+DataHandlingCopy = { other = "Çıkarılan Almanca kaynak metni yerel olarak saklanır. Kısıtlı inceleme modu, kalite kontrolü için özgün metinleri ve işleme durumlarını gösterebilir; herkese açık mod saklanan özgün metinleri göstermez." }
+IndependenceLegalReview = { other = "Bağımsızlık ve hukuki inceleme" }
+IndependenceLegalReviewCopy = { other = "MunichBrief, Bavyera Polisinden bağımsızdır. Teknik önlemler hukuki incelemenin yerini tutmaz. Saklama, hukuki dayanak, suçla ilgili veriler ve uygulanabilir gazetecilik istisnaları sürekli inceleme gerektirir." }
+ContactHeading = { other = "Sorular, düzeltmeler veya geri bildirim" }
+ContactPublicLead = { other = "Bir hata mı buldunuz veya öneriniz mi var?" }
+ContactIssueLink = { other = "GitHub’da konu aç" }
+ContactPrivateLead = { other = "Gizlilikle ilgili endişeler veya herkese açık paylaşılmaması gereken konular için e-posta gönderin:" }
+SwitchToRomanian = { other = "Rumence sürüme geç" }
+SwitchToPolish = { other = "Lehçe sürüme geç" }
+SwitchToRussian = { other = "Rusça sürüme geç" }
+RomanianTranslationStep = { other = "Rumence çeviri" }
+PolishTranslationStep = { other = "Lehçe çeviri" }
+RussianTranslationStep = { other = "Rusça çeviri" }

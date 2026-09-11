@@ -25,6 +25,7 @@ type pipelineTestProvider struct {
 	fail            func(string, int) error
 	generate        func(StepDefinition, StepInput) (StepOutput, bool)
 	generateContext func(context.Context, StepDefinition, StepInput) (StepOutput, bool, error)
+	adapters        map[string][]string
 }
 
 type testModelCatalog struct{ snapshot ModelCatalogSnapshot }
@@ -93,9 +94,14 @@ func (p *pipelineTestProvider) StepGenerator(model string) (StepGenerator, error
 	return pipelineTestGenerator{model: model, provider: p}, nil
 }
 
+func (p *pipelineTestProvider) StepGeneratorFor(model, adapter string) (StepGenerator, error) {
+	return pipelineTestGenerator{model: model, provider: p, adapter: adapter}, nil
+}
+
 type pipelineTestGenerator struct {
 	model    string
 	provider *pipelineTestProvider
+	adapter  string
 }
 
 func (g pipelineTestGenerator) ModelIdentity() string { return g.model }
@@ -107,6 +113,12 @@ func (g pipelineTestGenerator) GenerateStep(ctx context.Context, step StepDefini
 		g.provider.calls = make(map[string]int)
 	}
 	g.provider.calls[step.Key]++
+	if g.adapter != "" {
+		if g.provider.adapters == nil {
+			g.provider.adapters = make(map[string][]string)
+		}
+		g.provider.adapters[step.Key] = append(g.provider.adapters[step.Key], g.adapter)
+	}
 	call := g.provider.calls[step.Key]
 	var failure error
 	if g.provider.fail != nil {
@@ -364,7 +376,7 @@ func TestCancelAllInterruptsCurrentPostProcessingRequestWithoutRetryFailure(t *t
 		t.Fatalf("manual canonical request = %#v/%v", result, err)
 	}
 	worker.processAvailable(ctx)
-	if queued, err := worker.RequestPostProcessing(ctx, PostProcessingRequest{ProcessorKey: TranslationModelStep, Model: "translate:4b"}); err != nil || queued != 1 {
+	if queued, err := worker.RequestPostProcessing(ctx, PostProcessingRequest{ProcessorKey: TranslationModelStep, ScopeKeys: []string{EnglishLanguage}, Model: "translate:4b"}); err != nil || queued != 1 {
 		t.Fatalf("manual post-processing request = %d/%v", queued, err)
 	}
 	provider.generateContext = func(requestCtx context.Context, step StepDefinition, _ StepInput) (StepOutput, bool, error) {
@@ -517,7 +529,7 @@ func TestCancelWinningBeforePostProcessingFailureBookkeepingIsNotAProcessingFail
 		t.Fatalf("manual canonical request = %#v/%v", result, err)
 	}
 	worker.processAvailable(ctx)
-	if queued, err := worker.RequestPostProcessing(ctx, PostProcessingRequest{ProcessorKey: TranslationModelStep, Model: "translate:4b"}); err != nil || queued != 1 {
+	if queued, err := worker.RequestPostProcessing(ctx, PostProcessingRequest{ProcessorKey: TranslationModelStep, ScopeKeys: []string{EnglishLanguage}, Model: "translate:4b"}); err != nil || queued != 1 {
 		t.Fatalf("manual post-processing request = %d/%v", queued, err)
 	}
 	provider.generateContext = func(_ context.Context, step StepDefinition, _ StepInput) (StepOutput, bool, error) {
@@ -608,7 +620,7 @@ func TestProviderCanceledWithoutWorkerCancellationRetriesPostProcessingJob(t *te
 		t.Fatalf("manual canonical request = %#v/%v", result, err)
 	}
 	worker.processAvailable(ctx)
-	if queued, err := worker.RequestPostProcessing(ctx, PostProcessingRequest{ProcessorKey: TranslationModelStep, Model: "translate:4b"}); err != nil || queued != 1 {
+	if queued, err := worker.RequestPostProcessing(ctx, PostProcessingRequest{ProcessorKey: TranslationModelStep, ScopeKeys: []string{EnglishLanguage}, Model: "translate:4b"}); err != nil || queued != 1 {
 		t.Fatalf("manual post-processing request = %d/%v", queued, err)
 	}
 	provider.fail = func(step string, _ int) error {
@@ -670,12 +682,36 @@ func TestAutomaticProcessingDisableFinishesCurrentPostProcessingOnly(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
+	settings, err := database.TranslationLanguageSettings(ctx)
+	if err != nil || len(settings) == 0 {
+		t.Fatalf("translation settings were not initialized: %#v/%v", settings, err)
+	}
+	for _, setting := range settings {
+		wantModel := ""
+		if setting.LanguageCode == EnglishLanguage {
+			wantModel = "translate:4b"
+		}
+		if setting.PreferredModel != wantModel || setting.AdapterKey != TranslationAdapterStructured {
+			t.Fatalf("initialized translation setting = %#v", setting)
+		}
+	}
+	configured, err := worker.configuredTranslationPlans(ctx, nil)
+	if err != nil || len(configured) != 1 || configured[0].ScopeKey != EnglishLanguage {
+		t.Fatalf("configured translation plans = %#v/%v", configured, err)
+	}
 	done := make(chan struct{})
 	go func() {
 		worker.processAvailable(ctx)
 		close(done)
 	}()
-	<-started
+	select {
+	case <-started:
+	case <-done:
+		status, statusErr := worker.Status(ctx)
+		t.Fatalf("worker completed before claiming English translation: %#v/%v", status.Queue.PostProcessing, statusErr)
+	case <-time.After(2 * time.Second):
+		t.Fatal("worker did not reach English translation")
+	}
 	if err := worker.SetAutomaticProcessing(ctx, false); err != nil {
 		t.Fatal(err)
 	}
@@ -689,7 +725,13 @@ func TestAutomaticProcessingDisableFinishesCurrentPostProcessingOnly(t *testing.
 		t.Fatalf("translation calls while disabled = %d, want 1", provider.callCount(EnglishTranslationStep))
 	}
 	status, err := worker.Status(ctx)
-	if err != nil || status.Queue.PostProcessing[len(status.Queue.PostProcessing)-1].Pending != 1 {
+	englishPending := -1
+	for _, queue := range status.Queue.PostProcessing {
+		if queue.ProcessorKey == TranslationModelStep && queue.ScopeKey == EnglishLanguage {
+			englishPending = queue.Pending
+		}
+	}
+	if err != nil || englishPending != 1 {
 		t.Fatalf("disabled post-processing status = %#v/%v", status.Queue.PostProcessing, err)
 	}
 }
@@ -724,19 +766,24 @@ func TestPipelineWorkerGroupsModelsFreezesTargetsAndStartsNextCycle(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
+	configureAllTestTranslationRoutes(t, ctx, worker, "translate:4b")
 	worker.processAvailable(ctx)
 
 	provider.mu.Lock()
 	events := append([]string(nil), provider.events...)
 	provider.mu.Unlock()
-	if len(events) != 9 {
+	if len(events) != 6+3*len(RegisteredTranslations()) {
 		t.Fatalf("events = %v", events)
 	}
 	want := []struct{ step, model string }{
 		{IncidentMetadataStep, "qwen:4b"}, {IncidentMetadataStep, "qwen:4b"},
 		{GermanPresentationStep, "qwen:4b"}, {GermanPresentationStep, "qwen:4b"},
 		{IncidentMetadataStep, "qwen:4b"}, {GermanPresentationStep, "qwen:4b"},
-		{EnglishTranslationStep, "translate:4b"}, {EnglishTranslationStep, "translate:4b"}, {EnglishTranslationStep, "translate:4b"},
+	}
+	for range 3 {
+		for _, translation := range RegisteredTranslations() {
+			want = append(want, struct{ step, model string }{translation.Step.Key, "translate:4b"})
+		}
 	}
 	for index, event := range events {
 		wantStep, wantModel := want[index].step, want[index].model
@@ -778,11 +825,15 @@ func TestPipelineWorkerPrioritizesPublicAssistanceThenCategoryBeforeTranslation(
 	if err != nil {
 		t.Fatal(err)
 	}
+	configureAllTestTranslationRoutes(t, ctx, worker, "translate:4b")
 	worker.processAvailable(ctx)
 	provider.mu.Lock()
 	events := append([]string(nil), provider.events...)
 	provider.mu.Unlock()
-	want := []string{IncidentMetadataStep, GermanPresentationStep, PublicAssistanceVerificationStep, CategoryVerificationStep, EnglishTranslationStep}
+	want := []string{IncidentMetadataStep, GermanPresentationStep, PublicAssistanceVerificationStep, CategoryVerificationStep}
+	for _, translation := range RegisteredTranslations() {
+		want = append(want, translation.Step.Key)
+	}
 	if len(events) != len(want) {
 		status, _ := worker.Status(ctx)
 		t.Fatalf("events = %v; models=%#v queue=%#v", events, status.Models.PostProcessors, status.Queue.PostProcessing)
@@ -799,7 +850,9 @@ func TestPipelineWorkerPrioritizesPublicAssistanceThenCategoryBeforeTranslation(
 	queueOrder := []string{
 		PublicAssistanceVerificationStep + "/" + DefaultPostProcessingScope,
 		CategoryVerificationStep + "/" + DefaultPostProcessingScope,
-		TranslationModelStep + "/" + EnglishLanguage,
+	}
+	for _, translation := range RegisteredTranslations() {
+		queueOrder = append(queueOrder, TranslationModelStep+"/"+translation.Language)
 	}
 	if len(status.Queue.PostProcessing) != len(queueOrder) {
 		t.Fatalf("runtime queue stats = %#v, want %d scopes", status.Queue.PostProcessing, len(queueOrder))
@@ -871,7 +924,7 @@ func TestInjectedPostProcessorUsesGenericSchedulingManualExecutionStatusAndHisto
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(status.Models.PostProcessors) != 4 || len(status.Queue.PostProcessing) != 4 {
+	if len(status.Models.PostProcessors) != 4 || len(status.Queue.PostProcessing) != 3+len(RegisteredTranslations()) {
 		t.Fatalf("injected processor status = %#v / %#v", status.Models.PostProcessors, status.Queue.PostProcessing)
 	}
 	records, _, err := database.ListIncidents(ctx, 1, 0)
@@ -1011,7 +1064,7 @@ func TestPipelineWorkerFinishesAuthorizedCycleAfterWindowButDoesNotStartAnother(
 		t.Fatal(err)
 	}
 	worker.processAvailable(ctx)
-	if len(provider.events) != 5 {
+	if len(provider.events) != 4+len(RegisteredTranslations()) {
 		t.Fatalf("outside-window manual cycle did not run: %v", provider.events)
 	}
 }
@@ -1152,6 +1205,84 @@ func TestMissingTranslationModelDoesNotBlockCanonicalGerman(t *testing.T) {
 	}
 }
 
+func TestPerLanguageTranslationRoutesAreValidatedAndFrozenIntoManualCycles(t *testing.T) {
+	ctx := context.Background()
+	database, err := store.Open(ctx, filepath.Join(t.TempDir(), "translation-routes.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 9, 6, 10, 0, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "one")
+	if err := database.EnsurePipelineSteps(ctx, ModelSettingKeys(), now); err != nil {
+		t.Fatal(err)
+	}
+	for _, step := range []string{IncidentMetadataStep, GermanPresentationStep} {
+		if err := database.SetPipelineStepModel(ctx, step, "qwen:4b", now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	models := []string{"hy-mt2:7b", "new-model:12b", "qwen:4b", "translategemma:12b"}
+	worker, err := NewPipelineWorker(database, &pipelineTestProvider{}, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: models, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := worker.SetTranslationLanguageSetting(ctx, "en", "hy-mt2:7b", TranslationAdapterHyMT2); err != nil {
+		t.Fatal(err)
+	}
+	if err := worker.SetTranslationLanguageSetting(ctx, "ro", "translategemma:12b", TranslationAdapterTranslateGemma); err != nil {
+		t.Fatal(err)
+	}
+	if err := worker.SetTranslationLanguageSetting(ctx, "ro", "hy-mt2:7b", TranslationAdapterHyMT2); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("unsupported Romanian route error = %v", err)
+	}
+	if err := worker.SetTranslationLanguageSetting(ctx, "en", "missing:7b", TranslationAdapterHyMT2); !errors.Is(err, ErrModelUnavailable) {
+		t.Fatalf("missing model error = %v", err)
+	}
+	if err := worker.SetPreferredStepModel(ctx, TranslationModelStep, "hy-mt2:7b"); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("shared translation setting error = %v", err)
+	}
+
+	result, err := worker.RequestNow(ctx, "fixture", map[string]string{
+		IncidentMetadataStep: "qwen:4b", GermanPresentationStep: "qwen:4b", TranslationModelStep: "configured",
+	}, nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plans, err := database.CyclePostProcessingPlans(ctx, result.CycleID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plans) != 2 || plans[0].ScopeKey != "en" || plans[0].Model != "hy-mt2:7b" || plans[0].AdapterKey != TranslationAdapterHyMT2 || plans[1].ScopeKey != "ro" || plans[1].Model != "translategemma:12b" || plans[1].AdapterKey != TranslationAdapterTranslateGemma {
+		t.Fatalf("frozen translation plans = %#v", plans)
+	}
+	if err := worker.SetTranslationLanguageSetting(ctx, "en", "new-model:12b", TranslationAdapterTranslateGemma); err != nil {
+		t.Fatal(err)
+	}
+	frozen, err := database.CyclePostProcessingPlans(ctx, result.CycleID)
+	if err != nil || frozen[0].Model != "hy-mt2:7b" || frozen[0].AdapterKey != TranslationAdapterHyMT2 {
+		t.Fatalf("queued route changed after preference update: %#v/%v", frozen, err)
+	}
+
+	status, err := worker.ModelStatus(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	translationStatus := status.PostProcessors[len(status.PostProcessors)-1]
+	if !translationStatus.PerScopeSettings || translationStatus.PreferredAvailable {
+		t.Fatalf("translation aggregate status = %#v", translationStatus)
+	}
+	foundEnglish := false
+	for _, scope := range translationStatus.Scopes {
+		if scope.Key == "en" {
+			foundEnglish = scope.PreferredAvailable && scope.PreferredModel == "new-model:12b" && scope.AdapterKey == TranslationAdapterTranslateGemma
+		}
+	}
+	if !foundEnglish {
+		t.Fatalf("English route status = %#v", translationStatus.Scopes)
+	}
+}
+
 func TestCanonicalWorkPreemptsTranslationsAtJobBoundaries(t *testing.T) {
 	ctx := context.Background()
 	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "canonical-preemption.db"))
@@ -1175,12 +1306,19 @@ func TestCanonicalWorkPreemptsTranslationsAtJobBoundaries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	configureAllTestTranslationRoutes(t, ctx, worker, "translate:4b")
 	worker.processAvailable(ctx)
 
 	provider.mu.Lock()
 	events := append([]string(nil), provider.events...)
 	provider.mu.Unlock()
-	want := []string{IncidentMetadataStep, GermanPresentationStep, EnglishTranslationStep, IncidentMetadataStep, GermanPresentationStep, EnglishTranslationStep}
+	want := []string{IncidentMetadataStep, GermanPresentationStep, EnglishTranslationStep, IncidentMetadataStep, GermanPresentationStep}
+	for _, translation := range RegisteredTranslations()[1:] {
+		want = append(want, translation.Step.Key)
+	}
+	for _, translation := range RegisteredTranslations() {
+		want = append(want, translation.Step.Key)
+	}
 	if len(events) != len(want) {
 		t.Fatalf("events = %v", events)
 	}
@@ -1237,11 +1375,11 @@ func TestTranslationFailureDoesNotChangeCanonicalCompletion(t *testing.T) {
 	snapshot, err := database.PipelineSnapshot(ctx, "fixture", StepKeys(), nil, now)
 	var translationStats *store.PostProcessingQueueStats
 	for index := range snapshot.PostProcessing {
-		if snapshot.PostProcessing[index].ProcessorKey == TranslationModelStep {
+		if snapshot.PostProcessing[index].ProcessorKey == TranslationModelStep && snapshot.PostProcessing[index].ScopeKey == EnglishLanguage {
 			translationStats = &snapshot.PostProcessing[index]
 		}
 	}
-	if err != nil || len(snapshot.PostProcessing) != 3 || translationStats == nil || translationStats.NeedsReview != 1 {
+	if err != nil || len(snapshot.PostProcessing) != 2+len(RegisteredTranslations()) || translationStats == nil || translationStats.NeedsReview != 1 {
 		t.Fatalf("translation failure snapshot = %#v, err=%v", snapshot.PostProcessing, err)
 	}
 }
@@ -1497,6 +1635,18 @@ func TestTranslationTransientFailureBacksOffFailedModel(t *testing.T) {
 func pipelineTestModels() map[string]string {
 	return map[string]string{
 		IncidentMetadataStep: "qwen:4b", GermanPresentationStep: "qwen:4b", TranslationModelStep: "translate:4b",
+	}
+}
+
+func configureAllTestTranslationRoutes(t *testing.T, ctx context.Context, worker *PipelineWorker, model string) {
+	t.Helper()
+	for _, translation := range RegisteredTranslations() {
+		if err := worker.SetTranslationLanguageSetting(ctx, translation.Language, model, TranslationAdapterStructured); err != nil {
+			t.Fatalf("configure %s translation route: %v", translation.Language, err)
+		}
+		if _, err := worker.SetPostProcessingScopeEnabled(ctx, TranslationModelStep, translation.Language, true); err != nil {
+			t.Fatalf("enable %s translation route: %v", translation.Language, err)
+		}
 	}
 }
 

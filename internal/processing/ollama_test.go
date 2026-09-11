@@ -88,6 +88,34 @@ func TestDirectIdentifiersAreRedactedBeforeGeneration(t *testing.T) {
 	}
 }
 
+func TestPublicTextDistinguishesLocalizedDatesFromStreetAddresses(t *testing.T) {
+	allowed := []string{
+		"Einsatz an der Ganghoferstraße 29. August 2026",
+		"Операція біля Ganghoferstraße 29 серпня 2026 року",
+		"Экспедиция на Ganghoferstraße 29 августа 2026 года",
+		"Operación en Ganghoferstraße 29 de agosto de 2026",
+		"Nesreća na Ganghoferstraße 29. avgust 2026 u 03:30",
+		"Nesreća na Ganghoferstraße\n29. avgusta 2026. u 03:30",
+		"Ganghoferstraße 2026年8月29日",
+	}
+	for _, value := range allowed {
+		if err := validatePublicText(value); err != nil {
+			t.Errorf("localized street/date text %q rejected: %v", value, err)
+		}
+	}
+	blocked := []string{
+		"Ganghoferstraße 29",
+		"Ganghoferstraße 29a",
+		"Ganghoferstraße 290 August 2026",
+		"Ganghoferstraße 2026",
+	}
+	for _, value := range blocked {
+		if err := validatePublicText(value); err == nil || KindOf(err) != ErrorPrivacy {
+			t.Errorf("precise street address %q accepted: %v", value, err)
+		}
+	}
+}
+
 func TestMissingPersonAppealIsReplacedWithIdentityFreeSource(t *testing.T) {
 	title, body := minimizeIncidentSource(
 		"Vermisstensuche nach Jonas Testmann",

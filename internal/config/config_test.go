@@ -9,6 +9,10 @@ func TestLoadDefaults(t *testing.T) {
 	t.Setenv("MUNICHBRIEF_ADDR", "")
 	t.Setenv("MUNICHBRIEF_METRICS_ADDR", "")
 	t.Setenv("MUNICHBRIEF_DATABASE_PATH", "")
+	t.Setenv("MUNICHBRIEF_GAZETTEER_DATABASE_PATH", "")
+	t.Setenv("MUNICHBRIEF_GAZETTEER_ENABLED", "")
+	t.Setenv("MUNICHBRIEF_GAZETTEER_REFRESH_INTERVAL", "")
+	t.Setenv("MUNICHBRIEF_GAZETTEER_HTTP_TIMEOUT", "")
 	t.Setenv("MUNICHBRIEF_SOURCE_MODE", "")
 	t.Setenv("MUNICHBRIEF_PAGE_SIZE", "")
 	t.Setenv("MUNICHBRIEF_FEED_URL", "")
@@ -41,6 +45,9 @@ func TestLoadDefaults(t *testing.T) {
 	}
 	if cfg.DatabasePath != defaultDatabasePath {
 		t.Errorf("DatabasePath = %q, want %q", cfg.DatabasePath, defaultDatabasePath)
+	}
+	if cfg.GazetteerEnabled || cfg.GazetteerDatabasePath != defaultGazetteerDatabasePath || cfg.GazetteerRefreshInterval != 7*24*time.Hour || cfg.GazetteerHTTPTimeout != 2*time.Minute {
+		t.Errorf("gazetteer defaults = enabled:%t path:%q interval:%s timeout:%s", cfg.GazetteerEnabled, cfg.GazetteerDatabasePath, cfg.GazetteerRefreshInterval, cfg.GazetteerHTTPTimeout)
 	}
 	if cfg.SourceMode != "fixture" {
 		t.Errorf("SourceMode = %q, want fixture", cfg.SourceMode)
@@ -139,6 +146,31 @@ func TestLoadAcceptsLiveMode(t *testing.T) {
 	}
 	if cfg.PresentationMode != "public" {
 		t.Fatalf("live presentation mode = %q, want public", cfg.PresentationMode)
+	}
+	if !cfg.GazetteerEnabled {
+		t.Fatal("live mode did not enable the gazetteer")
+	}
+}
+
+func TestLoadAcceptsGazetteerOverrides(t *testing.T) {
+	t.Setenv("MUNICHBRIEF_GAZETTEER_ENABLED", "true")
+	t.Setenv("MUNICHBRIEF_GAZETTEER_DATABASE_PATH", "/tmp/test-gazetteer.db")
+	t.Setenv("MUNICHBRIEF_GAZETTEER_REFRESH_INTERVAL", "48h")
+	t.Setenv("MUNICHBRIEF_GAZETTEER_HTTP_TIMEOUT", "3m")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.GazetteerEnabled || cfg.GazetteerDatabasePath != "/tmp/test-gazetteer.db" || cfg.GazetteerRefreshInterval != 48*time.Hour || cfg.GazetteerHTTPTimeout != 3*time.Minute {
+		t.Fatalf("gazetteer config = %#v", cfg)
+	}
+}
+
+func TestLoadRejectsSharedGazetteerDatabasePath(t *testing.T) {
+	t.Setenv("MUNICHBRIEF_DATABASE_PATH", ".data/shared.db")
+	t.Setenv("MUNICHBRIEF_GAZETTEER_DATABASE_PATH", ".data/./shared.db")
+	if _, err := Load(); err == nil {
+		t.Fatal("Load() accepted one file for incident and gazetteer databases")
 	}
 }
 

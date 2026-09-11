@@ -23,7 +23,7 @@
       const incidentInput = document.getElementById(incidentInputID);
       if (incidentInput instanceof HTMLInputElement) message += ` Incident ID: ${incidentInput.value}.`;
     }
-    const selections = [...form.querySelectorAll('select[name="scope"], select[name="model"], select[name^="model_"]')]
+    const selections = [...form.querySelectorAll('select[name="scope"], select[name="model"], select[name^="model_"], select[name="adapter"]')]
       .filter((field) => field instanceof HTMLSelectElement && field.value)
       .map((field) => {
         const label = field.labels?.[0]?.textContent?.trim() || field.name.replace("model_", "").replaceAll("_", " ");
@@ -269,7 +269,7 @@
 })();
 
 (() => {
-  const history = document.querySelector("[data-pipeline-history], [data-rss-history]");
+  const history = document.querySelector("[data-pipeline-history], [data-rss-history], [data-gazetteer-history]");
   if (!(history instanceof HTMLElement)) return;
 
   const interval = Number(history.dataset.historyPollInterval) || 2000;
@@ -289,19 +289,24 @@
       const response = await fetch(window.location.href, {headers: {Accept: "text/html"}, cache: "no-store"});
       if (!response.ok) throw new Error(`status ${response.status}`);
       const parsedDocument = new DOMParser().parseFromString(await response.text(), "text/html");
-      const nextHistory = parsedDocument.querySelector("[data-pipeline-history], [data-rss-history]");
+      const nextHistory = parsedDocument.querySelector("[data-pipeline-history], [data-rss-history], [data-gazetteer-history]");
       if (!(nextHistory instanceof HTMLElement)) throw new Error("history content missing");
       if (history.innerHTML !== nextHistory.innerHTML) {
-        if (history.matches("[data-rss-history]")) {
+        if (history.matches("[data-rss-history], [data-gazetteer-history]")) {
+          const gazetteer = history.matches("[data-gazetteer-history]");
+          const rowSelector = gazetteer ? "[data-gazetteer-row]" : "[data-rss-row]";
+          const rowKey = gazetteer ? "gazetteerRow" : "rssRow";
+          const panelPrefix = gazetteer ? "gazetteer-run-" : "rss-check-";
+          const tableSelector = gazetteer ? ".gazetteer-history-table" : ".rss-history-table";
           const focused = document.activeElement;
           const scrollX = window.scrollX;
           const scrollY = window.scrollY;
-          const tableScroll = history.querySelector(".rss-history-table")?.scrollLeft || 0;
+          const tableScroll = history.querySelector(tableSelector)?.scrollLeft || 0;
           // Reuse existing detail nodes: polling must not discard loaded snapshots.
-          for (const row of history.querySelectorAll("[data-rss-row]")) {
-            const id = row.dataset.rssRow;
-            const nextRow = nextHistory.querySelector(`[data-rss-row="${id}"]`);
-            const panel = history.querySelector(`#rss-check-${id}`);
+          for (const row of history.querySelectorAll(rowSelector)) {
+            const id = row.dataset[rowKey];
+            const nextRow = nextHistory.querySelector(`${rowSelector.slice(0, -1)}="${id}"]`);
+            const panel = history.querySelector(`#${panelPrefix}${id}`);
             if (nextRow) {
               for (let i = 1; i < row.cells.length; i += 1) {
                 if (!row.cells[i].contains(focused) && row.cells[i].innerHTML !== nextRow.cells[i].innerHTML) {
@@ -309,14 +314,14 @@
                 }
               }
               nextRow.replaceWith(row);
-              nextHistory.querySelector(`#rss-check-${id}`)?.replaceWith(panel);
+              nextHistory.querySelector(`#${panelPrefix}${id}`)?.replaceWith(panel);
             } else if (panel && (!panel.hidden || row.contains(focused))) {
               // Keep a check being read even when a new check pushes it off the page.
               nextHistory.querySelector("tbody")?.append(row, panel);
             }
           }
           history.replaceChildren(...nextHistory.childNodes);
-          const table = history.querySelector(".rss-history-table");
+          const table = history.querySelector(tableSelector);
           if (table) table.scrollLeft = tableScroll;
           if (focused instanceof HTMLElement && focused.isConnected) focused.focus({preventScroll: true});
           window.scrollTo(scrollX, scrollY);
@@ -383,7 +388,6 @@ const initializeOperationsRefresh = ({regionSelector, intervalAttribute, connect
       if (!(nextRegion instanceof HTMLElement)) throw new Error(`${contentLabel} content missing`);
       const scrollX = window.scrollX;
       const scrollY = window.scrollY;
-          const tableScroll = history.querySelector(".rss-history-table")?.scrollLeft || 0;
       region.replaceChildren(...nextRegion.childNodes);
       window.scrollTo(scrollX, scrollY);
       failures = 0;

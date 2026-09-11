@@ -18,9 +18,9 @@ Choose these values before writing code:
   in URLs, the preference cookie, and persisted translation scope keys, and
   must not be the reserved `api` prefix;
 - the exact BCP-47 content tag, such as `fr-FR` or `pt-BR`, for negotiation,
-  HTML, HTTP, Markdown, hreflang, structured data, and the TranslateGemma
+  HTML, HTTP, Markdown, hreflang, structured data, and the translation
   source/target code;
-- the English model-facing language name used in the TranslateGemma prompt,
+- the English model-facing language name used in the unified prompt,
   such as `French` or `Portuguese`;
 - the Open Graph locale, such as `fr_FR`;
 - the language's own display name and localized language-switch/provenance
@@ -37,16 +37,15 @@ own stable code.
    `internal/languages/languages.go`. Supply its exact tag, catalog filename,
    English model-facing translation name, Open Graph locale, message IDs, and
    date formatters. Keep German as the only canonical entry. Confirm the exact
-   BCP-47 tag is listed by the
-   [Ollama TranslateGemma prompt guide](https://ollama.com/library/translategemma:4b)
-   before registration.
-2. Add a target-specific immutable translation prompt to
+   BCP-47 tag and target language are supported by the intended translation
+   model, then exercise that exact model through the opt-in live checks before
+   registration.
+2. Register a new immutable translation prompt version in
    `internal/processing/prompts.go`. Set its translation language to the new
-   registry code and its step key to `translation/<code>`. Build its user-only
-   template with the versioned TranslateGemma helper so source/target names,
-   exact BCP-47 codes, output field names, and payload spacing cannot drift.
-   Target-specific terminology guidance may be supplied without changing the
-   shared request shape. The generic factory creates the schema, decoder,
+   registry code and its step key to `translation/<code>`. The shared user-only
+   factory derives source/target names, exact BCP-47 tags, output field names,
+   placeholder rules, and payload spacing from the registry. Do not fork the
+   prompt for place-name examples or target-specific checklists. The factory creates the schema, decoder,
    validator, queue scope, admin control, history, metrics contract, and a row
    in the translation operations dashboard. No dashboard template branch is
    needed for the new language.
@@ -54,10 +53,16 @@ own stable code.
    ID in the existing catalogs, including plural forms, category/report/time
    metadata, disclosure text, language switching, and processing provenance.
    Add the new language's switch and step labels to every existing catalog too.
+   Supply every plural category used by the locale (for example `one`, `few`,
+   `many`, and `other`) and test representative counts through the actual
+   localization matcher.
 4. Add native-language tests for representative singular/plural values, dates,
    metadata labels, navigation, disclosure text, and long mobile labels. Do not
    rely on machine translation as the only review of legal, privacy, or source
    attribution copy.
+5. Confirm the compact language menu remains keyboard accessible and fits at
+   320px, tablet, and desktop widths in light and dark modes. Header controls
+   may wrap to a second row; language names must not be clipped.
 
 No database migration is normally required. Translation jobs and values are
 already keyed by processor and language scope, and startup records a durable
@@ -66,14 +71,32 @@ automatic-enablement cutover for every newly registered scope.
 ## Validate AI output and privacy
 
 The new prompt receives only the accepted privacy-safe German title and
-summary. It must preserve subjects, claims, uncertainty, Munich place names,
-and the presumption of innocence without adding explanations or source details.
+summary. The shared prompt preserves subjects, claims, uncertainty, and the
+presumption of innocence without adding explanations or source details.
+Munich-area names are detected from the separately refreshed gazetteer and
+replaced with typed opaque tokens such as `__MB_STREET_0001__` and
+`__MB_TRAIN_STATION_0002__` before the model request. The model uses the type
+only as sentence context and must copy each token exactly once in the
+corresponding field; application code restores the original spelling. Smoke fixtures must cover streets,
+districts, stations, parks, municipalities, repeated names, Unicode boundaries,
+and the static `U-Bahn` and `S-Bahn` labels. Titles and summaries are plain text;
+reject model-produced Markdown and URLs rather than storing them.
 Keep the existing title and summary limits and strict two-field JSON output.
-TranslateGemma supports only user and assistant roles in its native template;
-MunichBrief therefore sends the complete translation instruction and payload as
-one user message while retaining Ollama's JSON schema constraint. The model
-card documents accepted language-code forms and the native template contract:
-[Google TranslateGemma model card](https://huggingface.co/google/translategemma-4b-it).
+Generated fields are normalized to Unicode NFC before character-count
+validation and persistence. Tests should include decomposed accents and the
+target alphabet so equivalent text has one stable stored and cache identity.
+For Romanian, require comma-below `ș` and `ț` rather than cedilla variants;
+for Polish, cover its complete extended
+Latin alphabet; and for Russian, distinguish its Cyrillic repertoire (including
+`Ё`) from Ukrainian. Exercise every CLDR plural category used by the locale,
+including `few` and `many` where applicable.
+MunichBrief sends the complete unified translation instruction and payload as
+one user message while retaining Ollama's JSON schema constraint. Following the
+[Ollama TranslateGemma prompt guide](https://ollama.com/library/translategemma:4b),
+exactly two blank lines separate the instruction from the JSON payload. The
+same clear separation is compatible with general chat templates, but model
+support is not inferred from prompt compatibility: each intended model and
+quantization must pass the registered-target and place-preservation live checks.
 
 Add tests for valid output, missing/extra fields, length limits, unsafe public
 text, and prompt-injection-like input. Then run the opt-in Ollama smoke check
@@ -99,6 +122,23 @@ and social cards. Confirm:
   language, while German and other successful languages remain available; and
 - public-host path filtering still rejects admin and unknown routes.
 
+Social cards use embedded fonts, so confirm glyph coverage for the complete
+target alphabet before registration. Scripts with contextual forms, conjuncts,
+or reordered marks require a shaping engine; rune-by-rune glyph drawing is not
+acceptable. CJK titles also require line-breaking tests that do not assume
+spaces between words. Bundle the font's license, include its bytes in the card
+cache identity, and test actual rendered pixels in addition to nominal glyph
+coverage. Test locale-aware casing (especially Turkish dotted and dotless I),
+title wrapping, and the text safe area. Keep
+website text unchanged; any substitution for an unsupported punctuation mark,
+such as modifier apostrophes or non-breaking hyphens, belongs only in the
+social-image renderer and must have a focused test.
+
+Before release, a fluent native reviewer must approve navigation and metadata,
+AI disclosure, privacy language, source attribution, neutral police
+terminology, uncertainty, and presumption-of-innocence copy. Keep the pull
+request in draft until that legal-sensitive checklist is complete.
+
 Run the complete validation suite in `docs/development.md` before opening the
 application pull request.
 
@@ -116,8 +156,10 @@ Use this rollout order:
 1. Merge and reconcile the ingress prefix first. The old application safely
    returns 404 for the not-yet-registered language.
 2. Deploy the application image containing the registry, prompt, and catalog.
-3. Confirm the shared translation model is configured and available, review new
-   automatic translations, and check queue/failure metrics and logs.
+3. On `/admin/translations`, select a reviewed installed model and a supported
+   adapter for the language. Confirm the route is ready, review new automatic
+   translations, and check queue/failure metrics and logs. The choice affects
+   new jobs only; queued jobs retain their frozen route.
 4. From `/admin/translations`, review the new language's coverage and explicitly
    use **Queue unpublished** for current presentations only after quality
    review. Use **Rerun all** only when every existing success should be

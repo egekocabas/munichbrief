@@ -20,6 +20,9 @@ type PipelineRepository interface {
 	PipelineStepSettings(context.Context) ([]store.StepSetting, error)
 	SetPipelineStepModel(context.Context, string, string, time.Time) error
 	PreferredPipelineModels(context.Context, []string) (map[string]string, error)
+	EnsureTranslationLanguageSettings(context.Context, []string, string, time.Time) error
+	TranslationLanguageSettings(context.Context) ([]store.TranslationLanguageSetting, error)
+	SetTranslationLanguageSetting(context.Context, string, string, string, time.Time) error
 	CreateManualPipelineCycle(context.Context, string, []store.PipelineStepPlan, []store.PostProcessingPlan, *int64, bool, time.Time) (store.PipelineRequestResult, error)
 	ActivateNextPipelineCycle(context.Context, string, []store.PipelineStepPlan, bool, time.Time) (store.PipelineCycle, bool, error)
 	RecoverPipeline(context.Context, time.Time) error
@@ -32,6 +35,10 @@ type PipelineRepository interface {
 	PipelineSnapshot(context.Context, string, []string, []store.PostProcessingCounterSpec, time.Time) (store.PipelineSnapshot, error)
 	PipelineStepModel(context.Context, int64, int) (string, string, error)
 	EnsurePostProcessingScopes(context.Context, []store.PostProcessingScope, time.Time) error
+	PostProcessingProcessorSettings(context.Context) ([]store.PostProcessingProcessorSetting, error)
+	SetPostProcessingProcessorEnabled(context.Context, string, bool, time.Time) (int, error)
+	PostProcessingScopeSettings(context.Context) ([]store.PostProcessingScopeSetting, error)
+	SetPostProcessingScopeEnabled(context.Context, string, string, bool, time.Time) (int, error)
 	QueuePostProcessingForRun(context.Context, int64, []store.PostProcessingPlan, string, bool, time.Time) (int, error)
 	QueueIncidentPostProcessing(context.Context, int64, []store.PostProcessingPlan, time.Time) (int, error)
 	QueuePostProcessingForAll(context.Context, string, []store.PostProcessingPlan, bool, time.Time) (int, error)
@@ -53,6 +60,7 @@ type PostProcessingRequest struct {
 	ScopeKeys    []string
 	IncidentID   *int64
 	Model        string
+	AdapterKey   string
 	Selection    PostProcessingSelection
 }
 
@@ -93,6 +101,13 @@ func (w *PipelineWorker) RequestPostProcessing(ctx context.Context, request Post
 	if err != nil {
 		return 0, err
 	}
+	if request.ProcessorKey == TranslationModelStep {
+		adapter := normalizedTranslationAdapter(request.AdapterKey)
+		if len(plans) != 1 || !TranslationAdapterSupports(adapter, plans[0].ScopeKey) {
+			return 0, store.ErrNotFound
+		}
+		plans[0].AdapterKey = adapter
+	}
 	w.executionMu.Lock()
 	defer w.executionMu.Unlock()
 	var queued int
@@ -114,7 +129,7 @@ func (w *PipelineWorker) RequestPostProcessing(ctx context.Context, request Post
 		for _, plan := range plans {
 			scopes = append(scopes, plan.ScopeKey)
 		}
-		w.logger.Info("AI post-processing jobs queued", "processor", request.ProcessorKey, "scopes", scopes, "target", target, "selection", selection, "incident_id", request.IncidentID, "model", model, "jobs", queued, "request_kind", "manual")
+		w.logger.Info("AI post-processing jobs queued", "processor", request.ProcessorKey, "scopes", scopes, "target", target, "selection", selection, "incident_id", request.IncidentID, "model", model, "adapter", normalizedTranslationAdapter(request.AdapterKey), "jobs", queued, "request_kind", "manual")
 		w.signal()
 	}
 	return queued, err
@@ -153,10 +168,15 @@ type PipelineModelStatus struct {
 }
 
 type PostProcessorScopeStatus struct {
-	Key           string `json:"key"`
-	DisplayName   string `json:"display_name"`
-	StepKey       string `json:"step_key"`
-	PromptVersion string `json:"prompt_version"`
+	Key                string    `json:"key"`
+	DisplayName        string    `json:"display_name"`
+	StepKey            string    `json:"step_key"`
+	PromptVersion      string    `json:"prompt_version"`
+	PreferredModel     string    `json:"preferred_model,omitempty"`
+	AdapterKey         string    `json:"adapter_key,omitempty"`
+	PreferredAvailable bool      `json:"preferred_available"`
+	Enabled            bool      `json:"enabled"`
+	EnabledUpdatedAt   time.Time `json:"enabled_updated_at"`
 }
 
 type PostProcessorModelStatus struct {
@@ -167,6 +187,9 @@ type PostProcessorModelStatus struct {
 	Manual             bool                       `json:"manual"`
 	Preferred          string                     `json:"preferred"`
 	PreferredAvailable bool                       `json:"preferred_available"`
+	PerScopeSettings   bool                       `json:"per_scope_settings"`
+	Enabled            bool                       `json:"enabled"`
+	EnabledUpdatedAt   time.Time                  `json:"enabled_updated_at"`
 	Scopes             []PostProcessorScopeStatus `json:"scopes"`
 	Verification       *PostProcessorVerification `json:"verification,omitempty"`
 }
@@ -232,6 +255,15 @@ func NewPipelineWorker(repository PipelineRepository, providers StepGeneratorPro
 	if err := repository.EnsurePostProcessingScopes(context.Background(), registry.StoreScopes(), clock()); err != nil {
 		return nil, err
 	}
+	var translationCodes []string
+	if definition, found := registry.Definition(TranslationModelStep); found {
+		for _, scope := range definition.Scopes {
+			translationCodes = append(translationCodes, scope.Key)
+		}
+	}
+	if err := repository.EnsureTranslationLanguageSettings(context.Background(), translationCodes, EnglishLanguage, clock()); err != nil {
+		return nil, err
+	}
 	return &PipelineWorker{repository: repository, providers: providers, catalog: catalog, postProcessors: registry, observer: observer, logger: logger, interval: interval, clock: clock, schedule: schedule, sourceMode: sourceMode, wake: make(chan struct{}, 1), available: true, circuits: make(map[string]time.Time)}, nil
 }
 
@@ -257,6 +289,26 @@ func (w *PipelineWorker) RequestNow(ctx context.Context, sourceMode string, mode
 	var postPlans []store.PostProcessingPlan
 	for _, definition := range w.postProcessors.Definitions() {
 		if !definition.Manual {
+			continue
+		}
+		if definition.Key == TranslationModelStep {
+			selection := strings.TrimSpace(models[definition.ModelSettingKey])
+			if selection == "" {
+				continue
+			}
+			var translationPlans []store.PostProcessingPlan
+			if selection == "configured" {
+				translationPlans, err = w.configuredTranslationPlans(ctx, nil)
+			} else {
+				if !snapshot.Has(selection) {
+					return store.PipelineRequestResult{}, fmt.Errorf("%w: %s", ErrModelUnavailable, selection)
+				}
+				translationPlans, err = w.postProcessors.Plans(definition.Key, nil, selection)
+			}
+			if err != nil {
+				return store.PipelineRequestResult{}, err
+			}
+			postPlans = append(postPlans, translationPlans...)
 			continue
 		}
 		model := strings.TrimSpace(models[definition.ModelSettingKey])
@@ -286,7 +338,7 @@ func (w *PipelineWorker) SetPreferredStepModel(ctx context.Context, stepKey, mod
 	if _, found := StepByKey(stepKey); !found {
 		registered := false
 		for _, definition := range w.postProcessors.Definitions() {
-			registered = registered || definition.ModelSettingKey == stepKey
+			registered = registered || definition.ModelSettingKey == stepKey && definition.Key != TranslationModelStep
 		}
 		if !registered {
 			return store.ErrNotFound
@@ -301,6 +353,109 @@ func (w *PipelineWorker) SetPreferredStepModel(ctx context.Context, stepKey, mod
 	}
 	w.signal()
 	return nil
+}
+
+func (w *PipelineWorker) SetTranslationLanguageSetting(ctx context.Context, languageCode, model, adapter string) error {
+	if _, _, found := w.postProcessors.Scope(TranslationModelStep, languageCode); !found || !TranslationAdapterSupports(adapter, languageCode) {
+		return store.ErrNotFound
+	}
+	snapshot := w.catalog.Snapshot()
+	if !snapshot.Available() || !snapshot.Has(model) {
+		return fmt.Errorf("%w: %s", ErrModelUnavailable, model)
+	}
+	if err := w.repository.SetTranslationLanguageSetting(ctx, languageCode, model, adapter, w.clock()); err != nil {
+		return err
+	}
+	w.signal()
+	return nil
+}
+
+// SetPostProcessingScopeEnabled changes automatic eligibility at a job
+// boundary. It intentionally does not wake the worker: enabling is observed by
+// the next ordinary post-processing discovery cycle.
+func (w *PipelineWorker) SetPostProcessingScopeEnabled(ctx context.Context, processorKey, scopeKey string, enabled bool) (int, error) {
+	if _, _, found := w.postProcessors.Scope(processorKey, scopeKey); !found {
+		return 0, store.ErrNotFound
+	}
+	w.executionMu.Lock()
+	defer w.executionMu.Unlock()
+	skipped, err := w.repository.SetPostProcessingScopeEnabled(ctx, processorKey, scopeKey, enabled, w.clock())
+	if err == nil {
+		w.logger.Info("automatic AI post-processing scope changed", "processor", processorKey, "scope", scopeKey, "enabled", enabled, "skipped_jobs", skipped)
+	}
+	return skipped, err
+}
+
+// SetPostProcessingProcessorEnabled changes the automatic gate shared by all
+// scopes of a registered processor. Enabling waits for normal discovery.
+func (w *PipelineWorker) SetPostProcessingProcessorEnabled(ctx context.Context, processorKey string, enabled bool) (int, error) {
+	if _, found := w.postProcessors.Definition(processorKey); !found {
+		return 0, store.ErrNotFound
+	}
+	w.executionMu.Lock()
+	defer w.executionMu.Unlock()
+	skipped, err := w.repository.SetPostProcessingProcessorEnabled(ctx, processorKey, enabled, w.clock())
+	if err == nil {
+		w.logger.Info("automatic AI post-processing processor changed", "processor", processorKey, "enabled", enabled, "skipped_jobs", skipped)
+	}
+	return skipped, err
+}
+
+func (w *PipelineWorker) configuredTranslationPlans(ctx context.Context, scopeKeys []string) ([]store.PostProcessingPlan, error) {
+	settings, err := w.repository.TranslationLanguageSettings(ctx)
+	if err != nil {
+		return nil, err
+	}
+	byCode := make(map[string]store.TranslationLanguageSetting, len(settings))
+	for _, setting := range settings {
+		byCode[setting.LanguageCode] = setting
+	}
+	wanted := make(map[string]struct{}, len(scopeKeys))
+	for _, scope := range scopeKeys {
+		wanted[scope] = struct{}{}
+	}
+	catalog := w.catalog.Snapshot()
+	if !catalog.Available() {
+		return nil, nil
+	}
+	var plans []store.PostProcessingPlan
+	definition, _ := w.postProcessors.Definition(TranslationModelStep)
+	for _, scope := range definition.Scopes {
+		if len(wanted) > 0 {
+			if _, included := wanted[scope.Key]; !included {
+				continue
+			}
+		}
+		setting := byCode[scope.Key]
+		if setting.PreferredModel == "" || !catalog.Has(setting.PreferredModel) || !TranslationAdapterSupports(setting.AdapterKey, setting.LanguageCode) {
+			continue
+		}
+		languagePlans, err := w.postProcessors.Plans(TranslationModelStep, []string{setting.LanguageCode}, setting.PreferredModel)
+		if err != nil {
+			return nil, err
+		}
+		languagePlans[0].AdapterKey = setting.AdapterKey
+		plans = append(plans, languagePlans[0])
+	}
+	return plans, nil
+}
+
+func (w *PipelineWorker) configuredPostProcessorPlans(ctx context.Context, definition PostProcessorDefinition) ([]store.PostProcessingPlan, error) {
+	if definition.Key == TranslationModelStep {
+		return w.configuredTranslationPlans(ctx, nil)
+	}
+	models, err := w.repository.PreferredPipelineModels(ctx, []string{definition.ModelSettingKey})
+	if err != nil {
+		if errors.Is(err, store.ErrPipelineUnconfigured) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	catalog := w.catalog.Snapshot()
+	if !catalog.Available() || !catalog.Has(models[definition.ModelSettingKey]) {
+		return nil, nil
+	}
+	return w.postProcessors.Plans(definition.Key, nil, models[definition.ModelSettingKey])
 }
 
 // SetAutomaticProcessing changes the durable automatic-work gate. Manual
@@ -358,11 +513,52 @@ func (w *PipelineWorker) ModelStatus(ctx context.Context) (PipelineModelStatus, 
 		status.Steps = append(status.Steps, item)
 		status.Ready = status.Ready && item.PreferredAvailable
 	}
+	translationSettings, err := w.repository.TranslationLanguageSettings(ctx)
+	if err != nil {
+		return PipelineModelStatus{}, err
+	}
+	translationByCode := make(map[string]store.TranslationLanguageSetting, len(translationSettings))
+	for _, setting := range translationSettings {
+		translationByCode[setting.LanguageCode] = setting
+	}
+	scopeSettings, err := w.repository.PostProcessingScopeSettings(ctx)
+	if err != nil {
+		return PipelineModelStatus{}, err
+	}
+	type scopeIdentity struct{ processor, scope string }
+	scopeByIdentity := make(map[scopeIdentity]store.PostProcessingScopeSetting, len(scopeSettings))
+	for _, setting := range scopeSettings {
+		scopeByIdentity[scopeIdentity{processor: setting.ProcessorKey, scope: setting.ScopeKey}] = setting
+	}
+	processorSettings, err := w.repository.PostProcessingProcessorSettings(ctx)
+	if err != nil {
+		return PipelineModelStatus{}, err
+	}
+	processorByKey := make(map[string]store.PostProcessingProcessorSetting, len(processorSettings))
+	for _, setting := range processorSettings {
+		processorByKey[setting.ProcessorKey] = setting
+	}
 	for _, definition := range w.postProcessors.Definitions() {
 		model := byKey[definition.ModelSettingKey]
-		item := PostProcessorModelStatus{Key: definition.Key, DisplayName: definition.DisplayName, Description: definition.Description, ModelSettingKey: definition.ModelSettingKey, Manual: definition.Manual, Preferred: model, PreferredAvailable: model != "" && catalog.Available() && catalog.Has(model), Verification: clonePostProcessorVerification(definition.Verification)}
+		processorSetting := processorByKey[definition.Key]
+		item := PostProcessorModelStatus{Key: definition.Key, DisplayName: definition.DisplayName, Description: definition.Description, ModelSettingKey: definition.ModelSettingKey, Manual: definition.Manual, Preferred: model, PreferredAvailable: model != "" && catalog.Available() && catalog.Has(model), Enabled: processorSetting.Enabled, EnabledUpdatedAt: processorSetting.EnabledUpdatedAt, Verification: clonePostProcessorVerification(definition.Verification)}
 		for _, scope := range definition.Scopes {
-			item.Scopes = append(item.Scopes, PostProcessorScopeStatus{Key: scope.Key, DisplayName: scope.DisplayName, StepKey: scope.Step.Key, PromptVersion: scope.Step.PromptVersion})
+			scopeSetting := scopeByIdentity[scopeIdentity{processor: definition.Key, scope: scope.Key}]
+			scopeStatus := PostProcessorScopeStatus{Key: scope.Key, DisplayName: scope.DisplayName, StepKey: scope.Step.Key, PromptVersion: scope.Step.PromptVersion, Enabled: scopeSetting.Enabled, EnabledUpdatedAt: scopeSetting.EnabledUpdatedAt}
+			if definition.Key == TranslationModelStep {
+				setting := translationByCode[scope.Key]
+				scopeStatus.PreferredModel = setting.PreferredModel
+				scopeStatus.AdapterKey = setting.AdapterKey
+				scopeStatus.PreferredAvailable = setting.PreferredModel != "" && catalog.Available() && catalog.Has(setting.PreferredModel) && TranslationAdapterSupports(setting.AdapterKey, scope.Key)
+			}
+			item.Scopes = append(item.Scopes, scopeStatus)
+		}
+		if definition.Key == TranslationModelStep {
+			item.PerScopeSettings = true
+			item.Preferred, item.PreferredAvailable = "", len(item.Scopes) > 0
+			for _, scope := range item.Scopes {
+				item.PreferredAvailable = item.PreferredAvailable && scope.PreferredAvailable
+			}
 		}
 		status.PostProcessors = append(status.PostProcessors, item)
 	}
@@ -483,6 +679,9 @@ func (w *PipelineWorker) processAvailable(ctx context.Context) {
 
 		processedPostJob := false
 		for _, definition := range w.postProcessors.Definitions() {
+			if !w.postProcessors.Ready(definition.Key) {
+				continue
+			}
 			contracts := make(store.PostProcessingContract, len(definition.Scopes))
 			for _, scope := range definition.Scopes {
 				contracts[scope.Key] = store.PostProcessingScopeContract{
@@ -491,10 +690,8 @@ func (w *PipelineWorker) processAvailable(ctx context.Context) {
 					OutputKinds:   append([]string(nil), scope.Step.OutputKinds...),
 				}
 			}
-			preferred, preferredErr := w.repository.PreferredPipelineModels(ctx, []string{definition.ModelSettingKey})
-			model := preferred[definition.ModelSettingKey]
-			if definition.Automatic && control.AutomaticProcessingEnabled && preferredErr == nil && catalog.Available() && catalog.Has(model) && windowOpen {
-				plans, err := w.postProcessors.Plans(definition.Key, nil, model)
+			if definition.Automatic && control.AutomaticProcessingEnabled && catalog.Available() && windowOpen {
+				plans, err := w.configuredPostProcessorPlans(ctx, definition)
 				if err != nil {
 					w.logger.Error("build scheduled AI post-processing plans", "processor", definition.Key, "error", err)
 					return
@@ -734,11 +931,7 @@ func (w *PipelineWorker) processJob(ctx, requestCtx context.Context, job store.P
 					if !definition.Automatic {
 						continue
 					}
-					models, err := w.repository.PreferredPipelineModels(ctx, []string{definition.ModelSettingKey})
-					if err != nil || !w.catalog.Snapshot().Has(models[definition.ModelSettingKey]) {
-						continue
-					}
-					plans, err := w.postProcessors.Plans(definition.Key, nil, models[definition.ModelSettingKey])
+					plans, err := w.configuredPostProcessorPlans(ctx, definition)
 					if err != nil {
 						postErr = err
 						break
@@ -813,8 +1006,8 @@ func (w *PipelineWorker) processPostProcessingJob(ctx, requestCtx context.Contex
 		w.observer.RecordPipelineAttempt(executionKey)
 		defer func() { w.observer.RecordPipelineDuration(executionKey, w.clock().Sub(started)) }()
 	}
-	w.logger.Info("AI post-processing request started", "job_id", job.ID, "incident_id", job.IncidentID, "processor", job.ProcessorKey, "scope", job.ScopeKey, "model", job.ModelIdentity, "attempt", job.AttemptCount)
-	generator, err := w.providers.StepGenerator(job.ModelIdentity)
+	w.logger.Info("AI post-processing request started", "job_id", job.ID, "incident_id", job.IncidentID, "processor", job.ProcessorKey, "scope", job.ScopeKey, "model", job.ModelIdentity, "adapter", job.AdapterKey, "attempt", job.AttemptCount)
+	generator, err := stepGeneratorFor(w.providers, job.ModelIdentity, job.AdapterKey)
 	if err != nil {
 		return w.handlePostProcessingFailure(ctx, job, errorOf(ErrorConfiguration, "create post-processing generator: %v", err))
 	}
@@ -826,6 +1019,9 @@ func (w *PipelineWorker) processPostProcessingJob(ctx, requestCtx context.Contex
 		hashParts = append(hashParts, kind, value)
 	}
 	hashParts = append(hashParts, job.PromptVersion, job.ModelIdentity)
+	if adapter := normalizedTranslationAdapter(job.AdapterKey); adapter != TranslationAdapterStructured {
+		hashParts = append(hashParts, "adapter", adapter)
+	}
 	inputHash := store.HashPipelineInput(hashParts...)
 	output, modelIdentity, err := generator.GenerateStep(requestCtx, scope.Step, StepInput{Values: inputValues})
 	if err != nil {
@@ -853,7 +1049,7 @@ func (w *PipelineWorker) processPostProcessingJob(ctx, requestCtx context.Contex
 		w.observer.RecordPipelineSuccess(executionKey, completed)
 	}
 	duration := completed.Sub(started)
-	w.logger.Info("AI post-processing request completed", "job_id", job.ID, "incident_id", job.IncidentID, "processor", job.ProcessorKey, "scope", job.ScopeKey, "model", modelIdentity, "duration", duration.Round(time.Millisecond), "duration_seconds", duration.Seconds())
+	w.logger.Info("AI post-processing request completed", "job_id", job.ID, "incident_id", job.IncidentID, "processor", job.ProcessorKey, "scope", job.ScopeKey, "model", modelIdentity, "adapter", job.AdapterKey, "duration", duration.Round(time.Millisecond), "duration_seconds", duration.Seconds())
 	w.publishSnapshot(ctx)
 	return true
 }

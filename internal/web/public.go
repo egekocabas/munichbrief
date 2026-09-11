@@ -110,7 +110,7 @@ func (s *Server) base(request *http.Request, language, canonicalRelativeURL stri
 		if definition.Code != language {
 			page.LanguageSwitches = append(page.LanguageSwitches, languageLink{
 				Code: definition.Code, Tag: definition.Tag.String(), URL: alternateLanguageURL(request.URL, language, definition.Code),
-				Label: s.localization.Text(language, definition.SwitchMessageID),
+				Label: s.localization.Text(language, definition.SwitchMessageID), DisplayName: definition.DisplayName,
 			})
 		}
 	}
@@ -569,10 +569,11 @@ func structuredJSON(value any) template.JS {
 }
 
 type languageLink struct {
-	Code  string
-	Tag   string
-	URL   string
-	Label string
+	Code        string
+	Tag         string
+	URL         string
+	Label       string
+	DisplayName string
 }
 
 func (p *basePage) removeLanguage(definition readerLanguage) {

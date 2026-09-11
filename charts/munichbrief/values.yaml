@@ -23,6 +23,10 @@ application:
   userAgent: MunichBrief/0.1.0 (+https://github.com/egekocabas/munichbrief)
   httpTimeout: 10s
   articleRefreshInterval: 6h
+  # null follows sourceMode: disabled for fixture, enabled for live.
+  gazetteerEnabled: null
+  gazetteerRefreshInterval: 168h
+  gazetteerHTTPTimeout: 2m
   aiEnabled: false
   aiImmediate: false
   aiWindow: "03:00-08:00"
@@ -55,6 +59,18 @@ ingress:
     languageCodes:
       - de
       - en
+      - tr
+      - hr
+      - it
+      - uk
+      - bs
+      - zh
+      - hi
+      - es
+      - fr
+      - ro
+      - pl
+      - ru
     tls: []
 
 admin:

@@ -81,16 +81,15 @@ func TestSitemapContainsOnlyCanonicalPublicDocuments(t *testing.T) {
 	if err := xml.Unmarshal(response.Body.Bytes(), &document); err != nil {
 		t.Fatalf("decode sitemap: %v", err)
 	}
-	if len(document.URLs) != 6 {
-		t.Fatalf("sitemap URL count = %d, want four static and two incident URLs", len(document.URLs))
+	wantLocations := make(map[string]bool)
+	for _, definition := range langregistry.Registered() {
+		wantLocations["https://munichbrief.de/"+definition.Code] = false
+		wantLocations["https://munichbrief.de/"+definition.Code+"/about"] = false
 	}
-	wantLocations := map[string]bool{
-		"https://munichbrief.de/de":                                       false,
-		"https://munichbrief.de/en":                                       false,
-		"https://munichbrief.de/de/about":                                 false,
-		"https://munichbrief.de/en/about":                                 false,
-		"https://munichbrief.de/de/incidents/" + formatID(job.IncidentID): false,
-		"https://munichbrief.de/en/incidents/" + formatID(job.IncidentID): false,
+	wantLocations["https://munichbrief.de/de/incidents/"+formatID(job.IncidentID)] = false
+	wantLocations["https://munichbrief.de/en/incidents/"+formatID(job.IncidentID)] = false
+	if len(document.URLs) != len(wantLocations) {
+		t.Fatalf("sitemap URL count = %d, want %d available canonical URLs", len(document.URLs), len(wantLocations))
 	}
 	for _, entry := range document.URLs {
 		if _, ok := wantLocations[entry.Location]; !ok {
@@ -145,23 +144,23 @@ func TestSyntheticReaderLanguageDrivesRoutesNegotiationAndSEO(t *testing.T) {
 	})
 	formatter := func(value time.Time) string { return value.Format("2006-01-02") }
 	server.languages = append(server.languages, langregistry.Definition{
-		Code: "fr", Tag: language.MustParse("fr-FR"), DisplayName: "Français", Catalog: "locales/active.fr.toml", OpenGraphLocale: "fr_FR",
-		SwitchMessageID: "SwitchToFrench", StepMessageID: "FrenchTranslationStep",
+		Code: "pt", Tag: language.MustParse("pt-BR"), DisplayName: "Português", Catalog: "locales/active.pt.toml", OpenGraphLocale: "pt_BR",
+		SwitchMessageID: "SwitchToPortuguese", StepMessageID: "PortugueseTranslationStep",
 		FormatDate: formatter, FormatDay: formatter, FormatDateTime: formatter,
 	})
 	handler := server.Handler()
 
 	page := httptest.NewRecorder()
-	request := httptest.NewRequest(http.MethodGet, "/fr", nil)
+	request := httptest.NewRequest(http.MethodGet, "/pt", nil)
 	request.Host = "munichbrief.de"
 	handler.ServeHTTP(page, request)
-	if page.Code != http.StatusOK || page.Header().Get("Content-Language") != "fr-FR" {
+	if page.Code != http.StatusOK || page.Header().Get("Content-Language") != "pt-BR" {
 		t.Fatalf("synthetic language page = %d/%q", page.Code, page.Header().Get("Content-Language"))
 	}
 	for _, expected := range []string{
-		`<html lang="fr-FR"`,
-		`<link rel="alternate" hreflang="fr-FR" href="https://munichbrief.de/fr">`,
-		`"inLanguage":["de-DE","en-GB","fr-FR"]`,
+		`<html lang="pt-BR"`,
+		`<link rel="alternate" hreflang="pt-BR" href="https://munichbrief.de/pt">`,
+		`"inLanguage":["de-DE","en-GB","tr-TR","hr-HR","it-IT","uk-UA","bs-BA","zh-CN","hi-IN","es-ES","fr-FR","ro-RO","pl-PL","ru-RU","pt-BR"]`,
 	} {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("synthetic language page does not contain %q", expected)
@@ -171,9 +170,9 @@ func TestSyntheticReaderLanguageDrivesRoutesNegotiationAndSEO(t *testing.T) {
 	redirect := httptest.NewRecorder()
 	root := httptest.NewRequest(http.MethodGet, "/", nil)
 	root.Host = "munichbrief.de"
-	root.Header.Set("Accept-Language", "fr-CA,fr;q=0.9,en;q=0.5")
+	root.Header.Set("Accept-Language", "pt-PT,pt;q=0.9,en;q=0.5")
 	handler.ServeHTTP(redirect, root)
-	if redirect.Code != http.StatusFound || redirect.Header().Get("Location") != "/fr" {
+	if redirect.Code != http.StatusFound || redirect.Header().Get("Location") != "/pt" {
 		t.Fatalf("synthetic language negotiation = %d/%q", redirect.Code, redirect.Header().Get("Location"))
 	}
 
@@ -181,7 +180,7 @@ func TestSyntheticReaderLanguageDrivesRoutesNegotiationAndSEO(t *testing.T) {
 	sitemapRequest := httptest.NewRequest(http.MethodGet, "/sitemap.xml", nil)
 	sitemapRequest.Host = "munichbrief.de"
 	handler.ServeHTTP(sitemap, sitemapRequest)
-	if !strings.Contains(sitemap.Body.String(), "https://munichbrief.de/fr</loc>") || !strings.Contains(sitemap.Body.String(), "https://munichbrief.de/fr/about</loc>") {
+	if !strings.Contains(sitemap.Body.String(), "https://munichbrief.de/pt</loc>") || !strings.Contains(sitemap.Body.String(), "https://munichbrief.de/pt/about</loc>") {
 		t.Fatalf("synthetic language sitemap = %s", sitemap.Body.String())
 	}
 
@@ -190,8 +189,8 @@ func TestSyntheticReaderLanguageDrivesRoutesNegotiationAndSEO(t *testing.T) {
 	detailRequest.Host = "munichbrief.de"
 	handler.ServeHTTP(detail, detailRequest)
 	for _, unavailable := range []string{
-		`hreflang="fr-FR"`,
-		`<meta property="og:locale:alternate" content="fr_FR">`,
+		`hreflang="pt-BR"`,
+		`<meta property="og:locale:alternate" content="pt_BR">`,
 	} {
 		if strings.Contains(detail.Body.String(), unavailable) {
 			t.Errorf("detail advertised unavailable synthetic translation %q", unavailable)

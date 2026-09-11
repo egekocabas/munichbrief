@@ -15,6 +15,14 @@ const PipelineVersion = "incident-pipeline-v2"
 // because one of its declared required inputs was unavailable.
 const PostProcessingStatusReasonMissingInput = "missing_input"
 
+// PostProcessingStatusReasonScopeDisabled identifies automatic work skipped
+// because its processor scope was disabled before execution.
+const PostProcessingStatusReasonScopeDisabled = "scope_disabled"
+
+// PostProcessingStatusReasonProcessorDisabled identifies automatic work
+// skipped because its processor-wide gate was disabled before execution.
+const PostProcessingStatusReasonProcessorDisabled = "processor_disabled"
+
 // ProcessingStatusReasonOperatorCanceled identifies unfinished work explicitly
 // canceled by an administrator without exposing any job input or output.
 const ProcessingStatusReasonOperatorCanceled = "operator_canceled"
@@ -73,13 +81,32 @@ type PostProcessingPlan struct {
 	ScopeKey      string
 	PromptVersion string
 	Model         string
+	AdapterKey    string
 	InputKinds    []string
 }
 
-// PostProcessingScope is one automatically enabled registry scope.
+// PostProcessingScope identifies one registered automatic/manual work scope.
 type PostProcessingScope struct {
 	ProcessorKey string
 	ScopeKey     string
+}
+
+// PostProcessingScopeSetting is the durable automatic-work gate for one
+// registered processor scope. Manual requests intentionally bypass it.
+type PostProcessingScopeSetting struct {
+	ProcessorKey     string    `json:"processor_key"`
+	ScopeKey         string    `json:"scope_key"`
+	Enabled          bool      `json:"enabled"`
+	AutomaticAfter   time.Time `json:"automatic_after"`
+	EnabledUpdatedAt time.Time `json:"enabled_updated_at"`
+}
+
+// PostProcessingProcessorSetting is the durable automatic-work gate shared by
+// every scope of one processor. Manual requests intentionally bypass it.
+type PostProcessingProcessorSetting struct {
+	ProcessorKey     string    `json:"processor_key"`
+	Enabled          bool      `json:"enabled"`
+	EnabledUpdatedAt time.Time `json:"enabled_updated_at"`
 }
 
 // PostProcessingScopeContract identifies the current prompt and exact
@@ -104,6 +131,7 @@ type PostProcessingJob struct {
 	ScopeKey          string
 	RequestKind       string
 	ModelIdentity     string
+	AdapterKey        string
 	PromptVersion     string
 	InputHash         string
 	AttemptCount      int
@@ -223,6 +251,7 @@ type PipelineHistoryEntry struct {
 	AttemptCount  int
 	FailureKind   string
 	ModelIdentity string
+	AdapterKey    string
 	PromptVersion string
 }
 

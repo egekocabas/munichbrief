@@ -100,6 +100,43 @@ other = "Switch to the German version"
 [SwitchToEnglish]
 other = "Switch to the English version"
 
+[SwitchToTurkish]
+other = "Switch to the Turkish version"
+
+[SwitchToCroatian]
+other = "Switch to the Croatian version"
+
+[SwitchToItalian]
+other = "Switch to the Italian version"
+
+[SwitchToUkrainian]
+other = "Switch to the Ukrainian version"
+
+[SwitchToBosnian]
+other = "Switch to the Bosnian version"
+
+[SwitchToChinese]
+other = "Switch to the Simplified Chinese version"
+
+[SwitchToHindi]
+other = "Switch to the Hindi version"
+
+[SwitchToSpanish]
+other = "Switch to the Spanish version"
+
+[SwitchToFrench]
+other = "Switch to the French version"
+
+
+[SwitchToRomanian]
+other = "Switch to the Romanian version"
+
+[SwitchToPolish]
+other = "Switch to the Polish version"
+
+[SwitchToRussian]
+other = "Switch to the Russian version"
+
 [HeroEyebrowFixture]
 other = "Local prototype"
 
@@ -326,6 +363,43 @@ other = "Category verification"
 [EnglishTranslationStep]
 other = "English translation"
 
+[TurkishTranslationStep]
+other = "Turkish translation"
+
+[CroatianTranslationStep]
+other = "Croatian translation"
+
+[ItalianTranslationStep]
+other = "Italian translation"
+
+[UkrainianTranslationStep]
+other = "Ukrainian translation"
+
+[BosnianTranslationStep]
+other = "Bosnian translation"
+
+[ChineseTranslationStep]
+other = "Simplified Chinese translation"
+
+[HindiTranslationStep]
+other = "Hindi translation"
+
+[SpanishTranslationStep]
+other = "Spanish translation"
+
+[FrenchTranslationStep]
+other = "French translation"
+
+
+[RomanianTranslationStep]
+other = "Romanian translation"
+
+[PolishTranslationStep]
+other = "Polish translation"
+
+[RussianTranslationStep]
+other = "Russian translation"
+
 [StagedPipeline]
 other = "Staged pipeline"
 
@@ -381,7 +455,7 @@ other = "How MunichBrief works"
 other = "About MunichBrief"
 
 [AboutIntro]
-other = "MunichBrief turns official Munich Police releases into clear, structured incident summaries in German and English."
+other = "MunichBrief turns official Munich Police releases into clear, structured incident summaries in multiple reader languages."
 
 [FromReleaseToIncident]
 other = "From release to incident"
@@ -408,7 +482,7 @@ other = "Local AI models extract details such as categories, locations, dates, a
 other = "Translate and publish"
 
 [TranslatePublishCopy]
-other = "German summaries that pass the automated processing checks are translated into English. Public pages display AI-generated content only after the processing pipeline completes successfully."
+other = "German summaries that pass the automated processing checks are translated into the available reader languages. Public pages display AI-generated content only after the processing pipeline completes successfully."
 
 [AccuracyOfficialInformation]
 other = "Accuracy and official information"

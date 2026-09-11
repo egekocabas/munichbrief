@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/egekocabas/munichbrief/internal/config"
+	"github.com/egekocabas/munichbrief/internal/gazetteer"
 	"github.com/egekocabas/munichbrief/internal/ingest"
 	"github.com/egekocabas/munichbrief/internal/observability"
 	"github.com/egekocabas/munichbrief/internal/processing"
@@ -67,6 +68,8 @@ func run(ctx context.Context, logger *slog.Logger, arguments []string) error {
 		return runOneShotSync(ctx, logger, cfg)
 	case "backup":
 		return runBackup(ctx, cfg, arguments, os.Stdout)
+	case "gazetteer":
+		return runGazetteer(ctx, logger, cfg, arguments)
 	case "ai-process", "ai-retry":
 		return runAIProcess(ctx, logger, cfg, arguments)
 	case "help", "-h", "--help":
@@ -96,8 +99,28 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 	if err := database.EnsurePipelineSteps(ctx, processing.ModelSettingKeys(), time.Now()); err != nil {
 		return err
 	}
+	if err := database.EnsureTranslationLanguageSettings(ctx, registeredTranslationCodes(), processing.EnglishLanguage, time.Now()); err != nil {
+		return err
+	}
 
 	metrics := observability.NewMetrics(version, time.Now())
+	var gazetteerManager *gazetteer.Manager
+	var gazetteerStore *gazetteer.Store
+	if cfg.GazetteerEnabled {
+		gazetteerStore, err = gazetteer.Open(ctx, cfg.GazetteerDatabasePath)
+		if err != nil {
+			return err
+		}
+		defer gazetteerStore.Close()
+		fetcher, err := gazetteer.NewFetcher(&http.Client{Timeout: cfg.GazetteerHTTPTimeout}, cfg.UserAgent, gazetteerStore)
+		if err != nil {
+			return err
+		}
+		gazetteerManager, err = gazetteer.NewManager(ctx, gazetteerStore, fetcher, gazetteer.DefaultSources(), cfg.GazetteerRefreshInterval, metrics, logger)
+		if err != nil {
+			return err
+		}
+	}
 	var berlinLocation *time.Location
 	if cfg.SourceMode == "live" || cfg.AIEnabled {
 		berlinLocation, err = time.LoadLocation("Europe/Berlin")
@@ -136,7 +159,7 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 			logger.Info("Ollama model catalog loaded", "models", len(snapshot.Models))
 		}
 		go catalog.Run(ctx)
-		provider, err := processing.NewOllamaGeneratorProvider(
+		baseProvider, err := processing.NewOllamaGeneratorProvider(
 			cfg.OllamaBaseURL,
 			cfg.AITimeout,
 			cfg.AIContextSize,
@@ -145,13 +168,21 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 		if err != nil {
 			return err
 		}
+		var provider processing.StepGeneratorProvider = baseProvider
+		registry := processing.DefaultPostProcessorRegistry(gazetteerManager)
+		if gazetteerManager != nil {
+			provider, err = processing.NewProtectedGeneratorProvider(baseProvider, gazetteerManager)
+			if err != nil {
+				return err
+			}
+		}
 		schedule := processing.Schedule{
 			Immediate: cfg.AIImmediate,
 			Location:  berlinLocation,
 			Start:     cfg.AIWindowStart,
 			End:       cfg.AIWindowEnd,
 		}
-		aiWorker, err = processing.NewPipelineWorker(database, provider, catalog, processing.DefaultPostProcessorRegistry(), metrics, logger, cfg.AIInterval, time.Now, schedule, cfg.SourceMode)
+		aiWorker, err = processing.NewPipelineWorker(database, provider, catalog, registry, metrics, logger, cfg.AIInterval, time.Now, schedule, cfg.SourceMode)
 		if err != nil {
 			return err
 		}
@@ -162,7 +193,9 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 		PageSize: cfg.PageSize, SourceMode: cfg.SourceMode, PresentationMode: cfg.PresentationMode,
 		SecureCookies: cfg.SecureCookies,
 		AdminEnabled:  cfg.AdminEnabled, PublicHosts: cfg.PublicHosts, CanonicalOrigin: cfg.CanonicalOrigin, Processor: processor,
-		Build: build,
+		Gazetteer:          gazetteerStore,
+		GazetteerRefresher: gazetteerManager,
+		Build:              build,
 	})
 	if err != nil {
 		return err
@@ -175,6 +208,9 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 	go serve(metricsServer, "metrics", cfg.MetricsAddress, cfg.SourceMode, logger, serveErrors)
 	if liveSyncer != nil {
 		go runLiveSyncLoop(ctx, berlinLocation, liveSyncer, metrics, logger)
+	}
+	if gazetteerManager != nil {
+		go gazetteerManager.Run(ctx)
 	}
 	if aiWorker != nil {
 		logger.Info("AI processing worker started",
@@ -253,6 +289,9 @@ func runAIProcess(ctx context.Context, logger *slog.Logger, cfg config.Config, a
 		return err
 	}
 	defer database.Close()
+	if err := database.EnsureTranslationLanguageSettings(ctx, registeredTranslationCodes(), processing.EnglishLanguage, time.Now()); err != nil {
+		return err
+	}
 	models, err := database.PreferredPipelineModels(ctx, processing.StepKeys())
 	if err != nil {
 		return err
@@ -266,9 +305,38 @@ func runAIProcess(ctx context.Context, logger *slog.Logger, cfg config.Config, a
 		selectedID = incidentID
 	}
 	registry := processing.DefaultPostProcessorRegistry()
-	postModels, _ := database.PreferredPipelineModels(ctx, registry.ModelSettingKeys())
+	postModels, postModelsErr := database.PreferredPipelineModels(ctx, registry.ModelSettingKeys())
+	if postModelsErr != nil && !errors.Is(postModelsErr, store.ErrPipelineUnconfigured) {
+		return postModelsErr
+	}
+	translationSettings, err := database.TranslationLanguageSettings(ctx)
+	if err != nil {
+		return err
+	}
+	translationByCode := make(map[string]store.TranslationLanguageSetting, len(translationSettings))
+	for _, setting := range translationSettings {
+		translationByCode[setting.LanguageCode] = setting
+	}
 	var postPlans []store.PostProcessingPlan
 	for _, definition := range registry.Definitions() {
+		if definition.Key == processing.TranslationModelStep {
+			for _, scope := range definition.Scopes {
+				setting := translationByCode[scope.Key]
+				if setting.PreferredModel == "" {
+					continue
+				}
+				if !processing.TranslationAdapterSupports(setting.AdapterKey, setting.LanguageCode) {
+					return fmt.Errorf("translation route %s uses unsupported adapter %q", setting.LanguageCode, setting.AdapterKey)
+				}
+				languagePlans, planErr := registry.Plans(definition.Key, []string{scope.Key}, setting.PreferredModel)
+				if planErr != nil {
+					return planErr
+				}
+				languagePlans[0].AdapterKey = setting.AdapterKey
+				postPlans = append(postPlans, languagePlans[0])
+			}
+			continue
+		}
 		model := postModels[definition.ModelSettingKey]
 		if model == "" {
 			continue
@@ -290,6 +358,15 @@ func runAIProcess(ctx context.Context, logger *slog.Logger, cfg config.Config, a
 	return nil
 }
 
+func registeredTranslationCodes() []string {
+	translations := processing.RegisteredTranslations()
+	codes := make([]string, 0, len(translations))
+	for _, translation := range translations {
+		codes = append(codes, translation.Language)
+	}
+	return codes
+}
+
 func runMigrate(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
 	database, err := store.Open(ctx, cfg.DatabasePath)
 	if err != nil {
@@ -300,6 +377,50 @@ func runMigrate(ctx context.Context, logger *slog.Logger, cfg config.Config) err
 		return err
 	}
 	logger.Info("database migrations are current", "database", cfg.DatabasePath)
+	if cfg.GazetteerEnabled {
+		gazetteerDatabase, err := gazetteer.Open(ctx, cfg.GazetteerDatabasePath)
+		if err != nil {
+			return err
+		}
+		defer gazetteerDatabase.Close()
+		if err := gazetteerDatabase.Ready(ctx); err != nil {
+			return err
+		}
+		logger.Info("gazetteer database migrations are current", "database", cfg.GazetteerDatabasePath)
+	}
+	return nil
+}
+
+func runGazetteer(ctx context.Context, logger *slog.Logger, cfg config.Config, arguments []string) error {
+	if len(arguments) != 1 || arguments[0] != "refresh" && arguments[0] != "status" {
+		return errors.New("gazetteer requires exactly one command: refresh or status")
+	}
+	database, err := gazetteer.Open(ctx, cfg.GazetteerDatabasePath)
+	if err != nil {
+		return err
+	}
+	defer database.Close()
+	if arguments[0] == "status" {
+		status, err := database.Status(ctx)
+		if err != nil {
+			return err
+		}
+		logger.Info("gazetteer status", "database", cfg.GazetteerDatabasePath, "active_generation", status.ActiveGeneration, "entries", status.EntryCount, "last_attempt", status.LastAttempt, "last_success", status.LastSuccess, "next_refresh", status.NextRefresh)
+		return nil
+	}
+	fetcher, err := gazetteer.NewFetcher(&http.Client{Timeout: cfg.GazetteerHTTPTimeout}, cfg.UserAgent, database)
+	if err != nil {
+		return err
+	}
+	manager, err := gazetteer.NewManager(ctx, database, fetcher, gazetteer.DefaultSources(), cfg.GazetteerRefreshInterval, nil, logger)
+	if err != nil {
+		return err
+	}
+	result, err := manager.Refresh(ctx)
+	if err != nil {
+		return err
+	}
+	logger.Info("manual gazetteer refresh completed", "generation_id", result.GenerationID, "entries", result.EntryCount, "not_modified", result.NotModified, "duration", result.Duration)
 	return nil
 }
 
@@ -491,6 +612,8 @@ func printUsage(writer io.Writer) {
 	fmt.Fprintln(writer, "  munichbrief sync                  Run one live synchronization")
 	fmt.Fprintln(writer, "  munichbrief backup --output PATH  Create a consistent SQLite backup")
 	fmt.Fprintln(writer, "  munichbrief backup --output -     Stream a consistent backup to stdout")
+	fmt.Fprintln(writer, "  munichbrief gazetteer refresh     Refresh and activate place-name data")
+	fmt.Fprintln(writer, "  munichbrief gazetteer status      Show the active gazetteer generation")
 	fmt.Fprintln(writer, "  munichbrief ai-process --incident ID  Request immediate processing for one incident")
 	fmt.Fprintln(writer, "  munichbrief ai-process --all          Request immediate processing for all unprocessed incidents")
 }

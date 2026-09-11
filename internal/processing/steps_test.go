@@ -24,8 +24,28 @@ func TestRegisteredPipelineStepsAreStableAndOrdered(t *testing.T) {
 		t.Fatalf("registered step identities = %v", StepKeys())
 	}
 	translations := RegisteredTranslations()
-	if len(translations) != 1 || translations[0].Language != EnglishLanguage || translations[0].PromptVersion != EnglishTranslationPromptVersion || translations[0].Step.OutputDecoder == nil {
+	wantTranslations := []struct{ language, prompt string }{
+		{EnglishLanguage, EnglishTranslationPromptVersion},
+		{"tr", TurkishTranslationPromptVersion},
+		{"hr", CroatianTranslationPromptVersion},
+		{"it", ItalianTranslationPromptVersion},
+		{"uk", UkrainianTranslationPromptVersion},
+		{"bs", BosnianTranslationPromptVersion},
+		{"zh", ChineseTranslationPromptVersion},
+		{"hi", HindiTranslationPromptVersion},
+		{"es", SpanishTranslationPromptVersion},
+		{"fr", FrenchTranslationPromptVersion},
+		{"ro", RomanianTranslationPromptVersion},
+		{"pl", PolishTranslationPromptVersion},
+		{"ru", RussianTranslationPromptVersion},
+	}
+	if len(translations) != len(wantTranslations) {
 		t.Fatalf("registered translations = %#v", translations)
+	}
+	for index, want := range wantTranslations {
+		if translations[index].Language != want.language || translations[index].PromptVersion != want.prompt || translations[index].Step.OutputDecoder == nil {
+			t.Errorf("registered translation %d = %#v, want %s/%s", index, translations[index], want.language, want.prompt)
+		}
 	}
 	if PipelineVersion != "incident-pipeline-v2" {
 		t.Fatalf("pipeline version = %q", PipelineVersion)
@@ -39,6 +59,16 @@ func TestRegisteredPipelineStepsAreStableAndOrdered(t *testing.T) {
 		if strings.Contains(steps[1].SystemPrompt, forbidden) {
 			t.Errorf("German presentation prompt contains English instruction %q", forbidden)
 		}
+	}
+}
+
+func TestGeneratedTextIsNormalizedToUnicodeNFCBeforeValidation(t *testing.T) {
+	value := "  Ukrai\u0308nische   Straße  "
+	if err := normalizeLimitedField("translated title", &value, 90); err != nil {
+		t.Fatal(err)
+	}
+	if value != "Ukraïnische Straße" {
+		t.Fatalf("normalized text = %q", value)
 	}
 }
 
@@ -58,7 +88,7 @@ func TestTranslationDefinitionFactorySupportsBCP47Target(t *testing.T) {
 	}
 	message := fmt.Sprintf(prompt.UserPromptTemplate, `{"title_de":"Titel","summary_de":"Zusammenfassung."}`)
 	if !strings.Contains(message, "German (de-DE) to Portuguese (pt-BR)") || !strings.Contains(message, `"title_pt_br"`) || !strings.Contains(message, `"summary_pt_br"`) {
-		t.Fatalf("synthetic TranslateGemma prompt = %q", message)
+		t.Fatalf("synthetic unified translation prompt = %q", message)
 	}
 	output, err := translation.Step.OutputDecoder(`{"title_pt_br":"Título","summary_pt_br":"Resumo seguro."}`)
 	if err != nil {
@@ -398,6 +428,44 @@ func TestGermanPresentationValidatesPrivacyOnly(t *testing.T) {
 	output.PrivacyFlags = []string{"uncertain"}
 	if err := ValidateStepOutput(step, StepInput{}, &output); KindOf(err) != ErrorPrivacy {
 		t.Fatalf("privacy uncertainty error = %v, kind %q", err, KindOf(err))
+	}
+}
+
+func TestGermanPresentationRejectsURLsAndMarkdown(t *testing.T) {
+	step, _ := StepByKey(GermanPresentationStep)
+	for _, output := range []StepOutput{
+		{TitleDE: "**Titel**", SummaryDE: "Eine sachliche Zusammenfassung.", PrivacyStatus: "safe"},
+		{TitleDE: "Sachlicher Titel", SummaryDE: "Mehr unter https://example.com.", PrivacyStatus: "safe"},
+	} {
+		if err := ValidateStepOutput(step, StepInput{}, &output); KindOf(err) != ErrorOutput {
+			t.Fatalf("non-plain German presentation accepted: %#v, err=%v", output, err)
+		}
+	}
+}
+
+func TestPlainPresentationDistinguishesLocalizedDateFromOrderedList(t *testing.T) {
+	for _, value := range []string{
+		"29. kolovoza 2026. u točno 03:30 sati dogodila se nesreća.",
+		"29. avgust 2026, tačno u 03:30, dogodila se nesreća.",
+		"1. September 2026 ereignete sich ein Unfall.",
+	} {
+		if err := validatePlainPresentation("summary", value); err != nil {
+			t.Fatalf("localized leading date rejected as Markdown: %q: %v", value, err)
+		}
+	}
+	for _, value := range []string{"1. First item", "42. Added explanation"} {
+		if err := validatePlainPresentation("summary", value); KindOf(err) != ErrorOutput {
+			t.Fatalf("ordered Markdown list accepted: %q: %v", value, err)
+		}
+	}
+}
+
+func TestTargetScriptRejectsCyrillicBosnianOutput(t *testing.T) {
+	if err := validateTargetScript("bs", "Policijska intervencija", "U petak navečer policija je nastavila istragu."); err != nil {
+		t.Fatalf("Latin Bosnian output rejected: %v", err)
+	}
+	if err := validateTargetScript("bs", "Policijska intervencija", "У петак увече полиција је наставила истрагу."); KindOf(err) != ErrorOutput {
+		t.Fatalf("Cyrillic Bosnian output accepted: %v", err)
 	}
 }
 

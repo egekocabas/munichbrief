@@ -36,6 +36,7 @@ type AdminTranslation struct {
 	Title                string
 	Summary              string
 	Model                string
+	AdapterKey           string
 	PromptVersion        string
 	GeneratedAt          *time.Time
 	Status               string
@@ -45,6 +46,7 @@ type AdminTranslation struct {
 	NextRetryAt          *time.Time
 	FailureKind          string
 	AttemptModel         string
+	AttemptAdapterKey    string
 	AttemptPromptVersion string
 	AttemptUpdatedAt     *time.Time
 }
@@ -474,10 +476,10 @@ func (s *Store) ListAdminTranslations(ctx context.Context, incidentIDs []int64, 
 		SELECT requested.incident_id, language.language_code,
 			COALESCE((SELECT value FROM post_processing_values WHERE job_id=selected.id AND kind='title'),''),
 			COALESCE((SELECT value FROM post_processing_values WHERE job_id=selected.id AND kind='summary'),''),
-			COALESCE(selected.model_identity, ''), COALESCE(selected.prompt_version, ''), COALESCE(selected.completed_at, ''),
+			COALESCE(selected.model_identity, ''), COALESCE(selected.adapter_key, ''), COALESCE(selected.prompt_version, ''), COALESCE(selected.completed_at, ''),
 			COALESCE(attempt.status, ''), COALESCE(attempt.status_reason, ''), COALESCE(attempt.status_detail, ''),
 			COALESCE(attempt.attempt_count, 0), COALESCE(attempt.next_retry_at, ''), COALESCE(attempt.failure_kind, ''),
-			COALESCE(attempt.model_identity, ''), COALESCE(attempt.prompt_version, ''), COALESCE(attempt.updated_at, '')
+			COALESCE(attempt.model_identity, ''), COALESCE(attempt.adapter_key, ''), COALESCE(attempt.prompt_version, ''), COALESCE(attempt.updated_at, '')
 		FROM requested_incidents requested
 		CROSS JOIN requested_languages language
 		LEFT JOIN canonical_runs canonical ON canonical.incident_id = requested.incident_id
@@ -495,10 +497,10 @@ func (s *Store) ListAdminTranslations(ctx context.Context, incidentIDs []int64, 
 		var generatedAt, nextRetryAt, attemptUpdatedAt string
 		if err := rows.Scan(
 			&translation.IncidentID, &translation.Language, &translation.Title, &translation.Summary,
-			&translation.Model, &translation.PromptVersion, &generatedAt,
+			&translation.Model, &translation.AdapterKey, &translation.PromptVersion, &generatedAt,
 			&translation.Status, &translation.StatusReason, &translation.StatusDetail,
 			&translation.Attempts, &nextRetryAt, &translation.FailureKind,
-			&translation.AttemptModel, &translation.AttemptPromptVersion, &attemptUpdatedAt,
+			&translation.AttemptModel, &translation.AttemptAdapterKey, &translation.AttemptPromptVersion, &attemptUpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan admin translation: %w", err)
 		}

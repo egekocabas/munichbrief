@@ -220,7 +220,7 @@ func (s *Store) InterruptBlockedAutomaticCycle(ctx context.Context, cycleID int6
 	if _, err := tx.ExecContext(ctx, `INSERT INTO cycle_step_models(cycle_id, step_key, step_order, model_identity, prompt_version) SELECT ?, step_key, step_order, model_identity, prompt_version FROM cycle_step_models WHERE cycle_id = ?`, continuationID, cycleID); err != nil {
 		return 0, err
 	}
-	if _, err := tx.ExecContext(ctx, `INSERT INTO cycle_post_processing_plans(cycle_id,processor_key,scope_key,model_identity,prompt_version) SELECT ?,processor_key,scope_key,model_identity,prompt_version FROM cycle_post_processing_plans WHERE cycle_id=?`, continuationID, cycleID); err != nil {
+	if _, err := tx.ExecContext(ctx, `INSERT INTO cycle_post_processing_plans(cycle_id,processor_key,scope_key,model_identity,adapter_key,prompt_version) SELECT ?,processor_key,scope_key,model_identity,adapter_key,prompt_version FROM cycle_post_processing_plans WHERE cycle_id=?`, continuationID, cycleID); err != nil {
 		return 0, err
 	}
 	if _, err := tx.ExecContext(ctx, `UPDATE processing_cycle_items SET cycle_id = ?, updated_at = ? WHERE cycle_id = ? AND status = 'pending'`, continuationID, formatted, cycleID); err != nil {
@@ -326,6 +326,9 @@ func manualRequestKeyTx(ctx context.Context, tx *sql.Tx, sourceMode, condition s
 	}
 	for _, plan := range postPlans {
 		fmt.Fprintf(hash, "\x00post\x00%s\x00%s\x00%s\x00%s", plan.ProcessorKey, plan.ScopeKey, plan.PromptVersion, plan.Model)
+		if adapter := normalizedAdapterKey(plan.AdapterKey); adapter != "structured" {
+			fmt.Fprintf(hash, "\x00adapter\x00%s", adapter)
+		}
 	}
 	rows, err := tx.QueryContext(ctx, `SELECT i.id, i.content_hash FROM incidents i JOIN source_documents d ON d.id=i.source_document_id WHERE `+condition+` ORDER BY i.id`, args...)
 	if err != nil {
@@ -438,7 +441,7 @@ func createPipelineCycleTx(ctx context.Context, tx *sql.Tx, kind, sourceMode str
 		}
 	}
 	for _, plan := range postPlans {
-		if _, err := tx.ExecContext(ctx, `INSERT INTO cycle_post_processing_plans(cycle_id,processor_key,scope_key,model_identity,prompt_version) VALUES(?,?,?,?,?)`, cycleID, plan.ProcessorKey, plan.ScopeKey, plan.Model, plan.PromptVersion); err != nil {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO cycle_post_processing_plans(cycle_id,processor_key,scope_key,model_identity,adapter_key,prompt_version) VALUES(?,?,?,?,?,?)`, cycleID, plan.ProcessorKey, plan.ScopeKey, plan.Model, normalizedAdapterKey(plan.AdapterKey), plan.PromptVersion); err != nil {
 			return 0, 0, fmt.Errorf("store cycle post-processing plan %s/%s: %w", plan.ProcessorKey, plan.ScopeKey, err)
 		}
 	}

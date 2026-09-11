@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/egekocabas/munichbrief/internal/gazetteer"
 	langregistry "github.com/egekocabas/munichbrief/internal/languages"
 	"github.com/egekocabas/munichbrief/internal/processing"
 	"github.com/egekocabas/munichbrief/internal/store"
@@ -39,6 +40,9 @@ var adminHistoryTemplate string
 
 //go:embed templates/admin_rss_history.html
 var adminRSSHistoryTemplate string
+
+//go:embed templates/admin_gazetteer.html
+var adminGazetteerTemplate string
 
 //go:embed templates/admin_translations.html
 var adminTranslationsTemplate string
@@ -73,6 +77,12 @@ var euAIAssetFiles embed.FS
 //go:embed static/eu-ai-generated-white-50.png
 var euAISocialLabel []byte
 
+//go:embed fonts/NotoSansSC-VF.ttf
+var notoSansSC []byte
+
+//go:embed fonts/NotoSansDevanagari-VF.ttf
+var notoSansDevanagari []byte
+
 type incidentStore interface {
 	ListPresentationEntries(context.Context, int, int, string, store.PresentationScope) ([]store.IncidentRecord, int, error)
 	ListPublicIncidentLinks(context.Context, string, store.PresentationScope) ([]store.PublicIncidentLink, error)
@@ -99,24 +109,39 @@ type ProcessingRequester interface {
 	RequestNow(context.Context, string, map[string]string, *int64, bool) (store.PipelineRequestResult, error)
 	ModelStatus(context.Context) (processing.PipelineModelStatus, error)
 	SetPreferredStepModel(context.Context, string, string) error
+	SetTranslationLanguageSetting(context.Context, string, string, string) error
+	SetPostProcessingScopeEnabled(context.Context, string, string, bool) (int, error)
+	SetPostProcessingProcessorEnabled(context.Context, string, bool) (int, error)
 	RequestPostProcessing(context.Context, processing.PostProcessingRequest) (int, error)
 	Status(context.Context) (processing.PipelineRuntimeStatus, error)
 	SetAutomaticProcessing(context.Context, bool) error
 	CancelAll(context.Context) (store.PipelineCancellationResult, error)
 }
 
+type GazetteerReader interface {
+	AdminSnapshot(context.Context) (gazetteer.AdminSnapshot, error)
+	RefreshHistory(context.Context, int) (gazetteer.RefreshHistoryPage, error)
+	RefreshDetails(context.Context, int64) (gazetteer.RefreshRunDetails, error)
+}
+
+type GazetteerRefresher interface {
+	RequestRefresh() gazetteer.RefreshRequestResult
+}
+
 // Options controls presentation and access behavior for a Server.
 // PublicHosts identifies requests that must never reach review-only routes.
 type Options struct {
-	PageSize         int
-	SourceMode       string
-	PresentationMode string
-	SecureCookies    bool
-	AdminEnabled     bool
-	PublicHosts      []string
-	CanonicalOrigin  string
-	Processor        ProcessingRequester
-	Build            BuildInfo
+	PageSize           int
+	SourceMode         string
+	PresentationMode   string
+	SecureCookies      bool
+	AdminEnabled       bool
+	PublicHosts        []string
+	CanonicalOrigin    string
+	Processor          ProcessingRequester
+	Gazetteer          GazetteerReader
+	GazetteerRefresher GazetteerRefresher
+	Build              BuildInfo
 }
 
 // BuildInfo identifies the source revision and time used for a deployed build.
@@ -141,6 +166,7 @@ type Server struct {
 	adminTemplate              *template.Template
 	adminHistoryTemplate       *template.Template
 	adminRSSHistoryTemplate    *template.Template
+	adminGazetteerTemplate     *template.Template
 	adminTranslationsTemplate  *template.Template
 	adminVerificationsTemplate *template.Template
 	socialCards                *socialCardRenderer
@@ -240,6 +266,10 @@ func newWithLanguages(database incidentStore, logger *slog.Logger, options Optio
 	if err != nil {
 		return nil, fmt.Errorf("parse admin RSS history template: %w", err)
 	}
+	adminGazetteer, err := template.New("admin_gazetteer").Funcs(functions).Parse(adminSharedTemplate + adminGazetteerTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("parse admin gazetteer template: %w", err)
+	}
 	adminTranslations, err := template.New("admin_translations").Funcs(functions).Parse(adminSharedTemplate + adminTranslationsTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("parse admin translations template: %w", err)
@@ -252,7 +282,7 @@ func newWithLanguages(database incidentStore, logger *slog.Logger, options Optio
 	if err != nil {
 		return nil, fmt.Errorf("initialize social card renderer: %w", err)
 	}
-	return &Server{store: database, logger: logger, options: options, location: location, languages: definitions, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, adminTemplate: admin, adminHistoryTemplate: adminHistory, adminRSSHistoryTemplate: adminRSSHistory, adminTranslationsTemplate: adminTranslations, adminVerificationsTemplate: adminVerifications, socialCards: socialCards}, nil
+	return &Server{store: database, logger: logger, options: options, location: location, languages: definitions, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, adminTemplate: admin, adminHistoryTemplate: adminHistory, adminRSSHistoryTemplate: adminRSSHistory, adminGazetteerTemplate: adminGazetteer, adminTranslationsTemplate: adminTranslations, adminVerificationsTemplate: adminVerifications, socialCards: socialCards}, nil
 }
 
 // Handler returns the complete public and optional review route tree.
@@ -282,6 +312,9 @@ func (s *Server) Handler() http.Handler {
 		mux.HandleFunc("GET /admin/rss-history", s.adminRSSHistory)
 		mux.HandleFunc("GET /admin/rss-history/{id}", s.adminRSSDetails)
 		mux.HandleFunc("GET /admin/rss-history/{id}/documents/{document}", s.adminRSSDetails)
+		mux.HandleFunc("GET /admin/gazetteer", s.adminGazetteer)
+		mux.HandleFunc("GET /admin/gazetteer/{id}", s.adminGazetteerDetails)
+		mux.HandleFunc("POST /api/admin/gazetteer/refresh", s.refreshGazetteer)
 		mux.HandleFunc("GET /admin/history", s.adminHistory)
 		mux.HandleFunc("GET /api/admin/ai/status", s.pipelineStatus)
 		mux.HandleFunc("POST /api/admin/ai/process-now", s.processIncidentNow)
@@ -289,7 +322,10 @@ func (s *Server) Handler() http.Handler {
 		mux.HandleFunc("POST /api/admin/ai/reprocess-all", s.reprocessAll)
 		mux.HandleFunc("POST /api/admin/ai/step-model", s.updatePreferredStepModel)
 		mux.HandleFunc("POST /api/admin/ai/post-processing/process", s.processPostProcessing)
+		mux.HandleFunc("POST /api/admin/ai/post-processing/enabled", s.updatePostProcessingScopeEnabled)
+		mux.HandleFunc("POST /api/admin/ai/post-processing/processor-enabled", s.updatePostProcessingProcessorEnabled)
 		mux.HandleFunc("POST /api/admin/ai/translations/process", s.processTranslations)
+		mux.HandleFunc("POST /api/admin/ai/translations/preference", s.updateTranslationPreference)
 		mux.HandleFunc("POST /api/admin/ai/automatic-processing", s.updateAutomaticProcessing)
 		mux.HandleFunc("POST /api/admin/ai/cancel-all", s.cancelAllProcessing)
 	}

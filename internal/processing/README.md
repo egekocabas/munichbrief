@@ -31,18 +31,30 @@ Failures are not verdicts and leave the previous successful correction, or the
 original category when no correction succeeded, effective.
 
 The translation registration generates one processor scope per target
-language. English uses `incident-translation-en-v2`; every translation receives
+language. English uses `incident-translation-en-v3`; every translation receives
 only the accepted German presentation and never blocks canonical completion.
-TranslateGemma prompts derive the English model-facing language names and exact
-BCP-47 codes from the shared language registry. They use the model's recommended
-single-user-message shape, with the complete instruction followed by the JSON
-payload after the required two blank lines; Ollama's structured-output schema
+Unified translation prompts derive the English model-facing language names and
+exact BCP-47 codes from the shared language registry. They use one user message,
+with the complete instruction followed by the JSON payload after exactly two
+blank lines; Ollama's structured-output schema
 still constrains the response to the registered title and summary fields. Each
 target keeps one active immutable prompt, and retired prompt versions remain
 registered for audit. The generic factory derives its schema, decoder, step,
 and scope; follow
 [Adding a reader language](../../docs/adding-a-language.md) instead of adding
 worker or store branches.
+
+Each target also has a durable production route containing an installed model
+and adapter. `structured` uses the unified JSON contract;
+`translategemma` and `hy-mt2` use their documented user-only, plain-text
+contracts and send title and summary sequentially as separate requests. HY-MT2
+is offered only for targets in its official language table. All routes still
+pass through Gazetteer protection, restoration, target-script checks, and the
+same output validator. The model, adapter, and prompt are frozen with a queued
+job and included in its input hash and audit provenance.
+Because the language prompt version is also the durable version boundary for
+native adapter instructions, changing a native prompt's semantics requires
+bumping every affected translation scope before queueing new work.
 
 `steps.go` is the registry and validation boundary. A model response is not
 publishable merely because it matches JSON: field limits, allowed values,

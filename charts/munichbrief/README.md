@@ -24,6 +24,8 @@ helm install munichbrief ./charts/munichbrief \
 - Reader and metrics use separate service ports.
 - Both LAN and public ingresses are disabled.
 - Ollama processing and its dedicated egress rule are disabled.
+- Gazetteer refresh follows the source mode by default: disabled for fixtures
+  and enabled for live deployments. An explicit boolean overrides that rule.
 
 The default NetworkPolicy permits DNS, same-namespace traffic, selected ingress
 namespaces, metrics scraping, and public HTTPS for opt-in live ingestion. The
@@ -40,6 +42,7 @@ Public ingress requires:
 
 - `application.sourceMode=live`;
 - `application.presentationMode=public`;
+- `application.gazetteerEnabled=true` before enabling translation processing;
 - every public ingress hostname in `application.publicHosts`;
 - an HTTPS `application.canonicalOrigin` using one of those hosts; and
 - `ingress.public.languageCodes` matching the compiled reader registry; and
@@ -55,8 +58,9 @@ matching NetworkPolicy egress. The legacy chart key `networkPolicy.pi8` is kept
 for compatibility; it controls the explicit Ollama CIDR and port allowlist.
 
 Fresh databases have no preferred models. Enable the protected admin view,
-select one installed model for every registered pipeline step, and then allow
-scheduled or manual cycles.
+select one installed model for every canonical pipeline step, and select an
+installed model plus supported adapter for every reader language on
+`/admin/translations` before allowing scheduled or manual cycles.
 
 Administration requires the LAN ingress plus exactly one of
 `admin.basicAuthSecret` or `admin.basicAuthMiddleware`. The chart never creates

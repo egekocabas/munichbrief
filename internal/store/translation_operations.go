@@ -52,6 +52,7 @@ type AdminTranslationIncident struct {
 	Title                string
 	Summary              string
 	Model                string
+	AdapterKey           string
 	PromptVersion        string
 	GeneratedAt          *time.Time
 	Status               string
@@ -61,6 +62,7 @@ type AdminTranslationIncident struct {
 	NextRetryAt          *time.Time
 	FailureKind          string
 	AttemptModel         string
+	AttemptAdapterKey    string
 	AttemptPromptVersion string
 	AttemptUpdatedAt     *time.Time
 }
@@ -145,10 +147,10 @@ func (s *Store) ListAdminTranslationIncidents(ctx context.Context, limit, offset
 			d.published_at, matrix.language_code,
 			COALESCE((SELECT value FROM post_processing_values WHERE job_id=matrix.success_id AND kind='title'), ''),
 			COALESCE((SELECT value FROM post_processing_values WHERE job_id=matrix.success_id AND kind='summary'), ''),
-			COALESCE(success.model_identity, ''), COALESCE(success.prompt_version, ''), COALESCE(success.completed_at, ''),
+			COALESCE(success.model_identity, ''), COALESCE(success.adapter_key, ''), COALESCE(success.prompt_version, ''), COALESCE(success.completed_at, ''),
 			COALESCE(latest.status, ''), COALESCE(latest.status_reason, ''), COALESCE(latest.status_detail, ''),
 			COALESCE(latest.attempt_count, 0), COALESCE(latest.next_retry_at, ''), COALESCE(latest.failure_kind, ''),
-			COALESCE(latest.model_identity, ''), COALESCE(latest.prompt_version, ''), COALESCE(latest.updated_at, '')
+			COALESCE(latest.model_identity, ''), COALESCE(latest.adapter_key, ''), COALESCE(latest.prompt_version, ''), COALESCE(latest.updated_at, '')
 		FROM translation_matrix matrix
 		JOIN incidents i ON i.id=matrix.incident_id JOIN source_documents d ON d.id=i.source_document_id
 		LEFT JOIN post_processing_jobs success ON success.id=matrix.success_id
@@ -166,9 +168,9 @@ func (s *Store) ListAdminTranslationIncidents(ctx context.Context, limit, offset
 		var publishedAt, generatedAt, nextRetryAt, attemptUpdatedAt string
 		if err := rows.Scan(
 			&item.IncidentID, &item.CanonicalTitle, &publishedAt, &item.Language,
-			&item.Title, &item.Summary, &item.Model, &item.PromptVersion, &generatedAt,
+			&item.Title, &item.Summary, &item.Model, &item.AdapterKey, &item.PromptVersion, &generatedAt,
 			&item.Status, &item.StatusReason, &item.StatusDetail, &item.Attempts, &nextRetryAt, &item.FailureKind,
-			&item.AttemptModel, &item.AttemptPromptVersion, &attemptUpdatedAt,
+			&item.AttemptModel, &item.AttemptAdapterKey, &item.AttemptPromptVersion, &attemptUpdatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan admin translation incident: %w", err)
 		}

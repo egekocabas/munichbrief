@@ -64,6 +64,7 @@ Start with fixture data and explicitly enable processing:
 ```bash
 MUNICHBRIEF_AI_ENABLED=true \
 MUNICHBRIEF_AI_IMMEDIATE=true \
+MUNICHBRIEF_GAZETTEER_ENABLED=true \
 MUNICHBRIEF_OLLAMA_BASE_URL=http://127.0.0.1:11434 \
 MUNICHBRIEF_ADMIN_ENABLED=true \
 MUNICHBRIEF_PRESENTATION_MODE=review \
@@ -71,7 +72,9 @@ go run ./cmd/munichbrief
 ```
 
 Select an installed model for every registered step in the protected/local
-admin view. The explicit live Ollama smoke test is:
+admin view. Enabling the gazetteer performs bounded public-source downloads;
+omit it when testing only canonical German or verification processors, in which
+case translation claims remain paused. The explicit live Ollama smoke test is:
 
 ```bash
 MUNICHBRIEF_OLLAMA_LIVE_TEST=1 go test -run TestLiveOllamaPrivacySafeMetadataFirstPresentation -v ./internal/processing
@@ -87,17 +90,166 @@ incidents. Never commit downloaded source text, model output, or test databases,
 and never write to a production database during verification.
 
 For a focused translation prompt check without running the German metadata and
-presentation stages, use the same explicit opt-in against TranslateGemma:
+presentation stages, use the same explicit opt-in. The test falls back to
+`translategemma:4b`; `MUNICHBRIEF_OLLAMA_TRANSLATION_MODEL` may select any
+installed schema-capable Ollama model:
 
 ```bash
 MUNICHBRIEF_OLLAMA_LIVE_TEST=1 \
 MUNICHBRIEF_OLLAMA_TRANSLATION_MODEL=translategemma:4b \
-go test -run TestLiveOllamaTranslateGemmaPromptContract -v ./internal/processing
+go test -run 'TestLiveOllama(UnifiedTranslationPromptContract|RegisteredTranslationTargets)$' \
+  -v ./internal/processing
 ```
 
-The focused check covers registered language identities, Munich place names,
-required terminology, attribution and uncertainty, strict JSON, and
+The focused checks cover every registered target, language identities, Munich
+district and street names, required terminology, attribution and uncertainty,
+strict JSON, Han, Devanagari, and Cyrillic script output, and
 instruction-like translated data without logging generated text.
+
+See [Translation model evaluation](translation-model-evaluation.md) for the
+official TranslateGemma request contract, the native-adapter boundary, separate
+structural/editorial scoring, and the bounded comparison protocol.
+
+The HY-MT2 and Seed-X critical screen never mutates production model routing. It
+verifies the selected installed model identity before generation, always uses
+typed placeholders, sends titles and summaries as separate requests, and
+checkpoints every field under `.local/` so the same run can resume after
+interruption. Seed-X is an opt-in per-language adapter, but the evaluated
+third-party Q5_K_M artifact is not a qualified production model:
+
+```bash
+MUNICHBRIEF_NATIVE_ADAPTER_SMOKE_LIVE_TEST=1 \
+MUNICHBRIEF_OLLAMA_BASE_URL=http://127.0.0.1:11434 \
+go test -timeout 60m -run TestLiveNativeTranslationAdapterSmoke \
+  -v ./internal/processing
+```
+
+The smoke test makes one production-shaped English-control case per adapter,
+with separate title and summary requests, and prints raw and restored output for
+inspection. Set `MUNICHBRIEF_NATIVE_ADAPTER_SMOKE_ADAPTER` to `hy-mt2` or
+`seed-x` for a targeted rerun. Run the smoke before the complete checkpointed
+screen:
+
+```bash
+MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_LIVE_TEST=1 \
+MUNICHBRIEF_OLLAMA_BASE_URL=http://127.0.0.1:11434 \
+go test -timeout 12h -run TestLiveNativeTranslationAdapterScreen \
+  -v ./internal/processing
+```
+
+Set `MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_DIR` to use a different checkpoint
+directory. Set `MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_ADAPTER` to `hy-mt2` or
+`seed-x` to run only an adapter that passed its smoke gate. A directory is bound
+to the exact selected adapter, model digest, prompt, settings, fixtures,
+languages, and repetitions in its manifest; use a new directory when any of
+those inputs changes. Targeted follow-ups may select comma-separated language
+codes with `MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_LANGUAGES` and fixture names with
+`MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_FIXTURES`. Generated output remains local
+evaluation evidence and requires manual semantic review even when all
+mechanical checks pass.
+
+The full production-worker readiness harness also accepts
+`MUNICHBRIEF_READINESS_ADAPTER=seed-x`, `salamandra-ta`, `llamax3`, `eurollm`,
+`tower-plus`, `tower-instruct`, `madlad400`, or `gemma4`. Seed-X uses raw
+`/api/generate`, its mandatory final language tag, greedy decoding, at most 512
+output tokens, and a 4096-token effective context. SalamandraTA uses user-only
+ChatML, greedy decoding, at most 1024 output tokens, and an 8192-token effective
+context. LLaMAX3 uses raw Alpaca-format generation; EuroLLM and Tower+ use
+user-only labelled-source ChatML. TowerInstruct renders that user-only ChatML
+through raw generation because the evaluated GGUF template otherwise inserts an
+empty system turn. MADLAD-400 uses raw generation with only its documented
+`<2xx>` target token and source text, greedy decoding, at most 512 output tokens,
+and a 2048-token effective context. Gemma 4 uses one user-only labelled-source
+chat message with thinking disabled. The evaluation adapters use greedy decoding
+and at most 1024 output tokens; Tower+, TowerInstruct, MADLAD-400, and Gemma 4
+use a 2048-token effective context. Use a fresh readiness
+directory whenever the prompt, model, or target changes; recording/replay binds
+saved responses to the exact rendered request and model digest.
+
+The current release gate, resumable six-fixture matrix, per-language report,
+and review criteria are in
+[Pre-merge translation testing](pre-merge-translation-testing.md).
+
+The production-worker readiness harness is the current evaluation entry point.
+It requires an isolated directory containing a refreshed `gazetteer.db` and
+`real-fixtures.json`: an array of three objects with IDs `D`, `E`, and `F`,
+`title`, `summary`, `source` URL, a `facts` string array, and a `places` string
+array. Synthetic A-C are defined in the harness. Freeze all six before running.
+Do not copy an operational incident database into the evaluation directory.
+
+```bash
+MUNICHBRIEF_READINESS_LIVE_TEST=1 \
+MUNICHBRIEF_READINESS_DIR=.local/translation-evaluations/readiness-v1 \
+MUNICHBRIEF_OLLAMA_BASE_URL=http://127.0.0.1:11434 \
+MUNICHBRIEF_READINESS_MODEL=hf.co/mradermacher/Hy-MT2-7B-GGUF:Q5_K_M \
+MUNICHBRIEF_READINESS_LANGUAGES=en,uk \
+MUNICHBRIEF_READINESS_FIXTURES=A \
+MUNICHBRIEF_READINESS_REPETITIONS=1 \
+MUNICHBRIEF_READINESS_MAX_NEW_CALLS=4 \
+go test -buildvcs=true -count=1 -timeout 70m -run '^TestLiveTranslationReadiness$' \
+  -v ./internal/processing
+```
+
+Language/fixture/repetition selections and the new-call budget do not invalidate
+completed requests. Select one language for later stages: A-C first, then D-F,
+then A-B with repetition 2. Set `MUNICHBRIEF_READINESS_ADAPTER` to `hy-mt2`
+(default), `translategemma`, `seed-x`, `salamandra-ta`, `llamax3`, `eurollm`,
+`tower-plus`, `tower-instruct`, `madlad400`, `gemma4`, or `structured` for the
+roadmap's candidates.
+`MUNICHBRIEF_READINESS_MODEL` may explicitly select an
+installed native-adapter artifact for a controlled comparison; structured mode
+uses its fixed candidate. Always use a new evaluation directory for a different
+model or digest.
+Set the new-call limit to zero to revalidate recorded responses without inference
+(the installed digest is still verified). A transport interruption stops the run;
+rerun the same command to replay saved fields and finish only missing calls.
+
+The manifest pins code-content identity, revision provenance, model digest,
+fixtures, and Gazetteer generation/content. Rendered request bodies are checked
+before both replay and generation. Code/model/source changes require a new
+directory; documentation-only commits do not invalidate identical requests.
+The first live invocation also stores the complete Ollama `/api/show` response
+and current `/api/ps` state in `artifact-preflight.json`. Append-only
+`requests.jsonl` retains every attempt, including rejected raw
+responses. Separate per-case databases and result files retain worker outcomes;
+`*-review.json` is initialized once and never overwritten by resume. An incomplete
+final event is retained separately before repairing its append boundary. Completed
+invalid model responses are replayed, not silently replaced by another attempt.
+
+The older native-adapter and summary screens below remain historical comparison
+tools. They are not substitutes for the queued-worker readiness harness.
+
+The smaller HY-MT2 plain-text screen sends one summary request for each of the
+ten supported MunichBrief targets (`en`, `tr`, `it`, `uk`, `zh`, `hi`, `es`,
+`fr`, `pl`, and `ru`). It uses its own configuration-bound checkpoint directory
+and remains available for reproducing the older summary-only comparison:
+
+```bash
+MUNICHBRIEF_HYMT2_LANGUAGE_SCREEN_LIVE_TEST=1 \
+MUNICHBRIEF_OLLAMA_BASE_URL=http://127.0.0.1:11434 \
+go test -timeout 4h -run TestLiveHyMT2SupportedReaderLanguageSummaryScreen \
+  -v ./internal/processing
+```
+
+The screen records raw and restored output for manual editorial review and
+rejects Markdown or URLs. It resumes completed languages after interruption;
+set `MUNICHBRIEF_NATIVE_ADAPTER_SCREEN_DIR` only when an explicit alternate
+checkpoint location is needed.
+
+The longer Munich place-name preservation matrix is independently gated so it
+does not slow the normal live smoke suite. It checks every translation target
+through the real placeholder wrapper with one dense request containing all 11
+requested forms: transit labels, streets, districts, municipalities, and
+hyphenated names. Every restored spelling must exactly match the NFC-normalized
+source, the result must remain plain text without URLs, and model output is not
+logged:
+
+```bash
+MUNICHBRIEF_OLLAMA_PLACE_NAMES_LIVE_TEST=1 \
+MUNICHBRIEF_OLLAMA_TRANSLATION_MODEL=translategemma:4b \
+go test -timeout 90m -run TestLiveOllamaMunichPlaceNamePreservationMatrix \
+  -v ./internal/processing
+```
 
 The real-RSS Qwen check requires its separate explicit opt-in:
 

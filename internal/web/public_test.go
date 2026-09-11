@@ -12,11 +12,13 @@ import (
 	"testing"
 	"testing/fstest"
 	"time"
+	"unicode/utf8"
 
 	"github.com/egekocabas/munichbrief/internal/domain"
 	langregistry "github.com/egekocabas/munichbrief/internal/languages"
 	"github.com/egekocabas/munichbrief/internal/processing"
 	"github.com/egekocabas/munichbrief/internal/store"
+	"golang.org/x/text/unicode/norm"
 )
 
 func TestTimelineAndDetailRenderFixtureData(t *testing.T) {
@@ -683,9 +685,10 @@ func TestPublicHostUsesFailClosedPresentationAndRejectsAdmin(t *testing.T) {
 			}
 
 			for _, route := range []struct{ method, path string }{
-				{http.MethodGet, "/admin"}, {http.MethodGet, "/admin/translations"}, {http.MethodGet, "/admin/verifications"}, {http.MethodGet, "/admin/rss-history"}, {http.MethodGet, "/admin/history"},
+				{http.MethodGet, "/admin"}, {http.MethodGet, "/admin/translations"}, {http.MethodGet, "/admin/verifications"}, {http.MethodGet, "/admin/rss-history"}, {http.MethodGet, "/admin/gazetteer"}, {http.MethodGet, "/admin/history"},
 				{http.MethodPost, "/api/admin/ai/process-all-now"}, {http.MethodPost, "/api/admin/ai/translations/process"},
-				{http.MethodPost, "/api/admin/ai/automatic-processing"}, {http.MethodPost, "/api/admin/ai/cancel-all"}, {http.MethodGet, "/private"},
+				{http.MethodPost, "/api/admin/gazetteer/refresh"},
+				{http.MethodPost, "/api/admin/ai/automatic-processing"}, {http.MethodPost, "/api/admin/ai/post-processing/processor-enabled"}, {http.MethodPost, "/api/admin/ai/cancel-all"}, {http.MethodGet, "/private"},
 			} {
 				response := httptest.NewRecorder()
 				request := httptest.NewRequest(route.method, route.path, nil)
@@ -735,6 +738,11 @@ func TestLocalizedRoutesAndLanguagePreference(t *testing.T) {
 	if !strings.Contains(english.Body.String(), `href="/de/about?page=2"`) || !strings.Contains(english.Body.String(), `hreflang="de-DE"`) {
 		t.Fatal("English page does not preserve path and query in its language switch")
 	}
+	for _, expected := range []string{`<details class="language-menu`, `max-h-[calc(100dvh-7rem)]`, "Deutsch", "Türkçe", "Hrvatski", "Italiano", "Українська", "Bosanski", "简体中文", "हिन्दी", "Español", "Français", "Română", "Polski", "Русский"} {
+		if !strings.Contains(english.Body.String(), expected) {
+			t.Errorf("compact language menu does not contain %q", expected)
+		}
+	}
 	cookies := english.Result().Cookies()
 	if len(cookies) != 1 || cookies[0].Name != "munichbrief_language" || cookies[0].Value != "en" || !cookies[0].HttpOnly || cookies[0].SameSite != http.SameSiteLaxMode || cookies[0].MaxAge != 365*24*60*60 || cookies[0].Expires.Before(time.Now().Add(364*24*time.Hour)) {
 		t.Fatalf("language cookie = %#v", cookies)
@@ -768,7 +776,23 @@ func TestLocalizedRoutesAndLanguagePreference(t *testing.T) {
 		t.Fatalf("legacy incident redirect = %d %q", legacyIncident.Code, legacyIncident.Header().Get("Location"))
 	}
 
-	for _, path := range []string{"/fr", "/fr/about"} {
+	for _, localized := range []struct{ path, tag, copy string }{
+		{path: "/zh/about", tag: "zh-CN", copy: "MunichBrief 的工作方式"},
+		{path: "/hi/about", tag: "hi-IN", copy: "MunichBrief कैसे काम करता है"},
+		{path: "/es/about", tag: "es-ES", copy: "Cómo funciona MunichBrief"},
+		{path: "/fr/about", tag: "fr-FR", copy: "Comment fonctionne MunichBrief"},
+		{path: "/ro/about", tag: "ro-RO", copy: "Cum funcționează MunichBrief"},
+		{path: "/pl/about", tag: "pl-PL", copy: "Jak działa MunichBrief"},
+		{path: "/ru/about", tag: "ru-RU", copy: "Как работает MunichBrief"},
+	} {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, localized.path, nil))
+		if response.Code != http.StatusOK || response.Header().Get("Content-Language") != localized.tag || !strings.Contains(response.Body.String(), localized.copy) {
+			t.Errorf("%s response = %d/%q", localized.path, response.Code, response.Header().Get("Content-Language"))
+		}
+	}
+
+	for _, path := range []string{"/pt", "/pt/about"} {
 		response := httptest.NewRecorder()
 		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
 		if response.Code != http.StatusNotFound {
@@ -832,6 +856,36 @@ func TestTranslationCatalogsAreCompleteAndPluralized(t *testing.T) {
 		{language: "de", count: 2, expected: "2 Meldungen"},
 		{language: "en", count: 1, expected: "1 report"},
 		{language: "en", count: 2, expected: "2 reports"},
+		{language: "tr", count: 1, expected: "1 bildirim"},
+		{language: "tr", count: 2, expected: "2 bildirim"},
+		{language: "hr", count: 1, expected: "1 priopćenje"},
+		{language: "hr", count: 2, expected: "2 priopćenja"},
+		{language: "hr", count: 5, expected: "5 priopćenja"},
+		{language: "it", count: 1, expected: "1 comunicato"},
+		{language: "it", count: 2, expected: "2 comunicati"},
+		{language: "uk", count: 1, expected: "1 повідомлення"},
+		{language: "uk", count: 2, expected: "2 повідомлення"},
+		{language: "uk", count: 5, expected: "5 повідомлень"},
+		{language: "bs", count: 1, expected: "1 saopćenje"},
+		{language: "bs", count: 2, expected: "2 saopćenja"},
+		{language: "bs", count: 5, expected: "5 saopćenja"},
+		{language: "zh", count: 1, expected: "1 条通报"},
+		{language: "zh", count: 12, expected: "12 条通报"},
+		{language: "hi", count: 1, expected: "1 रिपोर्ट"},
+		{language: "hi", count: 2, expected: "2 रिपोर्टें"},
+		{language: "es", count: 1, expected: "1 informe"},
+		{language: "es", count: 2, expected: "2 informes"},
+		{language: "fr", count: 1, expected: "1 rapport"},
+		{language: "fr", count: 2, expected: "2 rapports"},
+		{language: "ro", count: 1, expected: "1 informare"},
+		{language: "ro", count: 2, expected: "2 informări"},
+		{language: "ro", count: 20, expected: "20 de informări"},
+		{language: "pl", count: 1, expected: "1 zgłoszenie"},
+		{language: "pl", count: 2, expected: "2 zgłoszenia"},
+		{language: "pl", count: 5, expected: "5 zgłoszeń"},
+		{language: "ru", count: 1, expected: "1 сообщение"},
+		{language: "ru", count: 2, expected: "2 сообщения"},
+		{language: "ru", count: 5, expected: "5 сообщений"},
 	} {
 		if actual := translations.Count(test.language, "Reports", test.count); actual != test.expected {
 			t.Errorf("Count(%q, %d) = %q, want %q", test.language, test.count, actual, test.expected)
@@ -857,6 +911,41 @@ func TestTranslationCatalogsAreCompleteAndPluralized(t *testing.T) {
 	}
 	if err := validateCatalogParity(missingPluralCount, "de.toml", "en.toml"); err == nil {
 		t.Fatal("translation catalog plural forms without count rendering were accepted")
+	}
+}
+
+func TestReaderCatalogsAreUTF8NFCAndContainRepresentativeCharacters(t *testing.T) {
+	representative := map[string]string{
+		"tr": "çğıİöşü",
+		"hr": "čćđšž",
+		"it": "àèéòù",
+		"uk": "ЄІєї",
+		"bs": "čćđšž",
+		"zh": "中文警方慕尼黑简体",
+		"hi": "अआईउएकगचजटडतदनपबमयरलवशसह़ँ",
+		"es": "áéíóúñ¿",
+		"fr": "àçéèôœ",
+		"ro": "ăâîșț",
+		"pl": "ąćęłńóśźż",
+		"ru": "ёйщыэюя",
+	}
+	for code, characters := range representative {
+		definition, found := langregistry.ByCode(langregistry.Registered(), code)
+		if !found {
+			t.Fatalf("reader language %q is not registered", code)
+		}
+		contents, err := localeFiles.ReadFile(definition.Catalog)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !utf8.Valid(contents) || !norm.NFC.IsNormal(contents) {
+			t.Errorf("catalog %s is not valid NFC-normalized UTF-8", definition.Catalog)
+		}
+		for _, character := range characters {
+			if !strings.ContainsRune(string(contents), character) {
+				t.Errorf("catalog %s does not exercise representative character %q (U+%04X)", definition.Catalog, character, character)
+			}
+		}
 	}
 }
 

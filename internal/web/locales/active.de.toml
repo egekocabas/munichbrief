@@ -100,6 +100,43 @@ other = "Zur deutschen Version wechseln"
 [SwitchToEnglish]
 other = "Zur englischen Version wechseln"
 
+[SwitchToTurkish]
+other = "Zur türkischen Version wechseln"
+
+[SwitchToCroatian]
+other = "Zur kroatischen Version wechseln"
+
+[SwitchToItalian]
+other = "Zur italienischen Version wechseln"
+
+[SwitchToUkrainian]
+other = "Zur ukrainischen Version wechseln"
+
+[SwitchToBosnian]
+other = "Zur bosnischen Version wechseln"
+
+[SwitchToChinese]
+other = "Zur chinesischen Version wechseln"
+
+[SwitchToHindi]
+other = "Zur Hindi-Version wechseln"
+
+[SwitchToSpanish]
+other = "Zur spanischen Version wechseln"
+
+[SwitchToFrench]
+other = "Zur französischen Version wechseln"
+
+
+[SwitchToRomanian]
+other = "Zur rumänischen Version wechseln"
+
+[SwitchToPolish]
+other = "Zur polnischen Version wechseln"
+
+[SwitchToRussian]
+other = "Zur russischen Version wechseln"
+
 [HeroEyebrowFixture]
 other = "Lokaler Prototyp"
 
@@ -326,6 +363,43 @@ other = "Kategorieprüfung"
 [EnglishTranslationStep]
 other = "Englische Übersetzung"
 
+[TurkishTranslationStep]
+other = "Türkische Übersetzung"
+
+[CroatianTranslationStep]
+other = "Kroatische Übersetzung"
+
+[ItalianTranslationStep]
+other = "Italienische Übersetzung"
+
+[UkrainianTranslationStep]
+other = "Ukrainische Übersetzung"
+
+[BosnianTranslationStep]
+other = "Bosnische Übersetzung"
+
+[ChineseTranslationStep]
+other = "Chinesische Übersetzung"
+
+[HindiTranslationStep]
+other = "Hindi-Übersetzung"
+
+[SpanishTranslationStep]
+other = "Spanische Übersetzung"
+
+[FrenchTranslationStep]
+other = "Französische Übersetzung"
+
+
+[RomanianTranslationStep]
+other = "Rumänische Übersetzung"
+
+[PolishTranslationStep]
+other = "Polnische Übersetzung"
+
+[RussianTranslationStep]
+other = "Russische Übersetzung"
+
 [StagedPipeline]
 other = "Mehrstufige Pipeline"
 
@@ -381,7 +455,7 @@ other = "So funktioniert MunichBrief"
 other = "Über MunichBrief"
 
 [AboutIntro]
-other = "MunichBrief verwandelt offizielle Meldungen der Münchner Polizei in klare, strukturierte Vorfallszusammenfassungen auf Deutsch und Englisch."
+other = "MunichBrief verwandelt offizielle Meldungen der Münchner Polizei in klare, strukturierte Vorfallszusammenfassungen in mehreren Lesesprachen."
 
 [FromReleaseToIncident]
 other = "Von der Meldung zum Vorfall"
@@ -408,7 +482,7 @@ other = "Lokale KI-Modelle extrahieren Angaben wie Kategorien, Orte, Daten und �
 other = "Übersetzen und veröffentlichen"
 
 [TranslatePublishCopy]
-other = "Deutsche Zusammenfassungen, die die automatisierten Verarbeitungskontrollen bestehen, werden ins Englische übersetzt. Öffentliche Seiten zeigen KI-generierte Inhalte erst, nachdem die Verarbeitungspipeline erfolgreich abgeschlossen wurde."
+other = "Deutsche Zusammenfassungen, die die automatisierten Verarbeitungskontrollen bestehen, werden in die verfügbaren Lesesprachen übersetzt. Öffentliche Seiten zeigen KI-generierte Inhalte erst, nachdem die Verarbeitungspipeline erfolgreich abgeschlossen wurde."
 
 [AccuracyOfficialInformation]
 other = "Genauigkeit und offizielle Informationen"

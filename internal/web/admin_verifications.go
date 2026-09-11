@@ -274,6 +274,16 @@ type adminVerificationsPage struct {
 }
 
 func (page *adminVerificationsPage) setNotice(query url.Values) {
+	if scope := query.Get("automatic_scope"); scope != "" {
+		enabled := query.Get("automatic_enabled") == "true"
+		skipped, _ := nonNegativeQueryIntFromValues(query, "automatic_skipped")
+		state := "disabled"
+		if enabled {
+			state = "enabled"
+		}
+		page.Notice = fmt.Sprintf("Automatic %s/%s processing is %s. %d queued automatic job(s) were skipped; manual verification actions remain available.", query.Get("automatic_processor"), scope, state, skipped)
+		return
+	}
 	queued, ok := nonNegativeQueryIntFromValues(query, "post_processing_queued")
 	if !ok {
 		return

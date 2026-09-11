@@ -8,6 +8,12 @@ data:
   MUNICHBRIEF_ADDR: ":8080"
   MUNICHBRIEF_METRICS_ADDR: ":9090"
   MUNICHBRIEF_DATABASE_PATH: "/data/munichbrief.db"
+  MUNICHBRIEF_GAZETTEER_DATABASE_PATH: "/data/munichbrief-gazetteer.db"
+  {{- if ne .Values.application.gazetteerEnabled nil }}
+  MUNICHBRIEF_GAZETTEER_ENABLED: {{ .Values.application.gazetteerEnabled | quote }}
+  {{- end }}
+  MUNICHBRIEF_GAZETTEER_REFRESH_INTERVAL: {{ .Values.application.gazetteerRefreshInterval | quote }}
+  MUNICHBRIEF_GAZETTEER_HTTP_TIMEOUT: {{ .Values.application.gazetteerHTTPTimeout | quote }}
   MUNICHBRIEF_SOURCE_MODE: {{ .Values.application.sourceMode | quote }}
   MUNICHBRIEF_PUBLIC_HOSTS: {{ join "," .Values.application.publicHosts | quote }}
   MUNICHBRIEF_CANONICAL_ORIGIN: {{ .Values.application.canonicalOrigin | quote }}

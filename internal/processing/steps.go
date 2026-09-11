@@ -6,14 +6,17 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	langregistry "github.com/egekocabas/munichbrief/internal/languages"
 	"github.com/egekocabas/munichbrief/internal/store"
+	"golang.org/x/text/unicode/norm"
 )
 
 const (
@@ -232,8 +235,11 @@ func newTranslationDefinition(target langregistry.Definition, prompt PromptDefin
 	schema, err := json.Marshal(map[string]any{
 		"type": "object",
 		"properties": map[string]any{
-			titleField:   map[string]any{"type": "string", "minLength": 1, "maxLength": 90},
-			summaryField: map[string]any{"type": "string", "minLength": 1, "maxLength": 600},
+			// Typed placeholders can be longer than the reader-visible names they
+			// replace. Enforce the real 90/600 limits after restoration instead of
+			// inviting schema-constrained models to truncate an immutable token.
+			titleField:   map[string]any{"type": "string", "minLength": 1},
+			summaryField: map[string]any{"type": "string", "minLength": 1},
 		},
 		"required": []string{titleField, summaryField}, "additionalProperties": false,
 	})
@@ -247,7 +253,7 @@ func newTranslationDefinition(target langregistry.Definition, prompt PromptDefin
 			InputKinds: []string{"title_de", "summary_de"}, OutputKinds: []string{"title", "summary"},
 			SystemPrompt: prompt.SystemPrompt, Schema: schema,
 			Generator: translationInputGenerator(prompt.Version), OutputDecoder: translationOutputDecoder(titleField, summaryField),
-			Validator: func(_ StepInput, output *StepOutput) error { return validateTranslation(output) }, OutputValues: postProcessingOutputValues},
+			Validator: translationValidator(target.Code), OutputValues: postProcessingOutputValues},
 	}, nil
 }
 
@@ -753,23 +759,241 @@ func validateGermanPresentation(_ StepInput, output *StepOutput) error {
 	if err := normalizePrivacyFlags(&output.PrivacyFlags); err != nil {
 		return err
 	}
+	if err := validatePlainPresentation("title_de", output.TitleDE); err != nil {
+		return err
+	}
+	if err := validatePlainPresentation("summary_de", output.SummaryDE); err != nil {
+		return err
+	}
 	return validatePublicText(output.TitleDE + "\n" + output.SummaryDE)
 }
 
-func validateTranslation(output *StepOutput) error {
+var (
+	translationURLPattern          = regexp.MustCompile(`(?i)\b(?:https?://|www\.)[^\s)]+`)
+	translationPlaceTokenPattern   = regexp.MustCompile(`__MB_[A-Z_]+_[0-9]{4}__`)
+	translationNumberPattern       = regexp.MustCompile(`[0-9]+`)
+	translation24HourPattern       = regexp.MustCompile(`\b([01]?[0-9]|2[0-3]):([0-5][0-9])\b`)
+	translation12HourPattern       = regexp.MustCompile(`(?i)\b(1[0-2]|0?[1-9])(?::([0-5][0-9]))?\s*([ap])\.?\s*m\.?`)
+	translationHourMarkerPattern   = regexp.MustCompile(`(?i)\b([01]?[0-9]|2[0-3])\s*h(?:eure(?:s)?)?(?:\s*([0-5][0-9]))?\b`)
+	translationChineseTimePattern  = regexp.MustCompile(`([01]?[0-9]|2[0-3])\s*点(?:\s*([0-5]?[0-9])\s*分?)?`)
+	presentationMarkdownPattern    = regexp.MustCompile("(?m)(?:\\*\\*|__|`|^\\s{0,3}(?:#{1,6}\\s|>\\s|[-+*]\\s)|!?\\[[^]\\n]+\\]\\([^)\\n]+\\))")
+	presentationOrderedListPattern = regexp.MustCompile(`(?m)^\s{0,3}[0-9]+\.\s`)
+	presentationDatePrefixPattern  = regexp.MustCompile(`(?m)^\s{0,3}(?:[1-9]|[12][0-9]|3[01])\.\s+\p{L}[\p{L}\p{M}.-]*\s+[0-9]{4}(?:[.,]\s+|\s+|$)`)
+)
+
+func validatePlainPresentation(field, value string) error {
+	if translationURLPattern.MatchString(value) {
+		return errorOf(ErrorOutput, "%s contains a URL; presentations must be plain text", field)
+	}
+	withoutPlaceholders := translationPlaceTokenPattern.ReplaceAllString(value, "")
+	withoutDatePrefixes := presentationDatePrefixPattern.ReplaceAllString(withoutPlaceholders, "")
+	if presentationMarkdownPattern.MatchString(withoutPlaceholders) || presentationOrderedListPattern.MatchString(withoutDatePrefixes) {
+		return errorOf(ErrorOutput, "%s contains Markdown; presentations must be plain text", field)
+	}
+	return nil
+}
+
+func translationValidator(language string) func(StepInput, *StepOutput) error {
+	return func(input StepInput, output *StepOutput) error {
+		if err := validateTranslation(input, output); err != nil {
+			return err
+		}
+		return validateTargetScript(language, output.Values["title"], output.Values["summary"])
+	}
+}
+
+func validateTranslation(input StepInput, output *StepOutput) error {
 	title, titleFound := output.Values["title"]
 	summary, summaryFound := output.Values["summary"]
 	if !titleFound || !summaryFound {
 		return errorOf(ErrorOutput, "model output contains no translated presentation")
 	}
-	if err := normalizeLimitedField("translated title", &title, 90); err != nil {
+	if err := normalizeTranslationField("translated title", &title, 90, input.Value("title_de")); err != nil {
 		return err
 	}
-	if err := normalizeLimitedField("translated summary", &summary, 600); err != nil {
+	if err := normalizeTranslationField("translated summary", &summary, 600, input.Value("summary_de")); err != nil {
 		return err
 	}
 	output.Values["title"], output.Values["summary"] = title, summary
+	for _, field := range []struct {
+		name, source, translated string
+	}{
+		{name: "title", source: input.Value("title_de"), translated: title},
+		{name: "summary", source: input.Value("summary_de"), translated: summary},
+	} {
+		if err := validatePlainPresentation("German "+field.name, field.source); err != nil {
+			return err
+		}
+		if err := validatePlainPresentation("translated "+field.name, field.translated); err != nil {
+			return err
+		}
+		if !sameTranslationNumbers(field.source, field.translated) {
+			return errorOf(ErrorOutput, "translated %s changed or omitted a number", field.name)
+		}
+	}
 	return validatePublicText(title + "\n" + summary)
+}
+
+func sameTranslationNumbers(source, translated string) bool {
+	source, translated = removeEquivalentLocalizedTimes(source, translated)
+	normalize := func(value string) []string {
+		value = translationURLPattern.ReplaceAllString(value, "")
+		value = translationPlaceTokenPattern.ReplaceAllString(value, "")
+		numbers := translationNumberPattern.FindAllString(value, -1)
+		for index, number := range numbers {
+			number = strings.TrimLeft(number, "0")
+			if number == "" {
+				number = "0"
+			}
+			numbers[index] = number
+		}
+		sort.Strings(numbers)
+		return numbers
+	}
+	sourceNumbers, translatedNumbers := normalize(source), normalize(translated)
+	if strings.Join(sourceNumbers, "\x00") == strings.Join(translatedNumbers, "\x00") {
+		return true
+	}
+	month := germanMonthNumber(source)
+	if month == "" {
+		return false
+	}
+	for index, number := range translatedNumbers {
+		if number == month {
+			translatedNumbers = append(translatedNumbers[:index], translatedNumbers[index+1:]...)
+			break
+		}
+	}
+	return strings.Join(sourceNumbers, "\x00") == strings.Join(translatedNumbers, "\x00")
+}
+
+type translationClock struct {
+	start, end int
+	minutes    int
+}
+
+func removeEquivalentLocalizedTimes(source, translated string) (string, string) {
+	sourceClocks := translation24HourPattern.FindAllStringSubmatchIndex(source, -1)
+	twelveHourClocks := translation12HourPattern.FindAllStringSubmatchIndex(translated, -1)
+	hourMarkerClocks := translationHourMarkerPattern.FindAllStringSubmatchIndex(translated, -1)
+	chineseClocks := translationChineseTimePattern.FindAllStringSubmatchIndex(translated, -1)
+	if len(sourceClocks) == 0 || len(twelveHourClocks) == 0 && len(hourMarkerClocks) == 0 && len(chineseClocks) == 0 {
+		return source, translated
+	}
+	sourceMatches := make([]translationClock, 0, len(sourceClocks))
+	for _, match := range sourceClocks {
+		hour, _ := strconv.Atoi(source[match[2]:match[3]])
+		minute, _ := strconv.Atoi(source[match[4]:match[5]])
+		sourceMatches = append(sourceMatches, translationClock{start: match[0], end: match[1], minutes: hour*60 + minute})
+	}
+	translatedMatches := make([]translationClock, 0, len(twelveHourClocks)+len(hourMarkerClocks)+len(chineseClocks))
+	for _, match := range twelveHourClocks {
+		hour, _ := strconv.Atoi(translated[match[2]:match[3]])
+		minute := 0
+		if match[4] >= 0 {
+			minute, _ = strconv.Atoi(translated[match[4]:match[5]])
+		}
+		if hour == 12 {
+			hour = 0
+		}
+		if strings.EqualFold(translated[match[6]:match[7]], "p") {
+			hour += 12
+		}
+		translatedMatches = append(translatedMatches, translationClock{start: match[0], end: match[1], minutes: hour*60 + minute})
+	}
+	for _, match := range hourMarkerClocks {
+		hour, _ := strconv.Atoi(translated[match[2]:match[3]])
+		minute := 0
+		if match[4] >= 0 {
+			minute, _ = strconv.Atoi(translated[match[4]:match[5]])
+		}
+		translatedMatches = append(translatedMatches, translationClock{start: match[0], end: match[1], minutes: hour*60 + minute})
+	}
+	for _, match := range chineseClocks {
+		hour, _ := strconv.Atoi(translated[match[2]:match[3]])
+		minute := 0
+		if match[4] >= 0 {
+			minute, _ = strconv.Atoi(translated[match[4]:match[5]])
+		}
+		translatedMatches = append(translatedMatches, translationClock{start: match[0], end: match[1], minutes: hour*60 + minute})
+	}
+	used := make([]bool, len(translatedMatches))
+	var sourceRemove, translatedRemove []translationClock
+	for _, candidate := range sourceMatches {
+		for index, translatedCandidate := range translatedMatches {
+			if !used[index] && candidate.minutes == translatedCandidate.minutes {
+				used[index] = true
+				sourceRemove = append(sourceRemove, candidate)
+				translatedRemove = append(translatedRemove, translatedCandidate)
+				break
+			}
+		}
+	}
+	blank := func(value string, matches []translationClock) string {
+		result := []byte(value)
+		for _, match := range matches {
+			for index := match.start; index < match.end; index++ {
+				result[index] = ' '
+			}
+		}
+		return string(result)
+	}
+	return blank(source, sourceRemove), blank(translated, translatedRemove)
+}
+
+func germanMonthNumber(value string) string {
+	words := strings.FieldsFunc(strings.ToLower(value), func(character rune) bool {
+		return !unicode.IsLetter(character)
+	})
+	for _, word := range words {
+		for index, month := range []string{"januar", "februar", "märz", "april", "mai", "juni", "juli", "august", "september", "oktober", "november", "dezember"} {
+			if word == month {
+				return strconv.Itoa(index + 1)
+			}
+		}
+	}
+	return ""
+}
+
+func sameStringMultiset(left, right []string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	left, right = append([]string(nil), left...), append([]string(nil), right...)
+	sort.Strings(left)
+	sort.Strings(right)
+	return strings.Join(left, "\x00") == strings.Join(right, "\x00")
+}
+
+func validateTargetScript(language, title, summary string) error {
+	target := map[string]*unicode.RangeTable{
+		"en": unicode.Latin, "tr": unicode.Latin, "hr": unicode.Latin,
+		"it": unicode.Latin, "bs": unicode.Latin, "es": unicode.Latin,
+		"fr": unicode.Latin, "ro": unicode.Latin, "pl": unicode.Latin,
+		"zh": unicode.Han, "hi": unicode.Devanagari,
+		"uk": unicode.Cyrillic, "ru": unicode.Cyrillic,
+	}[language]
+	if target == nil {
+		return nil
+	}
+	for field, value := range map[string]string{"title": title, "summary": summary} {
+		value = translationURLPattern.ReplaceAllString(value, "")
+		value = translationPlaceTokenPattern.ReplaceAllString(value, "")
+		letters, targetLetters := 0, 0
+		for _, character := range value {
+			if !unicode.IsLetter(character) {
+				continue
+			}
+			letters++
+			if unicode.Is(target, character) {
+				targetLetters++
+			}
+		}
+		if targetLetters < 2 || letters > 0 && targetLetters*100/letters < 60 {
+			return errorOf(ErrorOutput, "translated %s is not predominantly in the target script", field)
+		}
+	}
+	return nil
 }
 
 func validatePublicAssistanceVerification(input StepInput, output *StepOutput) error {
@@ -834,15 +1058,40 @@ func validateCategoryVerification(input StepInput, output *StepOutput) error {
 }
 
 func normalizeLimitedField(name string, value *string, limit int) error {
-	if !utf8.ValidString(*value) {
-		return errorOf(ErrorOutput, "model output %s is not valid UTF-8", name)
-	}
-	*value = strings.Join(strings.Fields(*value), " ")
-	if *value == "" {
-		return errorOf(ErrorOutput, "model output %s is empty", name)
+	if err := normalizeGeneratedField(name, value); err != nil {
+		return err
 	}
 	if utf8.RuneCountInString(*value) > limit {
 		return errorOf(ErrorOutput, "model output %s exceeds %d characters", name, limit)
+	}
+	return nil
+}
+
+func normalizeTranslationField(name string, value *string, limit int, source string) error {
+	if err := normalizeGeneratedField(name, value); err != nil {
+		return err
+	}
+	// Typed placeholder spellings are intentionally longer than the names they
+	// replace. The protected generator validates again after restoration, where
+	// the real reader-visible field must satisfy the ordinary limit.
+	if !translationPlaceTokenPattern.MatchString(source) && utf8.RuneCountInString(*value) > limit {
+		return errorOf(ErrorOutput, "model output %s exceeds %d characters", name, limit)
+	}
+	return nil
+}
+
+func normalizeGeneratedField(name string, value *string) error {
+	if !utf8.ValidString(*value) {
+		return errorOf(ErrorOutput, "model output %s is not valid UTF-8", name)
+	}
+	for _, character := range *value {
+		if unicode.IsControl(character) && character != '\n' && character != '\r' && character != '\t' {
+			return errorOf(ErrorOutput, "model output %s contains a control character", name)
+		}
+	}
+	*value = norm.NFC.String(strings.Join(strings.Fields(*value), " "))
+	if *value == "" {
+		return errorOf(ErrorOutput, "model output %s is empty", name)
 	}
 	return nil
 }
@@ -872,6 +1121,9 @@ func validatePublicText(value string) error {
 		if detector.expression.MatchString(value) {
 			return errorOf(ErrorPrivacy, "model output contains a possible %s", detector.label)
 		}
+	}
+	if containsPreciseStreetAddress(value) {
+		return errorOf(ErrorPrivacy, "model output contains a possible precise street address")
 	}
 	return nil
 }

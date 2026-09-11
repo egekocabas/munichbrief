@@ -1,0 +1,346 @@
+[SiteDescription]
+other = "Rămâi informat prin rezumate AI ale comunicatelor oficiale ale Poliției din München."
+[BrandTagline]
+other = "München dintr-o privire"
+[SocialImageAlt]
+other = "Previzualizare MunichBrief cu Parcul Olimpic din München."
+[SocialIncidentLabel]
+other = "Incident"
+[Timeline]
+other = "Cele mai recente"
+[About]
+other = "Despre"
+[PrimaryNavigation]
+other = "Navigare principală"
+[SkipToContent]
+other = "Sari la conținut"
+[DarkMode]
+other = "Mod întunecat"
+[NoticeLabel]
+other = "Notă importantă"
+[NoticeLead]
+other = "Independent și neoficial."
+[FixtureNotice]
+other = "Această vizualizare conține numai date de test sintetice."
+[LiveNotice]
+other = "AI este utilizată pentru a rezuma, clasifica și extrage detalii din comunicatele oficiale ale poliției. Pot apărea erori, iar comunicatele pot fi actualizate după publicare."
+[AuthorityNotice]
+other = "Cele mai recente informații oficiale rămân autoritatea de referință, iar prezumția de nevinovăție se aplică."
+[ReviewNotice]
+other = "Mod de verificare: textul original care nu a fost anonimizat poate fi vizibil. Nu îl publicați."
+[AIGeneratedContent]
+other = "Conținut generat de AI"
+[AIFixtureLabelPreview]
+other = "Previzualizare etichetă — aceste date sintetice nu au fost procesate de AI"
+[AIDisclosureTitle]
+other = "Conținut generat de AI"
+[AIDisclosureFixtureCopy]
+other = "Previzualizare locală: această pagină folosește conținut de test sintetic."
+[AIDisclosureCopy]
+other = "MunichBrief folosește AI operată local pentru a crea titluri, rezumate, traduceri, categorii și detalii structurate, precum zona și ora raportate și dacă poliția solicită ajutorul publicului, pe baza comunicatelor oficiale ale Poliției din München. Informațiile generate sau deduse de AI pot conține erori ori pot deveni depășite când comunicatul original este actualizat. Fiecare pagină de incident identifică și trimite la sursa oficială a poliției; consultați acea sursă pentru informații oficiale. MunichBrief este un proiect independent și nu este afiliat Poliției Bavareze. Orice persoană menționată este prezumată nevinovată până la dovedirea vinovăției."
+[AIDisclosurePreferenceCopy]
+other = "Selectarea opțiunii „Am înțeles” memorează această notificare timp de 30 de zile."
+[AIDisclosureLearnMore]
+other = "Mai multe informații despre MunichBrief și modul său de funcționare sunt disponibile pe pagina Despre."
+[AIDisclosureGotIt]
+other = "Am înțeles"
+[AITransparencyEU]
+other = "Transparență AI și orientări UE"
+[AITransparencyEUCopy]
+other = "MunichBrief folosește eticheta UE pentru conținut integral generat de AI deoarece orientările Comisiei Europene menționează explicit rezumatele de știri generate de AI ca exemplu de utilizare. Etichetele vizibile și proveniența procesabilă automat susțin transparența, însă folosirea pictogramei nu demonstrează de una singură conformitatea juridică și nu indică faptul că MunichBrief a semnat Codul de bune practici voluntar."
+[EUIconGuidance]
+other = "Orientări privind pictograma UE"
+[EUCodePractice]
+other = "Codul de bune practici al UE"
+[Footer]
+other = "MunichBrief este independent de Poliția Bavareză. Fără analiză de trafic, conturi sau publicitate."
+[Built]
+other = "Versiune"
+[Language]
+other = "Limbă"
+[German]
+other = "Deutsch"
+[English]
+other = "English"
+[SwitchToGerman]
+other = "Comută la versiunea în germană"
+[SwitchToEnglish]
+other = "Comută la versiunea în engleză"
+[SwitchToTurkish]
+other = "Comută la versiunea în turcă"
+[SwitchToCroatian]
+other = "Comută la versiunea în croată"
+[SwitchToItalian]
+other = "Comută la versiunea în italiană"
+[SwitchToUkrainian]
+other = "Comută la versiunea în ucraineană"
+[SwitchToBosnian]
+other = "Comută la versiunea în bosniacă"
+[SwitchToChinese]
+other = "Comută la versiunea în chineză simplificată"
+[SwitchToHindi]
+other = "Comută la versiunea în hindi"
+[SwitchToSpanish]
+other = "Comută la versiunea în spaniolă"
+[SwitchToFrench]
+other = "Comută la versiunea în franceză"
+[SwitchToRomanian]
+other = "Comută la versiunea în română"
+[SwitchToPolish]
+other = "Comută la versiunea în polonă"
+[SwitchToRussian]
+other = "Comută la versiunea în rusă"
+[HeroEyebrowFixture]
+other = "Prototip local"
+[HeroEyebrowLive]
+other = "Comunicatele Poliției din München"
+[HeroTitle]
+other = "Cele mai recente incidente raportate de Poliția din München"
+[HeroCopy]
+other = "O prezentare clară a incidentelor locale, rezumată din comunicatele oficiale ale poliției."
+[FixtureIncidents]
+other = "Informări sintetice"
+[LatestIncidents]
+other = "Cele mai recente incidente"
+[Reports]
+one = "{{.Count}} informare"
+few = "{{.Count}} informări"
+other = "{{.Count}} de informări"
+[ShownTotal]
+other = "{{.Shown}} afișate / {{.Total}} în total"
+[Report]
+other = "Comunicat al poliției"
+[SourceMetadata]
+other = "Metadatele sursei"
+[ReadIncident]
+other = "Citește informarea"
+[OpenOfficialSource]
+other = "Deschide sursa oficială"
+[OpenOfficialPoliceRelease]
+other = "Deschide comunicatul oficial al poliției"
+[Newer]
+other = "Mai noi"
+[Older]
+other = "Mai vechi"
+[Page]
+other = "Pagina"
+[Of]
+other = "din"
+[NoIncidents]
+other = "Nu există încă informări"
+[NoFixtureCopy]
+other = "Rulați importul datelor de test pentru a popula această vizualizare."
+[NoLiveCopy]
+other = "Sincronizatorul nu a descoperit încă niciun comunicat în intervalul activ."
+[BodyUnavailable]
+other = "Conținutul comunicatului nu este încă disponibil. MunichBrief reîncearcă; între timp, utilizați sursa oficială."
+[SourceRefreshFailed]
+other = "Ultima actualizare a sursei a eșuat; această copie salvată rămâne disponibilă."
+[Back]
+other = "Înapoi"
+[Breadcrumb]
+other = "Traseu de navigare"
+[PublishedWithin]
+other = "Publicat în"
+[Published]
+other = "Publicat"
+[LastProcessed]
+other = "Ultima procesare"
+[Model]
+other = "Model"
+[PromptVersion]
+other = "Versiunea instrucțiunii"
+[Category]
+other = "Categorie"
+[CategoryTraffic]
+other = "Trafic"
+[CategoryTheftBurglary]
+other = "Furt și spargere"
+[CategoryRobberyExtortion]
+other = "Tâlhărie și șantaj"
+[CategoryViolence]
+other = "Violență"
+[CategorySexualOffense]
+other = "Infracțiuni sexuale"
+[CategoryFraudCyber]
+other = "Fraudă și criminalitate informatică"
+[CategoryDrugs]
+other = "Droguri"
+[CategoryFireHazard]
+other = "Incendii și pericole"
+[CategoryPropertyDamage]
+other = "Distrugere de bunuri"
+[CategoryMissingWanted]
+other = "Persoane dispărute și căutate"
+[CategoryPoliceOperation]
+other = "Operațiune a poliției"
+[CategoryOther]
+other = "Altele"
+[Area]
+other = "Zonă"
+[ReportKind]
+other = "Tipul informării"
+[PublicAssistance]
+other = "Ajutorul publicului"
+[PublicAssistanceRequested]
+other = "Poliția solicită ajutorul publicului"
+[PublicAssistanceNeeded]
+other = "Este necesar ajutorul publicului"
+[PublicAssistanceSourceCopy]
+other = "Instrucțiunile, datele de contact și detaliile suplimentare sunt disponibile numai în sursa oficială."
+[TimeStatedInReport]
+other = "Ora incidentului"
+[DayPartMorning]
+other = "dimineața"
+[DayPartMidday]
+other = "la prânz"
+[DayPartAfternoon]
+other = "după-amiaza"
+[DayPartEvening]
+other = "seara"
+[DayPartNight]
+other = "noaptea"
+[ReportKindIncident]
+other = "Incident"
+[ReportKindFollowUp]
+other = "Actualizare"
+[ReportKindMissingPerson]
+other = "Informare despre o persoană dispărută"
+[ReportKindWantedPerson]
+other = "Informare despre o persoană căutată"
+[ReportKindPublicWarning]
+other = "Avertizare publică"
+[ReportKindOther]
+other = "Alt tip de informare"
+[AssistanceWitnessObservations]
+other = "Observații ale martorilor"
+[AssistanceIdentifyPerson]
+other = "Identificarea unei persoane"
+[AssistanceLocatePerson]
+other = "Localizarea unei persoane"
+[AssistancePhotoVideo]
+other = "Material foto sau video"
+[AssistanceVehicleInformation]
+other = "Informații despre un vehicul"
+[AssistancePropertyInformation]
+other = "Informații despre bunuri"
+[AssistanceOtherInformation]
+other = "Alte informații"
+[AIProcessing]
+other = "Procesare AI"
+[Step]
+other = "Etapă"
+[Translation]
+other = "Traducere"
+[IncidentMetadataStep]
+other = "Metadatele incidentului"
+[GermanPresentationStep]
+other = "Prezentare în germană"
+[PublicAssistanceVerificationStep]
+other = "Verificarea solicitării de ajutor public"
+[CategoryVerificationStep]
+other = "Verificarea categoriei"
+[EnglishTranslationStep]
+other = "Traducere în engleză"
+[TurkishTranslationStep]
+other = "Traducere în turcă"
+[CroatianTranslationStep]
+other = "Traducere în croată"
+[ItalianTranslationStep]
+other = "Traducere în italiană"
+[UkrainianTranslationStep]
+other = "Traducere în ucraineană"
+[BosnianTranslationStep]
+other = "Traducere în bosniacă"
+[ChineseTranslationStep]
+other = "Traducere în chineză simplificată"
+[HindiTranslationStep]
+other = "Traducere în hindi"
+[SpanishTranslationStep]
+other = "Traducere în spaniolă"
+[FrenchTranslationStep]
+other = "Traducere în franceză"
+[RomanianTranslationStep]
+other = "Traducere în română"
+[PolishTranslationStep]
+other = "Traducere în polonă"
+[RussianTranslationStep]
+other = "Traducere în rusă"
+[StagedPipeline]
+other = "Flux pe etape"
+[MetadataFirstPipeline]
+other = "Flux cu metadatele mai întâi v2"
+[Generated]
+other = "Generat"
+[AISummary]
+other = "Rezumat generat de AI"
+[VerifySource]
+other = "Verificați detaliile importante în cele mai recente informații oficiale."
+[OriginalGerman]
+other = "Textul original în germană"
+[OriginalQACopy]
+other = "Vizibil numai pentru controlul calității în modul de verificare restricționat."
+[AuthoritativeSource]
+other = "Sursa oficială"
+[FixtureSourceCopy]
+other = "Această pagină folosește conținut de test sintetic."
+[LiveSourceCopy]
+other = "Aceasta este o prezentare neoficială. Comunicatul Poliției Bavareze rămâne sursa oficială."
+[NotProcessed]
+other = "Nu a fost încă rezumat sau tradus"
+[Queued]
+other = "Rezumatul și traducerea AI sunt în așteptare"
+[Running]
+other = "Rezumatul și traducerea AI sunt în curs"
+[Retrying]
+other = "AI este temporar indisponibilă; reîncercare programată"
+[NeedsReview]
+other = "Rezultatul AI necesită verificare"
+[OriginalShown]
+other = "Este afișat comunicatul original în germană."
+[AboutTitle]
+other = "Cum funcționează MunichBrief"
+[Methodology]
+other = "Despre MunichBrief"
+[AboutIntro]
+other = "MunichBrief transformă comunicatele oficiale ale Poliției din München în rezumate clare și structurate ale incidentelor, în mai multe limbi pentru cititori."
+[FromReleaseToIncident]
+other = "De la comunicat la incident"
+[Discover]
+other = "Descoperire"
+[DiscoverCopy]
+other = "Comunicatele noi sunt descoperite exclusiv prin fluxul RSS oficial al Poliției din München."
+[Organize]
+other = "Organizare"
+[OrganizeCopy]
+other = "Comunicatele care conțin mai multe informări sunt separate folosind numerele oficiale ale acestora. Informările publicate separat rămân separate."
+[Summarize]
+other = "Rezumare"
+[SummarizeCopy]
+other = "Modelele AI locale extrag detalii precum categoria, locul, data și solicitările de ajutor public, apoi creează un rezumat în germană cu date reduse la minimum."
+[TranslatePublish]
+other = "Traducere și publicare"
+[TranslatePublishCopy]
+other = "Rezumatele în germană care trec verificările automate de procesare sunt traduse în limbile disponibile. Paginile publice afișează conținut generat de AI numai după finalizarea cu succes a fluxului de procesare."
+[AccuracyOfficialInformation]
+other = "Acuratețe și informații oficiale"
+[AccuracyOfficialInformationCopy]
+other = "Rezumatele și detaliile extrase de AI pot conține erori. Comunicatele poliției pot fi actualizate după publicare. Cele mai recente informații oficiale rămân autoritatea de referință, iar prezumția de nevinovăție se aplică."
+[PrivacyDataHandling]
+other = "Confidențialitate și gestionarea datelor"
+[PrivacyCopy]
+other = "MunichBrief nu are conturi, analiză de trafic sau publicitate. Un cookie necesar păstrează limba selectată timp de un an. După ce selectați „Am înțeles”, un cookie propriu memorează notificarea privind AI timp de 30 de zile. Tema de culoare selectată este stocată local în browser."
+[DataHandlingCopy]
+other = "Textul-sursă extras în germană este stocat local. Modul de verificare restricționat poate afișa textele originale și stările procesării pentru controlul calității; modul public nu afișează originalele stocate."
+[IndependenceLegalReview]
+other = "Independență și verificare juridică"
+[IndependenceLegalReviewCopy]
+other = "MunichBrief este independent de Poliția Bavareză. Măsurile tehnice de protecție nu înlocuiesc verificarea juridică. Păstrarea datelor, temeiul legal, datele referitoare la infracțiuni și eventualele excepții jurnalistice necesită evaluare continuă."
+[ContactHeading]
+other = "Întrebări, corecturi sau feedback"
+[ContactPublicLead]
+other = "Ați găsit o eroare sau aveți o sugestie?"
+[ContactIssueLink]
+other = "Deschideți o sesizare pe GitHub"
+[ContactPrivateLead]
+other = "Pentru preocupări legate de confidențialitate sau orice nu ar trebui distribuit public, trimiteți un e-mail la"

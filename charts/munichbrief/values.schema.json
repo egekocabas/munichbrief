@@ -21,7 +21,7 @@
     },
     "application": {
       "type": "object",
-      "required": ["publicHosts", "canonicalOrigin", "sourceMode", "presentationMode", "secureCookies", "pageSize", "feedURL", "userAgent", "httpTimeout", "articleRefreshInterval", "aiEnabled", "aiImmediate", "aiWindow", "ollamaBaseURL", "aiInterval", "aiTimeout", "aiContextSize"],
+      "required": ["publicHosts", "canonicalOrigin", "sourceMode", "presentationMode", "secureCookies", "pageSize", "feedURL", "userAgent", "httpTimeout", "articleRefreshInterval", "gazetteerRefreshInterval", "gazetteerHTTPTimeout", "aiEnabled", "aiImmediate", "aiWindow", "ollamaBaseURL", "aiInterval", "aiTimeout", "aiContextSize"],
       "properties": {
         "publicHosts": {
           "type": "array",
@@ -37,6 +37,9 @@
         "userAgent": {"type": "string", "minLength": 1},
         "httpTimeout": {"type": "string", "minLength": 2},
         "articleRefreshInterval": {"type": "string", "minLength": 2},
+        "gazetteerEnabled": {"type": ["boolean", "null"]},
+        "gazetteerRefreshInterval": {"type": "string", "minLength": 2},
+        "gazetteerHTTPTimeout": {"type": "string", "minLength": 2},
         "aiEnabled": {"type": "boolean"},
         "aiImmediate": {"type": "boolean"},
         "aiWindow": {"type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]-([01][0-9]|2[0-3]):[0-5][0-9]$"},

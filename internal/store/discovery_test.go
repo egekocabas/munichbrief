@@ -130,6 +130,9 @@ func TestDiscoveryFiltersOnlySatisfiedProcessorScope(t *testing.T) {
 				if err := database.EnsurePostProcessingScopes(ctx, []PostProcessingScope{scope}, now.Add(-time.Hour)); err != nil {
 					t.Fatal(err)
 				}
+				if _, err := database.SetPostProcessingScopeEnabled(ctx, scope.ProcessorKey, scope.ScopeKey, true, now.Add(-time.Minute)); err != nil {
+					t.Fatal(err)
+				}
 				other := plan
 				other.ProcessorKey, other.ScopeKey = scope.ProcessorKey, scope.ScopeKey
 				if queued, err := database.QueuePostProcessingForAll(ctx, "fixture", []PostProcessingPlan{other}, false, now); err != nil || queued != 1 {

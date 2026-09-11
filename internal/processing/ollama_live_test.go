@@ -8,9 +8,12 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode"
 
+	"github.com/egekocabas/munichbrief/internal/gazetteer"
 	"github.com/egekocabas/munichbrief/internal/parser"
 	"github.com/egekocabas/munichbrief/internal/source"
+	"golang.org/x/text/unicode/norm"
 )
 
 const liveOllamaJobTimeout = 10 * time.Minute
@@ -129,7 +132,7 @@ func TestLiveOllamaPrivacySafeMetadataFirstPresentation(t *testing.T) {
 	}
 }
 
-func TestLiveOllamaTranslateGemmaPromptContract(t *testing.T) {
+func TestLiveOllamaUnifiedTranslationPromptContract(t *testing.T) {
 	if os.Getenv("MUNICHBRIEF_OLLAMA_LIVE_TEST") != "1" {
 		t.Skip("set MUNICHBRIEF_OLLAMA_LIVE_TEST=1 for the explicit Ollama smoke test")
 	}
@@ -229,6 +232,173 @@ func TestLiveOllamaTranslateGemmaPromptContract(t *testing.T) {
 		})
 	}
 }
+
+func TestLiveOllamaRegisteredTranslationTargets(t *testing.T) {
+	if os.Getenv("MUNICHBRIEF_OLLAMA_LIVE_TEST") != "1" {
+		t.Skip("set MUNICHBRIEF_OLLAMA_LIVE_TEST=1 for the explicit Ollama smoke test")
+	}
+	baseURL := os.Getenv("MUNICHBRIEF_OLLAMA_BASE_URL")
+	if baseURL == "" {
+		baseURL = "http://127.0.0.1:11434"
+	}
+	model := os.Getenv("MUNICHBRIEF_OLLAMA_TRANSLATION_MODEL")
+	if model == "" {
+		model = "translategemma:4b"
+	}
+	client, err := NewOllamaClient(baseURL, model, liveOllamaJobTimeout, 8192, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	matcher, err := gazetteer.NewMatcher([]gazetteer.Entry{
+		{Name: "Maxvorstadt", Kind: gazetteer.KindNeighbourhood, Priority: 10},
+		{Name: "Leopoldstraße", Kind: gazetteer.KindStreet, Priority: 10},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	protectedClient := &protectedGenerator{inner: client, protector: liveMatcherProtector{Matcher: matcher}}
+	const titleDE = "Polizeieinsatz in Maxvorstadt"
+	const summaryDE = "Nach Angaben der Polizei soll eine Person einen Gegenstand abgelegt haben. Die Ermittlungen dauern an."
+	for _, target := range RegisteredTranslations() {
+		t.Run(target.Language, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), liveOllamaJobTimeout)
+			defer cancel()
+			output, returnedModel, err := protectedClient.GenerateStep(ctx, target.Step, StepInput{Values: map[string]string{
+				"title_de": titleDE, "summary_de": summaryDE,
+			}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			title := strings.TrimSpace(output.Values["title"])
+			summary := strings.TrimSpace(output.Values["summary"])
+			if title == "" || summary == "" || strings.TrimSpace(returnedModel) == "" {
+				t.Fatalf("translation result/model is incomplete: %#v/%q", output.Values, returnedModel)
+			}
+			combined := strings.ToLower(title + "\n" + summary)
+			if !strings.Contains(combined, "maxvorstadt") {
+				t.Error("translation did not preserve the Munich place name Maxvorstadt")
+			}
+			if title == titleDE && summary == summaryDE {
+				t.Error("translation returned the German input unchanged")
+			}
+			if target.Language == "zh" && !strings.ContainsFunc(combined, func(character rune) bool { return unicode.Is(unicode.Han, character) }) {
+				t.Error("Simplified Chinese translation contains no Han characters")
+			}
+			if target.Language == "hi" && !strings.ContainsFunc(combined, func(character rune) bool { return unicode.Is(unicode.Devanagari, character) }) {
+				t.Error("Hindi translation contains no Devanagari characters")
+			}
+			if target.Language == "uk" && !strings.ContainsFunc(combined, func(character rune) bool { return unicode.Is(unicode.Cyrillic, character) }) {
+				t.Error("Ukrainian translation contains no Cyrillic characters")
+			}
+			if target.Language == "ru" && !strings.ContainsFunc(combined, func(character rune) bool { return unicode.Is(unicode.Cyrillic, character) }) {
+				t.Error("Russian translation contains no Cyrillic characters")
+			}
+			if target.Language != EnglishLanguage {
+				streetContext, cancelStreet := context.WithTimeout(context.Background(), liveOllamaJobTimeout)
+				streetOutput, _, streetErr := protectedClient.GenerateStep(streetContext, target.Step, StepInput{Values: map[string]string{
+					"title_de":   "Polizeieinsatz an der Leopoldstraße",
+					"summary_de": "Nach Angaben der Polizei soll eine Person an der Leopoldstraße leicht verletzt worden sein. Die Ermittlungen dauern an.",
+				}})
+				cancelStreet()
+				if streetErr != nil {
+					t.Fatal(streetErr)
+				}
+				streetText := strings.ToLower(streetOutput.Values["title"] + "\n" + streetOutput.Values["summary"])
+				if !strings.Contains(streetText, "leopoldstraße") {
+					t.Errorf("%s translation did not preserve the exact Munich street name Leopoldstraße", target.Language)
+				}
+			}
+			t.Logf("model=%s target=%s", returnedModel, target.Language)
+		})
+	}
+}
+
+func TestLiveOllamaMunichPlaceNamePreservationMatrix(t *testing.T) {
+	if os.Getenv("MUNICHBRIEF_OLLAMA_PLACE_NAMES_LIVE_TEST") != "1" {
+		t.Skip("set MUNICHBRIEF_OLLAMA_PLACE_NAMES_LIVE_TEST=1 for the extended Munich place-name translation test")
+	}
+	baseURL := os.Getenv("MUNICHBRIEF_OLLAMA_BASE_URL")
+	if baseURL == "" {
+		baseURL = "http://127.0.0.1:11434"
+	}
+	model := os.Getenv("MUNICHBRIEF_OLLAMA_TRANSLATION_MODEL")
+	if model == "" {
+		model = "translategemma:4b"
+	}
+	client, err := NewOllamaClient(baseURL, model, liveOllamaJobTimeout, 8192, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixtures := []struct {
+		name, title, summary string
+		protected            map[string][]string
+	}{
+		{
+			name:    "all requested place forms",
+			title:   "U-Bahn und S-Bahn in München",
+			summary: "Ingolstädter Straße, Milbertshofen, Schwabing, Ganghoferstraße, Sendling, Ramersdorf-Perlach, Schwabing-West, Oberhaching und Geiselgasteig werden als eigenständige Ortsangaben genannt.",
+			protected: map[string][]string{
+				"U-Bahn":              {"U-Bahn"},
+				"S-Bahn":              {"S-Bahn"},
+				"Ingolstädter Straße": {"Ingolstädter Straße"},
+				"Milbertshofen":       {"Milbertshofen"},
+				"Schwabing":           {"Schwabing"},
+				"Ganghoferstraße":     {"Ganghoferstraße"},
+				"Sendling":            {"Sendling"},
+				"Ramersdorf-Perlach":  {"Ramersdorf-Perlach"},
+				"Schwabing-West":      {"Schwabing-West"},
+				"Oberhaching":         {"Oberhaching"},
+				"Geiselgasteig":       {"Geiselgasteig"},
+			},
+		},
+	}
+	protectedNames := make(map[string]struct{})
+	for _, fixture := range fixtures {
+		for name := range fixture.protected {
+			protectedNames[name] = struct{}{}
+		}
+	}
+	entries := make([]gazetteer.Entry, 0, len(protectedNames))
+	for name := range protectedNames {
+		entries = append(entries, gazetteer.Entry{Name: name, Kind: gazetteer.KindNeighbourhood, Priority: 10})
+	}
+	matcher, err := gazetteer.NewMatcher(entries)
+	if err != nil {
+		t.Fatal(err)
+	}
+	protectedClient := &protectedGenerator{inner: client, protector: liveMatcherProtector{Matcher: matcher}}
+
+	for _, target := range RegisteredTranslations() {
+		t.Run(target.Language, func(t *testing.T) {
+			for _, fixture := range fixtures {
+				t.Run(fixture.name, func(t *testing.T) {
+					ctx, cancel := context.WithTimeout(context.Background(), liveOllamaJobTimeout)
+					defer cancel()
+					output, returnedModel, err := protectedClient.GenerateStep(ctx, target.Step, StepInput{Values: map[string]string{
+						"title_de": fixture.title, "summary_de": fixture.summary,
+					}})
+					if err != nil {
+						t.Fatal(err)
+					}
+					if strings.TrimSpace(returnedModel) == "" {
+						t.Fatal("translation model identity is empty")
+					}
+					translated := norm.NFC.String(output.Values["title"] + "\n" + output.Values["summary"])
+					for label, acceptedSpellings := range fixture.protected {
+						if !containsAny(translated, acceptedSpellings...) {
+							t.Errorf("%s translation did not retain protected Munich wording %s", target.Language, label)
+						}
+					}
+					t.Logf("model=%s target=%s fixture=%s protected_names=%d", returnedModel, target.Language, fixture.name, len(fixture.protected))
+				})
+			}
+		})
+	}
+}
+
+type liveMatcherProtector struct{ *gazetteer.Matcher }
+
+func (liveMatcherProtector) Ready() bool { return true }
 
 func TestLiveOllamaOfficialRSSMetadataAndGermanPresentation(t *testing.T) {
 	if os.Getenv("MUNICHBRIEF_OLLAMA_RSS_LIVE_TEST") != "1" {
@@ -452,4 +622,13 @@ func assertOptionalString(t *testing.T, name string, actual *string, expected st
 		}
 		t.Fatalf("%s = %s, want %s", name, value, expected)
 	}
+}
+
+func containsAny(text string, candidates ...string) bool {
+	for _, candidate := range candidates {
+		if strings.Contains(text, candidate) {
+			return true
+		}
+	}
+	return false
 }

@@ -3,11 +3,12 @@
 [![CI](https://github.com/egekocabas/munichbrief/actions/workflows/ci.yml/badge.svg)](https://github.com/egekocabas/munichbrief/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-MunichBrief turns official Munich Police press releases into a clear bilingual
+MunichBrief turns official Munich Police press releases into a clear multilingual
 incident reader. It discovers the official RSS feed, separates combined daily
 releases into individual reports, and publishes privacy-minimised German
-summaries and English translations with provenance and links to the
-authoritative source.
+summaries and translations in English, Turkish, Croatian, Italian, Ukrainian,
+Bosnian, Simplified Chinese, Hindi, Spanish, French, Romanian, Polish,
+and Russian with provenance and links to the authoritative source.
 
 Visit the live reader at [munichbrief.de](https://munichbrief.de).
 
@@ -24,13 +25,16 @@ Visit the live reader at [munichbrief.de](https://munichbrief.de).
 - Bounded, low-rate ingestion of RSS-linked official articles.
 - Metadata-first Ollama processing: a two-stage canonical German pipeline plus
   independent public-assistance verification, category verification, and
-  per-language translation jobs.
+  per-language translation jobs with global, translation-wide, and
+  language-specific automatic controls.
+- A separately refreshed Munich-area gazetteer protects official place names
+  with deterministic placeholders before any translation request.
 - Fail-closed public presentation: retained source text is never rendered on a
   public host.
 - Protected operational review, structured logs, health checks, and Prometheus
   metrics.
 - Multi-architecture container images and a security-hardened Helm chart.
-- HTML and Markdown representations with canonical bilingual discovery links.
+- HTML and Markdown representations with canonical multilingual discovery links.
 
 ## Quick start
 
@@ -64,6 +68,8 @@ See [the development guide](docs/development.md) for live-source, Ollama, and
 complete validation commands.
 See [Adding a reader language](docs/adding-a-language.md) for the registry,
 translation, discovery, and deployment workflow.
+See [Pre-merge translation testing](docs/pre-merge-translation-testing.md) for
+the model-routing, live-matrix, and native-review release gate.
 
 ## How it works
 
@@ -80,7 +86,7 @@ flowchart LR
     Category --> DB
     DB --> Translation["Independent translation jobs"]
     Translation --> DB
-    DB --> Reader["German and English reader"]
+    DB --> Reader["Multilingual reader"]
     Reader --> Source["Authoritative source links"]
 ```
 
@@ -90,7 +96,8 @@ privacy-safe presentations for the current source and prompt versions. Review
 mode retains the original text for local or protected quality control.
 
 The detailed component, data-flow, and trust-boundary design is documented in
-[Architecture](docs/architecture.md).
+[Architecture](docs/architecture.md). Source contracts and refresh behavior are
+documented in [Place-name gazetteer](docs/gazetteer.md).
 
 ## Configuration
 
@@ -101,6 +108,10 @@ Common settings:
 | `MUNICHBRIEF_ADDR` | `127.0.0.1:8080` | Reader listen address |
 | `MUNICHBRIEF_METRICS_ADDR` | `127.0.0.1:9090` | Internal metrics listener |
 | `MUNICHBRIEF_DATABASE_PATH` | `.data/munichbrief.db` | SQLite database path |
+| `MUNICHBRIEF_GAZETTEER_DATABASE_PATH` | `.data/munichbrief-gazetteer.db` | Rebuildable gazetteer SQLite path |
+| `MUNICHBRIEF_GAZETTEER_ENABLED` | live-mode dependent | Refresh and require the place-name gazetteer |
+| `MUNICHBRIEF_GAZETTEER_REFRESH_INTERVAL` | `168h` | Successful gazetteer refresh interval |
+| `MUNICHBRIEF_GAZETTEER_HTTP_TIMEOUT` | `2m` | Timeout for one gazetteer source request |
 | `MUNICHBRIEF_SOURCE_MODE` | `fixture` | `fixture` or explicit `live` ingestion |
 | `MUNICHBRIEF_PRESENTATION_MODE` | mode-dependent | Local `review` or fail-closed `public` |
 | `MUNICHBRIEF_PUBLIC_HOSTS` | empty | Hosts forced through public path and content restrictions |

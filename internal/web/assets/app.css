@@ -83,6 +83,16 @@
     color-scheme: dark;
   }
 
+  html:lang(zh-CN) {
+    --font-sans: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+    --font-serif: "Songti SC", "Noto Serif CJK SC", serif;
+  }
+
+  html:lang(hi-IN) {
+    --font-sans: "Noto Sans Devanagari", "Kohinoor Devanagari", "Nirmala UI", system-ui, sans-serif;
+    --font-serif: "Noto Serif Devanagari", "Kohinoor Devanagari", serif;
+  }
+
   a:focus-visible,
   button:focus-visible,
   select:focus-visible,
@@ -143,6 +153,14 @@
 
   .incident-body {
     white-space: pre-line;
+  }
+
+  .language-menu > summary {
+    list-style: none;
+  }
+
+  .language-menu > summary::-webkit-details-marker {
+    display: none;
   }
 
   .htmx-progress {
@@ -321,6 +339,10 @@
 .rss-history-table {
   container-type: inline-size;
 }
-.rss-history-table .rss-check-details {
+.gazetteer-history-table {
+  container-type: inline-size;
+}
+.rss-history-table .rss-check-details,
+.gazetteer-history-table .gazetteer-refresh-details {
   width: calc(100cqw - 2rem);
 }

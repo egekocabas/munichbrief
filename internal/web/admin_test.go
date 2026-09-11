@@ -9,12 +9,15 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
 	"testing"
 
+	"github.com/egekocabas/munichbrief/internal/gazetteer"
 	"github.com/egekocabas/munichbrief/internal/processing"
 	"github.com/egekocabas/munichbrief/internal/source"
 	"github.com/egekocabas/munichbrief/internal/store"
@@ -31,6 +34,8 @@ func TestAdminIsDisabledByDefault(t *testing.T) {
 		{method: http.MethodGet, path: "/admin/rss-history"},
 		{method: http.MethodGet, path: "/admin/rss-history/1"},
 		{method: http.MethodGet, path: "/admin/rss-history/1/documents/1?fragment=1"},
+		{method: http.MethodGet, path: "/admin/gazetteer"},
+		{method: http.MethodPost, path: "/api/admin/gazetteer/refresh"},
 		{method: http.MethodGet, path: "/admin/history"},
 		{method: http.MethodPost, path: "/api/admin/ai/process-all-now"},
 		{method: http.MethodPost, path: "/api/admin/ai/translations/process"},
@@ -40,6 +45,183 @@ func TestAdminIsDisabledByDefault(t *testing.T) {
 		if response.Code != http.StatusNotFound {
 			t.Errorf("%s %s status = %d, want 404", test.method, test.path, response.Code)
 		}
+	}
+}
+
+func TestAdminGazetteerShowsBoundedOperationalStatus(t *testing.T) {
+	ctx := context.Background()
+	gazetteerStore, err := gazetteer.Open(ctx, filepath.Join(t.TempDir(), "gazetteer.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { gazetteerStore.Close() })
+	now := time.Date(2026, time.September, 6, 8, 0, 0, 0, time.UTC)
+	definition := gazetteer.SourceDefinition{Key: "official", DisplayName: "Official Munich places", URL: "https://example.test/places", License: "Data licence", Attribution: "City of Munich"}
+	entry := gazetteer.Entry{Name: "Schwabing", Kind: gazetteer.KindNeighbourhood, Priority: 10, Sources: []gazetteer.EntrySource{{Key: "official", ExternalID: "1", Kind: gazetteer.KindNeighbourhood}}}
+	if _, changed, err := gazetteerStore.Activate(ctx, []gazetteer.SourceSnapshot{{Definition: definition, ContentHash: "source-hash", FetchedAt: now, Entries: []gazetteer.Entry{entry}}}, []gazetteer.Entry{entry}, "aggregate-hash", now, now.Add(24*time.Hour)); err != nil || !changed {
+		t.Fatalf("activate gazetteer = changed:%v err:%v", changed, err)
+	}
+	runID, err := gazetteerStore.BeginRefresh(ctx, gazetteer.RefreshTriggerScheduled, []gazetteer.SourceDefinition{definition}, now.Add(time.Hour), now.Add(25*time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := gazetteerStore.StartRefreshSource(ctx, runID, definition.Key, now.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if err := gazetteerStore.FailRefresh(ctx, runID, &definition, "http_status", gazetteer.SourceFetchDiagnostic{HTTPStatus: http.StatusBadGateway, ResponseSize: 17}, errors.New("upstream <script>alert(1)</script> failed"), now.Add(time.Hour+time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	database := fixtureStore(t)
+	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
+		PageSize: 20, SourceMode: "fixture", PresentationMode: "review", AdminEnabled: true,
+		Processor: fakeProcessingRequester{database: database}, Gazetteer: gazetteerStore, GazetteerRefresher: &fakeGazetteerRefresher{result: gazetteer.RefreshRequestAccepted},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := httptest.NewRecorder()
+	server.Handler().ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/admin/gazetteer", nil))
+	for _, expected := range []string{"Gazetteer operations", "Place-name gazetteer", "Ready", "1 protected names", "Official Munich places", "City of Munich", "aggregate-hash", "Source payloads and the complete name list are intentionally not rendered", "Stale but operational", "Refresh history", "http_status", "gazetteer-history-table", `role="region"`, `tabindex="0"`, `data-gazetteer-history`, "admin-history-shell", "upstream &lt;script&gt;alert(1)&lt;/script&gt; failed", "/api/admin/gazetteer/refresh", "Refresh now", `id="processing-confirmation"`} {
+		if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), expected) {
+			t.Errorf("gazetteer admin = %d, missing %q", response.Code, expected)
+		}
+	}
+	if strings.Contains(response.Body.String(), "Schwabing") {
+		t.Error("gazetteer admin rendered the active name set")
+	}
+	if strings.Contains(response.Body.String(), "upstream <script>") {
+		t.Fatal("gazetteer diagnostic was not HTML escaped")
+	}
+
+	details := httptest.NewRecorder()
+	server.Handler().ServeHTTP(details, httptest.NewRequest(http.MethodGet, "/admin/gazetteer/"+strconv.FormatInt(runID, 10), nil))
+	for _, expected := range []string{"Gazetteer refresh details", "HTTP 502", "expected 0–0", "Data licence · City of Munich", "upstream &lt;script&gt;alert(1)&lt;/script&gt; failed", "Attempted source URL"} {
+		if details.Code != http.StatusOK || !strings.Contains(details.Body.String(), expected) {
+			t.Errorf("gazetteer details = %d, missing %q", details.Code, expected)
+		}
+	}
+	fragment := httptest.NewRecorder()
+	server.Handler().ServeHTTP(fragment, httptest.NewRequest(http.MethodGet, "/admin/gazetteer/"+strconv.FormatInt(runID, 10)+"?fragment=1", nil))
+	if fragment.Code != http.StatusOK || strings.Contains(fragment.Body.String(), "<!doctype html>") || !strings.Contains(fragment.Body.String(), "Source outcomes") {
+		t.Fatalf("gazetteer fragment = %d/%q", fragment.Code, fragment.Body.String())
+	}
+	missing := httptest.NewRecorder()
+	server.Handler().ServeHTTP(missing, httptest.NewRequest(http.MethodGet, "/admin/gazetteer/999999", nil))
+	if missing.Code != http.StatusNotFound {
+		t.Fatalf("missing gazetteer details = %d", missing.Code)
+	}
+	invalidID := httptest.NewRecorder()
+	server.Handler().ServeHTTP(invalidID, httptest.NewRequest(http.MethodGet, "/admin/gazetteer/not-a-number", nil))
+	if invalidID.Code != http.StatusBadRequest {
+		t.Fatalf("invalid gazetteer details = %d", invalidID.Code)
+	}
+	invalidPage := httptest.NewRecorder()
+	server.Handler().ServeHTTP(invalidPage, httptest.NewRequest(http.MethodGet, "/admin/gazetteer?page=zero", nil))
+	if invalidPage.Code != http.StatusBadRequest {
+		t.Fatalf("invalid gazetteer page = %d", invalidPage.Code)
+	}
+	emptyPage := httptest.NewRecorder()
+	server.Handler().ServeHTTP(emptyPage, httptest.NewRequest(http.MethodGet, "/admin/gazetteer?page=2", nil))
+	if emptyPage.Code != http.StatusNotFound {
+		t.Fatalf("empty gazetteer page = %d", emptyPage.Code)
+	}
+	if response.Header().Get("Cache-Control") != "private, no-store" || response.Header().Get("X-Robots-Tag") != "noindex, nofollow, noarchive" {
+		t.Fatalf("gazetteer headers = %#v", response.Header())
+	}
+
+	disabled := httptest.NewRecorder()
+	adminTestServer(t, database, nil).Handler().ServeHTTP(disabled, httptest.NewRequest(http.MethodGet, "/admin/gazetteer", nil))
+	if disabled.Code != http.StatusOK || !strings.Contains(disabled.Body.String(), "Gazetteer is disabled") {
+		t.Fatalf("disabled gazetteer = %d/%q", disabled.Code, disabled.Body.String())
+	}
+	disabledDetails := httptest.NewRecorder()
+	adminTestServer(t, database, nil).Handler().ServeHTTP(disabledDetails, httptest.NewRequest(http.MethodGet, "/admin/gazetteer/1", nil))
+	if disabledDetails.Code != http.StatusNotFound {
+		t.Fatalf("disabled gazetteer details = %d", disabledDetails.Code)
+	}
+}
+
+type fakeGazetteerRefresher struct {
+	result gazetteer.RefreshRequestResult
+	calls  int
+}
+
+func (f *fakeGazetteerRefresher) RequestRefresh() gazetteer.RefreshRequestResult {
+	f.calls++
+	return f.result
+}
+
+func TestAdminGazetteerRequestsManualRefresh(t *testing.T) {
+	ctx := context.Background()
+	gazetteerStore, err := gazetteer.Open(ctx, filepath.Join(t.TempDir(), "gazetteer.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { gazetteerStore.Close() })
+	database := fixtureStore(t)
+	refresher := &fakeGazetteerRefresher{result: gazetteer.RefreshRequestAccepted}
+	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{PageSize: 20, SourceMode: "fixture", PresentationMode: "review", AdminEnabled: true, Processor: fakeProcessingRequester{database: database}, Gazetteer: gazetteerStore, GazetteerRefresher: refresher})
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := server.Handler()
+
+	accepted := httptest.NewRecorder()
+	handler.ServeHTTP(accepted, formRequest(http.MethodPost, "/api/admin/gazetteer/refresh", "confirmed=true"))
+	if accepted.Code != http.StatusSeeOther || accepted.Header().Get("Location") != "/admin/gazetteer?notice=refresh_requested" || refresher.calls != 1 {
+		t.Fatalf("accepted refresh = %d/%q calls=%d", accepted.Code, accepted.Header().Get("Location"), refresher.calls)
+	}
+	refresher.result = gazetteer.RefreshRequestRunning
+	running := httptest.NewRecorder()
+	handler.ServeHTTP(running, formRequest(http.MethodPost, "/api/admin/gazetteer/refresh", "confirmed=true"))
+	if running.Code != http.StatusSeeOther || running.Header().Get("Location") != "/admin/gazetteer?notice=refresh_running" {
+		t.Fatalf("running refresh = %d/%q", running.Code, running.Header().Get("Location"))
+	}
+	refresher.result = gazetteer.RefreshRequestPending
+	pending := httptest.NewRecorder()
+	handler.ServeHTTP(pending, formRequest(http.MethodPost, "/api/admin/gazetteer/refresh", "confirmed=true"))
+	if pending.Code != http.StatusSeeOther || pending.Header().Get("Location") != "/admin/gazetteer?notice=refresh_pending" {
+		t.Fatalf("pending refresh = %d/%q", pending.Code, pending.Header().Get("Location"))
+	}
+
+	for _, test := range []struct {
+		name    string
+		request *http.Request
+		want    int
+	}{
+		{name: "unconfirmed", request: formRequest(http.MethodPost, "/api/admin/gazetteer/refresh", "confirmed=false"), want: http.StatusBadRequest},
+		{name: "non form", request: httptest.NewRequest(http.MethodPost, "/api/admin/gazetteer/refresh", strings.NewReader("confirmed=true")), want: http.StatusUnsupportedMediaType},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, test.request)
+			if response.Code != test.want {
+				t.Fatalf("status = %d, want %d", response.Code, test.want)
+			}
+		})
+	}
+	crossSite := formRequest(http.MethodPost, "/api/admin/gazetteer/refresh", "confirmed=true")
+	crossSite.Header.Set("Sec-Fetch-Site", "cross-site")
+	blocked := httptest.NewRecorder()
+	handler.ServeHTTP(blocked, crossSite)
+	if blocked.Code != http.StatusForbidden {
+		t.Fatalf("cross-site status = %d", blocked.Code)
+	}
+	oversized := httptest.NewRecorder()
+	handler.ServeHTTP(oversized, formRequest(http.MethodPost, "/api/admin/gazetteer/refresh", "confirmed=true&"+strings.Repeat("padding=x&", 600)))
+	if oversized.Code != http.StatusBadRequest {
+		t.Fatalf("oversized form status = %d", oversized.Code)
+	}
+	disabled := httptest.NewRecorder()
+	adminTestServer(t, database, nil).Handler().ServeHTTP(disabled, formRequest(http.MethodPost, "/api/admin/gazetteer/refresh", "confirmed=true"))
+	if disabled.Code != http.StatusServiceUnavailable {
+		t.Fatalf("disabled refresh status = %d", disabled.Code)
+	}
+
+	notice := httptest.NewRecorder()
+	handler.ServeHTTP(notice, httptest.NewRequest(http.MethodGet, "/admin/gazetteer?notice=refresh_running", nil))
+	if notice.Code != http.StatusOK || !strings.Contains(notice.Body.String(), "already running") {
+		t.Fatalf("refresh notice = %d/%q", notice.Code, notice.Body.String())
 	}
 }
 
@@ -62,7 +244,7 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	if page.Code != http.StatusOK || page.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("admin page = %d/%q", page.Code, page.Header().Get("Cache-Control"))
 	}
-	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", longTestModel, "Installed and ready", "admin-control", "admin-action-button", "sm:grid-cols-2", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/post-processing/process", "/api/admin/ai/automatic-processing", "/api/admin/ai/cancel-all", "Cancel all unfinished work", "/api/admin/ai/status", "/admin/rss-history", "RSS history", "/admin/history", "Pipeline history", "Open reader", "View full history", "Confirm AI request", staticAssets["theme.js"].path, "data-theme-toggle", staticAssets["admin.js"].path, "Active stage", "Canonical pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover", "Independent post-processing queues", "Post-processing only", "All registered languages", "Translations only", "Category verification only"} {
+	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", longTestModel, "Installed and ready", "admin-control", "admin-action-button", "sm:grid-cols-2", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/post-processing/process", "/api/admin/ai/automatic-processing", "/api/admin/ai/cancel-all", "Cancel all unfinished work", "/api/admin/ai/status", "/admin/rss-history", "RSS history", "/admin/history", "Pipeline history", "Open reader", "View full history", "Confirm AI request", staticAssets["theme.js"].path, "data-theme-toggle", staticAssets["admin.js"].path, "Active stage", "Canonical pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover", "Independent post-processing queues", "Post-processing only", "Configure translation routes", "Category verification only"} {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("admin page does not contain %q", expected)
 		}
@@ -87,8 +269,8 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	}
 	translationsOnly := httptest.NewRecorder()
 	handler.ServeHTTP(translationsOnly, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=translation&scope=all&target=all&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
-	if translationsOnly.Code != http.StatusSeeOther || !strings.Contains(translationsOnly.Header().Get("Location"), "post_processing_queued=0") || !strings.Contains(translationsOnly.Header().Get("Location"), "processor=translation") {
-		t.Fatalf("all-language focused processing = %d/%q", translationsOnly.Code, translationsOnly.Header().Get("Location"))
+	if translationsOnly.Code != http.StatusBadRequest || !strings.Contains(translationsOnly.Body.String(), "translations page") {
+		t.Fatalf("generic translation processing = %d/%q", translationsOnly.Code, translationsOnly.Body.String())
 	}
 	categoryOnly := httptest.NewRecorder()
 	handler.ServeHTTP(categoryOnly, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=category_verification&scope=default&target=all&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
@@ -107,8 +289,8 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	}
 	invalidModel := httptest.NewRecorder()
 	handler.ServeHTTP(invalidModel, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=translation&scope=en&target=all&model=missing%3A4b"))
-	if invalidModel.Code != http.StatusServiceUnavailable {
-		t.Fatalf("unavailable focused model = %d, want 503", invalidModel.Code)
+	if invalidModel.Code != http.StatusBadRequest {
+		t.Fatalf("generic translation model = %d, want 400", invalidModel.Code)
 	}
 	unexpectedIncident := httptest.NewRecorder()
 	handler.ServeHTTP(unexpectedIncident, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=translation&scope=en&target=all&incident_id=1&model=qwen3.5%3A4b"))
@@ -336,6 +518,8 @@ func TestAdminProcessingReturnsUnavailableWhenAIIsDisabled(t *testing.T) {
 		{method: http.MethodPost, path: "/api/admin/ai/automatic-processing", body: "enabled=false"},
 		{method: http.MethodPost, path: "/api/admin/ai/cancel-all", body: "confirmed=true"},
 		{method: http.MethodPost, path: "/api/admin/ai/post-processing/process", body: "confirmed=true&processor=translation&scope=en&target=all&model=qwen3.5%3A4b"},
+		{method: http.MethodPost, path: "/api/admin/ai/post-processing/enabled", body: "confirmed=true&processor=translation&scope=en&enabled=false"},
+		{method: http.MethodPost, path: "/api/admin/ai/post-processing/processor-enabled", body: "confirmed=true&processor=translation&enabled=false"},
 		{method: http.MethodPost, path: "/api/admin/ai/translations/process", body: "confirmed=true&language=en&action=all&model=qwen3.5%3A4b"},
 	} {
 		response := httptest.NewRecorder()
@@ -401,7 +585,7 @@ func TestAdminRetriesPostProcessingAndRejectsRemovedBackfillRoutes(t *testing.T)
 	handler := adminTestServer(t, database, nil).Handler()
 	page := httptest.NewRecorder()
 	handler.ServeHTTP(page, httptest.NewRequest(http.MethodGet, "/admin", nil))
-	for _, expected := range []string{"Kanonischer Titel", "0 / 1 published", "Manage translations", "/admin/translations?incident=", "Category verification", "Not checked"} {
+	for _, expected := range []string{"Kanonischer Titel", fmt.Sprintf("0 / %d published", len(processing.RegisteredTranslations())), "Manage translations", "/admin/translations?incident=", "Category verification", "Not checked"} {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("admin missing-translation page does not contain %q", expected)
 		}
@@ -412,8 +596,8 @@ func TestAdminRetriesPostProcessingAndRejectsRemovedBackfillRoutes(t *testing.T)
 		t.Fatalf("unconfirmed translation retry = %d", unconfirmed.Code)
 	}
 	retry := httptest.NewRecorder()
-	handler.ServeHTTP(retry, formRequest(http.MethodPost, "/api/admin/ai/post-processing/process", "confirmed=true&processor=translation&scope=en&target=incident&incident_id="+formatID(records[0].ID)+"&model=qwen3.5%3A4b&unprocessed_page=1&all_page=1"))
-	if retry.Code != http.StatusSeeOther || !strings.Contains(retry.Header().Get("Location"), "post_processing_queued=1") {
+	handler.ServeHTTP(retry, formRequest(http.MethodPost, "/api/admin/ai/translations/process", "confirmed=true&language=en&action=incident&incident_id="+formatID(records[0].ID)+"&model=qwen3.5%3A4b&adapter=structured&return_incident="+formatID(records[0].ID)))
+	if retry.Code != http.StatusSeeOther || !strings.Contains(retry.Header().Get("Location"), "queued=1") {
 		t.Fatalf("translation retry = %d/%q", retry.Code, retry.Header().Get("Location"))
 	}
 	backfill := httptest.NewRecorder()
@@ -498,7 +682,7 @@ func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
 	}
 	for _, expected := range []string{
 		"Unprocessed incidents", "2 shown / 28 total", "All incidents", "2 shown / 28 total",
-		presentation.TitleDE, presentation.SummaryDE, "1 / 1 published", "Manage translations",
+		presentation.TitleDE, presentation.SummaryDE, fmt.Sprintf("1 / %d published", len(processing.RegisteredTranslations())), "Manage translations",
 		job.TitleDE, job.BodyDE, "Original German text", "German presentation ready",
 		"all_page=1&amp;unprocessed_page=2", "all_page=2&amp;unprocessed_page=1",
 	} {
@@ -549,6 +733,13 @@ func TestAdminRendersPaginatedIncidentReviewLists(t *testing.T) {
 func TestAdminTranslationOperationsOverviewDrilldownsAndActions(t *testing.T) {
 	t.Parallel()
 	database := fixtureStore(t)
+	translationCodes := make([]string, 0, len(processing.RegisteredTranslations()))
+	for _, translation := range processing.RegisteredTranslations() {
+		translationCodes = append(translationCodes, translation.Language)
+	}
+	if err := database.EnsureTranslationLanguageSettings(context.Background(), translationCodes, processing.EnglishLanguage, time.Now()); err != nil {
+		t.Fatal(err)
+	}
 	now := time.Date(2026, time.August, 31, 10, 0, 0, 0, time.UTC)
 	presentation := testPresentation{
 		TitleDE: "Übersetzungsübersicht", SummaryDE: "Deutsche Zusammenfassung.",
@@ -584,7 +775,7 @@ func TestAdminTranslationOperationsOverviewDrilldownsAndActions(t *testing.T) {
 	handler.ServeHTTP(overview, httptest.NewRequest(http.MethodGet, "/admin/translations", nil))
 	for _, expected := range []string{
 		"Translation operations", "Current source incidents", "Published German", "German canonical backlog",
-		"English", "1 / 1", "100%", "Manage", "Attention can overlap published", "1 retained replacement warning", "data-translation-operations",
+		"English", "1 / 1", "100%", "Manage", "Preferred route", "Structured chat (general LLM)", "HY-MT2 native", "Seed-X native", "SalamandraTA native", "LLaMAX3 native", "EuroLLM native", "Tower&#43; native", "TowerInstruct native", "Attention can overlap published", "1 retained replacement warning", "data-translation-operations",
 		"data-translation-poll-interval=\"5000\"", "/admin/history", "aria-current=\"page\"",
 	} {
 		if overview.Code != http.StatusOK || !strings.Contains(overview.Body.String(), expected) {
@@ -596,7 +787,7 @@ func TestAdminTranslationOperationsOverviewDrilldownsAndActions(t *testing.T) {
 	}
 	dashboard := httptest.NewRecorder()
 	handler.ServeHTTP(dashboard, httptest.NewRequest(http.MethodGet, "/admin", nil))
-	for _, expected := range []string{"1 / 1 published", "1 attention", "1 retained replacement warning", "Manage translations"} {
+	for _, expected := range []string{fmt.Sprintf("1 / %d published", len(processing.RegisteredTranslations())), "1 attention", "1 retained replacement warning", "Manage translations"} {
 		if dashboard.Code != http.StatusOK || !strings.Contains(dashboard.Body.String(), expected) {
 			t.Errorf("compact translation rollup = %d, missing %q", dashboard.Code, expected)
 		}
@@ -646,9 +837,9 @@ func TestAdminTranslationOperationsOverviewDrilldownsAndActions(t *testing.T) {
 		selection processing.PostProcessingSelection
 		incident  bool
 	}{
-		{body: "confirmed=true&language=en&model=qwen3.5%3A4b&action=unpublished&return_status=unpublished", selection: processing.PostProcessingSelectionUnpublished},
-		{body: "confirmed=true&language=en&model=qwen3.5%3A4b&action=all&return_status=all", selection: processing.PostProcessingSelectionAll},
-		{body: "confirmed=true&language=en&model=qwen3.5%3A4b&action=incident&incident_id=" + formatID(job.IncidentID) + "&return_incident=" + formatID(job.IncidentID), selection: processing.PostProcessingSelectionAll, incident: true},
+		{body: "confirmed=true&language=en&model=qwen3.5%3A4b&adapter=hy-mt2&action=unpublished&return_status=unpublished", selection: processing.PostProcessingSelectionUnpublished},
+		{body: "confirmed=true&language=en&model=qwen3.5%3A4b&adapter=hy-mt2&action=all&return_status=all", selection: processing.PostProcessingSelectionAll},
+		{body: "confirmed=true&language=en&model=qwen3.5%3A4b&adapter=hy-mt2&action=incident&incident_id=" + formatID(job.IncidentID) + "&return_incident=" + formatID(job.IncidentID), selection: processing.PostProcessingSelectionAll, incident: true},
 	}
 	for index, test := range actions {
 		response := httptest.NewRecorder()
@@ -657,9 +848,29 @@ func TestAdminTranslationOperationsOverviewDrilldownsAndActions(t *testing.T) {
 			t.Fatalf("translation action %d = %d/%q", index, response.Code, response.Header().Get("Location"))
 		}
 		request := received[index]
-		if request.ProcessorKey != processing.TranslationModelStep || len(request.ScopeKeys) != 1 || request.ScopeKeys[0] != "en" || request.Selection != test.selection || (request.IncidentID != nil) != test.incident {
+		if request.ProcessorKey != processing.TranslationModelStep || len(request.ScopeKeys) != 1 || request.ScopeKeys[0] != "en" || request.AdapterKey != processing.TranslationAdapterHyMT2 || request.Selection != test.selection || (request.IncidentID != nil) != test.incident {
 			t.Errorf("translation action %d request = %#v", index, request)
 		}
+	}
+
+	preference := httptest.NewRecorder()
+	handler.ServeHTTP(preference, formRequest(http.MethodPost, "/api/admin/ai/translations/preference", "confirmed=true&language=en&model=granite4%3A3b&adapter=hy-mt2&return_language=en"))
+	if preference.Code != http.StatusSeeOther || !strings.Contains(preference.Header().Get("Location"), "preference_language=en") {
+		t.Fatalf("translation preference = %d/%q", preference.Code, preference.Header().Get("Location"))
+	}
+	settings, err := database.TranslationLanguageSettings(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, setting := range settings {
+		if setting.LanguageCode == "en" && (setting.PreferredModel != "granite4:3b" || setting.AdapterKey != processing.TranslationAdapterHyMT2) {
+			t.Fatalf("saved English preference = %#v", setting)
+		}
+	}
+	preferenceNotice := httptest.NewRecorder()
+	handler.ServeHTTP(preferenceNotice, httptest.NewRequest(http.MethodGet, preference.Header().Get("Location"), nil))
+	if preferenceNotice.Code != http.StatusOK || !strings.Contains(preferenceNotice.Body.String(), "Preferred translation model and adapter updated for English") {
+		t.Fatalf("translation preference notice = %d/%q", preferenceNotice.Code, preferenceNotice.Body.String())
 	}
 
 	notice := httptest.NewRecorder()
@@ -679,6 +890,7 @@ func TestAdminTranslationOperationsOverviewDrilldownsAndActions(t *testing.T) {
 		{name: "missing incident", body: "confirmed=true&language=en&model=qwen3.5%3A4b&action=incident&incident_id=zero", want: http.StatusBadRequest},
 		{name: "incident on all", body: "confirmed=true&language=en&model=qwen3.5%3A4b&action=all&incident_id=1", want: http.StatusBadRequest},
 		{name: "model", body: "confirmed=true&language=en&model=missing%3A4b&action=all", want: http.StatusServiceUnavailable},
+		{name: "unsupported adapter", body: "confirmed=true&language=ro&model=qwen3.5%3A4b&adapter=hy-mt2&action=all", want: http.StatusBadRequest},
 	} {
 		response := httptest.NewRecorder()
 		handler.ServeHTTP(response, formRequest(http.MethodPost, "/api/admin/ai/translations/process", test.body))
@@ -704,6 +916,11 @@ func TestAdminTranslationOperationsOverviewDrilldownsAndActions(t *testing.T) {
 	handler.ServeHTTP(oversized, formRequest(http.MethodPost, "/api/admin/ai/translations/process", "confirmed=true&"+strings.Repeat("padding=x&", 600)))
 	if oversized.Code != http.StatusBadRequest {
 		t.Errorf("oversized translation mutation = %d, want 400", oversized.Code)
+	}
+	adminScript := httptest.NewRecorder()
+	handler.ServeHTTP(adminScript, httptest.NewRequest(http.MethodGet, staticAssets["admin.js"].path, nil))
+	if adminScript.Code != http.StatusOK || !strings.Contains(adminScript.Body.String(), `select[name="adapter"]`) {
+		t.Error("translation confirmation does not show the selected adapter")
 	}
 }
 
@@ -803,8 +1020,7 @@ func TestAdminTranslationActionsRequireManualProcessorAndExplicitFallbackModel(t
 			CatalogAvailable: true,
 			Models:           []string{"fallback:4b"},
 		},
-		TranslationModel:  processor,
-		TranslationModels: []adminTranslationModelOption{{Value: "fallback:4b"}},
+		TranslationModel: processor,
 	}
 	data.TranslationActionsAvailable = data.translationActionsAvailable()
 	if !data.TranslationActionsAvailable {
@@ -827,6 +1043,16 @@ func TestAdminTranslationActionsRequireManualProcessorAndExplicitFallbackModel(t
 	}
 	if count := strings.Count(output.String(), "Choose installed model"); count != 2 {
 		t.Fatalf("fallback model prompts = %d, want two bulk-action prompts", count)
+	}
+}
+
+func TestAdminTranslationRoutesKeepUnavailablePreferredModelVisible(t *testing.T) {
+	processor := &processing.PostProcessorModelStatus{Scopes: []processing.PostProcessorScopeStatus{{
+		Key: "en", PreferredModel: "missing:12b", AdapterKey: processing.TranslationAdapterStructured,
+	}}}
+	route := adminTranslationRoutes(processor, []string{"installed:4b"})["en"]
+	if len(route.Models) != 2 || route.Models[0].Value != "missing:12b" || !route.Models[0].Selected || route.Models[1].Selected {
+		t.Fatalf("unavailable preferred route = %#v", route)
 	}
 }
 
@@ -879,7 +1105,7 @@ func TestAdminRSSHistoryShowsDurableChecksAndCursorPagination(t *testing.T) {
 	for _, expected := range []string{
 		"RSS synchronization history", "2 checks shown", "RSS history", `aria-current="page"`,
 		"In progress", "upstream &lt;timeout&gt;", "Parsed and stored 2", "Fetch failures 1", "Older →",
-		"admin-history-shell", "admin-provenance", `data-rss-history`, `data-history-poll-interval="5000"`, staticAssets["admin.js"].path,
+		`data-rss-history`, `data-history-poll-interval="5000"`, staticAssets["admin.js"].path,
 	} {
 		if !strings.Contains(first.Body.String(), expected) {
 			t.Errorf("RSS history does not contain %q", expected)
@@ -955,7 +1181,7 @@ func TestAdminPipelineHistoryCombinesCanonicalAndPostProcessingJobs(t *testing.T
 	if completed, err := database.AdvancePipelineCycle(ctx, cycle, len(plans), requestedAt); err != nil || !completed.Completed {
 		t.Fatalf("complete history cycle = %#v/%v", completed, err)
 	}
-	translationPlan := store.PostProcessingPlan{ProcessorKey: "translation", ScopeKey: "en", PromptVersion: "incident-translation-en-v1", Model: "translategemma:4b", InputKinds: []string{"title_de", "summary_de"}}
+	translationPlan := store.PostProcessingPlan{ProcessorKey: "translation", ScopeKey: "en", PromptVersion: "incident-translation-en-v1", Model: "translategemma:4b", AdapterKey: processing.TranslationAdapterTranslateGemma, InputKinds: []string{"title_de", "summary_de"}}
 	if queued, err := database.QueuePostProcessingForRun(ctx, german.PresentationRunID, []store.PostProcessingPlan{translationPlan}, "manual", false, requestedAt); err != nil || queued != 1 {
 		t.Fatalf("queue history translation = %d/%v", queued, err)
 	}
@@ -992,7 +1218,7 @@ func TestAdminPipelineHistoryCombinesCanonicalAndPostProcessingJobs(t *testing.T
 	if first.Code != http.StatusOK || first.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("pipeline history = %d/%q", first.Code, first.Header().Get("Cache-Control"))
 	}
-	for _, expected := range []string{"Pipeline history", "Open reader", `aria-current="page"`, "2 job states shown", "category_verification/default", "post-processing · manual", "qwen3.5:4b", "translation/en", "translategemma:4b", "Older →", "admin-history-shell", "admin-provenance", `data-pipeline-history`, `data-history-poll-interval="2000"`, staticAssets["admin.js"].path} {
+	for _, expected := range []string{"Pipeline history", "Open reader", `aria-current="page"`, "2 job states shown", "category_verification/default", "post-processing · manual", "qwen3.5:4b", "translation/en", "translategemma:4b", "adapter translategemma", "Older →", "admin-history-shell", "admin-provenance", `data-pipeline-history`, `data-history-poll-interval="2000"`, staticAssets["admin.js"].path} {
 		if !strings.Contains(first.Body.String(), expected) {
 			t.Errorf("pipeline history does not contain %q", expected)
 		}
@@ -1389,6 +1615,90 @@ func TestVisiblePostProcessingModelDistinguishesZeroAttemptSkip(t *testing.T) {
 	generatedAt := time.Now()
 	if visible := visiblePostProcessingModel(model, "skipped", 0, &generatedAt); visible != model {
 		t.Fatalf("retained successful model = %q", visible)
+	}
+}
+
+func TestAdminControlsAutomaticPostProcessingPerScope(t *testing.T) {
+	database := fixtureStore(t)
+	server := adminTestServer(t, database, nil)
+	handler := server.Handler()
+
+	translations := httptest.NewRecorder()
+	handler.ServeHTTP(translations, httptest.NewRequest(http.MethodGet, "/admin/translations", nil))
+	for _, expected := range []string{"Automatic", "Automatic translation requires the global AI switch", "Enabling is picked up by the next normal check", `/api/admin/ai/post-processing/processor-enabled`, "All translations", `/api/admin/ai/post-processing/enabled`, `name="scope" type="hidden" value="en"`, "Enabled", `name="scope" type="hidden" value="ru"`, "Disabled"} {
+		if translations.Code != http.StatusOK || !strings.Contains(translations.Body.String(), expected) {
+			t.Errorf("translation controls do not contain %q", expected)
+		}
+	}
+	disableAll := httptest.NewRecorder()
+	handler.ServeHTTP(disableAll, formRequest(http.MethodPost, "/api/admin/ai/post-processing/processor-enabled", "confirmed=true&processor=translation&enabled=false"))
+	if disableAll.Code != http.StatusSeeOther || !strings.Contains(disableAll.Header().Get("Location"), "/admin/translations?") || !strings.Contains(disableAll.Header().Get("Location"), "processor_automatic_enabled=false") {
+		t.Fatalf("disable all translations redirect = %d %q", disableAll.Code, disableAll.Header().Get("Location"))
+	}
+	processorSettings, err := database.PostProcessingProcessorSettings(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, setting := range processorSettings {
+		if setting.ProcessorKey == processing.TranslationModelStep && setting.Enabled {
+			t.Fatalf("translation processor remains enabled: %#v", setting)
+		}
+	}
+	invalidProcessor := httptest.NewRecorder()
+	handler.ServeHTTP(invalidProcessor, formRequest(http.MethodPost, "/api/admin/ai/post-processing/processor-enabled", "confirmed=true&processor=translation&enabled=1"))
+	if invalidProcessor.Code != http.StatusBadRequest {
+		t.Fatalf("non-boolean processor enabled status = %d", invalidProcessor.Code)
+	}
+	unknownProcessor := httptest.NewRecorder()
+	handler.ServeHTTP(unknownProcessor, formRequest(http.MethodPost, "/api/admin/ai/post-processing/processor-enabled", "confirmed=true&processor=missing&enabled=false"))
+	if unknownProcessor.Code != http.StatusBadRequest {
+		t.Fatalf("unknown processor status = %d", unknownProcessor.Code)
+	}
+
+	disable := httptest.NewRecorder()
+	handler.ServeHTTP(disable, formRequest(http.MethodPost, "/api/admin/ai/post-processing/enabled", "confirmed=true&processor=category_verification&scope=default&enabled=false"))
+	if disable.Code != http.StatusSeeOther || !strings.Contains(disable.Header().Get("Location"), "/admin/verifications?") || !strings.Contains(disable.Header().Get("Location"), "automatic_enabled=false") {
+		t.Fatalf("disable redirect = %d %q", disable.Code, disable.Header().Get("Location"))
+	}
+	settings, err := database.PostProcessingScopeSettings(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, setting := range settings {
+		if setting.ProcessorKey == processing.CategoryVerificationStep && setting.ScopeKey == processing.DefaultPostProcessingScope && setting.Enabled {
+			t.Fatalf("category verification remains enabled: %#v", setting)
+		}
+	}
+
+	invalid := httptest.NewRecorder()
+	handler.ServeHTTP(invalid, formRequest(http.MethodPost, "/api/admin/ai/post-processing/enabled", "confirmed=true&processor=translation&scope=en&enabled=1"))
+	if invalid.Code != http.StatusBadRequest {
+		t.Fatalf("non-boolean enabled status = %d", invalid.Code)
+	}
+	unknown := httptest.NewRecorder()
+	handler.ServeHTTP(unknown, formRequest(http.MethodPost, "/api/admin/ai/post-processing/enabled", "confirmed=true&processor=translation&scope=missing&enabled=false"))
+	if unknown.Code != http.StatusBadRequest {
+		t.Fatalf("unknown scope status = %d", unknown.Code)
+	}
+	unconfirmed := httptest.NewRecorder()
+	handler.ServeHTTP(unconfirmed, formRequest(http.MethodPost, "/api/admin/ai/post-processing/enabled", "processor=translation&scope=en&enabled=false"))
+	if unconfirmed.Code != http.StatusBadRequest {
+		t.Fatalf("unconfirmed scope update status = %d", unconfirmed.Code)
+	}
+	protected := adminTestServer(t, database, []string{"munichbrief.de"})
+	crossSite := httptest.NewRecorder()
+	crossSiteRequest := formRequest(http.MethodPost, "/api/admin/ai/post-processing/enabled", "confirmed=true&processor=translation&scope=en&enabled=false")
+	crossSiteRequest.Header.Set("Origin", "https://evil.invalid")
+	protected.Handler().ServeHTTP(crossSite, crossSiteRequest)
+	if crossSite.Code != http.StatusForbidden {
+		t.Fatalf("cross-site scope update status = %d", crossSite.Code)
+	}
+	crossSiteProcessor := httptest.NewRecorder()
+	crossSiteProcessorRequest := formRequest(http.MethodPost, "/api/admin/ai/post-processing/processor-enabled", "confirmed=true&processor=translation&enabled=true")
+	crossSiteProcessorRequest.Header.Set("Origin", "https://evil.invalid")
+	protected.Handler().ServeHTTP(crossSiteProcessor, crossSiteProcessorRequest)
+	if crossSiteProcessor.Code != http.StatusForbidden {
+		t.Fatalf("cross-site processor update status = %d", crossSiteProcessor.Code)
 	}
 }
 

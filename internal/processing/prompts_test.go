@@ -3,6 +3,8 @@ package processing
 import (
 	"strings"
 	"testing"
+
+	langregistry "github.com/egekocabas/munichbrief/internal/languages"
 )
 
 func TestPromptRegistryResolvesRegisteredVersions(t *testing.T) {
@@ -28,27 +30,97 @@ func TestPromptRegistryResolvesRegisteredVersions(t *testing.T) {
 	}
 }
 
-func TestEnglishTranslateGemmaV2PromptUsesRegisteredLanguageIdentity(t *testing.T) {
-	prompt, found := PromptByVersion(EnglishTranslationPromptVersion)
-	if !found || prompt.Status != PromptActive || !prompt.UserOnly || prompt.SystemPrompt != "" {
-		t.Fatalf("active English translation prompt = %#v, found=%t", prompt, found)
-	}
-	retired, found := PromptByVersion(EnglishTranslationV1PromptVersion)
-	if !found || retired.Status != PromptRetired || retired.UserOnly {
-		t.Fatalf("retired English translation prompt = %#v, found=%t", retired, found)
-	}
-	const payload = `{"title_de":"Titel","summary_de":"Zusammenfassung."}`
-	rendered := promptUserMessage(EnglishTranslationPromptVersion, payload)
-	for _, expected := range []string{
-		"German (de-DE) to English (en-GB)", `"title_de"`, `"summary_de"`, `"title_en"`, `"summary_en"`,
-		"Maxvorstadt", "slightly injured", "presumption-of-innocence",
-	} {
-		if !strings.Contains(rendered, expected) {
-			t.Errorf("TranslateGemma prompt omitted %q: %s", expected, rendered)
+func TestRegisteredTranslationPromptsUseOnePlaceholderContract(t *testing.T) {
+	var sharedBody string
+	for _, translation := range RegisteredTranslations() {
+		prompt, found := PromptByVersion(translation.PromptVersion)
+		if !found || prompt.Status != PromptActive || !prompt.UserOnly || prompt.SystemPrompt != "" {
+			t.Fatalf("active %s translation prompt = %#v, found=%t", translation.Language, prompt, found)
+		}
+		definition, found := langregistry.ByCode(langregistry.Registered(), translation.Language)
+		if !found {
+			t.Fatalf("translation language %q is not registered", translation.Language)
+		}
+		payload := `{"title_de":"Titel","summary_de":"Zusammenfassung."}`
+		rendered := promptUserMessage(translation.PromptVersion, payload)
+		fieldCode := strings.ReplaceAll(translation.Language, "-", "_")
+		for _, expected := range []string{
+			"German (de-DE) to " + definition.TranslationName + " (" + definition.Tag.String() + ")",
+			`"title_` + fieldCode + `"`, `"summary_` + fieldCode + `"`, "presumption-of-innocence",
+			`__MB_[A-Z_]+_[0-9]{4}__`, "STREET, DISTRICT, TRAIN_STATION, COMMUTER_TRAIN, or SUBWAY_SYSTEM", "same token can intentionally occur more than once", "Copy every token occurrence exactly", "natural target-language word order", "apostrophe-delimited grammatical suffix", "Output plain text without Markdown or URLs",
+		} {
+			if !strings.Contains(rendered, expected) {
+				t.Errorf("%s unified translation prompt omitted %q", translation.Language, expected)
+			}
+		}
+		if strings.Count(rendered, payload) != 1 {
+			t.Errorf("%s unified translation payload occurrence count = %d", translation.Language, strings.Count(rendered, payload))
+		}
+		if !strings.Contains(rendered, ":\n\n\n"+payload) || strings.Contains(rendered, ":\n\n\n\n"+payload) {
+			t.Errorf("%s unified translation prompt must have exactly two blank lines before the payload", translation.Language)
+		}
+		body := strings.ReplaceAll(prompt.UserPromptTemplate, definition.TranslationName, "TARGET")
+		if guidance := strings.TrimSpace(structuredTranslationLanguageGuidance[translation.Language]); guidance != "" {
+			body = strings.Replace(prompt.UserPromptTemplate, guidance+"\n", "", 1)
+			body = strings.ReplaceAll(body, definition.TranslationName, "TARGET")
+		}
+		body = strings.ReplaceAll(body, definition.Tag.String(), "TAG")
+		body = strings.ReplaceAll(body, `title_`+fieldCode, "title_TARGET")
+		body = strings.ReplaceAll(body, `summary_`+fieldCode, "summary_TARGET")
+		if sharedBody == "" {
+			sharedBody = body
+		} else if body != sharedBody {
+			t.Errorf("%s prompt diverged from the unified template", translation.Language)
 		}
 	}
-	if strings.Count(rendered, payload) != 1 || !strings.HasSuffix(rendered, "English:\n\n\n"+payload) {
-		t.Fatalf("TranslateGemma payload separator or occurrence count is invalid: %q", rendered)
+}
+
+func TestStructuredTranslationLanguageGuidanceIsIsolated(t *testing.T) {
+	payload := `{"title_de":"Unfall an der __MB_STREET_0001__","summary_de":"Unfall an der __MB_STREET_0001__."}`
+	romanian := promptUserMessage(RomanianTranslationPromptVersion, payload)
+	for _, expected := range []string{"never ‘în apropierea’", "never ‘poliția criminalistică’", "plural meaning of German ‘S-Bahnen’", "both trailing underscore characters"} {
+		if !strings.Contains(romanian, expected) {
+			t.Fatalf("Romanian guidance missing %q: %q", expected, romanian)
+		}
+	}
+	croatian := promptUserMessage(CroatianTranslationPromptVersion, payload)
+	for _, expected := range []string{"standard Croatian, never Serbian", "directly from the input", "plural German context", "explicitly alleged", "neutral ‘osumnjičenik’", "uhićen tijekom provjere", "Keep ‘Hinweise’", "never confirmed offences"} {
+		if !strings.Contains(croatian, expected) {
+			t.Fatalf("Croatian guidance missing %q: %q", expected, croatian)
+		}
+	}
+	if strings.Contains(romanian, "neutral ‘osumnjičenik’") || strings.Contains(croatian, "în apropierea") {
+		t.Fatal("Romanian and Croatian guidance leaked into each other")
+	}
+	spanish := promptUserMessage(SpanishTranslationPromptVersion, payload)
+	for _, expected := range []string{"German time precision explicitly", "‘genau’ requires ‘exactamente’", "never make either unmarked", "‘los trenes’", "independently in both title and summary", "never singular ‘el’", "singular verb such as ‘circuló’", "‘ingresada en un hospital’", "vague ‘de forma hospitalaria’", "‘anomalías compatibles con alcohol o drogas’", "Do not use the word ‘consumo’", "generic plural ‘testigos’", "neutral ‘Tatverdächtiger’ as ‘sospechoso’", "never as an author or perpetrator"} {
+		if !strings.Contains(spanish, expected) {
+			t.Fatalf("Spanish guidance missing %q: %q", expected, spanish)
+		}
+	}
+	italian := promptUserMessage(ItalianTranslationPromptVersion, payload)
+	for _, expected := range []string{"German time precision explicitly", "‘genau’ requires ‘esattamente’", "‘venerdì sera’", "never Friday afternoon", "‘i treni’", "independently in title and summary", "never put singular ‘il’", "generic vehicle ‘Scheibe’", "never infer ‘parabrezza’", "‘non vi è alcuna condanna’", "without adding ‘definitiva’", "‘condanna passata in giudicato’", "‘anomalie compatibili con alcol o droghe’", "never claim intake, consumption, intoxication", "neutral ‘Tatverdächtiger’ as ‘sospettato’", "never as an author, offender, or perpetrator"} {
+		if !strings.Contains(italian, expected) {
+			t.Fatalf("Italian guidance missing %q: %q", expected, italian)
+		}
+	}
+	for _, translation := range RegisteredTranslations() {
+		if translation.Language == "ro" || translation.Language == "hr" || translation.Language == "es" || translation.Language == "it" {
+			continue
+		}
+		if rendered := promptUserMessage(translation.PromptVersion, payload); strings.Contains(rendered, "în apropierea") || strings.Contains(rendered, "poliția criminalistică") || strings.Contains(rendered, "plural meaning of German ‘S-Bahnen’") || strings.Contains(rendered, "neutral ‘osumnjičenik’") || strings.Contains(rendered, "generic plural ‘testigos’") || strings.Contains(rendered, "neutral ‘Tatverdächtiger’ as ‘sospettato’") {
+			t.Fatalf("language-specific guidance leaked into %s: %q", translation.Language, rendered)
+		}
+	}
+}
+
+func TestPreviousTranslationPromptsRemainRetiredAndAddressable(t *testing.T) {
+	versions := []string{EnglishTranslationV1PromptVersion, EnglishTranslationV2PromptVersion}
+	for _, version := range versions {
+		prompt, found := PromptByVersion(version)
+		if !found || prompt.Status != PromptRetired {
+			t.Errorf("retired prompt %q = %#v, found=%v", version, prompt, found)
+		}
 	}
 }
 
