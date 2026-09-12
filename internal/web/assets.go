@@ -79,8 +79,8 @@ func assetURL(name string) (string, error) {
 	return asset.path, nil
 }
 
-// selectedAIGeneratedAssetURL returns the unchanged official label used in
-// dark mode and as the basis for the reviewed light-theme derivative.
+// selectedAIGeneratedAssetURL returns the dark-theme label with its text sized
+// to match the light-theme treatment.
 func selectedAIGeneratedAssetURL() (string, error) {
 	return assetURL(selectedAIGeneratedAsset)
 }
