@@ -152,6 +152,10 @@ func Open(ctx context.Context, path string) (*Store, error) {
 		db.Close()
 		return nil, err
 	}
+	if err := store.installReaderIndex(ctx); err != nil {
+		db.Close()
+		return nil, err
+	}
 	return store, nil
 }
 
