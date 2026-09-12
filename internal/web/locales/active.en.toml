@@ -1,5 +1,5 @@
 [SiteDescription]
-other = "Stay informed with AI summaries of official Munich Police reports."
+other = "Reports from Munich Police Headquarters (Polizeipräsidium München), summarized in English."
 
 [BrandTagline]
 other = "Munich at a glance"
@@ -56,13 +56,13 @@ other = "AI-generated content"
 other = "Local preview: this page uses synthetic fixture content."
 
 [AIDisclosureCopy]
-other = "MunichBrief uses locally operated AI to create headlines, summaries, translations, categories, and structured details such as the reported area and time, and whether the police are requesting public assistance, from official Munich Police reports. AI-generated or inferred information may contain errors or become outdated when the original report is updated. Each incident page identifies and links to its official police source; please consult that source for authoritative information. MunichBrief is an independent project and is not affiliated with the Bavarian Police. Everyone mentioned is presumed innocent unless proven guilty."
+other = "AI creates these headlines, summaries, translations, and incident details. It can make mistakes or miss updates. Use the linked police report to check the information. MunichBrief is independent of the police; the presumption of innocence applies."
 
 [AIDisclosurePreferenceCopy]
-other = "Selecting “Got it” remembers this notice for 30 days."
+other = "Dismiss for 30 days."
 
 [AIDisclosureLearnMore]
-other = "More information about MunichBrief and how it works is available on the About page."
+other = "How it works"
 
 [AIDisclosureGotIt]
 other = "Got it"
@@ -80,7 +80,7 @@ other = "EU icon guidance"
 other = "EU Code of Practice"
 
 [Footer]
-other = "MunichBrief is independent from the Bavarian Police. No analytics, accounts, or advertising."
+other = "MunichBrief is independent of the police. No account needed. No advertising."
 
 [Built]
 other = "Built"
@@ -144,16 +144,16 @@ other = "Local prototype"
 other = "Munich Police releases"
 
 [HeroTitle]
-other = "Latest incidents reported by Munich Police"
+other = "Munich, in brief."
 
 [HeroCopy]
-other = "A clear overview of local incidents, summarized from official police reports."
+other = "Reports from Munich Police Headquarters (Polizeipräsidium München), summarized in English."
 
 [FixtureIncidents]
 other = "Synthetic reports"
 
 [LatestIncidents]
-other = "Latest incidents"
+other = "Latest reports"
 
 [Reports]
 one = "{{.Count}} report"
@@ -172,10 +172,10 @@ other = "Source metadata"
 other = "Read report"
 
 [OpenOfficialSource]
-other = "Open official source"
+other = "Official report"
 
 [OpenOfficialPoliceRelease]
-other = "Open official police release"
+other = "Official report"
 
 [Newer]
 other = "Newer"
@@ -196,16 +196,16 @@ other = "No reports yet"
 other = "Run fixture ingestion to populate this view."
 
 [NoLiveCopy]
-other = "The synchronizer has not discovered an in-window release yet."
+other = "There are no reports to show right now. Please check back later."
 
 [BodyUnavailable]
-other = "The release body is not available yet. MunichBrief is retrying; use the official source in the meantime."
+other = "This summary is not ready yet. You can read the original police report below."
 
 [SourceRefreshFailed]
-other = "The last source refresh failed; this stored copy remains available."
+other = "This report may have been updated. Check the official source for the latest information."
 
 [Back]
-other = "Back"
+other = "All reports"
 
 [Breadcrumb]
 other = "Breadcrumb"
@@ -449,13 +449,13 @@ other = "AI output requires review"
 other = "The original German report is shown."
 
 [AboutTitle]
-other = "How MunichBrief works"
+other = "About MunichBrief"
 
 [Methodology]
 other = "About MunichBrief"
 
 [AboutIntro]
-other = "MunichBrief turns official Munich Police releases into clear, structured incident summaries in multiple reader languages."
+other = "MunichBrief helps you follow local police reports in your language. Read a short summary, see where and when an incident happened, and open the official report for the full details."
 
 [FromReleaseToIncident]
 other = "From release to incident"
@@ -494,10 +494,10 @@ other = "AI-generated summaries and extracted details may contain errors. Police
 other = "Privacy and data handling"
 
 [PrivacyCopy]
-other = "MunichBrief has no accounts, analytics, or advertising. A necessary cookie stores the selected language for one year. After you select “Got it”, a first-party preference cookie remembers the AI disclosure for 30 days. The selected colour theme is stored locally in your browser."
+other = "No account is needed and there is no advertising. This browser remembers your language for one year, dismissed AI notices for 30 days, and applied searches for 30 days. Search criteria are sent in a first-party cookie, not in the URL. The colour theme stays in browser storage until removed."
 
 [DataHandlingCopy]
-other = "Extracted German source text is stored locally. Restricted review mode can display originals and processing states for quality control; public mode does not display stored originals."
+other = "German source text is retained for processing and restricted review, with no automatic expiry currently configured. Public pages show the resulting summaries rather than stored originals. Requests about personal data can be sent by email."
 
 [IndependenceLegalReview]
 other = "Independence and legal review"
@@ -506,7 +506,7 @@ other = "Independence and legal review"
 other = "MunichBrief is independent from the Bavarian Police. Technical safeguards do not replace legal review. Retention, lawful basis, offence-related data, and applicable journalistic exceptions require ongoing review."
 
 [ContactHeading]
-other = "Questions, corrections, or feedback"
+other = "Contact"
 
 [ContactPublicLead]
 other = "Found an error or have a suggestion?"
@@ -516,3 +516,133 @@ other = "Open an issue on GitHub"
 
 [ContactPrivateLead]
 other = "For privacy-related concerns or anything that should not be shared publicly, email"
+
+[ViewOrder]
+other = "Timeline order"
+
+[ByPublication]
+other = "By publication date"
+
+[ByIncident]
+other = "By incident date"
+
+[SearchFilters]
+other = "Search and filters"
+
+[SearchText]
+other = "Search reports"
+
+[SearchPlaceholder]
+other = "Try a topic, place, or report number"
+
+[AllCategories]
+other = "All categories"
+
+[AnyAssistance]
+other = "All reports"
+
+[AssistanceYes]
+other = "Assistance requested"
+
+[AssistanceNo]
+other = "No assistance requested"
+
+[DateType]
+other = "Filter dates by"
+
+[PublishedDate]
+other = "Publication date"
+
+[IncidentDate]
+other = "Incident date"
+
+[DateFrom]
+other = "From"
+
+[DateTo]
+other = "To"
+
+[ApplySearch]
+other = "Apply"
+
+[SearchRemembered]
+other = "Your search is remembered on this browser for 30 days."
+
+[ActiveFilters]
+other = "Active filters"
+
+[RemoveFilter]
+other = "Remove filter"
+
+[ClearAll]
+other = "Clear all"
+
+[SearchResults]
+other = "Search results"
+
+[NoSearchCopy]
+other = "No reports match these filters. Try a broader search or clear the filters."
+
+[Pagination]
+other = "Pagination"
+
+[PerPage]
+other = "Reports per page"
+
+[GoToPage]
+other = "Go to page"
+
+[PreviousPage]
+other = "Previous"
+
+[NextPage]
+other = "Next"
+
+[SearchInvalid]
+other = "Please check your search: use valid dates, put the start date first, and keep text fields under 201 characters."
+
+[DateNotReported]
+other = "Date not reported"
+
+[ClockTimeReported]
+other = "Clock time reported"
+
+[DayPartReported]
+other = "Part of day reported"
+
+[TimeNotReported]
+other = "Time not reported"
+
+[PageStatus]
+other = "Page {{.Page}} of {{.TotalPages}} · Reports {{.First}}–{{.Last}} of {{.Total}}"
+
+[ContactIntro]
+other = "Questions, corrections, or a concern about a report? Get in touch by email."
+
+[ContactCorrections]
+other = "Corrections and updates"
+
+[ContactCorrectionCopy]
+other = "Include the MunichBrief page link and explain what needs correcting. A link to an updated official report is helpful."
+
+[ContactPrivacy]
+other = "Privacy requests"
+
+[ContactPrivacyCopy]
+other = "Please send personal or sensitive information by email, not through a public GitHub issue. Share only what is needed to explain your request."
+
+[ContactTechnical]
+other = "Technical issues"
+
+[ContactTechnicalCopy]
+other = "You can report display problems and suggest improvements on GitHub. Please leave personal information out of public issues."
+
+[ContactPoliceCopy]
+other = "MunichBrief is not a police contact point. For police matters, use the contact details on the official police website."
+
+
+[MonitoringCopy]
+other = "Cloudflare delivers and protects the site and processes traffic data, including IP addresses. No browser analytics beacon was observed in our inspection. Internal monitoring records aggregate metrics and request logs containing method, path, status, duration, and request identifiers. The monitoring configuration retains metrics and logs for 30 days; it does not establish Cloudflare’s retention settings. Cloudflare can also generate traffic analytics without a browser beacon."
+
+[CoverageCopy]
+other = "This is a selection of published police reports, not a complete record of local incidents or a crime statistic. Updates may reach MunichBrief later. Incident dates and times reflect the source; a stated clock time may be approximate."

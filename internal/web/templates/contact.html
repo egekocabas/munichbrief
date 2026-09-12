@@ -1,0 +1,11 @@
+{{define "title"}}{{t .Lang "ContactHeading"}} · MunichBrief{{end}}
+{{define "content"}}
+<article class="reader-about reader-contact">
+ <header><h1>{{t .Lang "ContactHeading"}}</h1><p class="reader-intro-copy">{{t .Lang "ContactIntro"}}</p></header>
+ <a class="contact-email" href="mailto:contact@munichbrief.de">contact@munichbrief.de</a>
+ <section><h2>{{t .Lang "ContactCorrections"}}</h2><p>{{t .Lang "ContactCorrectionCopy"}}</p></section>
+ <section><h2>{{t .Lang "ContactPrivacy"}}</h2><p>{{t .Lang "ContactPrivacyCopy"}}</p></section>
+ <section><h2>{{t .Lang "ContactTechnical"}}</h2><p>{{t .Lang "ContactTechnicalCopy"}} <a href="https://github.com/egekocabas/munichbrief/issues" target="_blank" rel="noopener noreferrer">GitHub {{template "external-icon" .}}</a></p></section>
+ <p class="incident-note">{{t .Lang "ContactPoliceCopy"}}</p>
+</article>
+{{end}}

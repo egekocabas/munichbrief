@@ -85,6 +85,7 @@ func TestSitemapContainsOnlyCanonicalPublicDocuments(t *testing.T) {
 	for _, definition := range langregistry.Registered() {
 		wantLocations["https://munichbrief.de/"+definition.Code] = false
 		wantLocations["https://munichbrief.de/"+definition.Code+"/about"] = false
+		wantLocations["https://munichbrief.de/"+definition.Code+"/contact"] = false
 	}
 	wantLocations["https://munichbrief.de/de/incidents/"+formatID(job.IncidentID)] = false
 	wantLocations["https://munichbrief.de/en/incidents/"+formatID(job.IncidentID)] = false
@@ -389,7 +390,7 @@ func TestPublicMarkdownNegotiationPreservesPrivacyBoundary(t *testing.T) {
 	aboutRequest := publicDiscoveryRequest(http.MethodGet, "/de/about")
 	aboutRequest.Header.Set("Accept", "text/markdown")
 	server.Handler().ServeHTTP(about, aboutRequest)
-	if about.Header().Get("Content-Type") != "text/markdown; charset=utf-8" || !strings.Contains(about.Body.String(), "# So funktioniert MunichBrief") || !strings.Contains(about.Body.String(), "1. **Entdecken**") || !strings.Contains(about.Body.String(), "[Auf GitHub melden](https://github.com/egekocabas/munichbrief/issues)") || !strings.Contains(about.Body.String(), "[contact@munichbrief.de](mailto:contact@munichbrief.de)") {
+	if about.Header().Get("Content-Type") != "text/markdown; charset=utf-8" || !strings.Contains(about.Body.String(), "# Über MunichBrief") || !strings.Contains(about.Body.String(), "1. **Entdecken**") || !strings.Contains(about.Body.String(), "[Auf GitHub melden](https://github.com/egekocabas/munichbrief/issues)") || !strings.Contains(about.Body.String(), "[contact@munichbrief.de](mailto:contact@munichbrief.de)") {
 		t.Errorf("about Markdown = %q/%q", about.Header().Get("Content-Type"), about.Body.String())
 	}
 }

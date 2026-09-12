@@ -36,6 +36,7 @@ func embeddedStaticAssets() []staticAsset {
 	assets := []staticAsset{
 		{name: "app.css", contentType: "text/css; charset=utf-8", content: stylesheet},
 		{name: "htmx.min.js", contentType: "text/javascript; charset=utf-8", content: htmxScript},
+		{name: "head-support.js", contentType: "text/javascript; charset=utf-8", content: headSupportScript},
 		{name: "theme.js", contentType: "text/javascript; charset=utf-8", content: themeScript},
 		{name: "navigation.js", contentType: "text/javascript; charset=utf-8", content: navigationScript},
 		{name: "admin.js", contentType: "text/javascript; charset=utf-8", content: adminScript},

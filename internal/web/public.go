@@ -133,8 +133,8 @@ func (s *Server) prepareHTML(response http.ResponseWriter, request *http.Request
 		response.Header().Set("Content-Signal", contentSignal)
 		addVary(response.Header(), "Accept")
 	}
-	if page.Review {
-		response.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive")
+	if strings.HasPrefix(page.Robots, "noindex") {
+		response.Header().Set("X-Robots-Tag", page.Robots)
 	}
 }
 
@@ -151,29 +151,62 @@ func (s *Server) timeline(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 	scope := s.scope(request)
-	incidents, total, err := s.store.ListPresentationEntries(request.Context(), s.options.PageSize, (page-1)*s.options.PageSize, s.options.SourceMode, scope)
+	view, size, err := readerOptions(request, s.options.PageSize)
+	if err != nil {
+		http.Error(response, s.localization.Text(language, "SearchInvalid"), http.StatusBadRequest)
+		return
+	}
+	search := strings.HasSuffix(request.URL.Path, "/search")
+	filters := readSearch(request)
+	if scope.PublicOnly && search != filters.Active() {
+		response.Header().Set("Cache-Control", "private, no-store")
+		http.Redirect(response, request, listingURL(language, filters.Active(), view, size, 1), http.StatusFound)
+		return
+	}
+	var incidents []store.IncidentRecord
+	var total int
+	if scope.PublicOnly {
+		var result store.ReaderResult
+		result, err = s.store.ListReaderEntries(request.Context(), store.ReaderQuery{Language: language, SourceMode: s.options.SourceMode, View: view, Limit: size, Offset: (page - 1) * size, Filters: filters})
+		incidents, total = result.Records, result.Total
+	} else {
+		incidents, total, err = s.store.ListPresentationEntries(request.Context(), size, (page-1)*size, s.options.SourceMode, scope)
+	}
 	if err != nil {
 		s.internalError(response, request, "list incidents", err)
 		return
 	}
-	totalPages := max(1, (total+s.options.PageSize-1)/s.options.PageSize)
-	if page > totalPages && total > 0 {
+	totalPages := max(1, (total+size-1)/size)
+	if page > totalPages {
 		http.NotFound(response, request)
 		return
 	}
-	base := s.base(request, language, timelineURL(language, page))
+	base := s.base(request, language, listingURL(language, search, view, size, page))
+	if search || view != "published" || size != 20 {
+		base.Robots = "noindex,follow"
+		base.LanguageAlternates = nil
+	}
 	base.setAIMetadata(aiGeneratedState(incidents), nil)
 	base.StructuredData = structuredPageData(base, "CollectionPage")
 	if page > 1 {
-		base.PreviousCanonicalURL = base.CanonicalOrigin + timelineURL(language, page-1)
+		base.PreviousCanonicalURL = base.CanonicalOrigin + listingURL(language, search, view, size, page-1)
 	}
 	if page < totalPages {
-		base.NextCanonicalURL = base.CanonicalOrigin + timelineURL(language, page+1)
+		base.NextCanonicalURL = base.CanonicalOrigin + listingURL(language, search, view, size, page+1)
 	}
 	data := timelinePage{
 		basePage: base, Groups: s.groupByDay(incidents, base.Lang), Page: page, TotalPages: totalPages, Total: total,
 		Shown:    len(incidents),
 		Previous: page - 1, Next: page + 1, HasPrevious: page > 1, HasNext: page < totalPages,
+	}
+	s.decorateReader(&data, language, search, view, size, filters)
+	if scope.PublicOnly && view == "incident" {
+		data.Groups = s.groupByIncident(incidents, language)
+	}
+	data.Areas, err = s.store.ReaderAreas(request.Context(), language, s.options.SourceMode)
+	if err != nil {
+		s.internalError(response, request, "list reader areas", err)
+		return
 	}
 	if scope.PublicOnly && wantsMarkdown(request.Header.Get("Accept")) {
 		s.prepareMarkdown(response, base)
@@ -315,13 +348,14 @@ func (s *Server) setLanguagePreference(response http.ResponseWriter, language st
 	})
 }
 
-func (s *Server) incidentForLanguage(record store.IncidentRecord, language string) incidentView {
+func (s *Server) incidentForLanguage(record store.IncidentRecord, language string) (view incidentView) {
+	defer func() { view.Title = readerTitle(view.Title, record.Number) }()
 	languageDefinition, registered := s.languageByCode(language)
 	if !registered {
 		languageDefinition = s.canonicalLanguage()
 	}
 	state := record.ProcessingState()
-	view := incidentView{
+	view = incidentView{
 		Record: record, ContentLanguage: s.canonicalLanguage().Tag.String(),
 		ProcessingState: strings.ReplaceAll(state, "_", "-"), ProcessingLabel: s.processingLabel(state, language),
 	}
@@ -635,18 +669,30 @@ type processingStepView struct {
 
 type timelinePage struct {
 	basePage
-	Groups      []dayGroup
-	Shown       int
-	Page        int
-	TotalPages  int
-	Total       int
-	Previous    int
-	Next        int
-	HasPrevious bool
-	HasNext     bool
+	View                                                                            string
+	PageSize                                                                        int
+	Search                                                                          bool
+	Filters                                                                         store.ReaderFilters
+	ListURL, FormURL, ClearURL, PublishedURL, IncidentViewURL, PreviousURL, NextURL string
+	Pages                                                                           []pageLink
+	PageSizes                                                                       []int
+	Categories                                                                      []readerChoice
+	Areas                                                                           []string
+	ActiveFilters                                                                   []activeFilter
+	First, Last                                                                     int
+	Groups                                                                          []dayGroup
+	Shown                                                                           int
+	Page                                                                            int
+	TotalPages                                                                      int
+	Total                                                                           int
+	Previous                                                                        int
+	Next                                                                            int
+	HasPrevious                                                                     bool
+	HasNext                                                                         bool
 }
 
 type dayGroup struct {
+	TimeLabel string
 	ID        string
 	Label     string
 	Incidents []incidentView

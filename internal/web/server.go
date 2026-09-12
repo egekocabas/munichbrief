@@ -26,6 +26,9 @@ var timelineTemplate string
 //go:embed templates/detail.html
 var detailTemplate string
 
+//go:embed templates/contact.html
+var contactTemplate string
+
 //go:embed templates/about.html
 var aboutTemplate string
 
@@ -56,6 +59,9 @@ var stylesheet []byte
 //go:embed static/htmx.min.js
 var htmxScript []byte
 
+//go:embed static/head-support.js
+var headSupportScript []byte
+
 //go:embed static/theme.js
 var themeScript []byte
 
@@ -84,6 +90,8 @@ var notoSansSC []byte
 var notoSansDevanagari []byte
 
 type incidentStore interface {
+	ListReaderEntries(context.Context, store.ReaderQuery) (store.ReaderResult, error)
+	ReaderAreas(context.Context, string, string) ([]string, error)
 	ListPresentationEntries(context.Context, int, int, string, store.PresentationScope) ([]store.IncidentRecord, int, error)
 	ListPublicIncidentLinks(context.Context, string, store.PresentationScope) ([]store.PublicIncidentLink, error)
 	GetPresentationIncident(context.Context, int64, store.PresentationScope) (store.IncidentRecord, error)
@@ -163,6 +171,7 @@ type Server struct {
 	timelineTemplate           *template.Template
 	detailTemplate             *template.Template
 	aboutTemplate              *template.Template
+	contactTemplate            *template.Template
 	adminTemplate              *template.Template
 	adminHistoryTemplate       *template.Template
 	adminRSSHistoryTemplate    *template.Template
@@ -239,6 +248,7 @@ func newWithLanguages(database incidentStore, logger *slog.Logger, options Optio
 		"postProcessingStatusReason": postProcessingStatusReasonLabel,
 		"pipelineStatusLabel":        pipelineStatusLabel,
 		"t":                          translations.Text,
+		"message":                    translations.Format,
 		"tc":                         translations.Count,
 		"shownTotal":                 translations.ShownTotal,
 	}
@@ -253,6 +263,10 @@ func newWithLanguages(database incidentStore, logger *slog.Logger, options Optio
 	about, err := template.New("layout").Funcs(functions).Parse(layoutTemplate + aboutTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("parse about template: %w", err)
+	}
+	contact, err := template.New("layout").Funcs(functions).Parse(layoutTemplate + contactTemplate)
+	if err != nil {
+		return nil, err
 	}
 	admin, err := template.New("admin").Funcs(functions).Parse(adminSharedTemplate + adminTemplate)
 	if err != nil {
@@ -282,7 +296,7 @@ func newWithLanguages(database incidentStore, logger *slog.Logger, options Optio
 	if err != nil {
 		return nil, fmt.Errorf("initialize social card renderer: %w", err)
 	}
-	return &Server{store: database, logger: logger, options: options, location: location, languages: definitions, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, adminTemplate: admin, adminHistoryTemplate: adminHistory, adminRSSHistoryTemplate: adminRSSHistory, adminGazetteerTemplate: adminGazetteer, adminTranslationsTemplate: adminTranslations, adminVerificationsTemplate: adminVerifications, socialCards: socialCards}, nil
+	return &Server{store: database, logger: logger, options: options, location: location, languages: definitions, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, contactTemplate: contact, adminTemplate: admin, adminHistoryTemplate: adminHistory, adminRSSHistoryTemplate: adminRSSHistory, adminGazetteerTemplate: adminGazetteer, adminTranslationsTemplate: adminTranslations, adminVerificationsTemplate: adminVerifications, socialCards: socialCards}, nil
 }
 
 // Handler returns the complete public and optional review route tree.
@@ -296,6 +310,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /ai-disclosure/acknowledge", s.acknowledgeAIDisclosure)
 	for _, language := range s.languages {
 		mux.HandleFunc("GET /"+language.Code, s.timeline)
+		mux.HandleFunc("GET /"+language.Code+"/search", s.timeline)
+		mux.HandleFunc("POST /"+language.Code+"/search", s.submitSearch)
+		mux.HandleFunc("POST /"+language.Code+"/search/clear", s.submitSearch)
+		mux.HandleFunc("GET /"+language.Code+"/contact", s.contact)
 		mux.HandleFunc("GET /"+language.Code+"/incidents/{id}", s.detail)
 		mux.HandleFunc("GET /"+language.Code+"/about", s.about)
 	}

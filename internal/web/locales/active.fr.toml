@@ -1,4 +1,3 @@
-SiteDescription = { other = "Restez informé grâce aux résumés par IA des communiqués officiels de la police de Munich." }
 BrandTagline = { other = "Munich en un coup d’œil" }
 SocialImageAlt = { other = "Aperçu de MunichBrief avec l’Olympiapark de Munich." }
 SocialIncidentLabel = { other = "Incident" }
@@ -17,7 +16,7 @@ AIGeneratedContent = { other = "Contenu généré par l’IA" }
 AIFixtureLabelPreview = { other = "Aperçu du label — ce contenu synthétique n’a pas été traité par l’IA" }
 AIDisclosureTitle = { other = "Contenu généré par l’IA" }
 AIDisclosureFixtureCopy = { other = "Aperçu local : cette page utilise du contenu de test synthétique." }
-AIDisclosureCopy = { other = "MunichBrief utilise une IA exécutée localement pour créer des titres, des résumés, des traductions, des catégories et des informations structurées, comme la zone et l’heure signalées ainsi que l’existence d’une demande d’aide au public, à partir des communiqués officiels de la police de Munich. Les informations générées ou déduites par l’IA peuvent contenir des erreurs ou devenir obsolètes si le communiqué original est mis à jour. Chaque page d’incident identifie la source policière officielle et fournit un lien vers celle-ci ; consultez cette source pour obtenir les informations faisant autorité. MunichBrief est un projet indépendant et n’est pas affilié à la police bavaroise. Toute personne mentionnée est présumée innocente jusqu’à preuve de sa culpabilité." }
+AIDisclosureCopy = { other = "L’IA produit les titres, résumés, traductions et détails des faits. Elle peut se tromper ou manquer des mises à jour. Vérifiez les informations dans le communiqué officiel en lien. MunichBrief est indépendant de la police ; la présomption d’innocence s’applique." }
 AIDisclosurePreferenceCopy = { other = "En sélectionnant « Compris », cet avis sera mémorisé pendant 30 jours." }
 AIDisclosureLearnMore = { other = "Vous trouverez plus d’informations sur MunichBrief et son fonctionnement sur la page À propos." }
 AIDisclosureGotIt = { other = "Compris" }
@@ -25,7 +24,6 @@ AITransparencyEU = { other = "Transparence de l’IA et orientations de l’UE" 
 AITransparencyEUCopy = { other = "MunichBrief utilise le label européen de contenu entièrement généré par l’IA, car les orientations de la Commission européenne citent expressément les résumés d’actualité générés par l’IA comme cas d’usage. Les labels visibles et les informations de provenance lisibles par machine contribuent à la transparence, mais l’utilisation de l’icône ne suffit pas à établir la conformité juridique et ne signifie pas que MunichBrief a signé le code de bonnes pratiques volontaire." }
 EUIconGuidance = { other = "Orientations de l’UE sur les icônes" }
 EUCodePractice = { other = "Code de bonnes pratiques de l’UE" }
-Footer = { other = "MunichBrief est indépendant de la police bavaroise. Aucun outil d’analyse, compte ou publicité." }
 Built = { other = "Version" }
 Language = { other = "Langue" }
 German = { other = "Allemand" }
@@ -43,8 +41,7 @@ SwitchToSpanish = { other = "Passer à la version espagnole" }
 SwitchToFrench = { other = "Passer à la version française" }
 HeroEyebrowFixture = { other = "Prototype local" }
 HeroEyebrowLive = { other = "Communiqués de la police de Munich" }
-HeroTitle = { other = "Derniers incidents signalés par la police de Munich" }
-HeroCopy = { other = "Un aperçu clair des incidents locaux, résumé à partir des communiqués officiels de la police." }
+HeroTitle = { other = "Munich, en bref." }
 FixtureIncidents = { other = "Rapports synthétiques" }
 LatestIncidents = { other = "Derniers incidents" }
 Reports = { one = "{{.Count}} rapport", other = "{{.Count}} rapports" }
@@ -52,8 +49,6 @@ ShownTotal = { other = "{{.Shown}} affichés / {{.Total}} au total" }
 Report = { other = "Rapport de police" }
 SourceMetadata = { other = "Métadonnées de la source" }
 ReadIncident = { other = "Lire le rapport" }
-OpenOfficialSource = { other = "Ouvrir la source officielle" }
-OpenOfficialPoliceRelease = { other = "Ouvrir le communiqué officiel de la police" }
 Newer = { other = "Plus récents" }
 Older = { other = "Plus anciens" }
 Page = { other = "Page" }
@@ -141,9 +136,7 @@ Running = { other = "Résumé et traduction par IA en cours" }
 Retrying = { other = "IA temporairement indisponible ; nouvelle tentative planifiée" }
 NeedsReview = { other = "Le résultat de l’IA nécessite une révision" }
 OriginalShown = { other = "Le rapport original allemand est affiché." }
-AboutTitle = { other = "Comment fonctionne MunichBrief" }
 Methodology = { other = "À propos de MunichBrief" }
-AboutIntro = { other = "MunichBrief transforme les communiqués officiels de la police de Munich en résumés d’incidents clairs et structurés dans plusieurs langues." }
 FromReleaseToIncident = { other = "Du communiqué à l’incident" }
 Discover = { other = "Découvrir" }
 DiscoverCopy = { other = "Les nouveaux communiqués sont découverts uniquement par le flux RSS officiel de la police de Munich." }
@@ -156,11 +149,11 @@ TranslatePublishCopy = { other = "Les résumés allemands qui réussissent les c
 AccuracyOfficialInformation = { other = "Exactitude et informations officielles" }
 AccuracyOfficialInformationCopy = { other = "Les résumés générés par l’IA et les informations extraites peuvent contenir des erreurs. Les communiqués de police peuvent être mis à jour après leur publication. Les informations officielles les plus récentes restent la référence et la présomption d’innocence s’applique." }
 PrivacyDataHandling = { other = "Confidentialité et traitement des données" }
-PrivacyCopy = { other = "MunichBrief ne comporte aucun compte, outil d’analyse ou publicité. Un cookie nécessaire conserve la langue sélectionnée pendant un an. Après avoir sélectionné « Compris », un cookie de préférence interne mémorise l’avis relatif à l’IA pendant 30 jours. Le thème de couleurs choisi est enregistré localement dans votre navigateur." }
-DataHandlingCopy = { other = "Le texte source allemand extrait est stocké localement. Le mode de révision restreint peut afficher les originaux et les états de traitement à des fins de contrôle qualité ; le mode public n’affiche pas les originaux stockés." }
+PrivacyCopy = { other = "Aucun compte n’est nécessaire et il n’y a pas de publicité. Le navigateur mémorise la langue pendant un an, les avis sur l’IA fermés et les recherches appliquées pendant 30 jours. Les critères de recherche sont transmis dans un cookie du site, pas dans l’URL. Le thème reste dans le navigateur jusqu’à sa suppression." }
+DataHandlingCopy = { other = "Les textes sources allemands sont conservés pour le traitement et une vérification à accès restreint. Aucune expiration automatique n’est actuellement configurée. Les pages publiques affichent les résumés, pas les originaux stockés. Les demandes concernant les données personnelles peuvent être envoyées par e-mail." }
 IndependenceLegalReview = { other = "Indépendance et examen juridique" }
 IndependenceLegalReviewCopy = { other = "MunichBrief est indépendant de la police bavaroise. Les mesures techniques ne remplacent pas l’examen juridique. La conservation, la base légale, les données relatives aux infractions et les exceptions journalistiques applicables nécessitent un examen continu." }
-ContactHeading = { other = "Questions, corrections ou commentaires" }
+ContactHeading = { other = "Contact" }
 ContactPublicLead = { other = "Vous avez trouvé une erreur ou avez une suggestion ?" }
 ContactIssueLink = { other = "Ouvrir un ticket sur GitHub" }
 ContactPrivateLead = { other = "Pour toute question relative à la confidentialité ou tout sujet qui ne doit pas être partagé publiquement, écrivez à" }
@@ -170,3 +163,54 @@ SwitchToRussian = { other = "Passer à la version russe" }
 RomanianTranslationStep = { other = "Traduction roumaine" }
 PolishTranslationStep = { other = "Traduction polonaise" }
 RussianTranslationStep = { other = "Traduction russe" }
+ViewOrder = { other = "Ordre d’affichage" }
+ByPublication = { other = "Par date de publication" }
+ByIncident = { other = "Par date des faits" }
+SearchFilters = { other = "Recherche et filtres" }
+SearchText = { other = "Rechercher des communiqués" }
+SearchPlaceholder = { other = "Saisissez un sujet, un lieu ou un numéro" }
+AllCategories = { other = "Toutes les catégories" }
+AnyAssistance = { other = "Tous les communiqués" }
+AssistanceYes = { other = "Appel à témoins ou à informations" }
+AssistanceNo = { other = "Sans appel à informations" }
+DateType = { other = "Filtrer la période par" }
+PublishedDate = { other = "Date de publication" }
+IncidentDate = { other = "Date des faits" }
+DateFrom = { other = "Du" }
+DateTo = { other = "Au" }
+ApplySearch = { other = "Appliquer" }
+SearchRemembered = { other = "Cette recherche est conservée dans votre navigateur pendant 30 jours." }
+ActiveFilters = { other = "Filtres actifs" }
+RemoveFilter = { other = "Retirer le filtre" }
+ClearAll = { other = "Tout effacer" }
+SearchResults = { other = "Résultats de recherche" }
+NoSearchCopy = { other = "Aucun communiqué ne correspond à ces filtres. Élargissez la recherche ou effacez les filtres." }
+Pagination = { other = "Pagination" }
+PerPage = { other = "Communiqués par page" }
+GoToPage = { other = "Aller à la page" }
+PreviousPage = { other = "Précédente" }
+NextPage = { other = "Suivante" }
+SearchInvalid = { other = "Vérifiez la validité et l’ordre des dates. Chaque champ de texte accepte au maximum 200 caractères." }
+DateNotReported = { other = "Date non précisée" }
+ClockTimeReported = { other = "Heure précisée" }
+DayPartReported = { other = "Moment de la journée précisé" }
+TimeNotReported = { other = "Heure non précisée" }
+PageStatus = { other = "Page {{.Page}} sur {{.TotalPages}} · Communiqués {{.First}}–{{.Last}} sur {{.Total}}" }
+HeroCopy = { other = "Les communiqués de la préfecture de police de Munich (Polizeipräsidium München), résumés en français." }
+Footer = { other = "MunichBrief est indépendant de la police. Sans inscription ni publicité." }
+AboutTitle = { other = "À propos de MunichBrief" }
+AboutIntro = { other = "MunichBrief vous aide à suivre les communiqués de la police locale dans votre langue. Lisez un résumé, découvrez où et quand les faits se sont produits, puis consultez le communiqué officiel pour les détails." }
+OpenOfficialSource = { other = "Communiqué officiel" }
+ContactIntro = { other = "Une question, une erreur à signaler ou une préoccupation concernant un communiqué ? Écrivez-nous par e-mail." }
+ContactCorrections = { other = "Corrections et mises à jour" }
+ContactCorrectionCopy = { other = "Joignez le lien vers la page MunichBrief et expliquez ce qui doit être corrigé. Un lien vers le communiqué officiel mis à jour est également utile." }
+ContactPrivacy = { other = "Demandes relatives à la vie privée" }
+ContactPrivacyCopy = { other = "Envoyez les informations personnelles ou sensibles par e-mail, plutôt que dans un ticket public sur GitHub. Ne partagez que les éléments nécessaires à votre demande." }
+ContactTechnical = { other = "Problèmes techniques" }
+ContactTechnicalCopy = { other = "Vous pouvez signaler les problèmes d’affichage et proposer des améliorations sur GitHub. N’incluez aucune donnée personnelle dans les tickets publics." }
+ContactPoliceCopy = { other = "MunichBrief n’est pas un service de contact de la police. Pour les questions de police, utilisez les coordonnées figurant sur son site officiel." }
+OpenOfficialPoliceRelease = { other = "Communiqué officiel" }
+SiteDescription = { other = "Les communiqués de la préfecture de police de Munich (Polizeipräsidium München), résumés en français." }
+MonitoringCopy = { other = "Cloudflare assure la diffusion et la protection du site et traite des données de trafic, dont les adresses IP. Aucun script d’analyse dans le navigateur n’a été observé lors de notre contrôle. Le suivi interne enregistre des métriques agrégées et des journaux comprenant méthode, chemin, statut, durée et identifiants des requêtes. Leur conservation est configurée à 30 jours ; cela ne définit pas les durées de Cloudflare. Cloudflare peut aussi produire des statistiques de trafic sans script de mesure dans le navigateur." }
+
+CoverageCopy = { other = "Cette sélection de communiqués de police ne constitue ni un relevé exhaustif des faits locaux ni une statistique de la criminalité. Les mises à jour peuvent apparaître avec un décalage sur MunichBrief. Les dates et heures proviennent de la source ; même une heure précisée peut être approximative." }

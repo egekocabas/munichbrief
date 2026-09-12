@@ -1,5 +1,6 @@
 [SiteDescription]
-other = "Rămâi informat prin rezumate AI ale comunicatelor oficiale ale Poliției din München."
+other = "Comunicatele Direcției de Poliție München (Polizeipräsidium München), pe scurt în română."
+
 [BrandTagline]
 other = "München dintr-o privire"
 [SocialImageAlt]
@@ -37,7 +38,8 @@ other = "Conținut generat de AI"
 [AIDisclosureFixtureCopy]
 other = "Previzualizare locală: această pagină folosește conținut de test sintetic."
 [AIDisclosureCopy]
-other = "MunichBrief folosește AI operată local pentru a crea titluri, rezumate, traduceri, categorii și detalii structurate, precum zona și ora raportate și dacă poliția solicită ajutorul publicului, pe baza comunicatelor oficiale ale Poliției din München. Informațiile generate sau deduse de AI pot conține erori ori pot deveni depășite când comunicatul original este actualizat. Fiecare pagină de incident identifică și trimite la sursa oficială a poliției; consultați acea sursă pentru informații oficiale. MunichBrief este un proiect independent și nu este afiliat Poliției Bavareze. Orice persoană menționată este prezumată nevinovată până la dovedirea vinovăției."
+other = "Titlurile, rezumatele, traducerile și detaliile incidentelor sunt generate de IA. Pot conține greșeli sau pot omite actualizări. Verifică informațiile în comunicatul oficial indicat. MunichBrief este independent de poliție; se aplică prezumția de nevinovăție."
+
 [AIDisclosurePreferenceCopy]
 other = "Selectarea opțiunii „Am înțeles” memorează această notificare timp de 30 de zile."
 [AIDisclosureLearnMore]
@@ -53,7 +55,8 @@ other = "Orientări privind pictograma UE"
 [EUCodePractice]
 other = "Codul de bune practici al UE"
 [Footer]
-other = "MunichBrief este independent de Poliția Bavareză. Fără analiză de trafic, conturi sau publicitate."
+other = "MunichBrief este independent de poliție. Fără cont și fără reclame."
+
 [Built]
 other = "Versiune"
 [Language]
@@ -95,9 +98,11 @@ other = "Prototip local"
 [HeroEyebrowLive]
 other = "Comunicatele Poliției din München"
 [HeroTitle]
-other = "Cele mai recente incidente raportate de Poliția din München"
+other = "München, pe scurt."
+
 [HeroCopy]
-other = "O prezentare clară a incidentelor locale, rezumată din comunicatele oficiale ale poliției."
+other = "Comunicatele Direcției de Poliție München (Polizeipräsidium München), pe scurt în română."
+
 [FixtureIncidents]
 other = "Informări sintetice"
 [LatestIncidents]
@@ -115,9 +120,11 @@ other = "Metadatele sursei"
 [ReadIncident]
 other = "Citește informarea"
 [OpenOfficialSource]
-other = "Deschide sursa oficială"
+other = "Comunicat oficial"
+
 [OpenOfficialPoliceRelease]
-other = "Deschide comunicatul oficial al poliției"
+other = "Comunicat oficial"
+
 [Newer]
 other = "Mai noi"
 [Older]
@@ -299,11 +306,13 @@ other = "Rezultatul AI necesită verificare"
 [OriginalShown]
 other = "Este afișat comunicatul original în germană."
 [AboutTitle]
-other = "Cum funcționează MunichBrief"
+other = "Despre MunichBrief"
+
 [Methodology]
 other = "Despre MunichBrief"
 [AboutIntro]
-other = "MunichBrief transformă comunicatele oficiale ale Poliției din München în rezumate clare și structurate ale incidentelor, în mai multe limbi pentru cititori."
+other = "MunichBrief te ajută să urmărești comunicatele poliției locale în limba ta. Citește un rezumat, află unde și când s-a petrecut un incident și deschide comunicatul oficial pentru detalii."
+
 [FromReleaseToIncident]
 other = "De la comunicat la incident"
 [Discover]
@@ -329,18 +338,151 @@ other = "Rezumatele și detaliile extrase de AI pot conține erori. Comunicatele
 [PrivacyDataHandling]
 other = "Confidențialitate și gestionarea datelor"
 [PrivacyCopy]
-other = "MunichBrief nu are conturi, analiză de trafic sau publicitate. Un cookie necesar păstrează limba selectată timp de un an. După ce selectați „Am înțeles”, un cookie propriu memorează notificarea privind AI timp de 30 de zile. Tema de culoare selectată este stocată local în browser."
+other = "Nu ai nevoie de cont și nu există reclame. Browserul păstrează limba timp de un an, iar notificările IA închise și căutările aplicate timp de 30 de zile. Criteriile căutării sunt transmise într-un cookie propriu, nu în URL. Tema de culoare rămâne în browser până la ștergere."
+
 [DataHandlingCopy]
-other = "Textul-sursă extras în germană este stocat local. Modul de verificare restricționat poate afișa textele originale și stările procesării pentru controlul calității; modul public nu afișează originalele stocate."
+other = "Textele originale în germană sunt păstrate pentru procesare și verificare cu acces restricționat. În prezent, nu este configurată ștergerea automată. Paginile publice afișează rezumatele, nu originalele stocate. Cererile privind datele personale pot fi trimise prin e-mail."
+
 [IndependenceLegalReview]
 other = "Independență și verificare juridică"
 [IndependenceLegalReviewCopy]
 other = "MunichBrief este independent de Poliția Bavareză. Măsurile tehnice de protecție nu înlocuiesc verificarea juridică. Păstrarea datelor, temeiul legal, datele referitoare la infracțiuni și eventualele excepții jurnalistice necesită evaluare continuă."
 [ContactHeading]
-other = "Întrebări, corecturi sau feedback"
+other = "Contact"
+
 [ContactPublicLead]
 other = "Ați găsit o eroare sau aveți o sugestie?"
 [ContactIssueLink]
 other = "Deschideți o sesizare pe GitHub"
 [ContactPrivateLead]
 other = "Pentru preocupări legate de confidențialitate sau orice nu ar trebui distribuit public, trimiteți un e-mail la"
+
+[ViewOrder]
+other = "Ordinea afișării"
+
+[ByPublication]
+other = "După data publicării"
+
+[ByIncident]
+other = "După data incidentului"
+
+[SearchFilters]
+other = "Căutare și filtre"
+
+[SearchText]
+other = "Caută în comunicate"
+
+[SearchPlaceholder]
+other = "Introdu un subiect, un loc sau un număr de comunicat"
+
+[AllCategories]
+other = "Toate categoriile"
+
+[AnyAssistance]
+other = "Toate comunicatele"
+
+[AssistanceYes]
+other = "Poliția solicită informații"
+
+[AssistanceNo]
+other = "Fără solicitare de informații"
+
+[DateType]
+other = "Filtrează perioada după"
+
+[PublishedDate]
+other = "Data publicării"
+
+[IncidentDate]
+other = "Data incidentului"
+
+[DateFrom]
+other = "De la"
+
+[DateTo]
+other = "Până la"
+
+[ApplySearch]
+other = "Aplică"
+
+[SearchRemembered]
+other = "Căutarea este păstrată în acest browser timp de 30 de zile."
+
+[ActiveFilters]
+other = "Filtre active"
+
+[RemoveFilter]
+other = "Elimină filtrul"
+
+[ClearAll]
+other = "Șterge tot"
+
+[SearchResults]
+other = "Rezultatele căutării"
+
+[NoSearchCopy]
+other = "Niciun comunicat nu corespunde filtrelor. Extinde căutarea sau șterge filtrele."
+
+[Pagination]
+other = "Paginare"
+
+[PerPage]
+other = "Comunicate pe pagină"
+
+[GoToPage]
+other = "Mergi la pagina"
+
+[PreviousPage]
+other = "Anterioară"
+
+[NextPage]
+other = "Următoare"
+
+[SearchInvalid]
+other = "Verifică dacă datele sunt valide și în ordinea corectă. Fiecare câmp de text poate avea cel mult 200 de caractere."
+
+[DateNotReported]
+other = "Data nu este precizată"
+
+[ClockTimeReported]
+other = "Ora este precizată"
+
+[DayPartReported]
+other = "Este precizată perioada zilei"
+
+[TimeNotReported]
+other = "Ora nu este precizată"
+
+[PageStatus]
+other = "Pagina {{.Page}} din {{.TotalPages}} · Comunicatele {{.First}}–{{.Last}} din {{.Total}}"
+
+[ContactIntro]
+other = "Ai o întrebare, ai observat o greșeală sau te îngrijorează un comunicat? Scrie-ne prin e-mail."
+
+[ContactCorrections]
+other = "Corecturi și actualizări"
+
+[ContactCorrectionCopy]
+other = "Include linkul paginii MunichBrief și explică ce trebuie corectat. Este util și un link către comunicatul oficial actualizat."
+
+[ContactPrivacy]
+other = "Cereri privind confidențialitatea"
+
+[ContactPrivacyCopy]
+other = "Trimite informațiile personale sau sensibile prin e-mail, nu într-o sesizare publică pe GitHub. Comunică doar datele necesare pentru a explica cererea."
+
+[ContactTechnical]
+other = "Probleme tehnice"
+
+[ContactTechnicalCopy]
+other = "Poți semnala probleme de afișare și propune îmbunătățiri pe GitHub. Nu include date personale în sesizările publice."
+
+[ContactPoliceCopy]
+other = "MunichBrief nu este un canal de contact al poliției. Pentru probleme care țin de poliție, folosește datele de contact de pe site-ul oficial."
+
+
+[MonitoringCopy]
+other = "Cloudflare livrează și protejează site-ul și prelucrează date de trafic, inclusiv adrese IP. La verificare nu am observat un script de analiză în browser. Monitorizarea internă înregistrează metrici agregate și jurnale cu metoda, calea, starea, durata și identificatorii cererilor. Păstrarea lor este configurată la 30 de zile; aceasta nu stabilește termenele Cloudflare. Cloudflare poate genera statistici de trafic și fără un script de analiză în browser."
+
+[CoverageCopy]
+other = "Aceasta este o selecție de comunicate ale poliției, nu o evidență completă a incidentelor locale sau o statistică a criminalității. Actualizările pot apărea cu întârziere pe MunichBrief. Data și ora provin din sursă; chiar și o oră indicată poate fi aproximativă."

@@ -1,5 +1,5 @@
 [SiteDescription]
-other = "Bleiben Sie informiert – mit KI-Zusammenfassungen offizieller Münchner Polizeimeldungen."
+other = "Meldungen des Polizeipräsidiums München, kurz und verständlich zusammengefasst."
 
 [BrandTagline]
 other = "München im Überblick"
@@ -56,13 +56,13 @@ other = "KI-generierte Inhalte"
 other = "Lokale Vorschau: Diese Seite verwendet synthetische Testinhalte."
 
 [AIDisclosureCopy]
-other = "MunichBrief nutzt lokal betriebene KI, um aus offiziellen Meldungen der Münchner Polizei Überschriften, Zusammenfassungen, Übersetzungen, Kategorien und strukturierte Angaben zu erstellen, etwa zum gemeldeten Ort und Zeitpunkt sowie dazu, ob die Polizei um Mithilfe bittet. KI-generierte oder abgeleitete Angaben können Fehler enthalten oder veralten, wenn die ursprüngliche Meldung aktualisiert wird. Jede Vorfallsseite nennt und verlinkt ihre offizielle polizeiliche Quelle; maßgeblich sind die dort veröffentlichten Informationen. MunichBrief ist ein unabhängiges Projekt und steht in keiner Verbindung zur Bayerischen Polizei. Für alle genannten Personen gilt die Unschuldsvermutung, solange ihre Schuld nicht rechtskräftig festgestellt wurde."
+other = "KI erstellt diese Überschriften, Zusammenfassungen, Übersetzungen und Ereignisdetails. Dabei können Fehler entstehen oder Aktualisierungen fehlen. Prüfe die Angaben in der verlinkten Polizeimeldung. MunichBrief ist unabhängig von der Polizei; es gilt die Unschuldsvermutung."
 
 [AIDisclosurePreferenceCopy]
-other = "Mit „Verstanden“ wird dieser Hinweis 30 Tage lang ausgeblendet."
+other = "Für 30 Tage ausblenden."
 
 [AIDisclosureLearnMore]
-other = "Weitere Informationen über MunichBrief und seine Funktionsweise finden Sie auf der Über-Seite."
+other = "So funktioniert es"
 
 [AIDisclosureGotIt]
 other = "Verstanden"
@@ -80,7 +80,7 @@ other = "EU-Leitlinien zu den Symbolen"
 other = "EU-Verhaltenskodex"
 
 [Footer]
-other = "MunichBrief ist unabhängig von der Bayerischen Polizei. Keine Analyse, Konten oder Werbung."
+other = "MunichBrief ist unabhängig von der Polizei. Ohne Anmeldung und ohne Werbung."
 
 [Built]
 other = "Gebaut"
@@ -144,16 +144,16 @@ other = "Lokaler Prototyp"
 other = "Münchner Polizeimeldungen"
 
 [HeroTitle]
-other = "Aktuelle Vorfälle laut Münchner Polizei"
+other = "München, kurz gefasst."
 
 [HeroCopy]
-other = "Ein klarer Überblick über lokale Vorfälle, zusammengefasst aus offiziellen Polizeimeldungen."
+other = "Meldungen des Polizeipräsidiums München, kurz und verständlich zusammengefasst."
 
 [FixtureIncidents]
 other = "Synthetische Meldungen"
 
 [LatestIncidents]
-other = "Neueste Vorfälle"
+other = "Aktuelle Meldungen"
 
 [Reports]
 one = "{{.Count}} Meldung"
@@ -172,10 +172,10 @@ other = "Quellendaten"
 other = "Meldung lesen"
 
 [OpenOfficialSource]
-other = "Offizielle Quelle öffnen"
+other = "Originalmeldung"
 
 [OpenOfficialPoliceRelease]
-other = "Offizielle Polizeimeldung öffnen"
+other = "Originalmeldung"
 
 [Newer]
 other = "Neuer"
@@ -196,16 +196,16 @@ other = "Noch keine Meldungen"
 other = "Führe den Testdaten-Import aus, um die Ansicht zu füllen."
 
 [NoLiveCopy]
-other = "Die Synchronisierung hat noch keine Meldung im aktuellen Zeitraum gefunden."
+other = "Zurzeit gibt es keine Meldungen. Schauen Sie später wieder vorbei."
 
 [BodyUnavailable]
-other = "Der Text ist noch nicht verfügbar. MunichBrief versucht es erneut; nutze solange die offizielle Quelle."
+other = "Diese Zusammenfassung ist noch nicht verfügbar. Die Originalmeldung finden Sie unten."
 
 [SourceRefreshFailed]
-other = "Die letzte Aktualisierung ist fehlgeschlagen; diese gespeicherte Fassung bleibt verfügbar."
+other = "Diese Meldung wurde möglicherweise aktualisiert. Prüfen Sie die offizielle Quelle."
 
 [Back]
-other = "Zurück"
+other = "Alle Meldungen"
 
 [Breadcrumb]
 other = "Brotkrümelnavigation"
@@ -449,13 +449,13 @@ other = "KI-Ausgabe muss geprüft werden"
 other = "Deutscher Originalbericht wird angezeigt."
 
 [AboutTitle]
-other = "So funktioniert MunichBrief"
+other = "Über MunichBrief"
 
 [Methodology]
 other = "Über MunichBrief"
 
 [AboutIntro]
-other = "MunichBrief verwandelt offizielle Meldungen der Münchner Polizei in klare, strukturierte Vorfallszusammenfassungen in mehreren Lesesprachen."
+other = "MunichBrief macht lokale Polizeimeldungen in deiner Sprache zugänglich. Lies eine kurze Zusammenfassung, erfahre Ort und Zeit des Geschehens und öffne die Originalmeldung für weitere Einzelheiten."
 
 [FromReleaseToIncident]
 other = "Von der Meldung zum Vorfall"
@@ -494,10 +494,10 @@ other = "KI-generierte Zusammenfassungen und extrahierte Angaben können Fehler 
 other = "Datenschutz und Datenverarbeitung"
 
 [PrivacyCopy]
-other = "MunichBrief hat keine Konten, Analysefunktionen oder Werbung. Ein technisch notwendiges Cookie speichert die gewählte Sprache für ein Jahr. Nach „Verstanden“ merkt sich ein Erstanbieter-Präferenzcookie den KI-Hinweis 30 Tage lang. Das gewählte Farbschema wird lokal im Browser gespeichert."
+other = "Es gibt weder Benutzerkonten noch Werbung. Dieser Browser merkt sich die Sprache ein Jahr lang, geschlossene KI-Hinweise und angewendete Suchen jeweils 30 Tage. Suchkriterien werden in einem eigenen Cookie übertragen, nicht in der URL. Das Farbschema bleibt bis zum Löschen im Browserspeicher."
 
 [DataHandlingCopy]
-other = "Extrahierte deutsche Quelltexte werden lokal gespeichert. Im eingeschränkten Prüfmodus können Originaltexte und Verarbeitungszustände zur Qualitätskontrolle angezeigt werden; der öffentliche Modus zeigt keine gespeicherten Originaltexte."
+other = "Deutsche Quelltexte werden für die Verarbeitung und eine zugangsbeschränkte Prüfung gespeichert. Eine automatische Löschung ist derzeit nicht eingerichtet. Öffentlich erscheinen die Zusammenfassungen statt der gespeicherten Originale. Anfragen zu persönlichen Daten sind per E-Mail möglich."
 
 [IndependenceLegalReview]
 other = "Unabhängigkeit und rechtliche Prüfung"
@@ -506,7 +506,7 @@ other = "Unabhängigkeit und rechtliche Prüfung"
 other = "MunichBrief ist unabhängig von der Bayerischen Polizei. Technische Schutzmaßnahmen ersetzen keine rechtliche Prüfung. Aufbewahrung, Rechtsgrundlage, Daten zu Straftaten und anwendbare journalistische Ausnahmen erfordern eine fortlaufende Prüfung."
 
 [ContactHeading]
-other = "Fragen, Korrekturen oder Feedback"
+other = "Kontakt"
 
 [ContactPublicLead]
 other = "Einen Fehler gefunden oder einen Vorschlag?"
@@ -516,3 +516,133 @@ other = "Auf GitHub melden"
 
 [ContactPrivateLead]
 other = "Bei Anliegen zum Datenschutz oder anderen Themen, die nicht öffentlich geteilt werden sollten, schreiben Sie an"
+
+[ViewOrder]
+other = "Reihenfolge"
+
+[ByPublication]
+other = "Nach Veröffentlichung"
+
+[ByIncident]
+other = "Nach Ereignisdatum"
+
+[SearchFilters]
+other = "Suche und Filter"
+
+[SearchText]
+other = "Meldungen durchsuchen"
+
+[SearchPlaceholder]
+other = "Thema, Ort oder Meldungsnummer eingeben"
+
+[AllCategories]
+other = "Alle Kategorien"
+
+[AnyAssistance]
+other = "Alle Meldungen"
+
+[AssistanceYes]
+other = "Polizei bittet um Hinweise"
+
+[AssistanceNo]
+other = "Keine Bitte um Hinweise"
+
+[DateType]
+other = "Zeitraum nach"
+
+[PublishedDate]
+other = "Veröffentlichungsdatum"
+
+[IncidentDate]
+other = "Ereignisdatum"
+
+[DateFrom]
+other = "Von"
+
+[DateTo]
+other = "Bis"
+
+[ApplySearch]
+other = "Anwenden"
+
+[SearchRemembered]
+other = "Diese Suche wird in diesem Browser 30 Tage lang gespeichert."
+
+[ActiveFilters]
+other = "Aktive Filter"
+
+[RemoveFilter]
+other = "Filter entfernen"
+
+[ClearAll]
+other = "Alle zurücksetzen"
+
+[SearchResults]
+other = "Suchergebnisse"
+
+[NoSearchCopy]
+other = "Keine passenden Meldungen. Erweitere die Suche oder setze die Filter zurück."
+
+[Pagination]
+other = "Seitennavigation"
+
+[PerPage]
+other = "Meldungen pro Seite"
+
+[GoToPage]
+other = "Zur Seite"
+
+[PreviousPage]
+other = "Zurück"
+
+[NextPage]
+other = "Weiter"
+
+[SearchInvalid]
+other = "Bitte prüfe die Suche: gültige Daten, Beginn vor dem Ende und höchstens 200 Zeichen je Textfeld."
+
+[DateNotReported]
+other = "Datum nicht angegeben"
+
+[ClockTimeReported]
+other = "Uhrzeit angegeben"
+
+[DayPartReported]
+other = "Tageszeit angegeben"
+
+[TimeNotReported]
+other = "Zeit nicht angegeben"
+
+[PageStatus]
+other = "Seite {{.Page}} von {{.TotalPages}} · Meldungen {{.First}}–{{.Last}} von {{.Total}}"
+
+[ContactIntro]
+other = "Fragen, Korrekturen oder Bedenken zu einer Meldung? Schreib uns eine E-Mail."
+
+[ContactCorrections]
+other = "Korrekturen und Aktualisierungen"
+
+[ContactCorrectionCopy]
+other = "Schicke den Link zur MunichBrief-Seite und beschreibe, was berichtigt werden sollte. Ein Link zur aktualisierten Polizeimeldung hilft dabei."
+
+[ContactPrivacy]
+other = "Datenschutzanfragen"
+
+[ContactPrivacyCopy]
+other = "Bitte sende persönliche oder sensible Informationen per E-Mail statt über ein öffentliches GitHub-Issue. Teile nur mit, was für deine Anfrage nötig ist."
+
+[ContactTechnical]
+other = "Technische Probleme"
+
+[ContactTechnicalCopy]
+other = "Darstellungsfehler und Verbesserungsvorschläge kannst du auf GitHub melden. Bitte veröffentliche dort keine persönlichen Informationen."
+
+[ContactPoliceCopy]
+other = "MunichBrief ist keine Kontaktstelle der Polizei. Nutze für polizeiliche Anliegen die Kontaktdaten auf der offiziellen Polizeiwebsite."
+
+
+[MonitoringCopy]
+other = "Cloudflare stellt die Website bereit, schützt sie und verarbeitet dabei Verkehrsdaten einschließlich IP-Adressen. Bei unserer Prüfung war kein Analyse-Skript im Browser zu sehen. Intern werden zusammengefasste Messwerte und Zugriffsprotokolle mit Methode, Pfad, Status, Dauer und Anfragekennungen erfasst. Laut Konfiguration werden Messwerte und Protokolle 30 Tage gespeichert; daraus lässt sich Cloudflares Speicherdauer nicht ableiten. Cloudflare kann auch ohne Analyse-Skript im Browser Verkehrsstatistiken erstellen."
+
+[CoverageCopy]
+other = "Die Auswahl veröffentlichter Polizeiberichte ist weder ein vollständiges Verzeichnis aller Vorfälle noch eine Kriminalstatistik. Aktualisierungen können MunichBrief verzögert erreichen. Datum und Uhrzeit stammen aus dem Bericht; auch eine angegebene Uhrzeit kann ungefähr sein."

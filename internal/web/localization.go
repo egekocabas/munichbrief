@@ -157,3 +157,11 @@ func messageIDDifference(left, right map[string]struct{}) []string {
 	sort.Strings(difference)
 	return difference
 }
+
+func (l *localization) Format(locale, id string, data any) string {
+	value, err := i18n.NewLocalizer(l.bundle, locale).Localize(&i18n.LocalizeConfig{MessageID: id, TemplateData: data})
+	if err != nil {
+		return "[" + id + "]"
+	}
+	return value
+}

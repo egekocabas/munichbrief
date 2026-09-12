@@ -252,6 +252,7 @@ func (s *Server) sitemap(response http.ResponseWriter, request *http.Request) {
 		urls = append(urls,
 			sitemapURL{Location: origin + "/" + definition.Code},
 			sitemapURL{Location: origin + "/" + definition.Code + "/about"},
+			sitemapURL{Location: origin + "/" + definition.Code + "/contact"},
 		)
 		for _, link := range links {
 			urls = append(urls, sitemapURL{
@@ -325,7 +326,7 @@ func (s *Server) renderTimelineMarkdown(response http.ResponseWriter, data timel
 	fmt.Fprintf(&builder, "# %s\n\n%s\n\n%s\n",
 		markdownText(s.localization.Text(data.Lang, "HeroTitle")),
 		markdownText(s.localization.Text(data.Lang, "HeroCopy")),
-		markdownText(s.localization.ShownTotal(data.Lang, data.Shown, data.Total)))
+		markdownText(s.localization.Format(data.Lang, "PageStatus", data)))
 	if len(data.Groups) == 0 {
 		fmt.Fprintf(&builder, "\n## %s\n\n", markdownText(s.localization.Text(data.Lang, "NoIncidents")))
 		copyKey := "NoLiveCopy"
@@ -336,6 +337,9 @@ func (s *Server) renderTimelineMarkdown(response http.ResponseWriter, data timel
 	}
 	for _, group := range data.Groups {
 		fmt.Fprintf(&builder, "\n## %s\n", markdownText(group.Label))
+		if group.TimeLabel != "" {
+			fmt.Fprintf(&builder, "\n%s\n", markdownText(group.TimeLabel))
+		}
 		for _, incident := range group.Incidents {
 			link := fmt.Sprintf("%s/%s/incidents/%d", data.CanonicalOrigin, data.Lang, incident.Record.ID)
 			if incident.Record.HasAI {
@@ -433,8 +437,8 @@ func (s *Server) renderAboutMarkdown(response http.ResponseWriter, data aboutPag
 		title string
 		copy  []string
 	}{
-		{title: "AccuracyOfficialInformation", copy: []string{"AccuracyOfficialInformationCopy"}},
-		{title: "PrivacyDataHandling", copy: []string{"PrivacyCopy", "DataHandlingCopy"}},
+		{title: "AccuracyOfficialInformation", copy: []string{"AccuracyOfficialInformationCopy", "CoverageCopy"}},
+		{title: "PrivacyDataHandling", copy: []string{"PrivacyCopy", "DataHandlingCopy", "MonitoringCopy"}},
 		{title: "IndependenceLegalReview", copy: []string{"IndependenceLegalReviewCopy"}},
 	}
 	for _, section := range sections {
