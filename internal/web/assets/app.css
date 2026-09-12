@@ -224,14 +224,24 @@
   }
 
   .ai-generated-label {
+    position: relative;
     display: inline-flex;
-    min-height: 2.25rem;
+    width: 8.125rem;
+    height: 1.625rem;
+    flex-shrink: 0;
     align-items: center;
   }
 
   .ai-generated-label img {
+    /* The SVG's padded canvas is about twice the visible pill's height. */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    max-width: none;
     width: auto;
-    height: 2.25rem;
+    height: 3.25rem;
+    transform: translate(-50%, -49%);
+    pointer-events: none;
   }
 
   .ai-label-image-light {
