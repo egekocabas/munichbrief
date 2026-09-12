@@ -86,7 +86,7 @@ visible keyboard focus, expanded search, page-size changes, language switching,
 native forms with JavaScript disabled, enhanced navigation, browser back/forward,
 and returning from a report to the list's scroll position. All 14 localized
 homepages and About/Contact pages were checked for horizontal overflow at 320px.
-Locale validation checks all 215 keys and their interpolation placeholders.
+Locale validation checks all 217 keys and their interpolation placeholders.
 
 The processing worker test's two-second deadlock guards were increased to ten
 seconds to accommodate SQLite index maintenance under Go's race detector. Its

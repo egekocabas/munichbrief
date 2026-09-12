@@ -71,7 +71,7 @@ other = "Got it"
 other = "AI transparency and EU guidance"
 
 [AITransparencyEUCopy]
-other = "MunichBrief uses the EU Fully AI-Generated label because European Commission guidance expressly lists AI-generated news summaries as a use case. Visible labels and machine-readable provenance support transparency, but use of the icon does not by itself establish legal compliance or indicate that MunichBrief has signed the voluntary Code of Practice."
+other = "The AI label identifies headlines, summaries and translations created with artificial intelligence. Each report also includes information about the models and processing steps used to create it."
 
 [EUIconGuidance]
 other = "EU icon guidance"
@@ -479,10 +479,10 @@ other = "Summarize"
 other = "Local AI models extract details such as categories, locations, dates, and public-assistance requests, then create a data-minimized German summary."
 
 [TranslatePublish]
-other = "Translate and publish"
+other = "Publish in German"
 
 [TranslatePublishCopy]
-other = "German summaries that pass the automated processing checks are translated into the available reader languages. Public pages display AI-generated content only after the processing pipeline completes successfully."
+other = "The German summary appears as soon as it passes the initial automated checks. It does not have to wait for translations or later verification."
 
 [AccuracyOfficialInformation]
 other = "Accuracy and official information"
@@ -494,10 +494,10 @@ other = "AI-generated summaries and extracted details may contain errors. Police
 other = "Privacy and data handling"
 
 [PrivacyCopy]
-other = "No account is needed and there is no advertising. This browser remembers your language for one year, dismissed AI notices for 30 days, and applied searches for 30 days. Search criteria are sent in a first-party cookie, not in the URL. The colour theme stays in browser storage until removed."
+other = "No account is needed and there is no advertising. This browser remembers your language for one year, dismissed AI notices for 30 days, and applied searches for 30 days. Search criteria are sent in a first-party cookie. The colour theme stays in browser storage until removed."
 
 [DataHandlingCopy]
-other = "German source text is retained for processing and restricted review, with no automatic expiry currently configured. Public pages show the resulting summaries rather than stored originals. Requests about personal data can be sent by email."
+other = "German source text is retained for processing and restricted review. Public pages show the resulting summaries."
 
 [IndependenceLegalReview]
 other = "Independence and legal review"
@@ -642,7 +642,13 @@ other = "MunichBrief is not a police contact point. For police matters, use the 
 
 
 [MonitoringCopy]
-other = "Cloudflare delivers and protects the site and processes traffic data, including IP addresses. No browser analytics beacon was observed in our inspection. Internal monitoring records aggregate metrics and request logs containing method, path, status, duration, and request identifiers. The monitoring configuration retains metrics and logs for 30 days; it does not establish Cloudflare’s retention settings. Cloudflare can also generate traffic analytics without a browser beacon."
+other = "We use Cloudflare to deliver and protect the site. Cloudflare processes connection data, including IP addresses, and can produce traffic statistics. To keep the site running reliably, we retain our own technical request logs and aggregate performance metrics for 30 days."
 
 [CoverageCopy]
 other = "This is a selection of published police reports, not a complete record of local incidents or a crime statistic. Updates may reach MunichBrief later. Incident dates and times reflect the source; a stated clock time may be approximate."
+
+[VerifyTranslate]
+other = "Check and translate in the background"
+
+[VerifyTranslateCopy]
+other = "Separate AI checks review the category and whether the police are asking for public assistance. These checks take priority over translation. Each language version appears when its translation is ready. Successful checks can update the category and public-assistance labels after publication."

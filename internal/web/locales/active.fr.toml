@@ -21,7 +21,7 @@ AIDisclosurePreferenceCopy = { other = "En sélectionnant « Compris », cet avi
 AIDisclosureLearnMore = { other = "Vous trouverez plus d’informations sur MunichBrief et son fonctionnement sur la page À propos." }
 AIDisclosureGotIt = { other = "Compris" }
 AITransparencyEU = { other = "Transparence de l’IA et orientations de l’UE" }
-AITransparencyEUCopy = { other = "MunichBrief utilise le label européen de contenu entièrement généré par l’IA, car les orientations de la Commission européenne citent expressément les résumés d’actualité générés par l’IA comme cas d’usage. Les labels visibles et les informations de provenance lisibles par machine contribuent à la transparence, mais l’utilisation de l’icône ne suffit pas à établir la conformité juridique et ne signifie pas que MunichBrief a signé le code de bonnes pratiques volontaire." }
+AITransparencyEUCopy = { other = "Le label IA signale les titres, résumés et traductions créés à l’aide de l’intelligence artificielle. Chaque article fournit aussi des informations sur les modèles utilisés et les étapes de traitement." }
 EUIconGuidance = { other = "Orientations de l’UE sur les icônes" }
 EUCodePractice = { other = "Code de bonnes pratiques de l’UE" }
 Built = { other = "Version" }
@@ -144,13 +144,13 @@ Organize = { other = "Organiser" }
 OrganizeCopy = { other = "Les communiqués contenant plusieurs rapports sont séparés à l’aide de leurs numéros officiels. Les rapports publiés séparément restent distincts." }
 Summarize = { other = "Résumer" }
 SummarizeCopy = { other = "Des modèles d’IA locaux extraient des informations comme les catégories, les lieux, les dates et les demandes d’aide au public, puis créent un résumé allemand minimisant les données personnelles." }
-TranslatePublish = { other = "Traduire et publier" }
-TranslatePublishCopy = { other = "Les résumés allemands qui réussissent les contrôles automatiques sont traduits dans les langues disponibles. Les pages publiques n’affichent le contenu généré par l’IA qu’après la réussite complète du pipeline de traitement." }
+TranslatePublish = { other = "Publication en allemand" }
+TranslatePublishCopy = { other = "Le résumé allemand est publié dès qu’il passe les premiers contrôles automatiques. Il n’attend pas les traductions ni les vérifications ultérieures." }
 AccuracyOfficialInformation = { other = "Exactitude et informations officielles" }
 AccuracyOfficialInformationCopy = { other = "Les résumés générés par l’IA et les informations extraites peuvent contenir des erreurs. Les communiqués de police peuvent être mis à jour après leur publication. Les informations officielles les plus récentes restent la référence et la présomption d’innocence s’applique." }
 PrivacyDataHandling = { other = "Confidentialité et traitement des données" }
-PrivacyCopy = { other = "Aucun compte n’est nécessaire et il n’y a pas de publicité. Le navigateur mémorise la langue pendant un an, les avis sur l’IA fermés et les recherches appliquées pendant 30 jours. Les critères de recherche sont transmis dans un cookie du site, pas dans l’URL. Le thème reste dans le navigateur jusqu’à sa suppression." }
-DataHandlingCopy = { other = "Les textes sources allemands sont conservés pour le traitement et une vérification à accès restreint. Aucune expiration automatique n’est actuellement configurée. Les pages publiques affichent les résumés, pas les originaux stockés. Les demandes concernant les données personnelles peuvent être envoyées par e-mail." }
+PrivacyCopy = { other = "Aucun compte n’est nécessaire et il n’y a pas de publicité. Le navigateur mémorise la langue pendant un an, les avis sur l’IA fermés et les recherches appliquées pendant 30 jours. Les critères de recherche sont transmis dans un cookie du site. Le thème reste dans le navigateur jusqu’à sa suppression." }
+DataHandlingCopy = { other = "Les textes sources en allemand sont conservés pour le traitement et les vérifications à accès restreint. Les pages publiques présentent les résumés qui en sont tirés." }
 IndependenceLegalReview = { other = "Indépendance et examen juridique" }
 IndependenceLegalReviewCopy = { other = "MunichBrief est indépendant de la police bavaroise. Les mesures techniques ne remplacent pas l’examen juridique. La conservation, la base légale, les données relatives aux infractions et les exceptions journalistiques applicables nécessitent un examen continu." }
 ContactHeading = { other = "Contact" }
@@ -211,6 +211,10 @@ ContactTechnicalCopy = { other = "Vous pouvez signaler les problèmes d’affich
 ContactPoliceCopy = { other = "MunichBrief n’est pas un service de contact de la police. Pour les questions de police, utilisez les coordonnées figurant sur son site officiel." }
 OpenOfficialPoliceRelease = { other = "Communiqué officiel" }
 SiteDescription = { other = "Les communiqués de la préfecture de police de Munich (Polizeipräsidium München), résumés en français." }
-MonitoringCopy = { other = "Cloudflare assure la diffusion et la protection du site et traite des données de trafic, dont les adresses IP. Aucun script d’analyse dans le navigateur n’a été observé lors de notre contrôle. Le suivi interne enregistre des métriques agrégées et des journaux comprenant méthode, chemin, statut, durée et identifiants des requêtes. Leur conservation est configurée à 30 jours ; cela ne définit pas les durées de Cloudflare. Cloudflare peut aussi produire des statistiques de trafic sans script de mesure dans le navigateur." }
+MonitoringCopy = { other = "Nous utilisons Cloudflare pour diffuser et protéger le site. Cloudflare traite des données de connexion, notamment les adresses IP, et peut produire des statistiques de trafic. Pour assurer le bon fonctionnement du site, nous conservons nos propres journaux techniques de requêtes et indicateurs de performance agrégés pendant 30 jours." }
 
 CoverageCopy = { other = "Cette sélection de communiqués de police ne constitue ni un relevé exhaustif des faits locaux ni une statistique de la criminalité. Les mises à jour peuvent apparaître avec un décalage sur MunichBrief. Les dates et heures proviennent de la source ; même une heure précisée peut être approximative." }
+
+VerifyTranslate = { other = "Vérifications et traductions en arrière-plan" }
+
+VerifyTranslateCopy = { other = "Des contrôles IA distincts réexaminent la catégorie et la présence d’un appel à l’aide du public. Ils sont prioritaires sur les traductions. Chaque version linguistique paraît lorsque sa traduction est prête. Les vérifications abouties peuvent mettre à jour la catégorie et l’indication d’appel à l’aide après la publication." }

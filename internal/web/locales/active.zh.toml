@@ -21,7 +21,7 @@ AIDisclosurePreferenceCopy = { other = "选择“知道了”后，此提示将�
 AIDisclosureLearnMore = { other = "有关 MunichBrief 及其工作方式的更多信息，请参阅“关于”页面。" }
 AIDisclosureGotIt = { other = "知道了" }
 AITransparencyEU = { other = "AI 透明度与欧盟指南" }
-AITransparencyEUCopy = { other = "MunichBrief 使用欧盟“完全由 AI 生成”标签，因为欧盟委员会指南明确将 AI 生成的新闻摘要列为适用场景。可见标签和机器可读的来源信息有助于提高透明度，但使用该图标本身并不证明符合法律要求，也不表示 MunichBrief 已签署自愿性的《行为准则》。" }
+AITransparencyEUCopy = { other = "人工智能标签用于标明由人工智能生成的标题、摘要和翻译。每条通报的页面还提供所用模型和处理步骤的信息。" }
 EUIconGuidance = { other = "欧盟图标指南" }
 EUCodePractice = { other = "欧盟行为准则" }
 Built = { other = "构建" }
@@ -144,13 +144,13 @@ Organize = { other = "整理" }
 OrganizeCopy = { other = "包含多则报告的通报按官方报告编号拆分；单独发布的报告仍保持独立。" }
 Summarize = { other = "摘要" }
 SummarizeCopy = { other = "本地 AI 模型提取类别、地点、日期和公众协助请求等信息，然后生成尽量减少个人数据的德语摘要。" }
-TranslatePublish = { other = "翻译与发布" }
-TranslatePublishCopy = { other = "通过自动处理检查的德语摘要会被翻译成可用的读者语言。只有处理流程成功完成后，公共页面才会显示 AI 生成的内容。" }
+TranslatePublish = { other = "先发布德语摘要" }
+TranslatePublishCopy = { other = "德语摘要通过初步自动检查后便会发布，无需等待翻译或后续核查完成。" }
 AccuracyOfficialInformation = { other = "准确性与官方信息" }
 AccuracyOfficialInformationCopy = { other = "AI 生成的摘要和提取的信息可能有误。警方通报可能在发布后更新。最新官方信息始终具有权威性，并适用无罪推定原则。" }
 PrivacyDataHandling = { other = "隐私与数据处理" }
-PrivacyCopy = { other = "无需账号，也没有广告。浏览器会记住语言选择一年，并保留已关闭的人工智能提示和已应用的搜索条件30天。搜索条件通过本站 cookie 传送，不会写入网址。配色主题保留在浏览器中，直到你将其清除。" }
-DataHandlingCopy = { other = "德语原文用于处理及受限访问的复核，目前未设置自动删除期限。公开页面显示摘要，而不显示已存储的原文。如需提出个人数据相关请求，请发送电子邮件。" }
+PrivacyCopy = { other = "无需账号，也没有广告。浏览器会记住语言选择一年，并保留已关闭的人工智能提示和已应用的搜索条件30天。搜索条件通过本站 cookie 传送。配色主题保留在浏览器中，直到你将其清除。" }
+DataHandlingCopy = { other = "德语原文会保留用于处理和内部受限审核。公开页面展示由这些原文生成的摘要。" }
 IndependenceLegalReview = { other = "独立性与法律审查" }
 IndependenceLegalReviewCopy = { other = "MunichBrief 独立于巴伐利亚警方。技术保障不能替代法律审查。数据保留、合法依据、与违法行为有关的数据及适用的新闻业例外均需持续审查。" }
 ContactHeading = { other = "联系我们" }
@@ -211,6 +211,10 @@ ContactTechnicalCopy = { other = "你可以在 GitHub 上反馈显示问题或�
 ContactPoliceCopy = { other = "MunichBrief 不是警方联络渠道。涉及警方事务，请使用警方官方网站上的联系方式。" }
 OpenOfficialPoliceRelease = { other = "官方通报" }
 SiteDescription = { other = "慕尼黑警察总部（Polizeipräsidium München）官方通报的中文摘要。" }
-MonitoringCopy = { other = "Cloudflare 负责网站的内容传输与安全防护，并处理包括 IP 地址在内的流量数据。本次检查未发现浏览器端分析脚本。内部监控记录汇总指标，以及包含请求方法、路径、状态、耗时和标识符的日志。指标和日志配置为保留30天；这一期限并不代表 Cloudflare 的数据保留设置。 即使浏览器中没有分析脚本，Cloudflare 也能生成流量统计。" }
+MonitoringCopy = { other = "我们使用 Cloudflare 提供网站访问和安全防护。Cloudflare 会处理包括 IP 地址在内的连接数据，并可生成流量统计。为保障网站稳定运行，我们将自己的技术请求日志和汇总性能数据保留30天。" }
 
 CoverageCopy = { other = "这里收录的是已发布的警方通报，并非所有本地事件的完整记录，也不是犯罪统计。通报更新可能会延迟反映在 MunichBrief 上。事件日期和时间以原文为依据；即使写明了几点几分，也可能只是大致时间。" }
+
+VerifyTranslate = { other = "后台核查和翻译" }
+
+VerifyTranslateCopy = { other = "随后，独立的人工智能核查会重新检查事件分类，以及警方是否请求公众协助。这些核查优先于翻译处理。各语言版本在翻译完成后发布。核查成功完成后，已发布页面的分类和公众协助标签也可能更新。" }

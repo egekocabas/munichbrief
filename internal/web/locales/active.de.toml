@@ -71,7 +71,7 @@ other = "Verstanden"
 other = "KI-Transparenz und EU-Leitlinien"
 
 [AITransparencyEUCopy]
-other = "MunichBrief verwendet das EU-Label für vollständig KI-generierte Inhalte, weil die Leitlinien der Europäischen Kommission KI-generierte Nachrichtenzusammenfassungen ausdrücklich als Anwendungsfall nennen. Sichtbare Kennzeichnungen und maschinenlesbare Herkunftsangaben unterstützen die Transparenz; die Verwendung des Symbols allein stellt jedoch keine Rechtskonformität fest und bedeutet nicht, dass MunichBrief den freiwilligen Verhaltenskodex unterzeichnet hat."
+other = "Das KI-Kennzeichen macht erkennbar, welche Überschriften, Zusammenfassungen und Übersetzungen mit künstlicher Intelligenz erstellt wurden. Zu jeder Meldung gibt es außerdem Angaben zu den verwendeten Modellen und Verarbeitungsschritten."
 
 [EUIconGuidance]
 other = "EU-Leitlinien zu den Symbolen"
@@ -479,10 +479,10 @@ other = "Zusammenfassen"
 other = "Lokale KI-Modelle extrahieren Angaben wie Kategorien, Orte, Daten und öffentliche Mithilfeersuchen und erstellen anschließend eine datensparsame deutsche Zusammenfassung."
 
 [TranslatePublish]
-other = "Übersetzen und veröffentlichen"
+other = "Auf Deutsch veröffentlichen"
 
 [TranslatePublishCopy]
-other = "Deutsche Zusammenfassungen, die die automatisierten Verarbeitungskontrollen bestehen, werden in die verfügbaren Lesesprachen übersetzt. Öffentliche Seiten zeigen KI-generierte Inhalte erst, nachdem die Verarbeitungspipeline erfolgreich abgeschlossen wurde."
+other = "Die deutsche Zusammenfassung erscheint, sobald sie die ersten automatisierten Prüfungen bestanden hat. Übersetzungen und spätere Überprüfungen müssen dafür nicht abgeschlossen sein."
 
 [AccuracyOfficialInformation]
 other = "Genauigkeit und offizielle Informationen"
@@ -494,10 +494,10 @@ other = "KI-generierte Zusammenfassungen und extrahierte Angaben können Fehler 
 other = "Datenschutz und Datenverarbeitung"
 
 [PrivacyCopy]
-other = "Es gibt weder Benutzerkonten noch Werbung. Dieser Browser merkt sich die Sprache ein Jahr lang, geschlossene KI-Hinweise und angewendete Suchen jeweils 30 Tage. Suchkriterien werden in einem eigenen Cookie übertragen, nicht in der URL. Das Farbschema bleibt bis zum Löschen im Browserspeicher."
+other = "Es gibt weder Benutzerkonten noch Werbung. Dieser Browser merkt sich die Sprache ein Jahr lang, geschlossene KI-Hinweise und angewendete Suchen jeweils 30 Tage. Suchkriterien werden in einem eigenen Cookie übertragen. Das Farbschema bleibt bis zum Löschen im Browserspeicher."
 
 [DataHandlingCopy]
-other = "Deutsche Quelltexte werden für die Verarbeitung und eine zugangsbeschränkte Prüfung gespeichert. Eine automatische Löschung ist derzeit nicht eingerichtet. Öffentlich erscheinen die Zusammenfassungen statt der gespeicherten Originale. Anfragen zu persönlichen Daten sind per E-Mail möglich."
+other = "Die deutschen Quelltexte werden zur Verarbeitung und für interne Prüfungen mit beschränktem Zugriff gespeichert. Öffentlich zu sehen sind die daraus erstellten Zusammenfassungen."
 
 [IndependenceLegalReview]
 other = "Unabhängigkeit und rechtliche Prüfung"
@@ -642,7 +642,13 @@ other = "MunichBrief ist keine Kontaktstelle der Polizei. Nutze für polizeilich
 
 
 [MonitoringCopy]
-other = "Cloudflare stellt die Website bereit, schützt sie und verarbeitet dabei Verkehrsdaten einschließlich IP-Adressen. Bei unserer Prüfung war kein Analyse-Skript im Browser zu sehen. Intern werden zusammengefasste Messwerte und Zugriffsprotokolle mit Methode, Pfad, Status, Dauer und Anfragekennungen erfasst. Laut Konfiguration werden Messwerte und Protokolle 30 Tage gespeichert; daraus lässt sich Cloudflares Speicherdauer nicht ableiten. Cloudflare kann auch ohne Analyse-Skript im Browser Verkehrsstatistiken erstellen."
+other = "Wir nutzen Cloudflare, um die Website bereitzustellen und zu schützen. Cloudflare verarbeitet Verbindungsdaten, darunter IP-Adressen, und kann Zugriffsstatistiken erstellen. Für einen zuverlässigen Betrieb speichern wir eigene technische Anfrageprotokolle und zusammengefasste Leistungsdaten 30 Tage lang."
 
 [CoverageCopy]
 other = "Die Auswahl veröffentlichter Polizeiberichte ist weder ein vollständiges Verzeichnis aller Vorfälle noch eine Kriminalstatistik. Aktualisierungen können MunichBrief verzögert erreichen. Datum und Uhrzeit stammen aus dem Bericht; auch eine angegebene Uhrzeit kann ungefähr sein."
+
+[VerifyTranslate]
+other = "Im Hintergrund prüfen und übersetzen"
+
+[VerifyTranslateCopy]
+other = "Weitere KI-Prüfungen kontrollieren die Kategorie und ob die Polizei um Mithilfe bittet. Diese Prüfungen haben Vorrang vor Übersetzungen. Jede Sprachfassung erscheint, sobald ihre Übersetzung fertig ist. Erfolgreiche Prüfungen können die Kategorie und den Mithilfehinweis auch nach der Veröffentlichung aktualisieren."

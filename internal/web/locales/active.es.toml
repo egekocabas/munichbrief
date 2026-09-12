@@ -21,7 +21,7 @@ AIDisclosurePreferenceCopy = { other = "Al seleccionar «Entendido», este aviso
 AIDisclosureLearnMore = { other = "Encontrarás más información sobre MunichBrief y su funcionamiento en la página Información." }
 AIDisclosureGotIt = { other = "Entendido" }
 AITransparencyEU = { other = "Transparencia de la IA y orientaciones de la UE" }
-AITransparencyEUCopy = { other = "MunichBrief utiliza la etiqueta de la UE para contenido íntegramente generado por IA porque las orientaciones de la Comisión Europea incluyen expresamente los resúmenes de noticias generados por IA como caso de uso. Las etiquetas visibles y la procedencia legible por máquinas favorecen la transparencia, pero el uso del icono no demuestra por sí solo el cumplimiento legal ni indica que MunichBrief haya firmado el Código de buenas prácticas voluntario." }
+AITransparencyEUCopy = { other = "La etiqueta de IA identifica los titulares, resúmenes y traducciones creados con inteligencia artificial. Cada noticia también incluye información sobre los modelos y las etapas de procesamiento utilizados." }
 EUIconGuidance = { other = "Orientaciones de la UE sobre iconos" }
 EUCodePractice = { other = "Código de buenas prácticas de la UE" }
 Built = { other = "Compilación" }
@@ -144,13 +144,13 @@ Organize = { other = "Organizar" }
 OrganizeCopy = { other = "Los comunicados que contienen varios informes se dividen según sus números oficiales. Los informes publicados por separado permanecen separados." }
 Summarize = { other = "Resumir" }
 SummarizeCopy = { other = "Los modelos locales de IA extraen datos como categorías, lugares, fechas y solicitudes de colaboración ciudadana y después crean un resumen en alemán con datos personales minimizados." }
-TranslatePublish = { other = "Traducir y publicar" }
-TranslatePublishCopy = { other = "Los resúmenes en alemán que superan las comprobaciones automáticas se traducen a los idiomas disponibles. Las páginas públicas solo muestran contenido generado por IA cuando el proceso finaliza correctamente." }
+TranslatePublish = { other = "Publicación en alemán" }
+TranslatePublishCopy = { other = "El resumen en alemán se publica en cuanto supera las comprobaciones automáticas iniciales. No tiene que esperar a las traducciones ni a las verificaciones posteriores." }
 AccuracyOfficialInformation = { other = "Exactitud e información oficial" }
 AccuracyOfficialInformationCopy = { other = "Los resúmenes generados por IA y los datos extraídos pueden contener errores. Los comunicados policiales pueden actualizarse después de publicarse. La información oficial más reciente sigue siendo la fuente autorizada y se aplica la presunción de inocencia." }
 PrivacyDataHandling = { other = "Privacidad y tratamiento de datos" }
-PrivacyCopy = { other = "No hacen falta cuentas y no hay publicidad. El navegador recuerda el idioma durante un año, y los avisos de IA cerrados y las búsquedas aplicadas durante 30 días. Los criterios de búsqueda se envían en una cookie propia, no en la URL. El tema de color permanece en el navegador hasta que lo elimines." }
-DataHandlingCopy = { other = "Los textos originales en alemán se conservan para su procesamiento y revisión con acceso restringido. Actualmente no tienen un plazo de borrado automático. Las páginas públicas muestran resúmenes, no los originales almacenados. Puedes enviar solicitudes sobre datos personales por correo electrónico." }
+PrivacyCopy = { other = "No hacen falta cuentas y no hay publicidad. El navegador recuerda el idioma durante un año, y los avisos de IA cerrados y las búsquedas aplicadas durante 30 días. Los criterios de búsqueda se envían en una cookie propia. El tema de color permanece en el navegador hasta que lo elimines." }
+DataHandlingCopy = { other = "Los textos originales en alemán se conservan para su procesamiento y revisión con acceso restringido. Las páginas públicas muestran los resúmenes elaborados a partir de ellos." }
 IndependenceLegalReview = { other = "Independencia y revisión jurídica" }
 IndependenceLegalReviewCopy = { other = "MunichBrief es independiente de la Policía de Baviera. Las medidas técnicas no sustituyen la revisión jurídica. La conservación, la base jurídica, los datos relacionados con delitos y las excepciones periodísticas aplicables requieren una revisión continua." }
 ContactHeading = { other = "Contacto" }
@@ -211,6 +211,10 @@ ContactTechnicalCopy = { other = "Puedes informar de problemas de visualización
 ContactPoliceCopy = { other = "MunichBrief no es un canal de contacto con la policía. Para asuntos policiales, utiliza los datos de contacto de su web oficial." }
 OpenOfficialPoliceRelease = { other = "Comunicado oficial" }
 SiteDescription = { other = "Los comunicados de la Jefatura de Policía de Múnich (Polizeipräsidium München), resumidos en español." }
-MonitoringCopy = { other = "Cloudflare distribuye y protege el sitio y trata datos de tráfico, incluidas las direcciones IP. En nuestra comprobación no se detectó un script de analítica en el navegador. La supervisión interna registra métricas agregadas y el método, ruta, estado, duración e identificadores de las solicitudes. La conservación configurada es de 30 días; esto no determina los plazos de Cloudflare. Cloudflare también puede generar estadísticas de tráfico sin un script de análisis en el navegador." }
+MonitoringCopy = { other = "Usamos Cloudflare para servir y proteger el sitio. Cloudflare trata datos de conexión, incluidas las direcciones IP, y puede generar estadísticas de tráfico. Para mantener el sitio en buen funcionamiento, conservamos nuestros registros técnicos de solicitudes y datos agregados de rendimiento durante 30 días." }
 
 CoverageCopy = { other = "Esta selección de comunicados policiales no es un registro completo de los sucesos locales ni una estadística sobre delincuencia. Las actualizaciones pueden llegar a MunichBrief con retraso. Las fechas y horas proceden de la fuente; una hora indicada también puede ser aproximada." }
+
+VerifyTranslate = { other = "Verificaciones y traducciones posteriores" }
+
+VerifyTranslateCopy = { other = "Otras comprobaciones mediante IA revisan la categoría y si la policía solicita colaboración ciudadana. Estas comprobaciones tienen prioridad sobre las traducciones. Cada versión se publica cuando su traducción está lista. Las verificaciones completadas pueden actualizar la categoría y la indicación de colaboración ciudadana después de la publicación." }

@@ -21,7 +21,7 @@ AIDisclosurePreferenceCopy = { other = "Wybranie „Rozumiem” zapamięta tę i
 AIDisclosureLearnMore = { other = "Więcej informacji o MunichBrief i sposobie działania znajduje się na stronie O nas." }
 AIDisclosureGotIt = { other = "Rozumiem" }
 AITransparencyEU = { other = "Przejrzystość AI i wytyczne UE" }
-AITransparencyEUCopy = { other = "MunichBrief stosuje unijne oznaczenie treści w pełni wygenerowanych przez AI, ponieważ wytyczne Komisji Europejskiej wyraźnie wymieniają generowane przez AI podsumowania wiadomości jako przykład zastosowania. Widoczne oznaczenia i pochodzenie czytelne maszynowo wspierają przejrzystość, lecz samo użycie ikony nie dowodzi zgodności z prawem ani nie oznacza, że MunichBrief podpisał dobrowolny kodeks postępowania." }
+AITransparencyEUCopy = { other = "Oznaczenie AI wskazuje nagłówki, podsumowania i tłumaczenia przygotowane z użyciem sztucznej inteligencji. Każdy komunikat zawiera też informacje o wykorzystanych modelach i etapach przetwarzania." }
 EUIconGuidance = { other = "Wytyczne UE dotyczące ikony" }
 EUCodePractice = { other = "Kodeks postępowania UE" }
 Built = { other = "Wersja" }
@@ -150,13 +150,13 @@ Organize = { other = "Porządkowanie" }
 OrganizeCopy = { other = "Komunikaty zawierające wiele zgłoszeń są dzielone według ich oficjalnych numerów. Zgłoszenia opublikowane oddzielnie pozostają oddzielne." }
 Summarize = { other = "Podsumowanie" }
 SummarizeCopy = { other = "Lokalne modele AI wyodrębniają szczegóły, takie jak kategoria, miejsce, data i prośby o pomoc publiczną, a następnie tworzą niemieckie podsumowanie z minimalizacją danych." }
-TranslatePublish = { other = "Tłumaczenie i publikacja" }
-TranslatePublishCopy = { other = "Niemieckie podsumowania, które przejdą automatyczne kontrole przetwarzania, są tłumaczone na dostępne języki. Strony publiczne pokazują treści wygenerowane przez AI dopiero po pomyślnym zakończeniu całego potoku przetwarzania." }
+TranslatePublish = { other = "Publikacja po niemiecku" }
+TranslatePublishCopy = { other = "Niemieckie podsumowanie pojawia się, gdy przejdzie wstępne automatyczne kontrole. Nie czeka na tłumaczenia ani późniejsze weryfikacje." }
 AccuracyOfficialInformation = { other = "Dokładność i informacje oficjalne" }
 AccuracyOfficialInformationCopy = { other = "Podsumowania i szczegóły wyodrębnione przez AI mogą zawierać błędy. Komunikaty policji mogą być aktualizowane po publikacji. Najnowsze oficjalne informacje pozostają rozstrzygające i obowiązuje domniemanie niewinności." }
 PrivacyDataHandling = { other = "Prywatność i przetwarzanie danych" }
-PrivacyCopy = { other = "Nie potrzebujesz konta i nie ma reklam. Przeglądarka zapamiętuje język przez rok, a zamknięte powiadomienie o AI i zastosowane wyszukiwania przez 30 dni. Kryteria wyszukiwania są przesyłane w pliku cookie witryny, nie w adresie URL. Motyw kolorystyczny pozostaje w przeglądarce do usunięcia." }
-DataHandlingCopy = { other = "Niemieckie teksty źródłowe są przechowywane do przetwarzania i weryfikacji z ograniczonym dostępem. Obecnie nie ustawiono automatycznego usuwania. Publiczne strony pokazują podsumowania zamiast zapisanych oryginałów. Wnioski dotyczące danych osobowych można przesyłać e-mailem." }
+PrivacyCopy = { other = "Nie potrzebujesz konta i nie ma reklam. Przeglądarka zapamiętuje język przez rok, a zamknięte powiadomienie o AI i zastosowane wyszukiwania przez 30 dni. Kryteria wyszukiwania są przesyłane w pliku cookie witryny. Motyw kolorystyczny pozostaje w przeglądarce do usunięcia." }
+DataHandlingCopy = { other = "Niemieckie teksty źródłowe są przechowywane do przetwarzania i weryfikacji z ograniczonym dostępem. Na publicznych stronach widoczne są przygotowane na ich podstawie podsumowania." }
 IndependenceLegalReview = { other = "Niezależność i weryfikacja prawna" }
 IndependenceLegalReviewCopy = { other = "MunichBrief jest niezależny od policji bawarskiej. Zabezpieczenia techniczne nie zastępują weryfikacji prawnej. Okres przechowywania, podstawa prawna, dane dotyczące wyroków skazujących i naruszeń prawa oraz wszelkie wyjątki dziennikarskie wymagają ciągłej oceny." }
 ContactHeading = { other = "Kontakt" }
@@ -211,6 +211,10 @@ ContactTechnicalCopy = { other = "Problemy z wyświetlaniem i propozycje ulepsze
 ContactPoliceCopy = { other = "MunichBrief nie jest kanałem kontaktu z policją. W sprawach policyjnych korzystaj z danych kontaktowych na jej oficjalnej stronie." }
 OpenOfficialPoliceRelease = { other = "Oficjalny komunikat" }
 SiteDescription = { other = "Komunikaty Komendy Policji w Monachium (Polizeipräsidium München) w skrócie po polsku." }
-MonitoringCopy = { other = "Cloudflare dostarcza i chroni witrynę oraz przetwarza dane o ruchu, w tym adresy IP. Podczas sprawdzania nie zaobserwowano skryptu analitycznego w przeglądarce. Wewnętrzny monitoring zapisuje zbiorcze metryki i dzienniki z metodą, ścieżką, statusem, czasem trwania oraz identyfikatorami żądań. Ich okres przechowywania ustawiono na 30 dni; nie określa to okresów stosowanych przez Cloudflare. Cloudflare może też tworzyć statystyki ruchu bez skryptu analitycznego w przeglądarce." }
+MonitoringCopy = { other = "Korzystamy z Cloudflare, aby udostępniać i chronić witrynę. Cloudflare przetwarza dane połączeń, w tym adresy IP, i może tworzyć statystyki ruchu. Aby zapewnić sprawne działanie strony, przechowujemy własne techniczne dzienniki żądań i zbiorcze dane o wydajności przez 30 dni." }
 
 CoverageCopy = { other = "To wybór opublikowanych komunikatów policji, a nie pełny rejestr lokalnych zdarzeń ani statystyka przestępczości. Aktualizacje mogą pojawiać się w MunichBrief z opóźnieniem. Daty i godziny pochodzą ze źródła; podana godzina również może być przybliżona." }
+
+VerifyTranslate = { other = "Weryfikacja i tłumaczenie w tle" }
+
+VerifyTranslateCopy = { other = "Osobne kontrole AI ponownie sprawdzają kategorię i to, czy policja prosi mieszkańców o pomoc. Mają pierwszeństwo przed tłumaczeniami. Każda wersja językowa pojawia się, gdy jej tłumaczenie jest gotowe. Udane weryfikacje mogą zaktualizować kategorię i oznaczenie prośby o pomoc już po publikacji." }

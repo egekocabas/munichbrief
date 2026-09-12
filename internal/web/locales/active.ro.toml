@@ -49,7 +49,8 @@ other = "Am înțeles"
 [AITransparencyEU]
 other = "Transparență AI și orientări UE"
 [AITransparencyEUCopy]
-other = "MunichBrief folosește eticheta UE pentru conținut integral generat de AI deoarece orientările Comisiei Europene menționează explicit rezumatele de știri generate de AI ca exemplu de utilizare. Etichetele vizibile și proveniența procesabilă automat susțin transparența, însă folosirea pictogramei nu demonstrează de una singură conformitatea juridică și nu indică faptul că MunichBrief a semnat Codul de bune practici voluntar."
+other = "Eticheta IA identifică titlurile, rezumatele și traducerile create cu inteligență artificială. Fiecare știre include și informații despre modelele și etapele de procesare folosite."
+
 [EUIconGuidance]
 other = "Orientări privind pictograma UE"
 [EUCodePractice]
@@ -328,9 +329,11 @@ other = "Rezumare"
 [SummarizeCopy]
 other = "Modelele AI locale extrag detalii precum categoria, locul, data și solicitările de ajutor public, apoi creează un rezumat în germană cu date reduse la minimum."
 [TranslatePublish]
-other = "Traducere și publicare"
+other = "Publicarea în germană"
+
 [TranslatePublishCopy]
-other = "Rezumatele în germană care trec verificările automate de procesare sunt traduse în limbile disponibile. Paginile publice afișează conținut generat de AI numai după finalizarea cu succes a fluxului de procesare."
+other = "Rezumatul german apare imediat ce trece de verificările automate inițiale. Nu trebuie să aștepte traducerile sau verificările ulterioare."
+
 [AccuracyOfficialInformation]
 other = "Acuratețe și informații oficiale"
 [AccuracyOfficialInformationCopy]
@@ -338,10 +341,10 @@ other = "Rezumatele și detaliile extrase de AI pot conține erori. Comunicatele
 [PrivacyDataHandling]
 other = "Confidențialitate și gestionarea datelor"
 [PrivacyCopy]
-other = "Nu ai nevoie de cont și nu există reclame. Browserul păstrează limba timp de un an, iar notificările IA închise și căutările aplicate timp de 30 de zile. Criteriile căutării sunt transmise într-un cookie propriu, nu în URL. Tema de culoare rămâne în browser până la ștergere."
+other = "Nu ai nevoie de cont și nu există reclame. Browserul păstrează limba timp de un an, iar notificările IA închise și căutările aplicate timp de 30 de zile. Criteriile căutării sunt transmise într-un cookie propriu. Tema de culoare rămâne în browser până la ștergere."
 
 [DataHandlingCopy]
-other = "Textele originale în germană sunt păstrate pentru procesare și verificare cu acces restricționat. În prezent, nu este configurată ștergerea automată. Paginile publice afișează rezumatele, nu originalele stocate. Cererile privind datele personale pot fi trimise prin e-mail."
+other = "Textele originale în germană sunt păstrate pentru procesare și verificare cu acces restricționat. Paginile publice afișează rezumatele rezultate."
 
 [IndependenceLegalReview]
 other = "Independență și verificare juridică"
@@ -482,7 +485,13 @@ other = "MunichBrief nu este un canal de contact al poliției. Pentru probleme c
 
 
 [MonitoringCopy]
-other = "Cloudflare livrează și protejează site-ul și prelucrează date de trafic, inclusiv adrese IP. La verificare nu am observat un script de analiză în browser. Monitorizarea internă înregistrează metrici agregate și jurnale cu metoda, calea, starea, durata și identificatorii cererilor. Păstrarea lor este configurată la 30 de zile; aceasta nu stabilește termenele Cloudflare. Cloudflare poate genera statistici de trafic și fără un script de analiză în browser."
+other = "Folosim Cloudflare pentru a furniza și proteja site-ul. Cloudflare prelucrează date de conexiune, inclusiv adrese IP, și poate genera statistici de trafic. Pentru buna funcționare a site-ului, păstrăm propriile jurnale tehnice ale cererilor și datele agregate de performanță timp de 30 de zile."
 
 [CoverageCopy]
 other = "Aceasta este o selecție de comunicate ale poliției, nu o evidență completă a incidentelor locale sau o statistică a criminalității. Actualizările pot apărea cu întârziere pe MunichBrief. Data și ora provin din sursă; chiar și o oră indicată poate fi aproximativă."
+
+[VerifyTranslate]
+other = "Verificări și traduceri în fundal"
+
+[VerifyTranslateCopy]
+other = "Verificări IA separate reevaluează categoria și dacă poliția solicită ajutorul publicului. Acestea au prioritate față de traduceri. Fiecare versiune lingvistică apare când traducerea este gata. Verificările încheiate cu succes pot actualiza categoria și eticheta privind solicitarea de ajutor și după publicare."

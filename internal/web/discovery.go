@@ -429,6 +429,7 @@ func (s *Server) renderAboutMarkdown(response http.ResponseWriter, data aboutPag
 		{title: "Organize", copy: "OrganizeCopy"},
 		{title: "Summarize", copy: "SummarizeCopy"},
 		{title: "TranslatePublish", copy: "TranslatePublishCopy"},
+		{title: "VerifyTranslate", copy: "VerifyTranslateCopy"},
 	}
 	for index, step := range steps {
 		fmt.Fprintf(&builder, "\n%d. **%s**\n\n   %s\n", index+1, markdownText(s.localization.Text(data.Lang, step.title)), markdownText(s.localization.Text(data.Lang, step.copy)))
@@ -437,6 +438,7 @@ func (s *Server) renderAboutMarkdown(response http.ResponseWriter, data aboutPag
 		title string
 		copy  []string
 	}{
+		{title: "AITransparencyEU", copy: []string{"AITransparencyEUCopy"}},
 		{title: "AccuracyOfficialInformation", copy: []string{"AccuracyOfficialInformationCopy", "CoverageCopy"}},
 		{title: "PrivacyDataHandling", copy: []string{"PrivacyCopy", "DataHandlingCopy", "MonitoringCopy"}},
 		{title: "IndependenceLegalReview", copy: []string{"IndependenceLegalReviewCopy"}},
@@ -445,6 +447,10 @@ func (s *Server) renderAboutMarkdown(response http.ResponseWriter, data aboutPag
 		fmt.Fprintf(&builder, "\n## %s\n", markdownText(s.localization.Text(data.Lang, section.title)))
 		for _, key := range section.copy {
 			fmt.Fprintf(&builder, "\n%s\n", markdownText(s.localization.Text(data.Lang, key)))
+		}
+		if section.title == "PrivacyDataHandling" {
+			fmt.Fprintf(&builder, "\n### %s\n\n", markdownText(s.localization.Text(data.Lang, "SourceMetadata")))
+			builder.WriteString("- [Landeshauptstadt München – GeodatenService](https://opendata.muenchen.de/) (dl-de/by-2.0)\n- [GeoNames](https://www.geonames.org/) (CC BY 4.0)\n- [© OpenStreetMap contributors](https://www.openstreetmap.org/copyright) (ODbL 1.0)\n")
 		}
 	}
 	fmt.Fprintf(&builder, "\n## %s\n", markdownText(s.localization.Text(data.Lang, "ContactHeading")))

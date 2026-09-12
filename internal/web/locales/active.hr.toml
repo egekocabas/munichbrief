@@ -21,7 +21,7 @@ AIDisclosurePreferenceCopy = { other = "Odabir opcije „Razumijem” pamti ovu 
 AIDisclosureLearnMore = { other = "Više informacija o MunichBriefu i njegovu radu dostupno je na stranici O projektu." }
 AIDisclosureGotIt = { other = "Razumijem" }
 AITransparencyEU = { other = "Transparentnost umjetne inteligencije i smjernice EU-a" }
-AITransparencyEUCopy = { other = "MunichBrief koristi oznaku EU-a za potpuno AI generiran sadržaj jer smjernice Europske komisije izričito navode AI sažetke vijesti kao primjer uporabe. Vidljive oznake i strojno čitljivo podrijetlo podržavaju transparentnost, ali sama uporaba ikone ne dokazuje pravnu usklađenost niti znači da je MunichBrief potpisao dobrovoljni Kodeks prakse." }
+AITransparencyEUCopy = { other = "Oznaka umjetne inteligencije pokazuje da su naslovi, sažeci i prijevodi izrađeni uz pomoć umjetne inteligencije. Uz svako izvješće dostupni su i podaci o korištenim modelima i koracima obrade." }
 EUIconGuidance = { other = "Smjernice EU-a za ikone" }
 EUCodePractice = { other = "Kodeks prakse EU-a" }
 Built = { other = "Izgrađeno" }
@@ -144,13 +144,13 @@ Organize = { other = "Organiziranje" }
 OrganizeCopy = { other = "Priopćenja s više izvještaja dijele se prema službenim brojevima izvještaja. Zasebno objavljeni izvještaji ostaju zasebni." }
 Summarize = { other = "Sažimanje" }
 SummarizeCopy = { other = "Lokalni AI modeli izdvajaju kategorije, lokacije, datume i zahtjeve za pomoć javnosti, a zatim izrađuju njemački sažetak sa smanjenom količinom osobnih podataka." }
-TranslatePublish = { other = "Prevođenje i objava" }
-TranslatePublishCopy = { other = "Njemački sažeci koji prođu automatizirane provjere prevode se na dostupne jezike. Javne stranice prikazuju AI sadržaj tek nakon uspješnog završetka obrade." }
+TranslatePublish = { other = "Objava na njemačkom" }
+TranslatePublishCopy = { other = "Njemački sažetak objavljuje se čim prođe početne automatske provjere. Ne čeka prijevode ni naknadne provjere." }
 AccuracyOfficialInformation = { other = "Točnost i službene informacije" }
 AccuracyOfficialInformationCopy = { other = "AI sažeci i izdvojeni podaci mogu sadržavati pogreške. Policijska priopćenja mogu se naknadno ažurirati. Najnovije službene informacije ostaju mjerodavne i primjenjuje se pretpostavka nedužnosti." }
 PrivacyDataHandling = { other = "Privatnost i obrada podataka" }
-PrivacyCopy = { other = "Nisu potrebni korisnički računi i nema oglasa. Preglednik pamti jezik godinu dana, a zatvorenu obavijest o umjetnoj inteligenciji i primijenjene pretrage 30 dana. Kriteriji pretrage šalju se kolačićem ove stranice, ne URL-om. Tema boja ostaje u pregledniku dok je ne izbrišete." }
-DataHandlingCopy = { other = "Njemački izvorni tekstovi čuvaju se radi obrade i ograničenog pregleda; automatsko brisanje trenutačno nije postavljeno. Javne stranice prikazuju sažetke, a ne pohranjene izvornike. Zahtjeve vezane uz osobne podatke možete poslati e-poštom." }
+PrivacyCopy = { other = "Nisu potrebni korisnički računi i nema oglasa. Preglednik pamti jezik godinu dana, a zatvorenu obavijest o umjetnoj inteligenciji i primijenjene pretrage 30 dana. Kriteriji pretrage šalju se kolačićem ove stranice. Tema boja ostaje u pregledniku dok je ne izbrišete." }
+DataHandlingCopy = { other = "Njemački izvorni tekstovi čuvaju se za obradu i provjeru s ograničenim pristupom. Na javnim stranicama prikazuju se sažeci nastali iz tih tekstova." }
 IndependenceLegalReview = { other = "Neovisnost i pravna provjera" }
 IndependenceLegalReviewCopy = { other = "MunichBrief je neovisan o Bavarskoj policiji. Tehničke zaštite ne zamjenjuju pravnu provjeru. Rokovi čuvanja, pravna osnova, podaci povezani s kaznenim djelima i primjenjive novinarske iznimke zahtijevaju stalnu provjeru." }
 ContactHeading = { other = "Kontakt" }
@@ -211,6 +211,10 @@ ContactTechnicalCopy = { other = "Probleme s prikazom i prijedloge za poboljšan
 ContactPoliceCopy = { other = "MunichBrief nije kontaktna služba policije. Za policijska pitanja koristite kontakte na službenim policijskim stranicama." }
 OpenOfficialPoliceRelease = { other = "Službeno priopćenje" }
 SiteDescription = { other = "Sažeci priopćenja Policijske uprave München (Polizeipräsidium München) na hrvatskom jeziku." }
-MonitoringCopy = { other = "Cloudflare isporučuje i štiti stranicu te obrađuje podatke o prometu, uključujući IP adrese. Tijekom provjere nije uočena skripta za analitiku u pregledniku. Interno praćenje bilježi zbirne metrike te metodu, putanju, status, trajanje i identifikatore zahtjeva. Konfigurirano čuvanje metrika i zapisa iznosi 30 dana; to ne određuje Cloudflareove rokove čuvanja. Cloudflare može izrađivati statistiku prometa i bez analitičke skripte u pregledniku." }
+MonitoringCopy = { other = "Cloudflare koristimo za isporuku i zaštitu stranice. Cloudflare obrađuje podatke o vezi, uključujući IP adrese, te može izrađivati statistiku posjeta. Kako bi stranica pouzdano radila, vlastite tehničke zapise zahtjeva i zbirne pokazatelje rada čuvamo 30 dana." }
 
 CoverageCopy = { other = "Ovdje je izbor objavljenih policijskih izvješća, a ne popis svih lokalnih događaja ili statistika kriminala. Izmjene mogu stići na MunichBrief sa zakašnjenjem. Datum i vrijeme preuzimaju se iz izvora; navedeno vrijeme može biti približno." }
+
+VerifyTranslate = { other = "Provjere i prijevodi u pozadini" }
+
+VerifyTranslateCopy = { other = "Zasebne provjere umjetnom inteligencijom ponovno provjeravaju kategoriju i traži li policija pomoć javnosti. Imaju prednost pred prijevodima. Svaka jezična verzija objavljuje se kada je prijevod spreman. Uspješne provjere mogu promijeniti kategoriju i oznaku poziva za pomoć i nakon objave." }

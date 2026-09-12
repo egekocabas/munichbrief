@@ -21,7 +21,7 @@ AIDisclosurePreferenceCopy = { other = "Selezionando “Ho capito”, questo avv
 AIDisclosureLearnMore = { other = "Ulteriori informazioni su MunichBrief e sul suo funzionamento sono disponibili nella pagina Informazioni." }
 AIDisclosureGotIt = { other = "Ho capito" }
 AITransparencyEU = { other = "Trasparenza dell’AI e orientamenti UE" }
-AITransparencyEUCopy = { other = "MunichBrief usa l’etichetta UE per i contenuti interamente generati dall’AI perché gli orientamenti della Commissione europea citano espressamente i riepiloghi di notizie generati dall’AI. Le etichette visibili e la provenienza leggibile dalle macchine favoriscono la trasparenza, ma l’uso dell’icona non dimostra di per sé la conformità legale né indica che MunichBrief abbia sottoscritto il Codice di buone pratiche volontario." }
+AITransparencyEUCopy = { other = "L’etichetta IA segnala titoli, riassunti e traduzioni creati con l’intelligenza artificiale. Ogni notizia include anche informazioni sui modelli e sulle fasi di elaborazione utilizzati." }
 EUIconGuidance = { other = "Orientamenti UE sulle icone" }
 EUCodePractice = { other = "Codice di buone pratiche UE" }
 Built = { other = "Build" }
@@ -144,13 +144,13 @@ Organize = { other = "Organizzazione" }
 OrganizeCopy = { other = "I comunicati con più rapporti vengono suddivisi usando i numeri ufficiali. I rapporti pubblicati separatamente restano separati." }
 Summarize = { other = "Riepilogo" }
 SummarizeCopy = { other = "Modelli AI locali estraggono categorie, luoghi, date e richieste di collaborazione, quindi creano un riepilogo tedesco con dati personali ridotti al minimo." }
-TranslatePublish = { other = "Traduzione e pubblicazione" }
-TranslatePublishCopy = { other = "I riepiloghi tedeschi che superano i controlli automatici vengono tradotti nelle lingue disponibili. Le pagine pubbliche mostrano contenuti generati dall’AI solo dopo il completamento della pipeline." }
+TranslatePublish = { other = "Pubblicazione in tedesco" }
+TranslatePublishCopy = { other = "Il riassunto in tedesco viene pubblicato non appena supera i controlli automatici iniziali. Non deve attendere le traduzioni o le verifiche successive." }
 AccuracyOfficialInformation = { other = "Accuratezza e informazioni ufficiali" }
 AccuracyOfficialInformationCopy = { other = "I riepiloghi AI e i dettagli estratti possono contenere errori. I comunicati della polizia possono essere aggiornati dopo la pubblicazione. Le informazioni ufficiali più recenti restano autorevoli e si applica la presunzione d’innocenza." }
 PrivacyDataHandling = { other = "Privacy e trattamento dei dati" }
-PrivacyCopy = { other = "Non servono account e non ci sono annunci pubblicitari. Il browser ricorda la lingua per un anno, gli avvisi sull’IA chiusi e le ricerche applicate per 30 giorni. I criteri di ricerca vengono trasmessi in un cookie del sito, non nell’URL. Il tema resta nella memoria del browser finché non viene eliminato." }
-DataHandlingCopy = { other = "I testi originali tedeschi sono conservati per l’elaborazione e la revisione ad accesso limitato, senza una scadenza automatica attualmente configurata. Le pagine pubbliche mostrano i riassunti, non gli originali archiviati. Le richieste sui dati personali possono essere inviate via email." }
+PrivacyCopy = { other = "Non servono account e non ci sono annunci pubblicitari. Il browser ricorda la lingua per un anno, gli avvisi sull’IA chiusi e le ricerche applicate per 30 giorni. I criteri di ricerca vengono trasmessi in un cookie del sito. Il tema resta nella memoria del browser finché non viene eliminato." }
+DataHandlingCopy = { other = "I testi originali in tedesco vengono conservati per l’elaborazione e per verifiche ad accesso riservato. Le pagine pubbliche mostrano i riassunti ricavati da questi testi." }
 IndependenceLegalReview = { other = "Indipendenza e revisione legale" }
 IndependenceLegalReviewCopy = { other = "MunichBrief è indipendente dalla Polizia bavarese. Le misure tecniche non sostituiscono la revisione legale. Conservazione, base giuridica, dati relativi a reati ed eventuali eccezioni giornalistiche richiedono una valutazione continua." }
 ContactHeading = { other = "Contatti" }
@@ -211,6 +211,10 @@ ContactTechnicalCopy = { other = "Puoi segnalare problemi di visualizzazione e p
 ContactPoliceCopy = { other = "MunichBrief non è un canale di contatto con la polizia. Per questioni di polizia, usa i recapiti indicati sul sito ufficiale." }
 OpenOfficialPoliceRelease = { other = "Comunicato ufficiale" }
 SiteDescription = { other = "I comunicati della Questura di Monaco (Polizeipräsidium München), riassunti in italiano." }
-MonitoringCopy = { other = "Cloudflare distribuisce e protegge il sito e tratta dati di traffico, compresi gli indirizzi IP. Durante il controllo non è stato rilevato uno script di analisi nel browser. Il monitoraggio interno registra metriche aggregate e log con metodo, percorso, stato, durata e identificativi delle richieste. La conservazione configurata è di 30 giorni; questo non determina i tempi di conservazione di Cloudflare. Cloudflare può produrre statistiche sul traffico anche senza uno script di analisi nel browser." }
+MonitoringCopy = { other = "Usiamo Cloudflare per distribuire e proteggere il sito. Cloudflare tratta dati di connessione, compresi gli indirizzi IP, e può produrre statistiche sul traffico. Per mantenere il sito affidabile, conserviamo i nostri registri tecnici delle richieste e i dati aggregati sulle prestazioni per 30 giorni." }
 
 CoverageCopy = { other = "Questa selezione di comunicati della polizia non è un elenco completo degli episodi avvenuti in città né una statistica sulla criminalità. Gli aggiornamenti possono arrivare su MunichBrief in ritardo. Date e orari provengono dalla fonte; anche un orario indicato può essere approssimativo." }
+
+VerifyTranslate = { other = "Verifiche e traduzioni in seguito" }
+
+VerifyTranslateCopy = { other = "Controlli IA separati riesaminano la categoria e l’eventuale richiesta di collaborazione da parte della polizia. Questi controlli hanno la precedenza sulle traduzioni. Ogni versione linguistica viene pubblicata quando la traduzione è pronta. Le verifiche completate possono aggiornare la categoria e l’indicazione della richiesta di collaborazione anche dopo la pubblicazione." }

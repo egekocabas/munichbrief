@@ -21,7 +21,7 @@ AIDisclosurePreferenceCopy = { other = "Bu bildirimi 30 gün boyunca gösterme."
 AIDisclosureLearnMore = { other = "Nasıl çalışıyor?" }
 AIDisclosureGotIt = { other = "Anladım" }
 AITransparencyEU = { other = "Yapay zekâ şeffaflığı ve AB rehberi" }
-AITransparencyEUCopy = { other = "MunichBrief, Avrupa Komisyonu rehberinde yapay zekâ tarafından oluşturulan haber özetleri açıkça bir kullanım alanı olarak belirtildiği için AB Tamamen Yapay Zekâ Tarafından Oluşturuldu etiketini kullanır. Görünür etiketler ve makinece okunabilir kaynak bilgileri şeffaflığı destekler; ancak simgenin kullanılması tek başına yasal uygunluk sağlamaz veya MunichBrief’in gönüllü Uygulama Kuralları’nı imzaladığı anlamına gelmez." }
+AITransparencyEUCopy = { other = "Yapay zekâ etiketi, başlıkların, özetlerin ve çevirilerin yapay zekâyla hazırlandığını gösterir. Her bültenin sayfasında kullanılan modeller ve işleme adımları hakkında da bilgi bulunur." }
 EUIconGuidance = { other = "AB simge rehberi" }
 EUCodePractice = { other = "AB Uygulama Kuralları" }
 Built = { other = "Derleme" }
@@ -144,13 +144,13 @@ Organize = { other = "Düzenle" }
 OrganizeCopy = { other = "Bir bültende birden fazla olay varsa her olay, resmî bülten numarasıyla ayrı gösterilir. Ayrı yayımlanan bültenler birleştirilmez." }
 Summarize = { other = "Özetle" }
 SummarizeCopy = { other = "Yerel yapay zekâ modelleri olayın türünü, yerini, tarihini ve polisin bilgi isteyip istemediğini belirler. Ardından gereksiz kişisel ayrıntıları dışarıda bırakan bir Almanca özet hazırlanır." }
-TranslatePublish = { other = "Çevir ve yayımla" }
-TranslatePublishCopy = { other = "Otomatik kontrollerden geçen Almanca özetler, sitedeki diğer dillere çevrilir. Özetler ancak tüm işleme adımları başarıyla tamamlandıktan sonra yayımlanır." }
+TranslatePublish = { other = "Önce Almanca yayımlama" }
+TranslatePublishCopy = { other = "Almanca özet, ilk otomatik kontrolleri geçer geçmez yayımlanır. Çevirilerin veya sonraki doğrulamaların tamamlanması beklenmez." }
 AccuracyOfficialInformation = { other = "Doğruluk ve resmî bilgiler" }
 AccuracyOfficialInformationCopy = { other = "Yapay zekâ özetlerinde ve olay ayrıntılarında hatalar olabilir. Polis bültenleri yayımlandıktan sonra güncellenebilir; en güncel bilgi için resmî bültene bakın. Hakkında suç isnadı bulunan herkes, suçluluğu kanıtlanana kadar masum sayılır." }
 PrivacyDataHandling = { other = "Gizlilik ve veri işleme" }
-PrivacyCopy = { other = "Siteyi kullanmak için hesap açmanız gerekmez; sitede reklam yoktur. Dil tercihiniz bir yıl, kapattığınız yapay zekâ bildirimi ve uyguladığınız arama filtreleri 30 gün hatırlanır. Arama ölçütleri adres çubuğunda değil, siteye ait bir çerezle iletilir. Renk teması, siz silene kadar tarayıcıda saklanır." }
-DataHandlingCopy = { other = "Almanca kaynak metinler, işleme ve erişimi kısıtlı inceleme amacıyla saklanır; şu anda otomatik silme süresi tanımlı değildir. Herkese açık sayfalarda kaynak metinler yerine özetler gösterilir. Kişisel verilerle ilgili taleplerinizi e-postayla iletebilirsiniz." }
+PrivacyCopy = { other = "Siteyi kullanmak için hesap açmanız gerekmez; sitede reklam yoktur. Dil tercihiniz bir yıl, kapattığınız yapay zekâ bildirimi ve uyguladığınız arama filtreleri 30 gün hatırlanır. Arama ölçütleri siteye ait bir çerezle iletilir. Renk teması, siz silene kadar tarayıcıda saklanır." }
+DataHandlingCopy = { other = "Almanca kaynak metinler, işleme ve erişimi kısıtlı inceleme amacıyla saklanır. Herkese açık sayfalarda bu metinlerden hazırlanan özetler gösterilir." }
 IndependenceLegalReview = { other = "Bağımsızlık ve hukuki inceleme" }
 IndependenceLegalReviewCopy = { other = "MunichBrief, Bavyera Polisinden bağımsız bir projedir. Teknik önlemler tek başına hukuki uygunluk sağlamaz. Verilerin hangi dayanakla ve ne kadar süre saklandığı, suçla ilgili bilgilerin işlenmesi ve gazeteciliğe tanınan istisnalar ayrıca değerlendirilmelidir." }
 ContactHeading = { other = "İletişim" }
@@ -211,6 +211,10 @@ ContactTechnicalCopy = { other = "Görünüm sorunlarını ve geliştirme öneri
 ContactPoliceCopy = { other = "MunichBrief, polise ulaşmak için kullanılan bir kanal değildir. Polisle ilgili konularda resmî polis sitesindeki iletişim bilgilerini kullanın." }
 OpenOfficialPoliceRelease = { other = "Resmî bülten" }
 SiteDescription = { other = "Münih Emniyet Müdürlüğünün (Polizeipräsidium München) yayımladığı bültenlerin Türkçe özetleri." }
-MonitoringCopy = { other = "Cloudflare, siteyi sunmak ve korumak için IP adresleri dâhil trafik verilerini işler. İncelememizde tarayıcıda çalışan bir analiz betiği görülmedi. İç izleme sistemi toplu ölçümleri ve istek yöntemi, yolu, durumu, süresi ve kimliklerinden oluşan günlükleri tutar. Yapılandırmada bunların saklama süresi 30 gündür; bu süre Cloudflare’ın kendi saklama ayarları hakkında bilgi vermez. Cloudflare, tarayıcıda bir analiz betiği çalışmasa da trafik istatistikleri oluşturabilir." }
+MonitoringCopy = { other = "Siteyi sunmak ve korumak için Cloudflare kullanıyoruz. Cloudflare, IP adresleri dâhil bağlantı verilerini işler ve ziyaret istatistikleri oluşturabilir. Sitenin sorunsuz çalışmasını sağlamak için tuttuğumuz teknik istek kayıtlarını ve toplu performans ölçümlerini 30 gün saklıyoruz." }
 
 CoverageCopy = { other = "Burada yalnızca yayımlanan polis bültenlerinden derlenen olaylar yer alır; tüm olayları kapsayan bir kayıt veya suç istatistiği sunulmaz. Güncellemeler MunichBrief’e gecikmeli yansıyabilir. Olayın tarihi ve saati bültenden alınır; saat belirtilmiş olsa da yaklaşık olabilir." }
+
+VerifyTranslate = { other = "Arka planda doğrulama ve çeviri" }
+
+VerifyTranslateCopy = { other = "Ayrı yapay zekâ kontrolleri, olayın kategorisini ve polisin halktan bilgi isteyip istemediğini yeniden değerlendirir. Bu kontroller çevirilere göre önceliklidir. Her dildeki özet, çevirisi hazır olduğunda yayımlanır. Başarılı kontroller, yayımdan sonra da kategori ve bilgi çağrısı etiketlerini güncelleyebilir." }
