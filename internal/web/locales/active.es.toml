@@ -390,3 +390,12 @@ other = "Tu derecho de oposición"
 
 [PrivacyObjectionCopy]
 other = "Cuando sea aplicable el artículo 21 del RGPD, puedes oponerte en cualquier momento al tratamiento basado en intereses legítimos por motivos relacionados con tu situación particular. Envía tu oposición a la dirección de contacto indicada arriba. Dejaremos de realizar ese tratamiento, salvo que acreditemos motivos legítimos imperiosos que prevalezcan sobre tus derechos o que sea necesario para formular, ejercer o defender reclamaciones."
+
+[LegalLastUpdated]
+other = "Última actualización"
+
+[ImpressumRequests]
+other = "Solicitudes sobre un informe"
+
+[ImpressumRequestsCopy]
+other = "Si un informe te afecta, puedes contactar con el responsable indicado arriba para solicitar una corrección, la retirada o la publicación de una réplica. Incluye el enlace a la página e indica el pasaje en cuestión. Cuando la ley exija una solicitud escrita y firmada, utiliza la dirección postal; el formulario de contacto por sí solo no cumple ese requisito."

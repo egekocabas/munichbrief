@@ -823,3 +823,12 @@ other = "Your right to object"
 
 [PrivacyObjectionCopy]
 other = "Where Article 21 GDPR applies, you may object at any time to processing based on legitimate interests for reasons relating to your particular situation. Send your objection to the contact address above. We will stop that processing unless we can demonstrate overriding compelling legitimate grounds or need it to establish, exercise or defend legal claims."
+
+[LegalLastUpdated]
+other = "Last updated"
+
+[ImpressumRequests]
+other = "Requests concerning a report"
+
+[ImpressumRequestsCopy]
+other = "If a report affects you, you can contact the operator above to request a correction, removal or right of reply. Please include the page link and identify the passage concerned. Where a signed written request is legally required, use the postal address; the contact form alone does not meet that requirement."

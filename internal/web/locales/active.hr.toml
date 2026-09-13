@@ -390,3 +390,12 @@ other = "Pravo na prigovor"
 
 [PrivacyObjectionCopy]
 other = "Kada se primjenjuje članak 21. GDPR-a, u svakom trenutku možete prigovoriti obradi koja se temelji na legitimnim interesima zbog razloga povezanih s vašom posebnom situacijom. Prigovor pošaljite na gore navedenu adresu za kontakt. Tu ćemo obradu obustaviti osim ako dokažemo uvjerljive legitimne razloge koji prevladavaju nad vašim pravima ili je obrada potrebna za postavljanje, ostvarivanje ili obranu pravnih zahtjeva."
+
+[LegalLastUpdated]
+other = "Posljednje ažuriranje"
+
+[ImpressumRequests]
+other = "Zahtjevi u vezi s izvještajem"
+
+[ImpressumRequestsCopy]
+other = "Ako se izvještaj odnosi na vas, možete se obratiti gore navedenom voditelju stranice sa zahtjevom za ispravak, uklanjanje ili objavu odgovora. Navedite poveznicu na stranicu i sporni odlomak. Kada zakon zahtijeva potpisani pisani zahtjev, koristite poštansku adresu; samo slanje obrasca za kontakt ne ispunjava taj uvjet."

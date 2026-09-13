@@ -78,7 +78,7 @@ func TestRegisteredDateFormatting(t *testing.T) {
 		want := map[string]string{
 			"Turkish": "Pazartesi, 31 Ağustos 2026", "Croatian": "ponedjeljak, 31. kolovoza 2026.",
 			"Italian": "lunedì 31 agosto 2026", "Ukrainian": "понеділок, 31 серпня 2026 р.",
-			"Bosnian": "ponedjeljak, 31. august 2026.",
+			"Bosnian": "ponedjeljak, 31. augusta 2026.",
 			"Chinese": "2026年8月31日星期一", "Hindi": "सोमवार, 31 अगस्त 2026",
 			"Spanish": "lunes, 31 de agosto de 2026", "French": "lundi 31 août 2026",
 			"Romanian": "luni, 31 august 2026",

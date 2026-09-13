@@ -131,3 +131,7 @@ Review sources:
 - [European Commission: information and processing obligations](https://commission.europa.eu/law/law-topic/data-protection/information-business-and-organisations/obligations_en).
 - [European Commission: handling rights and objections](https://commission.europa.eu/law/law-topic/data-protection/information-business-and-organisations/dealing-requests-individuals_en).
 - [BayLDA contact and complaint routes](https://www.lda.bayern.de/de/kontakt.html).
+
+The subsequent [Bavarian publisher and current-law review](legal-review-2026-09.md)
+records editorial-duty scope, the July 2026 CJEU development, unresolved operational
+assessments and the independent public legal-page revision dates.

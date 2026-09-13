@@ -268,10 +268,11 @@ var ukrainianWeekdays = map[time.Weekday]string{
 	time.Thursday: "четвер", time.Friday: "п’ятниця", time.Saturday: "субота",
 }
 
+// Genitive month names follow the day number in written Bosnian dates.
 var bosnianMonths = map[time.Month]string{
-	time.January: "januar", time.February: "februar", time.March: "mart", time.April: "april",
-	time.May: "maj", time.June: "juni", time.July: "juli", time.August: "august",
-	time.September: "septembar", time.October: "oktobar", time.November: "novembar", time.December: "decembar",
+	time.January: "januara", time.February: "februara", time.March: "marta", time.April: "aprila",
+	time.May: "maja", time.June: "juna", time.July: "jula", time.August: "augusta",
+	time.September: "septembra", time.October: "oktobra", time.November: "novembra", time.December: "decembra",
 }
 
 var bosnianWeekdays = map[time.Weekday]string{

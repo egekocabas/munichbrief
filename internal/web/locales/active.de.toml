@@ -823,3 +823,12 @@ other = "Ihr Widerspruchsrecht"
 
 [PrivacyObjectionCopy]
 other = "Soweit Artikel 21 DSGVO gilt, können Sie einer Verarbeitung auf Grundlage berechtigter Interessen jederzeit aus Gründen widersprechen, die sich aus Ihrer besonderen Situation ergeben. Richten Sie Ihren Widerspruch an die oben genannte Kontaktadresse. Wir stellen diese Verarbeitung ein, sofern wir keine zwingenden schutzwürdigen Gründe nachweisen können, die überwiegen, oder die Verarbeitung zur Geltendmachung, Ausübung oder Verteidigung von Rechtsansprüchen benötigen."
+
+[LegalLastUpdated]
+other = "Zuletzt aktualisiert"
+
+[ImpressumRequests]
+other = "Anliegen zu einer Meldung"
+
+[ImpressumRequestsCopy]
+other = "Wenn Sie von einer Meldung betroffen sind, können Sie sich wegen einer Berichtigung, Entfernung oder Gegendarstellung an den oben genannten Betreiber wenden. Bitte nennen Sie den Seitenlink und die betreffende Textstelle. Soweit das Gesetz ein schriftliches, unterzeichnetes Verlangen voraussetzt, nutzen Sie bitte die Postanschrift; das Kontaktformular allein erfüllt diese Formvorgabe nicht."

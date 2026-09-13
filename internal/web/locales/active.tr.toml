@@ -390,3 +390,12 @@ other = "İtiraz hakkınız"
 
 [PrivacyObjectionCopy]
 other = "GDPR’nin 21. maddesinin geçerli olduğu durumlarda, meşru menfaate dayalı veri işlemeye kendi durumunuzdan kaynaklanan nedenlerle dilediğiniz zaman itiraz edebilirsiniz. İtirazınızı yukarıdaki iletişim adresine gönderin. Haklarınıza ağır basan zorlayıcı meşru gerekçeler ortaya koyamadığımız veya hukuki taleplerin ileri sürülmesi, kullanılması ya da savunulması için gerekli olmadığı sürece ilgili veri işlemeyi durdururuz."
+
+[LegalLastUpdated]
+other = "Son güncelleme"
+
+[ImpressumRequests]
+other = "Bir haberle ilgili talepler"
+
+[ImpressumRequestsCopy]
+other = "Bir haber sizi ilgilendiriyorsa düzeltme, kaldırma veya cevap hakkı talebinizi yukarıdaki iletişim bilgileri üzerinden site sorumlusuna iletebilirsiniz. Lütfen sayfanın bağlantısını ve ilgili bölümü belirtin. Yasanın imzalı ve yazılı başvuru gerektirdiği durumlarda posta adresini kullanın; yalnızca iletişim formunu göndermek bu koşulu karşılamaz."

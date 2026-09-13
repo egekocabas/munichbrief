@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 )
 
 //go:embed templates/legal.html
@@ -22,10 +23,25 @@ var publicOperator = operatorInformation{"Ege Kocabaş", "c/o COCENTER", "Koppol
 type legalSection struct{ Title, Copy string }
 type legalPage struct {
 	basePage
-	Title    string
-	Operator operatorInformation
-	Sections []legalSection
-	Privacy  bool
+	Title        string
+	Operator     operatorInformation
+	Sections     []legalSection
+	Privacy      bool
+	UpdatedDate  string
+	UpdatedLabel string
+}
+
+// Update each page independently when its published information is revised.
+// These are content dates, never the request time or application build date.
+func legalPageUpdatedAt(page string) time.Time {
+	switch page {
+	case "privacy":
+		return time.Date(2026, time.September, 13, 0, 0, 0, 0, time.UTC)
+	case "impressum":
+		return time.Date(2026, time.September, 13, 0, 0, 0, 0, time.UTC)
+	default:
+		return time.Time{}
+	}
 }
 
 func (s *Server) legal(w http.ResponseWriter, r *http.Request) {
@@ -45,14 +61,19 @@ func (s *Server) legal(w http.ResponseWriter, r *http.Request) {
 	base.ShowReviewNotice = false
 	base.SocialTitle = s.localization.Text(lang, title) + " · MunichBrief"
 	base.Description = s.localization.Text(lang, title+"Description")
+	updated := legalPageUpdatedAt("impressum")
+	if privacy {
+		updated = legalPageUpdatedAt("privacy")
+	}
+	base.DocumentModifiedDate = updated.Format(time.DateOnly)
 	base.StructuredData = structuredPageData(base, "WebPage")
-	data := legalPage{basePage: base, Title: title, Operator: publicOperator, Privacy: privacy}
+	data := legalPage{basePage: base, Title: title, Operator: publicOperator, Privacy: privacy, UpdatedDate: base.DocumentModifiedDate, UpdatedLabel: s.formatIncidentDate(lang, updated)}
 	if privacy {
 		for _, key := range []string{"PrivacyController", "PrivacyHosting", "PrivacyCloudflare", "PrivacyPreferences", "PrivacyMonitoring", "PrivacyCorrespondence", "PrivacyRequired", "PrivacyRetention", "PrivacyPost", "PrivacySources", "PrivacySourcePeople", "PrivacyAutomation", "PrivacyRights", "PrivacyObjection"} {
 			data.Sections = append(data.Sections, legalSection{key, key + "Copy"})
 		}
 	} else {
-		data.Sections = []legalSection{{"ImpressumResponsible", "ImpressumResponsibleCopy"}, {"ContactHeading", "ImpressumContactCopy"}}
+		data.Sections = []legalSection{{"ImpressumResponsible", "ImpressumResponsibleCopy"}, {"ContactHeading", "ImpressumContactCopy"}, {"ImpressumRequests", "ImpressumRequestsCopy"}}
 	}
 	if wantsMarkdown(r.Header.Get("Accept")) {
 		s.prepareMarkdown(w, base)
@@ -68,6 +89,7 @@ func writeMarkdownFrontMatterBuilder(w http.ResponseWriter, data legalPage, s *S
 	var b strings.Builder
 	writeMarkdownFrontMatter(&b, s.localization.Text(data.Lang, data.Title), data.basePage)
 	fmt.Fprintf(&b, "# %s\n\n%s\n\n", s.localization.Text(data.Lang, data.Title), data.Description)
+	fmt.Fprintf(&b, "%s: %s\n\n", s.localization.Text(data.Lang, "LegalLastUpdated"), data.UpdatedLabel)
 	o := data.Operator
 	fmt.Fprintf(&b, "%s  \n%s  \n%s  \n%s  \n%s  \n%s\n\n", o.Name, o.CareOf, o.Street, o.City, s.localization.Text(data.Lang, "LegalGermany"), o.Email)
 	for _, section := range data.Sections {

@@ -31,3 +31,7 @@ contact-form link and editorial responsibility remain unchanged. If the operator
 later receives a VAT or economic identification number or changes legal status,
 reassess the applicable details under DDG §5 rather than inventing them now.
 See the reference-page comparison in `docs/privacy-draft.md`.
+
+The subsequent [Bavarian publisher and current-law review](legal-review-2026-09.md)
+records editorial-duty scope, the July 2026 CJEU development, unresolved operational
+assessments and the independent public legal-page revision dates.

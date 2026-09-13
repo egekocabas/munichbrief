@@ -253,8 +253,8 @@ func (s *Server) sitemap(response http.ResponseWriter, request *http.Request) {
 			sitemapURL{Location: origin + "/" + definition.Code},
 			sitemapURL{Location: origin + "/" + definition.Code + "/about"},
 			sitemapURL{Location: origin + "/" + definition.Code + "/contact"},
-			sitemapURL{Location: origin + "/" + definition.Code + "/privacy"},
-			sitemapURL{Location: origin + "/" + definition.Code + "/impressum"},
+			sitemapURL{Location: origin + "/" + definition.Code + "/privacy", LastMod: legalPageUpdatedAt("privacy").Format(time.DateOnly)},
+			sitemapURL{Location: origin + "/" + definition.Code + "/impressum", LastMod: legalPageUpdatedAt("impressum").Format(time.DateOnly)},
 		)
 		for _, link := range links {
 			urls = append(urls, sitemapURL{

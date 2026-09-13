@@ -206,6 +206,23 @@ func TestLegalPagesEveryLanguageHTMLAndMarkdown(t *testing.T) {
 			if mw.Code != 200 || strings.Contains(mw.Body.String(), "[ContactEmergencyCopy]") {
 				t.Fatal("markdown", lang.Code)
 			}
+			if path != "contact" {
+				date := legalPageUpdatedAt(path)
+				iso := date.Format(time.DateOnly)
+				label := s.formatIncidentDate(lang.Code, date)
+				if !strings.Contains(w.Body.String(), `<time datetime="`+iso+`">`+html.EscapeString(label)+`</time>`) || !strings.Contains(mw.Body.String(), s.localization.Text(lang.Code, "LegalLastUpdated")+": "+label) {
+					t.Errorf("%s/%s: missing localized revision date", lang.Code, path)
+				}
+				if !strings.Contains(w.Body.String(), `"dateModified":"`+iso+`"`) || strings.Contains(w.Body.String(), `property="article:modified_time"`) {
+					t.Errorf("%s/%s: incorrect document revision metadata", lang.Code, path)
+				}
+			}
+			if path == "impressum" {
+				copy := s.localization.Text(lang.Code, "ImpressumRequestsCopy")
+				if !strings.Contains(w.Body.String(), html.EscapeString(copy)) || !strings.Contains(mw.Body.String(), copy) {
+					t.Errorf("%s: editorial request guidance missing", lang.Code)
+				}
+			}
 			if path == "privacy" {
 				for _, key := range []string{"PrivacyRequired", "PrivacySourcePeople", "PrivacyAutomation", "PrivacyObjection"} {
 					for _, suffix := range []string{"", "Copy"} {

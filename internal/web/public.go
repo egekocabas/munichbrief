@@ -538,6 +538,7 @@ type basePage struct {
 	BuildCommitURL                      string
 	BuildTime                           string
 	BuildTimeLabel                      string
+	DocumentModifiedDate                string
 }
 
 func structuredPageData(page basePage, pageType string) template.JS {
@@ -546,6 +547,9 @@ func structuredPageData(page basePage, pageType string) template.JS {
 		"@type": pageType, "@id": page.CanonicalURL + "#webpage", "url": page.CanonicalURL,
 		"name": page.SocialTitle, "description": page.Description, "inLanguage": page.LanguageTag,
 		"isPartOf": map[string]any{"@id": websiteID},
+	}
+	if page.DocumentModifiedDate != "" {
+		webPage["dateModified"] = page.DocumentModifiedDate
 	}
 	if page.AIGeneratedState != "false" {
 		webPage["digitalSourceType"] = schemaTrainedAlgorithmicMedia

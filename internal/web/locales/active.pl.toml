@@ -390,3 +390,12 @@ other = "Prawo do sprzeciwu"
 
 [PrivacyObjectionCopy]
 other = "Gdy ma zastosowanie art. 21 RODO, możesz w dowolnym momencie wnieść sprzeciw wobec przetwarzania opartego na prawnie uzasadnionych interesach z przyczyn związanych z Twoją szczególną sytuacją. Wyślij sprzeciw na podany wyżej adres kontaktowy. Zaprzestaniemy tego przetwarzania, chyba że wykażemy nadrzędne, prawnie uzasadnione podstawy przeważające nad Twoimi prawami lub przetwarzanie będzie niezbędne do ustalenia, dochodzenia albo obrony roszczeń."
+
+[LegalLastUpdated]
+other = "Ostatnia aktualizacja"
+
+[ImpressumRequests]
+other = "Wnioski dotyczące relacji"
+
+[ImpressumRequestsCopy]
+other = "Jeśli relacja Cię dotyczy, możesz zwrócić się do wskazanego wyżej operatora o sprostowanie, usunięcie lub publikację odpowiedzi. Podaj link do strony i wskaż fragment, którego dotyczy wniosek. Gdy prawo wymaga podpisanego wniosku na piśmie, skorzystaj z adresu pocztowego; sam formularz kontaktowy nie spełnia tego wymogu."

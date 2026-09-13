@@ -390,3 +390,12 @@ other = "Il diritto di opposizione"
 
 [PrivacyObjectionCopy]
 other = "Quando si applica l’articolo 21 GDPR, puoi opporti in qualsiasi momento al trattamento basato su interessi legittimi per motivi connessi alla tua situazione particolare. Invia l’opposizione al recapito indicato sopra. Interromperemo il trattamento, salvo dimostrare motivi legittimi cogenti che prevalgano sui tuoi diritti o la necessità di accertare, esercitare o difendere un diritto in sede giudiziaria."
+
+[LegalLastUpdated]
+other = "Ultimo aggiornamento"
+
+[ImpressumRequests]
+other = "Richieste relative a un resoconto"
+
+[ImpressumRequestsCopy]
+other = "Se un resoconto ti riguarda, puoi contattare il responsabile indicato sopra per chiedere una correzione, la rimozione o la pubblicazione di una replica. Indica il link alla pagina e il passaggio interessato. Quando la legge richiede una richiesta scritta e firmata, usa l’indirizzo postale: il solo modulo di contatto non soddisfa tale requisito."

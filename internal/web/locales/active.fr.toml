@@ -390,3 +390,12 @@ other = "Votre droit d’opposition"
 
 [PrivacyObjectionCopy]
 other = "Lorsque l’article 21 du RGPD s’applique, vous pouvez à tout moment vous opposer au traitement fondé sur des intérêts légitimes pour des raisons tenant à votre situation particulière. Adressez votre opposition aux coordonnées indiquées ci-dessus. Nous cesserons ce traitement, sauf si nous démontrons des motifs légitimes impérieux qui prévalent sur vos droits ou si le traitement est nécessaire à la constatation, à l’exercice ou à la défense de droits en justice."
+
+[LegalLastUpdated]
+other = "Dernière mise à jour"
+
+[ImpressumRequests]
+other = "Demandes concernant un compte rendu"
+
+[ImpressumRequestsCopy]
+other = "Si un compte rendu vous concerne, vous pouvez contacter le responsable indiqué ci-dessus pour demander une correction, un retrait ou la publication d’un droit de réponse. Joignez le lien de la page et indiquez le passage concerné. Lorsque la loi exige une demande écrite et signée, utilisez l’adresse postale ; le formulaire de contact seul ne satisfait pas à cette exigence."

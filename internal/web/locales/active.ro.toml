@@ -666,3 +666,12 @@ other = "Dreptul la opoziție"
 
 [PrivacyObjectionCopy]
 other = "Când se aplică articolul 21 din RGPD, te poți opune oricând prelucrării bazate pe interese legitime, din motive legate de situația ta particulară. Trimite opoziția la adresa de contact de mai sus. Vom opri prelucrarea respectivă, cu excepția cazului în care demonstrăm motive legitime imperioase care prevalează asupra drepturilor tale sau prelucrarea este necesară pentru constatarea, exercitarea ori apărarea unui drept în instanță."
+
+[LegalLastUpdated]
+other = "Ultima actualizare"
+
+[ImpressumRequests]
+other = "Solicitări privind o relatare"
+
+[ImpressumRequestsCopy]
+other = "Dacă o relatare te privește, poți contacta operatorul indicat mai sus pentru a solicita o corectare, eliminarea sau publicarea unui drept la replică. Include linkul paginii și indică pasajul vizat. Când legea cere o solicitare scrisă și semnată, folosește adresa poștală; formularul de contact singur nu îndeplinește această cerință."
