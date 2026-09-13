@@ -86,3 +86,48 @@ actual account options before accepting sensitive third-party postal data.
 - [SMTP2GO EU data center](https://support.smtp2go.com/hc/en-gb/articles/12974008254873-EU-Data-Center)
 - [Google privacy](https://policies.google.com/privacy)
 - [COCENTER / anschrift.net privacy](https://anschrift.net/datenschutzerklaerung/)
+
+## Reference-page comparison — 13 September 2026
+
+The operator supplied the [Helios privacy notice](https://helios.aet.cit.tum.de/privacy)
+and [imprint](https://helios.aet.cit.tum.de/imprint) for a gap review. These are
+examples, not evidence of MunichBrief's practices or a legal template to copy.
+The review adds four reader-facing disclosures in all 14 languages, with matching
+HTML and Markdown:
+
+- Contact is voluntary; email, topic and message are required to submit the form.
+  Reading requires neither an account nor contacting the operator. Email remains
+  an alternative, and correspondents should limit unnecessary personal details.
+- Incident-related information is obtained indirectly from public police releases.
+  Its possible categories and the public/search-indexed audience are explained,
+  separately from the unpublished private correspondence inbox. This improves
+  transparency; it does not establish an Article 14 exemption or resolve the
+  editorial/source-data assessment above.
+- AI processes incident reports. It is not used to make legally or similarly
+  significant decisions about visitors; automated contact security checks and
+  the email alternative are described separately.
+- The Article 21 objection right is given its own heading, with the
+  particular-situation ground, contact route and conditions for continued processing.
+
+The existing rights paragraph already covers conditional portability and complaint
+rights; BayLDA remains linked for ordinary private-sector matters. Do not copy
+Helios's Bavarian public-university legal bases, BayLfD jurisdiction, DPO,
+GitHub authentication, Sentry, backup claims, or notification-consent wording.
+MunichBrief's contact notifications are not consent-based visitor subscriptions.
+No general copyright prohibition or liability waiver is added: software has its
+MIT licence, source rights require individual assessment, and About already
+explains accuracy limits and independence. The supplied imprint's TMG reference
+is not used; the current provider-information statute is the DDG.
+
+Account-specific processing agreements and transfer safeguards remain unverified.
+Provider-policy links are not a substitute for verifying the applicable arrangement
+and completing the Article 13/14 transfer information before activation. This
+copy update neither records that verification as done nor changes provider settings.
+
+Review sources:
+
+- [DDG §5](https://www.gesetze-im-internet.de/ddg/__5.html).
+- [BayLDA: transparency obligations under Articles 13 and 14](https://www.lda.bayern.de/de/thema_informationspflichten.html).
+- [European Commission: information and processing obligations](https://commission.europa.eu/law/law-topic/data-protection/information-business-and-organisations/obligations_en).
+- [European Commission: handling rights and objections](https://commission.europa.eu/law/law-topic/data-protection/information-business-and-organisations/dealing-requests-individuals_en).
+- [BayLDA contact and complaint routes](https://www.lda.bayern.de/de/kontakt.html).

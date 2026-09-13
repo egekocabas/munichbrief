@@ -22,3 +22,12 @@ restored to About.
 - [Section 18 MStV](https://www.gesetze-bayern.de/Content/Document/MStV-18)
 - [Section 5 DDG](https://www.gesetze-im-internet.de/ddg/__5.html)
 - [CJEU C-298/07](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:62007CJ0298)
+
+The 13 September 2026 comparison with the operator-supplied TUM Helios imprint
+found no additional operator facts to publish on that basis. Its university
+representation, VAT number and public-official liability clauses do not describe
+MunichBrief. The shared individual identity, correspondence address, email,
+contact-form link and editorial responsibility remain unchanged. If the operator
+later receives a VAT or economic identification number or changes legal status,
+reassess the applicable details under DDG §5 rather than inventing them now.
+See the reference-page comparison in `docs/privacy-draft.md`.

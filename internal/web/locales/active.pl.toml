@@ -366,3 +366,27 @@ other = "Formularz kontaktowy został zamknięty. Twoja wiadomość nie została
 
 [ContactKeepDraft]
 other = "Możesz skopiować poniższe dane do e-maila. Ten szkic nie został zapisany w skrzynce odbiorczej."
+
+[PrivacyRequired]
+other = "Jakie dane trzeba podać"
+
+[PrivacyRequiredCopy]
+other = "MunichBrief można czytać bez konta i bez kontaktowania się z nami. Nie masz prawnego ani umownego obowiązku korzystania z formularza kontaktowego. Do jego wysłania potrzebujemy adresu e-mail, tematu i wiadomości, aby rozpatrzyć sprawę i odpowiedzieć. Bez tych pól formularza nie można wysłać. Możesz też napisać do nas bezpośrednio e-mailem. Podaj tylko dane osobowe potrzebne do załatwienia swojej sprawy."
+
+[PrivacySourcePeople]
+other = "Osoby wspomniane w relacjach"
+
+[PrivacySourcePeopleCopy]
+other = "Informacje o osobach związanych ze zdarzeniami pochodzą z publicznych komunikatów policji, a nie bezpośrednio od tych osób. Zależnie od komunikatu mogą obejmować opisy osób, ich rolę w zdarzeniu, zarzucane czyny, obrażenia oraz miejsce i czas zdarzenia. Opublikowane podsumowania są dostępne dla wszystkich i mogą być indeksowane przez wyszukiwarki. Wiadomości kontaktowe i zawartość prywatnej skrzynki nie są publikowane."
+
+[PrivacyAutomation]
+other = "AI i zautomatyzowane decyzje"
+
+[PrivacyAutomationCopy]
+other = "AI wyodrębnia informacje, podsumowuje, tłumaczy i sprawdza relacje ze zdarzeń. Nie używamy jej do podejmowania decyzji dotyczących odwiedzających, które wywołują skutki prawne lub podobnie istotne skutki w rozumieniu art. 22 RODO. Automatyczne kontrole bezpieczeństwa mogą tymczasowo zablokować wysłanie formularza; nadal możesz skontaktować się z nami e-mailem."
+
+[PrivacyObjection]
+other = "Prawo do sprzeciwu"
+
+[PrivacyObjectionCopy]
+other = "Gdy ma zastosowanie art. 21 RODO, możesz w dowolnym momencie wnieść sprzeciw wobec przetwarzania opartego na prawnie uzasadnionych interesach z przyczyn związanych z Twoją szczególną sytuacją. Wyślij sprzeciw na podany wyżej adres kontaktowy. Zaprzestaniemy tego przetwarzania, chyba że wykażemy nadrzędne, prawnie uzasadnione podstawy przeważające nad Twoimi prawami lub przetwarzanie będzie niezbędne do ustalenia, dochodzenia albo obrony roszczeń."

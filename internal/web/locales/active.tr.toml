@@ -366,3 +366,27 @@ other = "İletişim formu kullanıma kapatıldı. Mesajınız gönderilmedi. Lü
 
 [ContactKeepDraft]
 other = "Aşağıdaki bilgilerinizi kopyalayıp e-postanıza ekleyebilirsiniz. Bu taslak gelen kutusuna kaydedilmedi."
+
+[PrivacyRequired]
+other = "Hangi bilgileri paylaşmalısınız?"
+
+[PrivacyRequiredCopy]
+other = "MunichBrief’i hesap açmadan ve bizimle iletişime geçmeden okuyabilirsiniz. İletişim formunu kullanmanız yasal veya sözleşmeden doğan bir zorunluluk değildir. Talebinizi değerlendirebilmemiz ve yanıtlayabilmemiz için formda e-posta adresinizi, konuyu ve mesajınızı belirtmeniz gerekir. Bu alanlar doldurulmadan form gönderilemez. Dilerseniz doğrudan e-posta da yazabilirsiniz. Lütfen yalnızca talebiniz için gerekli kişisel bilgileri paylaşın."
+
+[PrivacySourcePeople]
+other = "Haberlerde adı geçen veya tarif edilen kişiler"
+
+[PrivacySourcePeopleCopy]
+other = "Olaylara karışan ya da olaylardan etkilenen kişiler hakkındaki bilgiler doğrudan bu kişilerden değil, kamuya açık polis duyurularından alınır. Duyurunun içeriğine göre kişi tariflerini, olayla bağlantılarını, suç iddialarını, yaralanmaları, olayın yerini ve zamanını içerebilir. Yayımlanan özetler herkese açıktır ve arama motorlarında yer alabilir. İletişim mesajları ve özel gelen kutusu yayımlanmaz."
+
+[PrivacyAutomation]
+other = "Yapay zekâ ve otomatik kararlar"
+
+[PrivacyAutomationCopy]
+other = "Yapay zekâ, olay bilgilerini çıkarır, özetler, çevirir ve kontrol eder. Ziyaretçiler hakkında GDPR’nin 22. maddesi kapsamında hukuki veya benzer ölçüde önemli sonuçlar doğuran kararlar almak için kullanılmaz. Otomatik güvenlik kontrolleri formun gönderilmesini geçici olarak engelleyebilir; bu durumda bize e-posta ile ulaşabilirsiniz."
+
+[PrivacyObjection]
+other = "İtiraz hakkınız"
+
+[PrivacyObjectionCopy]
+other = "GDPR’nin 21. maddesinin geçerli olduğu durumlarda, meşru menfaate dayalı veri işlemeye kendi durumunuzdan kaynaklanan nedenlerle dilediğiniz zaman itiraz edebilirsiniz. İtirazınızı yukarıdaki iletişim adresine gönderin. Haklarınıza ağır basan zorlayıcı meşru gerekçeler ortaya koyamadığımız veya hukuki taleplerin ileri sürülmesi, kullanılması ya da savunulması için gerekli olmadığı sürece ilgili veri işlemeyi durdururuz."

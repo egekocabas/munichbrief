@@ -366,3 +366,27 @@ other = "Le formulaire de contact a été fermé. Votre message n’a pas été 
 
 [ContactKeepDraft]
 other = "Vous pouvez copier les informations ci-dessous dans un e-mail. Ce brouillon n’a pas été enregistré dans la boîte de réception."
+
+[PrivacyRequired]
+other = "Quelles informations fournir ?"
+
+[PrivacyRequiredCopy]
+other = "Vous pouvez lire MunichBrief sans compte et sans nous contacter. Aucune obligation légale ou contractuelle ne vous impose d’utiliser le formulaire de contact. Pour l’envoyer, vous devez indiquer votre adresse e-mail, un sujet et un message afin que nous puissions traiter votre demande et vous répondre. Sans ces champs, le formulaire ne peut pas être envoyé. Vous pouvez aussi nous écrire directement par e-mail. Ne communiquez que les données personnelles nécessaires à votre demande."
+
+[PrivacySourcePeople]
+other = "Personnes mentionnées dans les comptes rendus"
+
+[PrivacySourcePeopleCopy]
+other = "Les informations sur les personnes impliquées dans les événements proviennent de communiqués publics de la police, et non directement de ces personnes. Selon le communiqué, elles peuvent comprendre des descriptions de personnes, leur rôle dans les faits, des infractions présumées, des blessures ainsi que le lieu et l’heure de l’événement. Les résumés publiés sont accessibles à tous et peuvent être indexés par les moteurs de recherche. Les messages de contact et la boîte de réception privée ne sont pas publiés."
+
+[PrivacyAutomation]
+other = "IA et décisions automatisées"
+
+[PrivacyAutomationCopy]
+other = "L’IA extrait les informations, résume, traduit et vérifie les comptes rendus. Nous ne l’utilisons pas pour prendre des décisions concernant les visiteurs qui produisent des effets juridiques ou d’importance similaire au sens de l’article 22 du RGPD. Les contrôles automatiques de sécurité peuvent bloquer temporairement l’envoi du formulaire ; vous pouvez toujours nous contacter par e-mail."
+
+[PrivacyObjection]
+other = "Votre droit d’opposition"
+
+[PrivacyObjectionCopy]
+other = "Lorsque l’article 21 du RGPD s’applique, vous pouvez à tout moment vous opposer au traitement fondé sur des intérêts légitimes pour des raisons tenant à votre situation particulière. Adressez votre opposition aux coordonnées indiquées ci-dessus. Nous cesserons ce traitement, sauf si nous démontrons des motifs légitimes impérieux qui prévalent sur vos droits ou si le traitement est nécessaire à la constatation, à l’exercice ou à la défense de droits en justice."

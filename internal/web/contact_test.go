@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/egekocabas/munichbrief/internal/store"
+	"html"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -204,6 +205,16 @@ func TestLegalPagesEveryLanguageHTMLAndMarkdown(t *testing.T) {
 			s.Handler().ServeHTTP(mw, r)
 			if mw.Code != 200 || strings.Contains(mw.Body.String(), "[ContactEmergencyCopy]") {
 				t.Fatal("markdown", lang.Code)
+			}
+			if path == "privacy" {
+				for _, key := range []string{"PrivacyRequired", "PrivacySourcePeople", "PrivacyAutomation", "PrivacyObjection"} {
+					for _, suffix := range []string{"", "Copy"} {
+						text := s.localization.Text(lang.Code, key+suffix)
+						if text == "" || strings.Contains(text, "["+key) || !strings.Contains(w.Body.String(), html.EscapeString(text)) || !strings.Contains(mw.Body.String(), text) {
+							t.Errorf("%s: privacy disclosure %s missing from HTML or Markdown", lang.Code, key+suffix)
+						}
+					}
+				}
 			}
 			if path != "contact" && (!strings.Contains(mw.Body.String(), "Ege Kocabaş") || !strings.Contains(mw.Body.String(), s.localization.Text(lang.Code, map[string]string{"privacy": "PrivacyRetentionCopy", "impressum": "ImpressumResponsibleCopy"}[path]))) {
 				t.Fatal("markdown parity", lang.Code, path)

@@ -48,7 +48,7 @@ func (s *Server) legal(w http.ResponseWriter, r *http.Request) {
 	base.StructuredData = structuredPageData(base, "WebPage")
 	data := legalPage{basePage: base, Title: title, Operator: publicOperator, Privacy: privacy}
 	if privacy {
-		for _, key := range []string{"PrivacyController", "PrivacyHosting", "PrivacyCloudflare", "PrivacyPreferences", "PrivacyMonitoring", "PrivacyCorrespondence", "PrivacyRetention", "PrivacyPost", "PrivacySources", "PrivacyRights"} {
+		for _, key := range []string{"PrivacyController", "PrivacyHosting", "PrivacyCloudflare", "PrivacyPreferences", "PrivacyMonitoring", "PrivacyCorrespondence", "PrivacyRequired", "PrivacyRetention", "PrivacyPost", "PrivacySources", "PrivacySourcePeople", "PrivacyAutomation", "PrivacyRights", "PrivacyObjection"} {
 			data.Sections = append(data.Sections, legalSection{key, key + "Copy"})
 		}
 	} else {

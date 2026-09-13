@@ -799,3 +799,27 @@ other = "The contact form has been closed. Your message was not sent. Please ema
 
 [ContactKeepDraft]
 other = "You can copy your details below into an email. This draft has not been saved in the inbox."
+
+[PrivacyRequired]
+other = "Choosing what to share"
+
+[PrivacyRequiredCopy]
+other = "You can read MunichBrief without an account or contacting us. There is no legal or contractual obligation to use the contact form. To submit it, we need your email address, a topic and a message so we can handle your enquiry and reply. Without these fields the form cannot be submitted. You can contact us by email instead. Please include only personal details needed for your enquiry."
+
+[PrivacySourcePeople]
+other = "People mentioned in reports"
+
+[PrivacySourcePeopleCopy]
+other = "Information about people involved in incidents comes from public police releases, not directly from those people. Depending on the release, it may include descriptions of people, their involvement, alleged offences, injuries, and the place and time of an incident. Published summaries are accessible to anyone and may be indexed by search engines. Contact messages and the private inbox are not published."
+
+[PrivacyAutomation]
+other = "AI and automated decisions"
+
+[PrivacyAutomationCopy]
+other = "AI extracts, summarizes, translates and checks incident reports. We do not use it to make decisions about visitors with legal or similarly significant effects under Article 22 GDPR. Automated security checks can temporarily block a contact submission; you can still contact us by email."
+
+[PrivacyObjection]
+other = "Your right to object"
+
+[PrivacyObjectionCopy]
+other = "Where Article 21 GDPR applies, you may object at any time to processing based on legitimate interests for reasons relating to your particular situation. Send your objection to the contact address above. We will stop that processing unless we can demonstrate overriding compelling legitimate grounds or need it to establish, exercise or defend legal claims."

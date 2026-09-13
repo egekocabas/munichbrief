@@ -366,3 +366,27 @@ other = "Il modulo di contatto è stato chiuso. Il messaggio non è stato inviat
 
 [ContactKeepDraft]
 other = "Puoi copiare i dati qui sotto in un’email. Questa bozza non è stata salvata nella casella di posta."
+
+[PrivacyRequired]
+other = "Quali dati fornire"
+
+[PrivacyRequiredCopy]
+other = "Puoi leggere MunichBrief senza un account e senza contattarci. Non hai alcun obbligo legale o contrattuale di usare il modulo di contatto. Per inviarlo servono il tuo indirizzo email, un argomento e un messaggio, così da poter gestire la richiesta e risponderti. Senza questi campi non è possibile inviare il modulo. In alternativa puoi scriverci direttamente via email. Includi solo i dati personali necessari per la tua richiesta."
+
+[PrivacySourcePeople]
+other = "Persone menzionate nei resoconti"
+
+[PrivacySourcePeopleCopy]
+other = "Le informazioni sulle persone coinvolte negli episodi provengono dai comunicati pubblici della polizia, non direttamente dalle persone interessate. A seconda del comunicato, possono comprendere descrizioni delle persone, il loro coinvolgimento, presunti reati, lesioni, luogo e ora dell’episodio. Le sintesi pubblicate sono accessibili a chiunque e possono essere indicizzate dai motori di ricerca. I messaggi di contatto e la casella privata non vengono pubblicati."
+
+[PrivacyAutomation]
+other = "IA e decisioni automatizzate"
+
+[PrivacyAutomationCopy]
+other = "L’IA estrae informazioni, riassume, traduce e verifica i resoconti degli episodi. Non la usiamo per prendere decisioni sui visitatori con effetti giuridici o analogamente significativi ai sensi dell’articolo 22 GDPR. I controlli automatici di sicurezza possono bloccare temporaneamente l’invio del modulo; resta possibile contattarci via email."
+
+[PrivacyObjection]
+other = "Il diritto di opposizione"
+
+[PrivacyObjectionCopy]
+other = "Quando si applica l’articolo 21 GDPR, puoi opporti in qualsiasi momento al trattamento basato su interessi legittimi per motivi connessi alla tua situazione particolare. Invia l’opposizione al recapito indicato sopra. Interromperemo il trattamento, salvo dimostrare motivi legittimi cogenti che prevalgano sui tuoi diritti o la necessità di accertare, esercitare o difendere un diritto in sede giudiziaria."

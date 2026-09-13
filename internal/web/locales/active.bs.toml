@@ -366,3 +366,27 @@ other = "Obrazac za kontakt je zatvoren. Vaša poruka nije poslana. Pišite na c
 
 [ContactKeepDraft]
 other = "Podatke ispod možete kopirati u e-mail. Ovaj nacrt nije sačuvan u prijemnom sandučetu."
+
+[PrivacyRequired]
+other = "Koje podatke trebate navesti"
+
+[PrivacyRequiredCopy]
+other = "MunichBrief možete čitati bez korisničkog računa i bez obraćanja nama. Nemate zakonsku ni ugovornu obavezu koristiti kontakt obrazac. Za slanje obrasca potrebni su e-mail adresa, tema i poruka kako bismo obradili upit i odgovorili vam. Bez tih podataka obrazac nije moguće poslati. Možete nam pisati i direktno e-mailom. Navedite samo lične podatke potrebne za vaš upit."
+
+[PrivacySourcePeople]
+other = "Osobe spomenute u izvještajima"
+
+[PrivacySourcePeopleCopy]
+other = "Podaci o osobama uključenim u događaje dolaze iz javnih policijskih saopćenja, a ne direktno od tih osoba. Zavisno od saopćenja, mogu obuhvatati opise osoba, njihovu ulogu u događaju, navodna krivična djela, povrede te mjesto i vrijeme događaja. Objavljeni sažeci dostupni su svima i mogu se pojaviti u pretraživačima. Kontakt poruke i privatni pretinac se ne objavljuju."
+
+[PrivacyAutomation]
+other = "Umjetna inteligencija i automatizirane odluke"
+
+[PrivacyAutomationCopy]
+other = "Umjetna inteligencija izdvaja podatke, sažima, prevodi i provjerava izvještaje o događajima. Ne koristimo je za odluke o posjetiocima koje imaju pravne ili slične značajne posljedice u smislu člana 22. GDPR-a. Automatske sigurnosne provjere mogu privremeno onemogućiti slanje obrasca; i dalje nam možete pisati e-mailom."
+
+[PrivacyObjection]
+other = "Pravo na prigovor"
+
+[PrivacyObjectionCopy]
+other = "Kada se primjenjuje član 21. GDPR-a, u svakom trenutku možete prigovoriti obradi zasnovanoj na legitimnim interesima zbog razloga povezanih s vašom posebnom situacijom. Prigovor pošaljite na gore navedenu kontakt adresu. Tu ćemo obradu obustaviti osim ako dokažemo uvjerljive legitimne razloge koji prevladavaju nad vašim pravima ili je obrada potrebna za postavljanje, ostvarivanje ili odbranu pravnih zahtjeva."

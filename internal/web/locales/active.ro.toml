@@ -642,3 +642,27 @@ other = "Formularul de contact a fost închis. Mesajul tău nu a fost trimis. Sc
 
 [ContactKeepDraft]
 other = "Poți copia datele de mai jos într-un e-mail. Această ciornă nu a fost salvată în căsuța de mesaje."
+
+[PrivacyRequired]
+other = "Ce date trebuie să furnizezi"
+
+[PrivacyRequiredCopy]
+other = "Poți citi MunichBrief fără cont și fără să ne contactezi. Nu ai nicio obligație legală sau contractuală să folosești formularul de contact. Pentru a-l trimite, avem nevoie de adresa ta de e-mail, un subiect și un mesaj, ca să putem analiza solicitarea și să îți răspundem. Fără aceste câmpuri, formularul nu poate fi trimis. Ne poți scrie și direct prin e-mail. Include doar datele personale necesare pentru solicitarea ta."
+
+[PrivacySourcePeople]
+other = "Persoane menționate în relatări"
+
+[PrivacySourcePeopleCopy]
+other = "Informațiile despre persoanele implicate în incidente provin din comunicatele publice ale poliției, nu direct de la aceste persoane. În funcție de comunicat, pot include descrieri ale persoanelor, rolul lor în incident, presupuse infracțiuni, răni, locul și ora incidentului. Rezumatele publicate sunt accesibile oricui și pot fi indexate de motoarele de căutare. Mesajele de contact și conținutul căsuței private nu sunt publicate."
+
+[PrivacyAutomation]
+other = "IA și deciziile automatizate"
+
+[PrivacyAutomationCopy]
+other = "IA extrage informații, rezumă, traduce și verifică relatările despre incidente. Nu o folosim pentru a lua decizii despre vizitatori cu efecte juridice sau de importanță similară în sensul articolului 22 din RGPD. Verificările automate de securitate pot bloca temporar trimiterea formularului; ne poți contacta în continuare prin e-mail."
+
+[PrivacyObjection]
+other = "Dreptul la opoziție"
+
+[PrivacyObjectionCopy]
+other = "Când se aplică articolul 21 din RGPD, te poți opune oricând prelucrării bazate pe interese legitime, din motive legate de situația ta particulară. Trimite opoziția la adresa de contact de mai sus. Vom opri prelucrarea respectivă, cu excepția cazului în care demonstrăm motive legitime imperioase care prevalează asupra drepturilor tale sau prelucrarea este necesară pentru constatarea, exercitarea ori apărarea unui drept în instanță."

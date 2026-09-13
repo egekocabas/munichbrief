@@ -799,3 +799,27 @@ other = "Das Kontaktformular wurde geschlossen. Ihre Nachricht wurde nicht gesen
 
 [ContactKeepDraft]
 other = "Sie können Ihre Angaben unten in eine E-Mail kopieren. Dieser Entwurf wurde nicht im Posteingang gespeichert."
+
+[PrivacyRequired]
+other = "Welche Angaben Sie machen möchten"
+
+[PrivacyRequiredCopy]
+other = "Sie können MunichBrief ohne Konto lesen und müssen uns nicht kontaktieren. Es besteht keine gesetzliche oder vertragliche Pflicht, das Kontaktformular zu nutzen. Für eine Anfrage über das Formular benötigen wir Ihre E-Mail-Adresse, ein Thema und eine Nachricht, damit wir Ihr Anliegen bearbeiten und antworten können. Ohne diese Angaben lässt sich das Formular nicht absenden. Alternativ können Sie uns eine E-Mail schreiben. Bitte geben Sie nur die für Ihr Anliegen nötigen personenbezogenen Informationen an."
+
+[PrivacySourcePeople]
+other = "In Berichten erwähnte Personen"
+
+[PrivacySourcePeopleCopy]
+other = "Informationen über Beteiligte stammen aus öffentlichen Polizeimeldungen, nicht unmittelbar von diesen Personen. Je nach Meldung können sie Personenbeschreibungen, die Rolle im Geschehen, mutmaßliche Straftaten, Verletzungen sowie Ort und Zeit eines Vorfalls umfassen. Veröffentlichte Zusammenfassungen sind für alle zugänglich und können von Suchmaschinen erfasst werden. Kontaktanfragen und der private Posteingang werden nicht veröffentlicht."
+
+[PrivacyAutomation]
+other = "KI und automatisierte Entscheidungen"
+
+[PrivacyAutomationCopy]
+other = "KI erfasst, fasst zusammen, übersetzt und prüft Vorfallsberichte. Wir verwenden sie nicht für Entscheidungen über Besucherinnen und Besucher, die rechtliche oder ähnlich erhebliche Auswirkungen im Sinne von Artikel 22 DSGVO haben. Automatische Sicherheitsprüfungen können das Absenden des Kontaktformulars vorübergehend verhindern; per E-Mail bleiben wir erreichbar."
+
+[PrivacyObjection]
+other = "Ihr Widerspruchsrecht"
+
+[PrivacyObjectionCopy]
+other = "Soweit Artikel 21 DSGVO gilt, können Sie einer Verarbeitung auf Grundlage berechtigter Interessen jederzeit aus Gründen widersprechen, die sich aus Ihrer besonderen Situation ergeben. Richten Sie Ihren Widerspruch an die oben genannte Kontaktadresse. Wir stellen diese Verarbeitung ein, sofern wir keine zwingenden schutzwürdigen Gründe nachweisen können, die überwiegen, oder die Verarbeitung zur Geltendmachung, Ausübung oder Verteidigung von Rechtsansprüchen benötigen."

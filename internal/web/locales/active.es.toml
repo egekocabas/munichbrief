@@ -366,3 +366,27 @@ other = "El formulario de contacto se ha cerrado. Tu mensaje no se ha enviado. E
 
 [ContactKeepDraft]
 other = "Puedes copiar los datos de abajo en un correo. Este borrador no se ha guardado en la bandeja de entrada."
+
+[PrivacyRequired]
+other = "Qué datos necesitas facilitar"
+
+[PrivacyRequiredCopy]
+other = "Puedes leer MunichBrief sin una cuenta y sin ponerte en contacto con nosotros. No tienes ninguna obligación legal ni contractual de utilizar el formulario de contacto. Para enviarlo necesitamos tu correo electrónico, un tema y un mensaje que nos permitan atender tu consulta y responderte. Sin esos campos no se puede enviar el formulario. También puedes escribirnos directamente por correo electrónico. Incluye solo los datos personales necesarios para tu consulta."
+
+[PrivacySourcePeople]
+other = "Personas mencionadas en los informes"
+
+[PrivacySourcePeopleCopy]
+other = "La información sobre las personas implicadas en los sucesos procede de comunicados públicos de la policía, no directamente de esas personas. Según el comunicado, puede incluir descripciones personales, su relación con el suceso, presuntos delitos, lesiones y el lugar y la hora de los hechos. Los resúmenes publicados son accesibles para cualquiera y pueden aparecer en buscadores. Los mensajes de contacto y el buzón privado no se publican."
+
+[PrivacyAutomation]
+other = "IA y decisiones automatizadas"
+
+[PrivacyAutomationCopy]
+other = "La IA extrae información, resume, traduce y comprueba los informes de sucesos. No la utilizamos para tomar decisiones sobre los visitantes que produzcan efectos jurídicos o de importancia similar en el sentido del artículo 22 del RGPD. Las comprobaciones automáticas de seguridad pueden bloquear temporalmente el envío del formulario; puedes seguir contactándonos por correo electrónico."
+
+[PrivacyObjection]
+other = "Tu derecho de oposición"
+
+[PrivacyObjectionCopy]
+other = "Cuando sea aplicable el artículo 21 del RGPD, puedes oponerte en cualquier momento al tratamiento basado en intereses legítimos por motivos relacionados con tu situación particular. Envía tu oposición a la dirección de contacto indicada arriba. Dejaremos de realizar ese tratamiento, salvo que acreditemos motivos legítimos imperiosos que prevalezcan sobre tus derechos o que sea necesario para formular, ejercer o defender reclamaciones."
