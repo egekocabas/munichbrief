@@ -13,14 +13,15 @@
  <p class="mt-3 leading-7 text-muted">{{t .Lang "ContactStorage"}} <a class="font-bold text-civic underline" href="/{{.Lang}}/privacy">{{t .Lang "PrivacyTitle"}}</a></p>
  {{if .Received}}<p role="status" class="mt-5 rounded-lg border border-rule p-4 font-semibold">{{t .Lang "ContactReceived"}}</p>{{end}}
  {{if .Error}}<div role="alert" class="mt-5 border-l-4 border-alert p-4 text-alert"><p>{{t .Lang .Error}}</p>{{range $field,$key:=.Errors}}<p><a class="underline" href="#contact-{{$field}}">{{t $.Lang $key}}</a></p>{{end}}</div>{{end}}
- {{if .Enabled}}<form method="post" action="/{{.Lang}}/contact" class="contact-form mt-6 grid gap-5" hx-boost="false">
+ {{if .Enabled}}<form method="post" action="/{{.Lang}}/contact#contact-form" class="contact-form mt-6 grid gap-5" hx-boost="false">
  <input type="hidden" name="token" value="{{.Token}}">
  <div hidden aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
  <div><label for="contact-email">{{t .Lang "ContactEmail"}}</label><input id="contact-email" name="email" type="email" autocomplete="email" maxlength="254" required value="{{.Email}}" {{if index .Errors "email"}}aria-invalid="true" aria-describedby="contact-email-error"{{end}}>{{with index .Errors "email"}}<p id="contact-email-error" class="text-alert">{{t $.Lang .}}</p>{{end}}</div>
  <div><label for="contact-topic">{{t .Lang "ContactTopic"}}</label><select id="contact-topic" name="topic" required {{if index .Errors "topic"}}aria-invalid="true"{{end}}><option value="general" {{if eq .Topic "general"}}selected{{end}}>{{t .Lang "ContactGeneral"}}</option><option value="correction" {{if eq .Topic "correction"}}selected{{end}}>{{t .Lang "ContactCorrection"}}</option><option value="privacy" {{if eq .Topic "privacy"}}selected{{end}}>{{t .Lang "ContactPrivacy"}}</option></select></div>
  <div><label for="contact-message">{{t .Lang "ContactMessage"}}</label><textarea id="contact-message" name="message" rows="9" required aria-describedby="contact-message-help{{if index .Errors "message"}} contact-message-error{{end}}" {{if index .Errors "message"}}aria-invalid="true"{{end}}>{{.Message}}</textarea><p id="contact-message-help" class="mt-2 text-sm text-muted">{{t .Lang "ContactMessageLimit"}}</p>{{with index .Errors "message"}}<p id="contact-message-error" class="text-alert">{{t $.Lang .}}</p>{{end}}</div>
  <button type="submit" class="justify-self-start rounded-lg bg-civic px-6 py-3 font-bold text-on-accent">{{t .Lang "ContactSend"}}</button>
- </form>{{else}}<p class="mt-4 text-muted">{{t .Lang "ContactUnavailable"}}</p>{{end}}
+ </form>{{else}}{{if ne .Error "ContactClosed"}}<p class="mt-4 text-muted">{{t .Lang "ContactUnavailable"}}</p>{{end}}{{end}}
+ {{if .Draft}}<div class="contact-form mt-5 grid gap-4"><p>{{t .Lang "ContactKeepDraft"}}</p><div><label for="contact-draft-email">{{t .Lang "ContactEmail"}}</label><input id="contact-draft-email" value="{{.Email}}" readonly></div><div><label for="contact-draft-message">{{t .Lang "ContactMessage"}}</label><textarea id="contact-draft-message" rows="9" readonly>{{.Message}}</textarea></div><a class="font-bold text-civic underline" href="mailto:contact@munichbrief.de">contact@munichbrief.de</a></div>{{end}}
  </section>
  </article>
 {{end}}

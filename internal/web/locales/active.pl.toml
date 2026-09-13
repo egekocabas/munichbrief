@@ -329,10 +329,10 @@ other = "Cloudflare dostarcza i chroni stronę, przetwarzając dane połączenia
 other = "Własne pliki cookie zachowują język przez rok, potwierdzenie informacji o AI przez 30 dni oraz ostatnie kryteria wyszukiwania przez 30 dni w cookie HttpOnly. Wyczyszczenie wyszukiwania usuwa kryteria. Motyw pozostaje w pamięci lokalnej do usunięcia, a pozycja powrotu do listy w bieżącej karcie. Tokeny formularza wygasają najpóźniej po godzinie, potwierdzenia odbioru po pięciu minutach; nie zawierają wiadomości. Funkcje te służą żądanej usłudze (§25(2)(2) TDDDG; art. 6 ust. 1 lit. f RODO). HTMX nie zapisuje kopii stron w localStorage."
 
 [PrivacyMonitoringCopy]
-other = "Logi techniczne obejmują metodę, ścieżkę bez parametrów zapytania, status, czas trwania i identyfikatory żądań. Nie zapisują wiadomości, adresów e-mail, cookie ani IP odwiedzających. Prometheus i Loki mają ustawiony okres 30 dni; Grafana prezentuje dane wewnętrznie. Krótkotrwałe pseudonimowe liczniki oparte na IP ograniczają próby kontaktu przez 15 minut. Celem jest bezpieczeństwo i niezawodność (art. 6 ust. 1 lit. f RODO). Cloudflare ma odrębne okresy przechowywania."
+other = "Logi techniczne obejmują metodę, ścieżkę bez parametrów zapytania, status, czas trwania i identyfikatory żądań. Nie zapisują wiadomości, adresów e-mail, cookie ani IP odwiedzających. Prometheus i Loki mają ustawiony okres 30 dni; Grafana prezentuje dane wewnętrznie. Aby ograniczać próby kontaktu, przechowujemy licznik i pseudonimowy identyfikator utworzony na podstawie IP wyłącznie w pamięci aplikacji, bez zapisywania samego adresu IP. Limit obowiązuje przez 15 minut od pierwszej próby. Wygasłe liczniki są usuwane przy następnej próbie kontaktu lub ponownym uruchomieniu aplikacji; jeśli nie ma kolejnych prób, mogą pozostać w pamięci dłużej. Celem jest bezpieczeństwo i niezawodność (art. 6 ust. 1 lit. f RODO). Cloudflare ma odrębne okresy przechowywania."
 
 [PrivacyCorrespondenceCopy]
-other = "Adres e-mail, temat i treść przetwarzamy w celu odpowiedzi (art. 6 ust. 1 lit. f RODO) lub wykonania obowiązku prawnego, gdy ma zastosowanie (lit. c). Formularz najpierw zapisuje wiadomość w prywatnej skrzynce bazy danych. SMTP2GO wysyła powiadomienie na contact@munichbrief.de, a Cloudflare Email Routing przekazuje je do Gmaila. Odpowiedzi powstają w Apple Mail i są wysyłane przez SMTP2GO. Wiadomości nie są przetwarzane przez AI. Polityki dostawców opisują także przetwarzanie poza EOG; europejski interfejs API SMTP2GO nie ogranicza całej drogi poczty do UE."
+other = "Adres e-mail, temat i treść przetwarzamy w celu odpowiedzi (art. 6 ust. 1 lit. f RODO) lub wykonania obowiązku prawnego, gdy ma zastosowanie (lit. c). Formularz najpierw zapisuje wiadomość w prywatnej skrzynce bazy danych. SMTP2GO wysyła powiadomienie na contact@munichbrief.de, a Cloudflare Email Routing przekazuje je do Gmaila. Odpowiedzi powstają w Apple Mail i są wysyłane przez SMTP2GO. Wiadomości nie są przetwarzane przez AI. Polityki dostawców opisują także przetwarzanie poza EOG; europejski interfejs API SMTP2GO nie ogranicza całej drogi poczty do UE. Powiadomienia e-mail można wyłączyć. Wiadomości otrzymane w tym czasie pozostają w prywatnej skrzynce odbiorczej i nie są później automatycznie wysyłane e-mailem."
 
 [PrivacyRetentionCopy]
 other = "Wiadomości w skrzynce administracyjnej są usuwane po 90 dniach od oznaczenia sprawy jako rozwiązanej. Ponowne otwarcie anuluje termin. Otwarte sprawy są przeglądane i przechowywane tak długo, jak to potrzebne. Spór lub obowiązek prawny może uzasadniać dalsze przechowywanie z odnotowanym powodem i datą przeglądu. Kopie Gmail i wysłane odpowiedzi są przeglądane i usuwane osobno; strona ich nie usuwa. Dane dotyczące wysyłki podlegają okresom dostawców."
@@ -359,4 +359,10 @@ other = "Wskazany operator odpowiada również za treści redakcyjne zgodnie z �
 other = "Pytania i sprostowania można przesyłać e-mailem lub formularzem. Podany adres służy do korespondencji pocztowej."
 
 [ContactStorage]
-other = "Wiadomość zostaje zapisana w prywatnej skrzynce przed wysłaniem powiadomienia e-mail. Rozwiązane sprawy są usuwane z tej skrzynki po 90 dniach."
+other = "Wiadomość zapisujemy w prywatnej skrzynce, zanim potwierdzimy jej otrzymanie. Wiadomości oznaczone jako rozwiązane są z niej usuwane po 90 dniach."
+
+[ContactClosed]
+other = "Formularz kontaktowy został zamknięty. Twoja wiadomość nie została wysłana. Napisz na contact@munichbrief.de."
+
+[ContactKeepDraft]
+other = "Możesz skopiować poniższe dane do e-maila. Ten szkic nie został zapisany w skrzynce odbiorczej."

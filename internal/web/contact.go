@@ -26,7 +26,7 @@ type contactRate struct {
 }
 type contactPage struct {
 	basePage
-	Enabled, Received                   bool
+	Enabled, Received, Draft            bool
 	Token, Email, Topic, Message, Error string
 	Errors                              map[string]string
 }
@@ -103,13 +103,19 @@ func (s *Server) allowContact(r *http.Request, now time.Time) bool {
 	v, exists := s.contactLimits[key]
 	if !exists {
 		if len(s.contactLimits) >= 10000 {
+			s.contactBlocked++
 			return false
 		}
 		v.Until = now.Add(15 * time.Minute)
 	}
 	v.Count++
 	s.contactLimits[key] = v
-	return v.Count <= 3
+	if v.Count <= 3 {
+		s.contactAllowed++
+		return true
+	}
+	s.contactBlocked++
+	return false
 }
 func (s *Server) renderContact(w http.ResponseWriter, r *http.Request, data contactPage, status int) {
 	language, ok := s.routeLanguage(r)
@@ -123,12 +129,26 @@ func (s *Server) renderContact(w http.ResponseWriter, r *http.Request, data cont
 	base.ShowReviewNotice = false
 	base.Description = s.localization.Text(language, "ContactIntro")
 	base.SocialTitle = s.localization.Text(language, "ContactHeading") + " · MunichBrief"
-	if data.Received || status != 200 {
+	if data.Received || status != http.StatusOK {
 		base.Robots = "noindex,follow"
 	}
 	base.StructuredData = structuredPageData(base, "ContactPage")
 	data.basePage = base
 	data.Enabled = s.options.ContactEnabled
+	if data.Enabled {
+		settings, err := s.contactStore.ContactSettings(r.Context())
+		if err != nil {
+			data.Enabled = false
+			data.Error = "ContactSaveFailed"
+			status = http.StatusServiceUnavailable
+			base.Robots = "noindex,follow"
+			data.basePage = base
+		} else {
+			data.Enabled = settings.FormEnabled
+		}
+	}
+	data.Draft = !data.Enabled && (data.Email != "" || data.Message != "")
+	w.Header().Set("Cache-Control", "private, no-store")
 	if data.Errors == nil {
 		data.Errors = map[string]string{}
 	}
@@ -138,52 +158,61 @@ func (s *Server) renderContact(w http.ResponseWriter, r *http.Request, data cont
 	}
 	if wantsMarkdown(r.Header.Get("Accept")) {
 		s.prepareMarkdown(w, base)
+		w.Header().Set("Cache-Control", "private, no-store")
 		w.WriteHeader(status)
 		fmt.Fprintf(w, "# %s\n\n%s\n\n%s\n\ncontact@munichbrief.de\n\n", s.localization.Text(language, "ContactHeading"), base.Description, s.localization.Text(language, "ContactEnglish"))
 		for _, key := range []string{"ContactCorrectionCopy", "ContactPrivacyCopy", "ContactTechnicalCopy", "ContactPoliceCopy", "ContactStorage"} {
 			fmt.Fprintf(w, "%s\n\n", s.localization.Text(language, key))
 		}
+		if data.Error != "" {
+			fmt.Fprintf(w, "%s\n\n", s.localization.Text(language, data.Error))
+		}
+		if !data.Enabled {
+			fmt.Fprintf(w, "%s\n\n", s.localization.Text(language, "ContactUnavailable"))
+		}
 		fmt.Fprintf(w, "[%s](/%s/contact#contact-form) · [%s](/%s/privacy) · [%s](/%s/impressum)\n", s.localization.Text(language, "ContactForm"), language, s.localization.Text(language, "PrivacyTitle"), language, s.localization.Text(language, "ImpressumTitle"), language)
 		return
 	}
 	s.prepareHTML(w, r, base)
+	w.Header().Set("Cache-Control", "private, no-store")
 	w.WriteHeader(status)
 	if err := s.contactTemplate.ExecuteTemplate(w, "layout", data); err != nil {
 		s.logger.Error("render contact page failed")
 	}
 }
 func (s *Server) submitContact(w http.ResponseWriter, r *http.Request) {
-	if !s.options.ContactEnabled {
-		http.NotFound(w, r)
-		return
-	}
+
 	language, _ := s.routeLanguage(r)
 	data := contactPage{}
 	invalid := func(status int, key string) { data.Error = key; s.renderContact(w, r, data, status) }
 	if !validReaderMutation(r) || !isFormPost(r) {
-		invalid(403, "ContactInvalid")
+		invalid(http.StatusForbidden, "ContactInvalid")
 		return
 	}
 	if !s.allowContact(r, time.Now()) {
 		w.Header().Set("Retry-After", "900")
-		invalid(429, "ContactRateLimit")
+		invalid(http.StatusTooManyRequests, "ContactRateLimit")
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 32768)
 	if err := r.ParseForm(); err != nil {
-		invalid(400, "ContactInvalid")
+		invalid(http.StatusBadRequest, "ContactInvalid")
 		return
 	}
 	token := r.PostForm.Get("token")
 	cookie, err := r.Cookie(contactCookie)
 	if err != nil || !hmac.Equal([]byte(cookie.Value), []byte(token)) || !s.validContactToken(token, time.Now()) || r.PostForm.Get("website") != "" {
-		invalid(403, "ContactInvalid")
+		invalid(http.StatusForbidden, "ContactInvalid")
 		return
 	}
 	data.Token = token
 	data.Email = strings.TrimSpace(r.PostForm.Get("email"))
 	data.Topic = r.PostForm.Get("topic")
 	data.Message = strings.TrimSpace(r.PostForm.Get("message"))
+	if !s.options.ContactEnabled {
+		invalid(http.StatusServiceUnavailable, "ContactClosed")
+		return
+	}
 	sum := sha256.Sum256([]byte(token))
 	message := store.ContactMessage{SubmissionHash: hex.EncodeToString(sum[:]), Email: data.Email, Topic: data.Topic, Message: data.Message, Language: language, CreatedAt: time.Now().Unix()}
 	if err := message.Validate(); err != nil {
@@ -192,12 +221,16 @@ func (s *Server) submitContact(w http.ResponseWriter, r *http.Request) {
 			key = "ContactInvalid"
 		}
 		data.Errors = map[string]string{err.Error(): key}
-		invalid(400, "ContactInvalid")
+		invalid(http.StatusBadRequest, "ContactInvalid")
 		return
 	}
 	created, err := s.contactStore.CreateContact(r.Context(), message)
+	if errors.Is(err, store.ErrContactClosed) {
+		invalid(http.StatusServiceUnavailable, "ContactClosed")
+		return
+	}
 	if err != nil {
-		invalid(503, "ContactSaveFailed")
+		invalid(http.StatusServiceUnavailable, "ContactSaveFailed")
 		return
 	}
 	if created {
@@ -211,25 +244,58 @@ func (s *Server) submitContact(w http.ResponseWriter, r *http.Request) {
 }
 
 type contactAdminPage struct {
-	Messages                             []store.ContactMessage
-	Detail                               *store.ContactMessage
-	Token, Filter, Previous, Next, Error string
-	Total                                int
-	Paused                               bool
-	Now                                  int64
-	Stats                                store.ContactStats
+	Messages                                                []store.ContactMessage
+	Detail                                                  *store.ContactMessage
+	Token, Filter, Previous, Next, Error                    string
+	Total                                                   int
+	Paused                                                  bool
+	Now                                                     int64
+	Stats                                                   store.ContactStats
+	Settings                                                store.ContactSettings
+	Budgets                                                 []store.ContactBudget
+	DeploymentEnabled, NotificationsConfigured, TestEnabled bool
+	Status                                                  string
+	Rate                                                    contactRateStats
 }
 
 func (s *Server) contactAdmin(w http.ResponseWriter, r *http.Request) {
-	s.renderContactAdmin(w, r, "", 200)
+	s.renderContactAdmin(w, r, "", http.StatusOK)
 }
 func (s *Server) renderContactAdmin(w http.ResponseWriter, r *http.Request, errorText string, status int) {
+	w.Header().Set("Cache-Control", "private, no-store")
+	w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive")
 	if s.contactStore == nil || len(s.options.ContactSecret) < 32 {
 		http.NotFound(w, r)
 		return
 	}
-	page := contactAdminPage{Token: s.contactToken(time.Now()), Filter: r.URL.Query().Get("filter"), Error: errorText, Paused: !s.options.ContactNotificationsConfigured || s.options.ContactMetrics.Paused.Load(), Now: time.Now().Unix()}
+	page := contactAdminPage{Token: s.contactToken(time.Now()), Filter: r.URL.Query().Get("filter"), Error: errorText, Now: time.Now().Unix()}
 	s.setContactCookie(w, page.Token, 3600)
+	page.DeploymentEnabled = s.options.ContactEnabled
+	page.NotificationsConfigured = s.options.ContactNotificationsConfigured && s.options.ContactEnabled
+	page.Rate = s.contactRateStats(time.Now())
+	var settingsErr error
+	page.Settings, settingsErr = s.contactStore.ContactSettings(r.Context())
+	if settingsErr == nil {
+		page.Budgets, settingsErr = s.contactStore.ContactBudgets(r.Context(), time.Now(), s.options.ContactDailyLimit, s.options.ContactMonthlyLimit)
+	}
+	if settingsErr != nil {
+		http.Error(w, "Inbox temporarily unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	page.Paused = !page.NotificationsConfigured || !page.Settings.NotificationsEnabled
+	page.TestEnabled = page.DeploymentEnabled && page.Settings.FormEnabled && page.Settings.NotificationsEnabled && page.NotificationsConfigured
+	for _, b := range page.Budgets {
+		if b.Remaining == 0 {
+			page.Paused = true
+			page.TestEnabled = false
+		}
+	}
+	switch r.URL.Query().Get("saved") {
+	case "form":
+		page.Status = "Form availability updated."
+	case "notifications":
+		page.Status = "Email notification setting updated."
+	}
 	w.Header().Set("Cache-Control", "private, no-store")
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive")
 	var statsErr error
@@ -288,23 +354,7 @@ func (s *Server) renderContactAdmin(w http.ResponseWriter, r *http.Request, erro
 	}
 }
 func (s *Server) contactAdminMutation(w http.ResponseWriter, r *http.Request) {
-	if s.contactStore == nil || len(s.options.ContactSecret) < 32 {
-		http.NotFound(w, r)
-		return
-	}
-	if !validReaderMutation(r) || !isFormPost(r) {
-		http.Error(w, "Invalid request", http.StatusForbidden)
-		return
-	}
-	r.Body = http.MaxBytesReader(w, r.Body, 4096)
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Invalid request", 400)
-		return
-	}
-	cookie, err := r.Cookie(contactCookie)
-	token := r.PostForm.Get("token")
-	if err != nil || !hmac.Equal([]byte(cookie.Value), []byte(token)) || !s.validContactToken(token, time.Now()) {
-		http.Error(w, "Expired form; reload and try again", http.StatusForbidden)
+	if !s.validContactAdminPost(w, r) {
 		return
 	}
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
@@ -313,13 +363,17 @@ func (s *Server) contactAdminMutation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	action := r.PostForm.Get("action")
+	if action == "retry" && (!s.options.ContactEnabled || !s.options.ContactNotificationsConfigured) {
+		s.renderContactAdmin(w, r, "Email notifications are unavailable in the deployment configuration.", http.StatusConflict)
+		return
+	}
 	if action == "delete" && r.PostForm.Get("confirm") != "yes" {
-		s.renderContactAdmin(w, r, "Confirm permanent deletion before continuing.", 400)
+		s.renderContactAdmin(w, r, "Confirm permanent deletion before continuing.", http.StatusBadRequest)
 		return
 	}
 	review, _ := time.Parse("2006-01-02", r.PostForm.Get("review_date"))
 	if err := s.contactStore.UpdateContact(r.Context(), id, action, r.PostForm.Get("reason"), review.Unix(), time.Now().Unix()); err != nil {
-		s.renderContactAdmin(w, r, "Action unavailable. Check the hold dates and notification status, then try again.", 400)
+		s.renderContactAdmin(w, r, "Action unavailable. Check the hold dates and notification status, then try again.", http.StatusBadRequest)
 		return
 	}
 	target := "/admin/contact/" + strconv.FormatInt(id, 10)

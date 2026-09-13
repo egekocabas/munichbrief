@@ -142,22 +142,23 @@ type GazetteerRefresher interface {
 // Options controls presentation and access behavior for a Server.
 // PublicHosts identifies requests that must never reach review-only routes.
 type Options struct {
-	ContactEnabled                 bool
-	ContactSecret                  string
-	ContactTrustedProxies          []netip.Prefix
-	ContactMetrics                 *contactservice.Metrics
-	ContactNotificationsConfigured bool
-	PageSize                       int
-	SourceMode                     string
-	PresentationMode               string
-	SecureCookies                  bool
-	AdminEnabled                   bool
-	PublicHosts                    []string
-	CanonicalOrigin                string
-	Processor                      ProcessingRequester
-	Gazetteer                      GazetteerReader
-	GazetteerRefresher             GazetteerRefresher
-	Build                          BuildInfo
+	ContactEnabled                         bool
+	ContactSecret                          string
+	ContactTrustedProxies                  []netip.Prefix
+	ContactMetrics                         *contactservice.Metrics
+	ContactNotificationsConfigured         bool
+	ContactDailyLimit, ContactMonthlyLimit int
+	PageSize                               int
+	SourceMode                             string
+	PresentationMode                       string
+	SecureCookies                          bool
+	AdminEnabled                           bool
+	PublicHosts                            []string
+	CanonicalOrigin                        string
+	Processor                              ProcessingRequester
+	Gazetteer                              GazetteerReader
+	GazetteerRefresher                     GazetteerRefresher
+	Build                                  BuildInfo
 }
 
 // BuildInfo identifies the source revision and time used for a deployed build.
@@ -170,28 +171,29 @@ var gitCommitPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
 
 // Server owns MunichBrief's HTTP route tree and parsed embedded templates.
 type Server struct {
-	contactStore               *store.Store
-	contactMu                  sync.Mutex
-	contactLimits              map[string]contactRate
-	legalTemplate              *template.Template
-	contactAdminTemplate       *template.Template
-	store                      incidentStore
-	logger                     *slog.Logger
-	options                    Options
-	location                   *time.Location
-	languages                  []readerLanguage
-	localization               *localization
-	timelineTemplate           *template.Template
-	detailTemplate             *template.Template
-	aboutTemplate              *template.Template
-	contactTemplate            *template.Template
-	adminTemplate              *template.Template
-	adminHistoryTemplate       *template.Template
-	adminRSSHistoryTemplate    *template.Template
-	adminGazetteerTemplate     *template.Template
-	adminTranslationsTemplate  *template.Template
-	adminVerificationsTemplate *template.Template
-	socialCards                *socialCardRenderer
+	contactStore                   *store.Store
+	contactMu                      sync.Mutex
+	contactLimits                  map[string]contactRate
+	contactAllowed, contactBlocked uint64
+	legalTemplate                  *template.Template
+	contactAdminTemplate           *template.Template
+	store                          incidentStore
+	logger                         *slog.Logger
+	options                        Options
+	location                       *time.Location
+	languages                      []readerLanguage
+	localization                   *localization
+	timelineTemplate               *template.Template
+	detailTemplate                 *template.Template
+	aboutTemplate                  *template.Template
+	contactTemplate                *template.Template
+	adminTemplate                  *template.Template
+	adminHistoryTemplate           *template.Template
+	adminRSSHistoryTemplate        *template.Template
+	adminGazetteerTemplate         *template.Template
+	adminTranslationsTemplate      *template.Template
+	adminVerificationsTemplate     *template.Template
+	socialCards                    *socialCardRenderer
 }
 
 // NewWithOptions validates all route-affecting configuration before constructing
@@ -246,13 +248,14 @@ func newWithLanguages(database incidentStore, logger *slog.Logger, options Optio
 		return nil, fmt.Errorf("initialize localization: %w", err)
 	}
 	functions := template.FuncMap{
-		"subtract":             func(a, b int64) int64 { return a - b },
-		"contactDate":          func(v int64) string { return time.Unix(v, 0).In(location).Format("02 Jan 2006, 15:04 MST") },
-		"rssFetchLabel":        rssFetchLabel,
-		"assetURL":             assetURL,
-		"aiLabelAssetURL":      selectedAIGeneratedAssetURL,
-		"aiLabelLightAssetURL": selectedAILightThemeAssetURL,
-		"excerpt":              func(value string) string { return excerpt(value, 190) },
+		"subtract":                 func(a, b int64) int64 { return a - b },
+		"contactNotificationLabel": contactNotificationLabel,
+		"contactDate":              func(v int64) string { return time.Unix(v, 0).In(location).Format("02 Jan 2006, 15:04 MST") },
+		"rssFetchLabel":            rssFetchLabel,
+		"assetURL":                 assetURL,
+		"aiLabelAssetURL":          selectedAIGeneratedAssetURL,
+		"aiLabelLightAssetURL":     selectedAILightThemeAssetURL,
+		"excerpt":                  func(value string) string { return excerpt(value, 190) },
 		"formatDateTime": func(language string, value time.Time) string {
 			return formatDateTimeFor(definitions, language, value.In(location))
 		},
@@ -319,6 +322,12 @@ func newWithLanguages(database incidentStore, logger *slog.Logger, options Optio
 	if options.ContactEnabled && (contactDatabase == nil || len(options.ContactSecret) < 32 || !options.AdminEnabled) {
 		return nil, errors.New("contact requires database, secret and protected admin")
 	}
+	if options.ContactDailyLimit <= 0 {
+		options.ContactDailyLimit = 20
+	}
+	if options.ContactMonthlyLimit <= 0 {
+		options.ContactMonthlyLimit = 300
+	}
 	if options.ContactMetrics == nil {
 		options.ContactMetrics = &contactservice.Metrics{}
 	}
@@ -361,6 +370,8 @@ func (s *Server) Handler() http.Handler {
 		mux.HandleFunc("GET /admin/contact", s.contactAdmin)
 		mux.HandleFunc("GET /admin/contact/{id}", s.contactAdmin)
 		mux.HandleFunc("POST /admin/contact/{id}", s.contactAdminMutation)
+		mux.HandleFunc("POST /admin/contact/settings", s.contactAdminSettings)
+		mux.HandleFunc("POST /admin/contact/test", s.contactAdminTest)
 		mux.HandleFunc("GET /admin/translations", s.adminTranslationsPage)
 		mux.HandleFunc("GET /admin/verifications", s.adminVerificationsPage)
 		mux.HandleFunc("GET /admin/rss-history", s.adminRSSHistory)

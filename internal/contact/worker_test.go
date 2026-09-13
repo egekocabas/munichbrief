@@ -129,3 +129,38 @@ func TestWorkerTemporaryBackoffAndPermanentStop(t *testing.T) {
 		t.Fatal("lost message", e)
 	}
 }
+
+func TestWorkerAdminPauseAndTestUseNormalTransport(t *testing.T) {
+	ctx := context.Background()
+	db, err := store.Open(ctx, filepath.Join(t.TempDir(), "controls.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	now := time.Now()
+	sender := &fakeSender{result: Result{State: "accepted", Code: "accepted"}}
+	w := Worker{Store: db, Sender: sender, Daily: 20, Monthly: 300, Metrics: &Metrics{}, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	if err = db.SetContactControl(ctx, "notifications", false); err != nil {
+		t.Fatal(err)
+	}
+	w.Step(ctx, now)
+	if sender.calls != 0 || !w.Metrics.Paused.Load() {
+		t.Fatal("worker ignored pause")
+	}
+	if err = db.SetContactControl(ctx, "notifications", true); err != nil {
+		t.Fatal(err)
+	}
+	id, err := db.QueueContactTest(ctx, strings.Repeat("b", 64), now, 20, 300)
+	if err != nil {
+		t.Fatal(err)
+	}
+	w.Step(ctx, now.Add(time.Second))
+	m, err := db.Contact(ctx, id)
+	if err != nil || sender.calls != 1 || m.NotificationState != "accepted" || !m.IsTest {
+		t.Fatal(m, err)
+	}
+	budgets, err := db.ContactBudgets(ctx, now, 20, 300)
+	if err != nil || budgets[0].Remaining != 19 || budgets[1].Remaining != 299 {
+		t.Fatal(budgets, err)
+	}
+}

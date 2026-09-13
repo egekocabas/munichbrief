@@ -605,10 +605,10 @@ other = "Cloudflare livrează și protejează site-ul, prelucrează date de cone
 other = "Cookie-urile proprii păstrează limba un an, confirmarea informării despre IA 30 de zile și ultima căutare 30 de zile într-un cookie HttpOnly. Ștergerea căutării elimină criteriile. Tema rămâne în stocarea locală până la ștergere; poziția de revenire în listă se păstrează pentru fila curentă. Tokenurile formularului expiră în cel mult o oră, iar confirmările în cinci minute; nu conțin mesaje. Aceste funcții asigură serviciul solicitat (§25(2)(2) TDDDG; art. 6(1)(f) GDPR). HTMX nu păstrează copii ale paginilor în localStorage."
 
 [PrivacyMonitoringCopy]
-other = "Jurnalele tehnice înregistrează metoda, calea fără parametrii căutării, starea, durata și identificatorii cererilor. Nu înregistrează mesaje, e-mailuri, cookie-uri sau IP-urile vizitatorilor. Prometheus și Loki sunt configurate pentru păstrarea datelor 30 de zile; Grafana le afișează intern. Contoare pseudonime bazate pe IP limitează încercările de contact timp de 15 minute. Scopul este securitatea și fiabilitatea (art. 6(1)(f) GDPR). Cloudflare are termene proprii."
+other = "Jurnalele tehnice înregistrează metoda, calea fără parametrii căutării, starea, durata și identificatorii cererilor. Nu înregistrează mesaje, e-mailuri, cookie-uri sau IP-urile vizitatorilor. Prometheus și Loki sunt configurate pentru păstrarea datelor 30 de zile; Grafana le afișează intern. Pentru a limita încercările de contact, păstrăm un contor și un identificator pseudonim derivat din IP doar în memoria aplicației, fără a salva adresa IP originală. Limita se aplică timp de 15 minute de la prima încercare. Contoarele expirate sunt șterse la următoarea încercare de contact sau la repornirea aplicației; dacă nu mai există încercări, pot rămâne în memorie mai mult timp. Scopul este securitatea și fiabilitatea (art. 6(1)(f) GDPR). Cloudflare are termene proprii."
 
 [PrivacyCorrespondenceCopy]
-other = "Prelucrăm adresa de e-mail, subiectul și mesajul pentru a răspunde solicitării (art. 6(1)(f) GDPR) sau pentru obligații legale aplicabile (art. 6(1)(c)). Formularul salvează întâi mesajul într-o căsuță privată din baza de date. SMTP2GO trimite notificarea la contact@munichbrief.de, iar Cloudflare Email Routing o redirecționează către Gmail. Răspunsurile sunt scrise în Apple Mail și trimise prin SMTP2GO. Mesajele nu sunt procesate de IA. Politicile furnizorilor descriu și prelucrarea în afara SEE; folosirea API-ului european SMTP2GO nu limitează întregul circuit de e-mail la UE."
+other = "Prelucrăm adresa de e-mail, subiectul și mesajul pentru a răspunde solicitării (art. 6(1)(f) GDPR) sau pentru obligații legale aplicabile (art. 6(1)(c)). Formularul salvează întâi mesajul într-o căsuță privată din baza de date. SMTP2GO trimite notificarea la contact@munichbrief.de, iar Cloudflare Email Routing o redirecționează către Gmail. Răspunsurile sunt scrise în Apple Mail și trimise prin SMTP2GO. Mesajele nu sunt procesate de IA. Politicile furnizorilor descriu și prelucrarea în afara SEE; folosirea API-ului european SMTP2GO nu limitează întregul circuit de e-mail la UE. Notificările prin e-mail pot fi dezactivate. Mesajele primite în acest timp rămân în căsuța privată și nu sunt trimise automat prin e-mail ulterior."
 
 [PrivacyRetentionCopy]
 other = "Mesajele din căsuța de administrare se șterg automat la 90 de zile după marcarea solicitării ca rezolvată. Redeschiderea anulează termenul. Solicitările deschise sunt revizuite și păstrate cât este necesar. Un litigiu sau o obligație legală poate justifica păstrarea cu motiv și dată de revizuire înregistrate. Copiile Gmail și răspunsurile trimise sunt revizuite și șterse separat; site-ul nu le șterge. Furnizorii aplică propriile termene datelor de expediere."
@@ -635,4 +635,10 @@ other = "Operatorul indicat răspunde și de conținutul editorial conform §18(
 other = "Pentru întrebări și corectări folosește e-mailul sau formularul. Adresa indicată este pentru corespondență poștală."
 
 [ContactStorage]
-other = "Mesajul este salvat într-o căsuță privată înaintea notificării prin e-mail. Mesajele rezolvate se șterg din acea căsuță după 90 de zile."
+other = "Mesajul este salvat într-o căsuță privată înainte de confirmarea primirii. Mesajele marcate ca rezolvate sunt șterse din această căsuță după 90 de zile."
+
+[ContactClosed]
+other = "Formularul de contact a fost închis. Mesajul tău nu a fost trimis. Scrie la contact@munichbrief.de."
+
+[ContactKeepDraft]
+other = "Poți copia datele de mai jos într-un e-mail. Această ciornă nu a fost salvată în căsuța de mesaje."

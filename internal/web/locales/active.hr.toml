@@ -329,10 +329,10 @@ other = "Cloudflare omogućuje pristup stranici i štiti je, obrađujući podatk
 other = "Vlastiti kolačići pamte jezik godinu dana, potvrdu obavijesti o umjetnoj inteligenciji 30 dana i posljednju pretragu 30 dana u HttpOnly kolačiću. Brisanje pretrage uklanja kriterije. Tema ostaje u lokalnoj pohrani dok je ne izbrišete; povratni položaj popisa traje do zatvaranja kartice. Sigurnosni tokeni obrasca vrijede najviše sat, a potvrde primitka pet minuta; ne sadrže poruku. Ove funkcije omogućuju traženu uslugu (§25(2)(2) TDDDG-a; čl. 6. st. 1. t. f GDPR-a). HTMX ne sprema kopije stranica u localStorage."
 
 [PrivacyMonitoringCopy]
-other = "Tehnički zapisi sadrže metodu, putanju bez parametara pretrage, status, trajanje i identifikatore zahtjeva, ali ne poruke, e-adrese, kolačiće ni IP-adrese posjetitelja. Prometheus i Loki podešeni su na čuvanje 30 dana; Grafana prikazuje interne podatke. Pseudonimni brojači temeljeni na IP-adresi ograničavaju pokušaje kontakta 15 minuta. Svrha je sigurnost i pouzdanost (čl. 6. st. 1. t. f GDPR-a). Cloudflare ima vlastite rokove."
+other = "Tehnički zapisi sadrže metodu, putanju bez parametara pretrage, status, trajanje i identifikatore zahtjeva, ali ne poruke, e-adrese, kolačiće ni IP-adrese posjetitelja. Prometheus i Loki podešeni su na čuvanje 30 dana; Grafana prikazuje interne podatke. Za ograničavanje pokušaja kontakta čuvamo brojač i pseudonimnu oznaku izvedenu iz IP-adrese samo u memoriji aplikacije, bez pohrane izvorne IP-adrese. Ograničenje traje 15 minuta od prvog pokušaja. Istekli brojači uklanjaju se pri sljedećem pokušaju kontakta ili ponovnom pokretanju aplikacije; ako nema novih pokušaja, mogu ostati u memoriji dulje. Svrha je sigurnost i pouzdanost (čl. 6. st. 1. t. f GDPR-a). Cloudflare ima vlastite rokove."
 
 [PrivacyCorrespondenceCopy]
-other = "E-adresu, temu i poruku obrađujemo radi odgovora na upit (čl. 6. st. 1. t. f GDPR-a) ili primjenjive zakonske obveze (t. c). Obrazac prvo sprema poruku u privatni pretinac baze podataka. SMTP2GO šalje obavijest na contact@munichbrief.de, a Cloudflare Email Routing prosljeđuje je u Gmail. Odgovori se pišu u Apple Mailu i šalju preko SMTP2GO-a. Poruke se ne obrađuju umjetnom inteligencijom. Pravila pružatelja opisuju i obradu izvan EGP-a; europski API SMTP2GO-a ne ograničava cijeli lanac e-pošte na EU."
+other = "E-adresu, temu i poruku obrađujemo radi odgovora na upit (čl. 6. st. 1. t. f GDPR-a) ili primjenjive zakonske obveze (t. c). Obrazac prvo sprema poruku u privatni pretinac baze podataka. SMTP2GO šalje obavijest na contact@munichbrief.de, a Cloudflare Email Routing prosljeđuje je u Gmail. Odgovori se pišu u Apple Mailu i šalju preko SMTP2GO-a. Poruke se ne obrađuju umjetnom inteligencijom. Pravila pružatelja opisuju i obradu izvan EGP-a; europski API SMTP2GO-a ne ograničava cijeli lanac e-pošte na EU. Obavijesti e-poštom mogu se isključiti. Poruke primljene dok su isključene ostaju u privatnoj pristigloj pošti i neće se kasnije automatski slati e-poštom."
 
 [PrivacyRetentionCopy]
 other = "Poruke u administratorskom pretincu automatski se brišu 90 dana nakon označavanja upita riješenim. Ponovno otvaranje poništava rok. Otvoreni upiti pregledavaju se i čuvaju dok su potrebni. Spor ili zakonska obveza mogu opravdati zadržavanje uz zabilježen razlog i datum pregleda. Kopije u Gmailu i poslani odgovori pregledavaju se i brišu zasebno; stranica ih ne briše. Pružatelji imaju vlastite rokove za podatke o slanju."
@@ -359,4 +359,10 @@ other = "Navedeni voditelj odgovoran je i za urednički sadržaj prema §18(2) M
 other = "Upite i ispravke pošaljite e-poštom ili obrascem. Navedena adresa služi za poštansku korespondenciju."
 
 [ContactStorage]
-other = "Poruka se sprema u privatni pretinac prije slanja obavijesti e-poštom. Riješene poruke brišu se iz tog pretinca nakon 90 dana."
+other = "Poruka se sprema u privatnu pristiglu poštu prije nego što potvrdimo primitak. Riješene poruke brišu se iz nje nakon 90 dana."
+
+[ContactClosed]
+other = "Obrazac za kontakt je zatvoren. Vaša poruka nije poslana. Pišite na contact@munichbrief.de."
+
+[ContactKeepDraft]
+other = "Podatke u nastavku možete kopirati u e-poruku. Ovaj nacrt nije spremljen u pristiglu poštu."

@@ -193,7 +193,7 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 	contactMetrics := &contact.Metrics{}
 	metrics.Contact = contactMetrics
 	webServer, err := web.NewWithOptions(database, logger, web.Options{
-		ContactEnabled: cfg.ContactEnabled, ContactSecret: cfg.ContactSecret, ContactTrustedProxies: cfg.ContactTrustedProxies, ContactMetrics: contactMetrics, ContactNotificationsConfigured: cfg.SMTP2GOAPIKey != "",
+		ContactDailyLimit: cfg.ContactDailyLimit, ContactMonthlyLimit: cfg.ContactMonthlyLimit, ContactEnabled: cfg.ContactEnabled, ContactSecret: cfg.ContactSecret, ContactTrustedProxies: cfg.ContactTrustedProxies, ContactMetrics: contactMetrics, ContactNotificationsConfigured: cfg.SMTP2GOAPIKey != "",
 		PageSize: cfg.PageSize, SourceMode: cfg.SourceMode, PresentationMode: cfg.PresentationMode,
 		SecureCookies: cfg.SecureCookies,
 		AdminEnabled:  cfg.AdminEnabled, PublicHosts: cfg.PublicHosts, CanonicalOrigin: cfg.CanonicalOrigin, Processor: processor,

@@ -34,9 +34,13 @@ type SMTP2GO struct {
 }
 
 func (s SMTP2GO) Send(ctx context.Context, m store.ContactMessage) Result {
+	subject := fmt.Sprintf("MunichBrief enquiry #%d · %s", m.ID, m.Topic)
+	if m.IsTest {
+		subject = fmt.Sprintf("MunichBrief test email #%d", m.ID)
+	}
 	body, _ := json.Marshal(map[string]any{
 		"sender": Address, "to": []string{Address},
-		"subject":        fmt.Sprintf("MunichBrief enquiry #%d · %s", m.ID, m.Topic),
+		"subject":        subject,
 		"text_body":      fmt.Sprintf("Enquiry #%d\nTopic: %s\nReceived: %s\n\n%s", m.ID, m.Topic, time.Unix(m.CreatedAt, 0).UTC().Format(time.RFC3339), m.Message),
 		"custom_headers": []map[string]string{{"header": "Reply-To", "value": m.Email}},
 	})
@@ -163,7 +167,7 @@ func (w *Worker) Step(ctx context.Context, now time.Time) {
 		return
 	}
 	m, err := w.Store.ClaimContact(ctx, now, w.Daily, w.Monthly)
-	if errors.Is(err, store.ErrContactBudget) {
+	if errors.Is(err, store.ErrContactBudget) || errors.Is(err, store.ErrContactPaused) {
 		w.Metrics.Paused.Store(true)
 		return
 	}

@@ -15,6 +15,7 @@ const ContactRetention = 90 * 24 * time.Hour
 
 type ContactMessage struct {
 	ID                                              int64
+	IsTest                                          bool
 	SubmissionHash, Email, Topic, Message, Language string
 	CreatedAt, ReadAt, ResolvedAt                   int64
 	HoldReason                                      string
@@ -48,19 +49,67 @@ func (s *Store) CreateContact(ctx context.Context, m ContactMessage) (bool, erro
 	if err := m.Validate(); err != nil {
 		return false, err
 	}
-	result, err := s.db.ExecContext(ctx, `INSERT INTO contact_messages(submission_hash,email,topic,message,language,created_at) VALUES(?,?,?,?,?,?) ON CONFLICT(submission_hash) DO NOTHING`, m.SubmissionHash, m.Email, m.Topic, m.Message, m.Language, m.CreatedAt)
+	return s.createContact(ctx, m, false, time.Time{}, 0, 0)
+}
+
+// The duplicate check and settings check share the insert transaction. A retry
+// of an accepted submission stays successful even after the form is closed.
+func (s *Store) createContact(ctx context.Context, m ContactMessage, test bool, now time.Time, daily, monthly int) (bool, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return false, err
 	}
-	n, err := result.RowsAffected()
-	return n == 1, err
+	defer tx.Rollback()
+	var exists bool
+	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM contact_messages WHERE submission_hash=?)`, m.SubmissionHash).Scan(&exists); err != nil {
+		return false, err
+	}
+	if exists {
+		return false, nil
+	}
+	var settings ContactSettings
+	if err = tx.QueryRowContext(ctx, `SELECT form_enabled,notifications_enabled FROM contact_settings WHERE id=1`).Scan(&settings.FormEnabled, &settings.NotificationsEnabled); err != nil {
+		return false, err
+	}
+	if !settings.FormEnabled {
+		return false, ErrContactClosed
+	}
+	state, code := "pending", ""
+	if !settings.NotificationsEnabled {
+		if test {
+			return false, ErrContactPaused
+		}
+		state, code = "cancelled", "notifications_disabled"
+	}
+	if test {
+		if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM contact_messages WHERE is_test=1 AND notification_state IN ('pending','retry','sending'))`).Scan(&exists); err != nil {
+			return false, err
+		}
+		if exists {
+			return false, ErrContactTestPending
+		}
+		for _, b := range contactBudgets(now, daily, monthly) {
+			var used int
+			if err = tx.QueryRowContext(ctx, `SELECT coalesce((SELECT attempts FROM contact_budgets WHERE period=?),0)`, b.Period).Scan(&used); err != nil {
+				return false, err
+			}
+			if used >= b.Limit {
+				return false, ErrContactBudget
+			}
+		}
+	}
+	_, err = tx.ExecContext(ctx, `INSERT INTO contact_messages(submission_hash,email,topic,message,language,created_at,notification_state,notification_code,is_test) VALUES(?,?,?,?,?,?,?,?,?)`, m.SubmissionHash, m.Email, m.Topic, m.Message, m.Language, m.CreatedAt, state, code, test)
+	if err != nil {
+		return false, err
+	}
+	return true, tx.Commit()
 }
 
-const contactColumns = `id,submission_hash,email,topic,message,language,created_at,read_at,resolved_at,hold_reason,hold_review_at,notification_state,notification_attempts,next_attempt_at,notification_code,provider_id`
+const contactColumns = `id,submission_hash,email,topic,message,language,created_at,read_at,resolved_at,hold_reason,hold_review_at,notification_state,notification_attempts,next_attempt_at,notification_code,provider_id,is_test`
 
 func scanContact(row interface{ Scan(...any) error }) (ContactMessage, error) {
 	var m ContactMessage
-	err := row.Scan(&m.ID, &m.SubmissionHash, &m.Email, &m.Topic, &m.Message, &m.Language, &m.CreatedAt, &m.ReadAt, &m.ResolvedAt, &m.HoldReason, &m.HoldReviewAt, &m.NotificationState, &m.NotificationAttempts, &m.NextAttemptAt, &m.NotificationCode, &m.ProviderID)
+	err := row.Scan(&m.ID, &m.SubmissionHash, &m.Email, &m.Topic, &m.Message, &m.Language, &m.CreatedAt, &m.ReadAt, &m.ResolvedAt, &m.HoldReason, &m.HoldReviewAt, &m.NotificationState, &m.NotificationAttempts, &m.NextAttemptAt, &m.NotificationCode, &m.ProviderID, &m.IsTest)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = ErrNotFound
 	}
@@ -142,7 +191,7 @@ func (s *Store) UpdateContact(ctx context.Context, id int64, action, reason stri
 	args = append(args, id)
 	condition := ""
 	if action == "retry" {
-		condition = " AND resolved_at=0 AND notification_state IN ('failed','uncertain','retry')"
+		condition = " AND resolved_at=0 AND notification_state IN ('failed','uncertain','retry') AND (SELECT notifications_enabled FROM contact_settings WHERE id=1)=1 AND (is_test=0 OR (SELECT form_enabled FROM contact_settings WHERE id=1)=1)"
 	}
 	result, err := s.db.ExecContext(ctx, `UPDATE contact_messages SET `+query+` WHERE id=? AND notification_state!='sending'`+condition, args...)
 	return contactChanged(result, err)
@@ -187,22 +236,27 @@ func (s *Store) ClaimContact(ctx context.Context, now time.Time, daily, monthly 
 		return ContactMessage{}, err
 	}
 	defer tx.Rollback()
-	for _, budget := range []struct {
-		period string
-		limit  int
-	}{{now.UTC().Format("2006-01-02"), daily}, {now.UTC().Format("2006-01"), monthly}} {
-		if _, err = tx.ExecContext(ctx, `INSERT INTO contact_budgets(period) VALUES(?) ON CONFLICT DO NOTHING`, budget.period); err != nil {
+	var settings ContactSettings
+	if err = tx.QueryRowContext(ctx, `SELECT form_enabled,notifications_enabled FROM contact_settings WHERE id=1`).Scan(&settings.FormEnabled, &settings.NotificationsEnabled); err != nil {
+		return ContactMessage{}, err
+	}
+	if !settings.NotificationsEnabled {
+		return ContactMessage{}, ErrContactPaused
+	}
+	for _, budget := range contactBudgets(now, daily, monthly) {
+		if _, err = tx.ExecContext(ctx, `INSERT INTO contact_budgets(period) VALUES(?) ON CONFLICT DO NOTHING`, budget.Period); err != nil {
 			return ContactMessage{}, err
 		}
 		var used int
-		if err = tx.QueryRowContext(ctx, `SELECT attempts FROM contact_budgets WHERE period=?`, budget.period).Scan(&used); err != nil {
+		if err = tx.QueryRowContext(ctx, `SELECT attempts FROM contact_budgets WHERE period=?`, budget.Period).Scan(&used); err != nil {
 			return ContactMessage{}, err
 		}
-		if used >= budget.limit {
+		if used >= budget.Limit {
 			return ContactMessage{}, ErrContactBudget
 		}
 	}
-	m, err := scanContact(tx.QueryRowContext(ctx, `SELECT `+contactColumns+` FROM contact_messages WHERE notification_state IN ('pending','retry') AND resolved_at=0 AND next_attempt_at<=? ORDER BY id LIMIT 1`, now.Unix()))
+
+	m, err := scanContact(tx.QueryRowContext(ctx, `SELECT `+contactColumns+` FROM contact_messages WHERE notification_state IN ('pending','retry') AND resolved_at=0 AND next_attempt_at<=? AND (is_test=0 OR ?=1) ORDER BY id LIMIT 1`, now.Unix(), settings.FormEnabled))
 	if err != nil {
 		return m, err
 	}

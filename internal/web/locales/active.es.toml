@@ -329,10 +329,10 @@ other = "Cloudflare distribuye y protege el sitio y procesa datos de conexión, 
 other = "Las cookies propias guardan el idioma un año, la confirmación del aviso de IA 30 días y la última búsqueda 30 días en una cookie HttpOnly. Borrar la búsqueda elimina sus criterios. El tema permanece en el almacenamiento local hasta borrarlo; la posición de regreso a la lista se guarda durante la sesión de la pestaña. Los tokens del formulario duran como máximo una hora y las confirmaciones cinco minutos; no contienen mensajes. Estas funciones permiten prestar el servicio solicitado (§25(2)(2) TDDDG; art. 6(1)(f) RGPD). HTMX no guarda copias de páginas en localStorage."
 
 [PrivacyMonitoringCopy]
-other = "Los registros técnicos incluyen método, ruta sin parámetros de consulta, estado, duración e identificadores de solicitud. No registran mensajes, correos electrónicos, cookies ni IP de visitantes. Prometheus y Loki están configurados para conservar métricas y registros 30 días; Grafana los muestra internamente. Los contadores seudónimos basados en IP limitan intentos de contacto durante 15 minutos. Su finalidad es la seguridad y fiabilidad (art. 6(1)(f) RGPD). Cloudflare tiene plazos propios."
+other = "Los registros técnicos incluyen método, ruta sin parámetros de consulta, estado, duración e identificadores de solicitud. No registran mensajes, correos electrónicos, cookies ni IP de visitantes. Prometheus y Loki están configurados para conservar métricas y registros 30 días; Grafana los muestra internamente. Para limitar los intentos de contacto, guardamos un contador y un identificador seudónimo derivado de la IP solo en la memoria de la aplicación, sin almacenar la dirección IP original. El límite se aplica durante 15 minutos desde el primer intento. Los contadores caducados se eliminan con el siguiente intento de contacto o al reiniciar la aplicación; si no hay más intentos, pueden permanecer en memoria durante más tiempo. Su finalidad es la seguridad y fiabilidad (art. 6(1)(f) RGPD). Cloudflare tiene plazos propios."
 
 [PrivacyCorrespondenceCopy]
-other = "Tratamos tu correo, tema y mensaje para responder a la consulta (art. 6(1)(f) RGPD), o cumplir obligaciones legales cuando corresponda (art. 6(1)(c)). El formulario guarda primero el mensaje en un buzón privado de la base de datos. SMTP2GO envía una notificación a contact@munichbrief.de y Cloudflare Email Routing la reenvía a Gmail. Las respuestas se redactan en Apple Mail y se envían mediante SMTP2GO. No se usa IA para tratar los mensajes. Las políticas enlazadas describen el tratamiento fuera del EEE; usar la API europea de SMTP2GO no sitúa toda la cadena de correo en la UE."
+other = "Tratamos tu correo, tema y mensaje para responder a la consulta (art. 6(1)(f) RGPD), o cumplir obligaciones legales cuando corresponda (art. 6(1)(c)). El formulario guarda primero el mensaje en un buzón privado de la base de datos. SMTP2GO envía una notificación a contact@munichbrief.de y Cloudflare Email Routing la reenvía a Gmail. Las respuestas se redactan en Apple Mail y se envían mediante SMTP2GO. No se usa IA para tratar los mensajes. Las políticas enlazadas describen el tratamiento fuera del EEE; usar la API europea de SMTP2GO no sitúa toda la cadena de correo en la UE. Las notificaciones por correo pueden desactivarse. Los mensajes recibidos mientras están desactivadas se guardan en la bandeja privada y no se envían automáticamente por correo más adelante."
 
 [PrivacyRetentionCopy]
 other = "Los mensajes del buzón de administración se eliminan 90 días después de marcar la consulta como resuelta. Reabrirla cancela el plazo. Las consultas abiertas se revisan y conservan mientras sean necesarias. Un litigio u obligación legal puede justificar conservarlas con un motivo y fecha de revisión registrados. Las copias en Gmail y respuestas enviadas se revisan y eliminan por separado; el sitio no las borra. Los proveedores aplican sus propios plazos a los registros de envío."
@@ -359,4 +359,10 @@ other = "El responsable indicado también responde del contenido editorial confo
 other = "Utiliza el correo o el formulario para consultas y correcciones. La dirección indicada es para correspondencia postal."
 
 [ContactStorage]
-other = "Tu mensaje se guarda en un buzón privado antes de enviar la notificación por correo. Los mensajes resueltos se eliminan de ese buzón a los 90 días."
+other = "Guardamos tu mensaje en una bandeja privada antes de confirmar su recepción. Los mensajes marcados como resueltos se eliminan de esa bandeja a los 90 días."
+
+[ContactClosed]
+other = "El formulario de contacto se ha cerrado. Tu mensaje no se ha enviado. Escribe a contact@munichbrief.de."
+
+[ContactKeepDraft]
+other = "Puedes copiar los datos de abajo en un correo. Este borrador no se ha guardado en la bandeja de entrada."

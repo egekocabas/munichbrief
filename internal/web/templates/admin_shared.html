@@ -12,12 +12,12 @@
       <a class="rounded-md border px-3 py-2 text-sm font-bold text-civic no-underline {{if eq . "rss-history"}}border-civic bg-newsprint{{else}}border-rule bg-white hover:bg-newsprint{{end}}" href="/admin/rss-history"{{if eq . "rss-history"}} aria-current="page"{{end}}>RSS history</a>
       <a class="rounded-md border px-3 py-2 text-sm font-bold text-civic no-underline {{if eq . "gazetteer"}}border-civic bg-newsprint{{else}}border-rule bg-white hover:bg-newsprint{{end}}" href="/admin/gazetteer"{{if eq . "gazetteer"}} aria-current="page"{{end}}>Gazetteer</a>
       <a class="rounded-md border px-3 py-2 text-sm font-bold text-civic no-underline {{if eq . "history"}}border-civic bg-newsprint{{else}}border-rule bg-white hover:bg-newsprint{{end}}" href="/admin/history"{{if eq . "history"}} aria-current="page"{{end}}>Pipeline history</a>
-      <a class="rounded-md border border-rule bg-white px-3 py-2 text-sm font-bold text-civic no-underline hover:bg-newsprint" href="/en">Open reader</a>
+      <a class="rounded-md border px-3 py-2 text-sm font-bold text-civic no-underline {{if eq . "contact"}}border-civic bg-newsprint{{else}}border-rule bg-white hover:bg-newsprint{{end}}" href="/admin/contact"{{if eq . "contact"}} aria-current="page"{{end}}>Messages</a>
       <button class="inline-flex size-9 items-center justify-center rounded-md border border-rule bg-white text-civic hover:border-civic/40 hover:bg-newsprint" type="button" data-theme-toggle aria-label="Dark mode" aria-pressed="false" title="Dark mode">
         <svg class="theme-icon-moon size-5" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.4 15.5A8.8 8.8 0 0 1 8.5 3.6 9 9 0 1 0 20.4 15.5Z"/></svg>
         <svg class="theme-icon-sun size-5" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0-5a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1Zm0 17a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1ZM3 11h1a1 1 0 1 1 0 2H3a1 1 0 1 1 0-2Zm17 0h1a1 1 0 1 1 0 2h-1a1 1 0 1 1 0-2ZM5.6 4.2l.7.7a1 1 0 0 1-1.4 1.4l-.7-.7a1 1 0 0 1 1.4-1.4l.7.7Zm13.5 13.5.7.7a1 1 0 0 1-1.4 1.4l-.7-.7a1 1 0 0 1 1.4-1.4ZM18.4 4.2a1 1 0 0 1 1.4 1.4l-.7.7a1 1 0 0 1-1.4-1.4l.7-.7ZM6.3 17.7a1 1 0 0 1 0 1.4l-.7.7a1 1 0 0 1-1.4-1.4l.7-.7a1 1 0 0 1 1.4 0Z"/></svg>
       </button>
-    <a class="rounded-md border border-rule bg-white px-3 py-2 text-sm font-bold text-civic no-underline hover:bg-newsprint" href="/admin/contact"{{if eq . "contact"}} aria-current="page"{{end}}>Messages</a></nav>
+    <a class="rounded-md border border-rule bg-white px-3 py-2 text-sm font-bold text-civic no-underline hover:bg-newsprint" href="/en">Open reader</a></nav>
   </div>
 </header>
 {{end}}

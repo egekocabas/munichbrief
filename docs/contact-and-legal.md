@@ -75,8 +75,11 @@ cookie contains only a signed token, never correspondence. No consent checkbox
 or external CAPTCHA is used. HTML is escaped, SQL is parameterized and email
 recipients are fixed. A submitted sender address is not proof of identity.
 
-Rate-limit keys are HMAC pseudonyms held in a bounded in-memory map and expire
-after 15 minutes; raw IPs are not saved with messages. Limits reset on restart.
+Rate-limit keys are HMAC pseudonyms held in a bounded in-memory map with a
+15-minute enforcement window starting at the first attempt. Expired
+entries are removed on the next contact attempt or application restart; they
+can remain in memory longer during inactivity. Raw IPs are not saved with
+messages. Limits and aggregate form-attempt statistics reset on restart.
 Only explicitly trusted immediate proxy networks allow forwarded client addresses;
 the rightmost untrusted address in the X-Forwarded-For chain is used. An arbitrary
 CF-Connecting-IP header is ignored. Do not trust all networks. Confirm that the
@@ -89,7 +92,7 @@ send live mail, configure accounts or activate production features.
 
 | Environment variable | Meaning |
 | --- | --- |
-| `MUNICHBRIEF_CONTACT_ENABLED` | Enable public receipt; requires admin enabled |
+| `MUNICHBRIEF_CONTACT_ENABLED` | Deployment gate for contact receipt and sending; requires admin enabled |
 | `MUNICHBRIEF_CONTACT_SECRET` | Random persistent signing secret, at least 32 bytes |
 | `MUNICHBRIEF_SMTP2GO_API_KEY` | Dedicated sending-only server key; blank pauses email |
 | `MUNICHBRIEF_CONTACT_DAILY_LIMIT` | Persistent UTC daily attempt budget; default 20 |
@@ -130,6 +133,54 @@ Dedicated-key budgets preserve room for normal replies but do not create another
 SMTP2GO account allowance. Both automated notifications and Apple Mail replies
 consume the account's plan quota. Account/key caps must be configured by the
 operator; the application cannot verify or change them.
+
+## Admin controls, budgets and test delivery
+
+Migration 025 adds a singleton `contact_settings` row and an `is_test` marker on
+contact messages. Both admin controls default to on, preserving existing behavior;
+`MUNICHBRIEF_CONTACT_ENABLED` remains the deployment gate, and sending still
+requires a configured SMTP2GO key. No additional environment variables or infra
+secrets are needed for these controls. They survive restarts in SQLite.
+
+The private Messages page provides two independent native POST controls:
+
+- **Accept form submissions:** closing the form leaves the email address visible.
+  Valid forms opened before closure receive HTTP 503, explicitly say the message
+  was not sent, and display escaped, read-only fields for copying into an email.
+  No correspondence is put in URLs, browser storage or metadata. Requests still
+  undergo origin, token, size and rate-limit checks. A retry of an already saved
+  enquiry acknowledges its original receipt even after closure.
+- **Send email notifications:** disabling pauses already queued notifications.
+  New enquiries are saved as inbox-only (`cancelled`, `notifications_disabled`)
+  and are not automatically mailed after re-enabling. Existing pending/retry work
+  resumes when enabled. Closing the form alone does not pause ordinary queued mail.
+
+Settings and message admission/notification claims share the SQLite transaction
+boundary. A message already admitted or email already claimed may complete before
+an admin change takes effect; a provider request cannot be recalled. Pending test
+emails are cancelled when either control is disabled, preventing unexpected later
+sends. All admin POSTs require the protected host, same-origin checks and signed
+CSRF tokens; responses are private/no-store.
+
+**Email budget** cards show configured totals, attempts used, remaining attempts
+and the next UTC reset for the daily and monthly periods. These are the persistent
+application budgets, not a live SMTP2GO account balance: Apple Mail replies consume
+provider allowance but are not counted here. Failed/uncertain attempts and tests
+consume reservations. Lowering a limit never displays negative remaining quota.
+A separate abuse-protection section shows the per-IP 3-attempt/15-minute policy,
+active windows and aggregate passed/blocked attempts since process start, without
+exposing raw IPs or pseudonymous identifiers. Passing the limit is not receipt.
+
+**Send test email** creates a clearly marked synthetic inbox entry and uses the
+normal asynchronous worker, fixed envelope and SMTP2GO implementation. Both admin
+controls and deployment support must be enabled, the key must be configured, and
+budget must remain. Only one test can be queued/sending at once. Repeated POSTs
+with the same action token reuse the test entry; the worker reserves quota at send
+time. Other work may use the remaining budget before the test is claimed. The
+result remains visible as pending, accepted by SMTP2GO, retry, failed or uncertain;
+acceptance is not confirmation of Gmail delivery. A test creates no public form
+receipt or received-enquiry metric and follows normal resolution/retention rules.
+Local verification uses a fake sender; no live test email is sent during development.
 
 ## Delivery, retention and recovery
 
@@ -208,3 +259,25 @@ Selected screenshots contain synthetic correspondence only:
 - [Privacy, desktop dark](previews/privacy-1440-dark.png)
 - [Private inbox](previews/contact-inbox-desktop.png)
 - [Private message, mobile dark](previews/contact-message-mobile-dark.png)
+
+### Admin controls follow-up verification
+
+The full repository race suite passed after introducing the controls, with the
+web package completing in 402 seconds. Final focused race tests additionally
+covered native settings actions, deployment gates, CSRF/public-host restrictions,
+closed-form draft preservation, already-accepted retries, inbox-only receipt,
+settings persistence, test cancellation/idempotency, UTC budget resets and all
+14 Privacy HTML/Markdown copies. The final Go analysis, dependency audit,
+formatting/module checks, documentation links, workflow/shell checks, application
+build and Helm contact/strict lint checks passed.
+
+Synthetic browser checks found no horizontal overflow at 320, 390, 768 and 1440
+pixels in either admin theme. Controls and test queuing worked with JavaScript
+disabled; a separate visitor tab retained its draft after the operator closed the
+form. The fake sender progressed a test from pending to accepted without network
+email. Inbox paging over 10,000 synthetic messages measured approximately 1.2 ms
+per page/count query on Apple M1; this is a local sample, not an SLA.
+Temporary port 18087 was stopped and port 8080 remained closed.
+
+- [Contact controls and budgets, desktop](previews/contact-controls-desktop.png)
+- [Contact controls, mobile dark theme](previews/contact-controls-mobile-dark.png)

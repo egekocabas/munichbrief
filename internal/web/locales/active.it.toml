@@ -329,10 +329,10 @@ other = "Cloudflare distribuisce e protegge il sito, trattando dati di connessio
 other = "I cookie del sito conservano la lingua per un anno, la conferma dell’avviso IA per 30 giorni e l’ultima ricerca in un cookie HttpOnly per 30 giorni. Cancellare la ricerca rimuove i criteri. Il tema resta nella memoria locale fino alla cancellazione; la posizione di ritorno all’elenco dura per la sessione della scheda. I token del modulo scadono entro un’ora e le conferme entro cinque minuti, senza contenere messaggi. Queste funzioni servono il servizio richiesto (§25(2)(2) TDDDG; art. 6(1)(f) GDPR). HTMX non salva copie delle pagine in localStorage."
 
 [PrivacyMonitoringCopy]
-other = "I log tecnici registrano metodo, percorso senza parametri di ricerca, stato, durata e identificativi delle richieste. Non registrano messaggi, email, cookie o IP dei visitatori. Prometheus e Loki sono configurati per una conservazione di 30 giorni; Grafana mostra i dati internamente. Contatori pseudonimi basati sull’IP limitano i tentativi di contatto per 15 minuti. La finalità è sicurezza e affidabilità (art. 6(1)(f) GDPR). Cloudflare applica tempi propri."
+other = "I log tecnici registrano metodo, percorso senza parametri di ricerca, stato, durata e identificativi delle richieste. Non registrano messaggi, email, cookie o IP dei visitatori. Prometheus e Loki sono configurati per una conservazione di 30 giorni; Grafana mostra i dati internamente. Per limitare i tentativi di contatto, conserviamo un contatore e un identificativo pseudonimo derivato dall’IP soltanto nella memoria dell’applicazione, senza salvare l’indirizzo IP originale. Il limite vale per 15 minuti dal primo tentativo. I contatori scaduti vengono eliminati al tentativo di contatto successivo o al riavvio dell’applicazione; in assenza di altri tentativi possono rimanere in memoria più a lungo. La finalità è sicurezza e affidabilità (art. 6(1)(f) GDPR). Cloudflare applica tempi propri."
 
 [PrivacyCorrespondenceCopy]
-other = "Email, argomento e messaggio servono a rispondere alla richiesta (art. 6(1)(f) GDPR), o ad adempiere obblighi legali applicabili (art. 6(1)(c)). Il modulo salva prima il messaggio in una casella privata nel database. SMTP2GO invia la notifica a contact@munichbrief.de e Cloudflare Email Routing la inoltra a Gmail. Le risposte si scrivono in Apple Mail e partono tramite SMTP2GO. I messaggi non vengono trattati dall’IA. Le informative spiegano anche i trattamenti fuori dal SEE; l’API europea di SMTP2GO non rende europea l’intera catena email."
+other = "Email, argomento e messaggio servono a rispondere alla richiesta (art. 6(1)(f) GDPR), o ad adempiere obblighi legali applicabili (art. 6(1)(c)). Il modulo salva prima il messaggio in una casella privata nel database. SMTP2GO invia la notifica a contact@munichbrief.de e Cloudflare Email Routing la inoltra a Gmail. Le risposte si scrivono in Apple Mail e partono tramite SMTP2GO. I messaggi non vengono trattati dall’IA. Le informative spiegano anche i trattamenti fuori dal SEE; l’API europea di SMTP2GO non rende europea l’intera catena email. Le notifiche email possono essere disattivate. I messaggi ricevuti mentre sono disattivate restano nella casella privata e non vengono inviati automaticamente via email in seguito."
 
 [PrivacyRetentionCopy]
 other = "I messaggi della casella amministrativa vengono cancellati 90 giorni dopo la chiusura della richiesta. Riaprirla annulla la scadenza. Le richieste aperte vengono riesaminate e conservate finché necessario. Controversie o obblighi legali possono giustificare una sospensione della cancellazione, con motivo e data di riesame registrati. Copie Gmail e risposte inviate vengono controllate e cancellate separatamente; il sito non le elimina. I fornitori applicano i propri tempi ai dati di invio."
@@ -359,4 +359,10 @@ other = "L’operatore indicato è anche responsabile dei contenuti editoriali a
 other = "Per richieste e correzioni usa l’email o il modulo. L’indirizzo indicato è destinato alla corrispondenza postale."
 
 [ContactStorage]
-other = "Il messaggio viene salvato in una casella privata prima della notifica email. Le richieste chiuse vengono eliminate da quella casella dopo 90 giorni."
+other = "Il messaggio viene salvato in una casella privata prima della conferma di ricezione. I messaggi segnati come risolti vengono eliminati dalla casella dopo 90 giorni."
+
+[ContactClosed]
+other = "Il modulo di contatto è stato chiuso. Il messaggio non è stato inviato. Scrivi a contact@munichbrief.de."
+
+[ContactKeepDraft]
+other = "Puoi copiare i dati qui sotto in un’email. Questa bozza non è stata salvata nella casella di posta."
