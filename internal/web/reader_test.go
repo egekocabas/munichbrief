@@ -83,8 +83,8 @@ func TestReaderSavedSearchRoutesAndSEO(t *testing.T) {
 		t.Error("contact unavailable")
 	}
 	for _, path := range []string{"/en/privacy", "/en/impressum"} {
-		if w := get(path, nil); w.Code != 404 {
-			t.Errorf("legal draft published at %s", path)
+		if w := get(path, nil); w.Code != 200 {
+			t.Errorf("legal page unavailable at %s", path)
 		}
 	}
 	clear := apply("/en/search/clear", "", cookie)

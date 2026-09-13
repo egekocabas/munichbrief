@@ -86,6 +86,8 @@ func TestSitemapContainsOnlyCanonicalPublicDocuments(t *testing.T) {
 		wantLocations["https://munichbrief.de/"+definition.Code] = false
 		wantLocations["https://munichbrief.de/"+definition.Code+"/about"] = false
 		wantLocations["https://munichbrief.de/"+definition.Code+"/contact"] = false
+		wantLocations["https://munichbrief.de/"+definition.Code+"/privacy"] = false
+		wantLocations["https://munichbrief.de/"+definition.Code+"/impressum"] = false
 	}
 	wantLocations["https://munichbrief.de/de/incidents/"+formatID(job.IncidentID)] = false
 	wantLocations["https://munichbrief.de/en/incidents/"+formatID(job.IncidentID)] = false

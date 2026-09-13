@@ -8,9 +8,12 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
+	"net/netip"
 	"regexp"
+	"sync"
 	"time"
 
+	contactservice "github.com/egekocabas/munichbrief/internal/contact"
 	"github.com/egekocabas/munichbrief/internal/gazetteer"
 	langregistry "github.com/egekocabas/munichbrief/internal/languages"
 	"github.com/egekocabas/munichbrief/internal/processing"
@@ -139,17 +142,22 @@ type GazetteerRefresher interface {
 // Options controls presentation and access behavior for a Server.
 // PublicHosts identifies requests that must never reach review-only routes.
 type Options struct {
-	PageSize           int
-	SourceMode         string
-	PresentationMode   string
-	SecureCookies      bool
-	AdminEnabled       bool
-	PublicHosts        []string
-	CanonicalOrigin    string
-	Processor          ProcessingRequester
-	Gazetteer          GazetteerReader
-	GazetteerRefresher GazetteerRefresher
-	Build              BuildInfo
+	ContactEnabled                 bool
+	ContactSecret                  string
+	ContactTrustedProxies          []netip.Prefix
+	ContactMetrics                 *contactservice.Metrics
+	ContactNotificationsConfigured bool
+	PageSize                       int
+	SourceMode                     string
+	PresentationMode               string
+	SecureCookies                  bool
+	AdminEnabled                   bool
+	PublicHosts                    []string
+	CanonicalOrigin                string
+	Processor                      ProcessingRequester
+	Gazetteer                      GazetteerReader
+	GazetteerRefresher             GazetteerRefresher
+	Build                          BuildInfo
 }
 
 // BuildInfo identifies the source revision and time used for a deployed build.
@@ -162,6 +170,11 @@ var gitCommitPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
 
 // Server owns MunichBrief's HTTP route tree and parsed embedded templates.
 type Server struct {
+	contactStore               *store.Store
+	contactMu                  sync.Mutex
+	contactLimits              map[string]contactRate
+	legalTemplate              *template.Template
+	contactAdminTemplate       *template.Template
 	store                      incidentStore
 	logger                     *slog.Logger
 	options                    Options
@@ -233,6 +246,8 @@ func newWithLanguages(database incidentStore, logger *slog.Logger, options Optio
 		return nil, fmt.Errorf("initialize localization: %w", err)
 	}
 	functions := template.FuncMap{
+		"subtract":             func(a, b int64) int64 { return a - b },
+		"contactDate":          func(v int64) string { return time.Unix(v, 0).In(location).Format("02 Jan 2006, 15:04 MST") },
 		"rssFetchLabel":        rssFetchLabel,
 		"assetURL":             assetURL,
 		"aiLabelAssetURL":      selectedAIGeneratedAssetURL,
@@ -292,11 +307,26 @@ func newWithLanguages(database incidentStore, logger *slog.Logger, options Optio
 	if err != nil {
 		return nil, fmt.Errorf("parse admin verifications template: %w", err)
 	}
+	legal, err := template.New("layout").Funcs(functions).Parse(layoutTemplate + legalTemplate)
+	if err != nil {
+		return nil, err
+	}
+	inbox, err := template.New("contact_admin").Funcs(functions).Parse(adminSharedTemplate + contactAdminTemplate)
+	if err != nil {
+		return nil, err
+	}
+	contactDatabase, _ := database.(*store.Store)
+	if options.ContactEnabled && (contactDatabase == nil || len(options.ContactSecret) < 32 || !options.AdminEnabled) {
+		return nil, errors.New("contact requires database, secret and protected admin")
+	}
+	if options.ContactMetrics == nil {
+		options.ContactMetrics = &contactservice.Metrics{}
+	}
 	socialCards, err := newSocialCardRenderer()
 	if err != nil {
 		return nil, fmt.Errorf("initialize social card renderer: %w", err)
 	}
-	return &Server{store: database, logger: logger, options: options, location: location, languages: definitions, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, contactTemplate: contact, adminTemplate: admin, adminHistoryTemplate: adminHistory, adminRSSHistoryTemplate: adminRSSHistory, adminGazetteerTemplate: adminGazetteer, adminTranslationsTemplate: adminTranslations, adminVerificationsTemplate: adminVerifications, socialCards: socialCards}, nil
+	return &Server{contactStore: contactDatabase, contactLimits: make(map[string]contactRate), legalTemplate: legal, contactAdminTemplate: inbox, store: database, logger: logger, options: options, location: location, languages: definitions, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, contactTemplate: contact, adminTemplate: admin, adminHistoryTemplate: adminHistory, adminRSSHistoryTemplate: adminRSSHistory, adminGazetteerTemplate: adminGazetteer, adminTranslationsTemplate: adminTranslations, adminVerificationsTemplate: adminVerifications, socialCards: socialCards}, nil
 }
 
 // Handler returns the complete public and optional review route tree.
@@ -314,6 +344,9 @@ func (s *Server) Handler() http.Handler {
 		mux.HandleFunc("POST /"+language.Code+"/search", s.submitSearch)
 		mux.HandleFunc("POST /"+language.Code+"/search/clear", s.submitSearch)
 		mux.HandleFunc("GET /"+language.Code+"/contact", s.contact)
+		mux.HandleFunc("POST /"+language.Code+"/contact", s.submitContact)
+		mux.HandleFunc("GET /"+language.Code+"/impressum", s.legal)
+		mux.HandleFunc("GET /"+language.Code+"/privacy", s.legal)
 		mux.HandleFunc("GET /"+language.Code+"/incidents/{id}", s.detail)
 		mux.HandleFunc("GET /"+language.Code+"/about", s.about)
 	}
@@ -325,6 +358,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /social/{language}/incidents/{id}", s.socialIncident)
 	if s.options.AdminEnabled {
 		mux.HandleFunc("GET /admin", s.admin)
+		mux.HandleFunc("GET /admin/contact", s.contactAdmin)
+		mux.HandleFunc("GET /admin/contact/{id}", s.contactAdmin)
+		mux.HandleFunc("POST /admin/contact/{id}", s.contactAdminMutation)
 		mux.HandleFunc("GET /admin/translations", s.adminTranslationsPage)
 		mux.HandleFunc("GET /admin/verifications", s.adminVerificationsPage)
 		mux.HandleFunc("GET /admin/rss-history", s.adminRSSHistory)

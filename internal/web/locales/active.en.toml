@@ -617,7 +617,7 @@ other = "Time not reported"
 other = "Page {{.Page}} of {{.TotalPages}} · Reports {{.First}}–{{.Last}} of {{.Total}}"
 
 [ContactIntro]
-other = "Questions, corrections, or a concern about a report? Get in touch by email."
+other = "Questions, corrections, or a concern about a report? Use the form below or send an email."
 
 [ContactCorrections]
 other = "Corrections and updates"
@@ -629,7 +629,7 @@ other = "Include the MunichBrief page link and explain what needs correcting. A 
 other = "Privacy requests"
 
 [ContactPrivacyCopy]
-other = "Please send personal or sensitive information by email, not through a public GitHub issue. Share only what is needed to explain your request."
+other = "Use the private form or email for personal-data requests. Share only what is needed, and keep personal information out of public GitHub issues."
 
 [ContactTechnical]
 other = "Technical issues"
@@ -638,7 +638,7 @@ other = "Technical issues"
 other = "You can report display problems and suggest improvements on GitHub. Please leave personal information out of public issues."
 
 [ContactPoliceCopy]
-other = "MunichBrief is not a police contact point. For police matters, use the contact details on the official police website."
+other = "MunichBrief is independent of the police and cannot accept police or emergency reports. For police matters, use the contact details on the official police website."
 
 
 [MonitoringCopy]
@@ -652,3 +652,144 @@ other = "Check and translate in the background"
 
 [VerifyTranslateCopy]
 other = "Separate AI checks review the category and whether the police are asking for public assistance. These checks take priority over translation. Each language version appears when its translation is ready. Successful checks can update the category and public-assistance labels after publication."
+
+[ImpressumTitle]
+other = "Legal notice"
+
+[PrivacyTitle]
+other = "Privacy"
+
+[LegalGermany]
+other = "Germany"
+
+[ContactEnglish]
+other = "Please write in English so I can respond to your enquiry."
+
+[ContactForm]
+other = "Send an enquiry"
+
+[ContactEmail]
+other = "Your email address"
+
+[ContactTopic]
+other = "Topic"
+
+[ContactGeneral]
+other = "General enquiry"
+
+[ContactCorrection]
+other = "Correction"
+
+[ContactMessage]
+other = "Message"
+
+[ContactMessageLimit]
+other = "Maximum 5,000 characters. Please do not include unnecessary personal information."
+
+[ContactSend]
+other = "Send message"
+
+[ContactReceived]
+other = "Your message has been received. Thank you."
+
+[ContactInvalid]
+other = "Please check the form and try again. If it has expired, reload the page."
+
+[ContactRateLimit]
+other = "Too many attempts. Please wait 15 minutes before trying again."
+
+[ContactEmailInvalid]
+other = "Enter a valid email address."
+
+[ContactTopicInvalid]
+other = "Choose one of the listed topics."
+
+[ContactMessageInvalid]
+other = "Enter a message of no more than 5,000 characters."
+
+[ContactSaveFailed]
+other = "Your message could not be saved. Please try again later or contact us by email."
+
+[ContactUnavailable]
+other = "The form is not currently available. Please use the email address above."
+
+[PrivacyLinks]
+other = "Provider information and complaints"
+
+[ImpressumResponsible]
+other = "Responsible for this website"
+
+[PrivacyController]
+other = "Who is responsible"
+
+[PrivacyHosting]
+other = "Hosting and AI"
+
+[PrivacyCloudflare]
+other = "Cloudflare and traffic measurements"
+
+[PrivacyPreferences]
+other = "Browser preferences"
+
+[PrivacyMonitoring]
+other = "Technical monitoring"
+
+[PrivacyCorrespondence]
+other = "Email and contact form"
+
+[PrivacyRetention]
+other = "Keeping and deleting messages"
+
+[PrivacyPost]
+other = "Postal correspondence"
+
+[PrivacySources]
+other = "Police reports and source material"
+
+[PrivacyRights]
+other = "Your rights and complaints"
+
+[PrivacyControllerCopy]
+other = "Ege Kocabaş operates MunichBrief personally from Bavaria. The address above is the correspondence address. You can contact the controller there or by email about the processing of your personal data."
+
+[PrivacyHostingCopy]
+other = "The website, database and all AI processing run on the operator’s own hardware in Germany. German summaries, translations and subsequent checks are processed locally; source material is not sent to an external AI provider."
+
+[PrivacyCloudflareCopy]
+other = "Cloudflare delivers and protects the site, processing connection information including IP addresses. It can produce traffic statistics at its network edge. Cloudflare Web Analytics is configured to exclude EU visitors and automatically insert a performance-measurement script elsewhere. Browser security restrictions may prevent that script from running. This is separate from Cloudflare’s delivery and security processing. Zaraz consent management and Google Tag Gateway are inactive. Delivery and protection serve our legitimate interest in operating a secure website (Article 6(1)(f) GDPR). Provider policies linked below explain their processing and international transfers."
+
+[PrivacyPreferencesCopy]
+other = "We remember your language for one year and acknowledgement of the AI notice for 30 days in first-party cookies. The latest applied search is saved in an HttpOnly cookie for 30 days; clearing it removes those criteria. Your theme stays in local browser storage until cleared. Return-to-list position uses storage for the current browser tab. Contact security tokens expire within one hour and receipt confirmations within five minutes; neither contains your message. These preferences and security functions support the service you request (§25(2)(2) TDDDG; Article 6(1)(f) GDPR). HTMX does not save page snapshots in localStorage."
+
+[PrivacyMonitoringCopy]
+other = "To operate the site reliably, technical logs record request method, path without query parameters, status, duration and request identifiers. Application logs do not record message contents, email addresses, cookies or visitor IP addresses. Prometheus metrics and Loki logs are configured for 30-day retention; Grafana displays this internal monitoring. Short-lived pseudonymous IP-based counters limit contact attempts for 15 minutes. These measures serve security and reliability (Article 6(1)(f) GDPR). Cloudflare’s own retention is separate."
+
+[PrivacyCorrespondenceCopy]
+other = "When you contact us, we process your email address, chosen topic and message to answer your enquiry (Article 6(1)(f) GDPR), or to meet a legal obligation where applicable (Article 6(1)(c)). The form first saves your message in a private database inbox. SMTP2GO sends a notification to contact@munichbrief.de; Cloudflare Email Routing forwards it to a Gmail mailbox. Replies are written in Apple Mail and sent through SMTP2GO. No message is sent to an AI service. The linked provider policies describe their data handling, including processing outside the EEA; the form uses SMTP2GO’s EU API endpoint, which does not make the whole email chain EU-only."
+
+[PrivacyRetentionCopy]
+other = "Admin inbox messages are deleted automatically 90 days after the enquiry is marked resolved. Reopening it cancels that deadline. Unresolved enquiries are reviewed and retained while needed. Correspondence needed for an ongoing dispute or legal obligation may be held with a recorded reason and review date. Gmail copies and sent replies are reviewed and deleted separately; website deletion does not delete them. Delivery-provider records follow their own retention policies, not the inbox’s 90-day period."
+
+[PrivacyPostCopy]
+other = "Letters addressed to the correspondence address are received, opened and scanned by COCENTER / anschrift.net so the operator can handle them. This serves our legitimate interest in receiving correspondence, or applicable legal obligations (Article 6(1)(f) or (c) GDPR). According to the provider, paper originals are kept for six months and scans remain until account closure or a deletion request, subject to justified retention. Its privacy notice explains the details."
+
+[PrivacySourcesCopy]
+other = "We use public releases from Polizeipräsidium München to produce local incident summaries. German source text and RSS text snapshots are retained for processing, source-change checks and restricted review; no automatic expiry is currently configured. Public pages show summaries rather than stored originals. Omitting names does not guarantee that every account is anonymous. Editorial processing must respect the applicable press and data-protection rules, including the special rules for offence-related information. Contact us about factual errors or an account that affects you; correction and privacy requests are assessed individually."
+
+[PrivacyRightsCopy]
+other = "Depending on the applicable rules, you may request access, correction, deletion or restriction, object to processing based on legitimate interests, and request portability where applicable. You can use the contact address without creating an account. Requests to exercise GDPR rights are normally answered within one month; lawful exceptions and editorial rules may affect the outcome. For ordinary non-public-sector data protection in Bavaria you may complain to BayLDA or another competent supervisory authority. Editorial complaints may follow different rules."
+
+[ImpressumTitleDescription]
+other = "Operator details and ways to contact MunichBrief."
+
+[PrivacyTitleDescription]
+other = "How MunichBrief handles website data, correspondence and public sources."
+
+[ImpressumResponsibleCopy]
+other = "The individual operator named above is also responsible for editorial content under §18(2) MStV. MunichBrief is independent of the police."
+
+[ImpressumContactCopy]
+other = "Please use email or the contact form for enquiries and corrections. The address is a postal correspondence address."
+
+[ContactStorage]
+other = "Your message is saved in a private inbox before an email notification is sent. Resolved messages are deleted from that inbox after 90 days."

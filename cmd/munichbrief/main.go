@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/egekocabas/munichbrief/internal/config"
+	"github.com/egekocabas/munichbrief/internal/contact"
 	"github.com/egekocabas/munichbrief/internal/gazetteer"
 	"github.com/egekocabas/munichbrief/internal/ingest"
 	"github.com/egekocabas/munichbrief/internal/observability"
@@ -189,7 +190,10 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 	}
 	processor := webProcessor(aiWorker)
 
+	contactMetrics := &contact.Metrics{}
+	metrics.Contact = contactMetrics
 	webServer, err := web.NewWithOptions(database, logger, web.Options{
+		ContactEnabled: cfg.ContactEnabled, ContactSecret: cfg.ContactSecret, ContactTrustedProxies: cfg.ContactTrustedProxies, ContactMetrics: contactMetrics, ContactNotificationsConfigured: cfg.SMTP2GOAPIKey != "",
 		PageSize: cfg.PageSize, SourceMode: cfg.SourceMode, PresentationMode: cfg.PresentationMode,
 		SecureCookies: cfg.SecureCookies,
 		AdminEnabled:  cfg.AdminEnabled, PublicHosts: cfg.PublicHosts, CanonicalOrigin: cfg.CanonicalOrigin, Processor: processor,
@@ -206,6 +210,14 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 	serveErrors := make(chan error, 2)
 	go serve(httpServer, "reader", cfg.Address, cfg.SourceMode, logger, serveErrors)
 	go serve(metricsServer, "metrics", cfg.MetricsAddress, cfg.SourceMode, logger, serveErrors)
+	{
+		var sender contact.Sender
+		if cfg.ContactEnabled && cfg.SMTP2GOAPIKey != "" {
+			sender = contact.SMTP2GO{APIKey: cfg.SMTP2GOAPIKey}
+		}
+		contactWorker := &contact.Worker{Store: database, Sender: sender, Daily: cfg.ContactDailyLimit, Monthly: cfg.ContactMonthlyLimit, Metrics: contactMetrics, Logger: logger}
+		go contactWorker.Run(ctx)
+	}
 	if liveSyncer != nil {
 		go runLiveSyncLoop(ctx, berlinLocation, liveSyncer, metrics, logger)
 	}

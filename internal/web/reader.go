@@ -290,25 +290,10 @@ func readerTitle(title, number string) string {
 	return title
 }
 func (s *Server) contact(w http.ResponseWriter, r *http.Request) {
-	language, ok := s.routeLanguage(r)
-	if !ok {
-		http.NotFound(w, r)
-		return
+	received := false
+	if c, err := r.Cookie("munichbrief_contact_received"); err == nil {
+		received = s.validContactToken(c.Value, time.Now())
+		http.SetCookie(w, &http.Cookie{Name: "munichbrief_contact_received", Value: "", Path: "/", MaxAge: -1, HttpOnly: true, Secure: s.options.SecureCookies, SameSite: http.SameSiteLaxMode})
 	}
-	s.setLanguagePreference(w, language)
-	base := s.base(r, language, "/"+language+"/contact")
-	base.ShowAIDisclosure = false
-	base.ShowReviewNotice = false
-	base.Description = s.localization.Text(language, "ContactIntro")
-	base.SocialTitle = s.localization.Text(language, "ContactHeading") + " · MunichBrief"
-	base.StructuredData = structuredPageData(base, "ContactPage")
-	if wantsMarkdown(r.Header.Get("Accept")) {
-		s.prepareMarkdown(w, base)
-		fmt.Fprintf(w, "# %s\n\n%s\n\ncontact@munichbrief.de\n\n%s\n\n%s\n", s.localization.Text(language, "ContactHeading"), base.Description, s.localization.Text(language, "ContactCorrectionCopy"), s.localization.Text(language, "ContactPrivacyCopy"))
-		return
-	}
-	s.prepareHTML(w, r, base)
-	if err := s.contactTemplate.ExecuteTemplate(w, "layout", aboutPage{basePage: base}); err != nil {
-		s.logger.ErrorContext(r.Context(), "render contact", "error", err)
-	}
+	s.renderContact(w, r, contactPage{Received: received}, http.StatusOK)
 }

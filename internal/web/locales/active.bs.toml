@@ -201,14 +201,14 @@ Footer = { other = "MunichBrief je nezavisan od policije. Bez registracije i ogl
 AboutTitle = { other = "O MunichBriefu" }
 AboutIntro = { other = "MunichBrief vam pomaže da pratite lokalna policijska saopćenja na svom jeziku. Pročitajte kratak sažetak, saznajte gdje i kada se nešto dogodilo te otvorite službeno saopćenje za detalje." }
 OpenOfficialSource = { other = "Službeno saopćenje" }
-ContactIntro = { other = "Imate pitanje, primijetili ste grešku ili vas zabrinjava neko saopćenje? Javite nam se e-poštom." }
+ContactIntro = { other = "Imate pitanje, ispravku ili nedoumicu o izvještaju? Koristite obrazac ili pošaljite e-mail." }
 ContactCorrections = { other = "Ispravke i ažuriranja" }
 ContactCorrectionCopy = { other = "Pošaljite poveznicu na stranicu MunichBriefa i objasnite šta treba ispraviti. Korisna je i poveznica na ažurirano službeno saopćenje." }
 ContactPrivacy = { other = "Zahtjevi u vezi s privatnošću" }
-ContactPrivacyCopy = { other = "Lične ili osjetljive informacije šaljite e-poštom, a ne u javnoj prijavi na GitHubu. Podijelite samo ono što je potrebno za vaš zahtjev." }
+ContactPrivacyCopy = { other = "Za zahtjeve o ličnim podacima koristite privatni obrazac ili e-mail. Navedite samo potrebno i ne objavljujte lične podatke na GitHubu." }
 ContactTechnical = { other = "Tehnički problemi" }
 ContactTechnicalCopy = { other = "Probleme s prikazom i prijedloge za poboljšanja možete prijaviti na GitHubu. U javne prijave nemojte unositi lične podatke." }
-ContactPoliceCopy = { other = "MunichBrief nije kontaktna služba policije. Za policijska pitanja koristite kontakte na službenoj policijskoj stranici." }
+ContactPoliceCopy = { other = "MunichBrief je neovisan o policiji i ne prima prijave policiji ni hitne dojave. Za policijska pitanja koristite kontakte na službenoj stranici policije." }
 OpenOfficialPoliceRelease = { other = "Službeno saopćenje" }
 SiteDescription = { other = "Sažeci saopćenja Policijske uprave München (Polizeipräsidium München) na bosanskom jeziku." }
 MonitoringCopy = { other = "Cloudflare koristimo za isporuku i zaštitu stranice. Cloudflare obrađuje podatke o vezi, uključujući IP adrese, te može praviti statistiku posjeta. Da bi stranica pouzdano radila, vlastite tehničke zapise zahtjeva i zbirne pokazatelje rada čuvamo 30 dana." }
@@ -218,3 +218,145 @@ CoverageCopy = { other = "Ovdje je izbor objavljenih policijskih izvještaja, a 
 VerifyTranslate = { other = "Provjere i prijevodi u pozadini" }
 
 VerifyTranslateCopy = { other = "Zasebne provjere umjetnom inteligencijom ponovo provjeravaju kategoriju i traži li policija pomoć javnosti. Imaju prednost nad prijevodima. Svaka jezička verzija objavljuje se kada je prijevod spreman. Uspješne provjere mogu promijeniti kategoriju i oznaku poziva za pomoć i nakon objave." }
+
+[ImpressumTitle]
+other = "Pravne informacije"
+
+[PrivacyTitle]
+other = "Privatnost"
+
+[LegalGermany]
+other = "Njemačka"
+
+[ContactEnglish]
+other = "Molim vas da pišete na engleskom kako bih mogao odgovoriti na vaš upit."
+
+[ContactForm]
+other = "Pošaljite upit"
+
+[ContactEmail]
+other = "Vaša e-mail adresa"
+
+[ContactTopic]
+other = "Tema"
+
+[ContactGeneral]
+other = "Opći upit"
+
+[ContactCorrection]
+other = "Ispravka"
+
+
+[ContactMessage]
+other = "Poruka"
+
+[ContactMessageLimit]
+other = "Najviše 5.000 znakova. Nemojte unositi nepotrebne lične podatke."
+
+[ContactSend]
+other = "Pošalji poruku"
+
+[ContactReceived]
+other = "Vaša poruka je primljena. Hvala."
+
+[ContactInvalid]
+other = "Provjerite obrazac i pokušajte ponovo. Ako je istekao, ponovo učitajte stranicu."
+
+[ContactRateLimit]
+other = "Previše pokušaja. Sačekajte 15 minuta."
+
+[ContactEmailInvalid]
+other = "Unesite ispravnu e-mail adresu."
+
+[ContactTopicInvalid]
+other = "Odaberite jednu od ponuđenih tema."
+
+[ContactMessageInvalid]
+other = "Unesite poruku s najviše 5.000 znakova."
+
+[ContactSaveFailed]
+other = "Poruka nije mogla biti sačuvana. Pokušajte kasnije ili pišite e-mailom."
+
+[ContactUnavailable]
+other = "Obrazac trenutno nije dostupan. Koristite navedenu e-mail adresu."
+
+[PrivacyLinks]
+other = "Informacije pružalaca usluga i pritužbe"
+
+[ImpressumResponsible]
+other = "Odgovornost za web-stranicu"
+
+[PrivacyController]
+other = "Ko je odgovoran"
+
+[PrivacyHosting]
+other = "Server i vještačka inteligencija"
+
+[PrivacyCloudflare]
+other = "Cloudflare i mjerenje posjeta"
+
+[PrivacyPreferences]
+other = "Postavke preglednika"
+
+[PrivacyMonitoring]
+other = "Tehnički nadzor"
+
+[PrivacyCorrespondence]
+other = "E-mail i kontaktni obrazac"
+
+[PrivacyRetention]
+other = "Čuvanje i brisanje poruka"
+
+[PrivacyPost]
+other = "Poštanska prepiska"
+
+[PrivacySources]
+other = "Policijska saopćenja i izvorni materijal"
+
+[PrivacyRights]
+other = "Vaša prava i pritužbe"
+
+[PrivacyControllerCopy]
+other = "Ege Kocabaş lično vodi MunichBrief iz Bavarske. Gornja adresa služi za prepisku. Pitanja o obradi ličnih podataka možete poslati poštom ili na navedenu e-mail adresu."
+
+[PrivacyHostingCopy]
+other = "Web-stranica, baza podataka i svi postupci vještačke inteligencije rade na vlastitoj opremi operatera u Njemačkoj. Sažeci, prijevodi i naknadne provjere obrađuju se lokalno; izvorni tekstovi ne šalju se vanjskom pružaocu usluga vještačke inteligencije."
+
+[PrivacyCloudflareCopy]
+other = "Cloudflare omogućava pristup stranici i štiti je, obrađujući podatke o vezi, uključujući IP adrese. Može praviti i statistike na svojoj mreži. Web Analytics isključuje posjetioce iz EU-a, a drugdje automatski ubacuje skriptu za mjerenje; sigurnosna pravila preglednika mogu spriječiti njeno izvršavanje. Obrada za isporuku i sigurnost je odvojena. Zaraz Consent Management i Google Tag Gateway nisu aktivni. Isporuka i zaštita zasnivaju se na legitimnom interesu za siguran rad (član 6(1)(f) GDPR-a). Politike pružalaca objašnjavaju međunarodne prijenose."
+
+[PrivacyPreferencesCopy]
+other = "Vlastiti kolačići pamte jezik godinu dana, potvrdu obavijesti o vještačkoj inteligenciji 30 dana i posljednju pretragu 30 dana u HttpOnly kolačiću. Brisanje pretrage uklanja kriterije. Tema ostaje u lokalnoj pohrani dok je ne izbrišete; povratni položaj liste čuva se za trenutnu karticu. Sigurnosni tokeni obrasca vrijede najviše sat, a potvrde prijema pet minuta; ne sadrže poruku. Ove funkcije omogućavaju traženu uslugu (§25(2)(2) TDDDG-a; član 6(1)(f) GDPR-a). HTMX ne čuva kopije stranica u localStorage."
+
+[PrivacyMonitoringCopy]
+other = "Tehnički zapisi sadrže metodu, putanju bez parametara pretrage, status, trajanje i identifikatore zahtjeva, ali ne poruke, e-mail adrese, kolačiće ni IP adrese posjetilaca. Prometheus i Loki podešeni su na čuvanje 30 dana; Grafana prikazuje interne podatke. Pseudonimni brojači zasnovani na IP adresi ograničavaju pokušaje kontakta 15 minuta. Svrha je sigurnost i pouzdanost (član 6(1)(f) GDPR-a). Cloudflare ima vlastite rokove."
+
+[PrivacyCorrespondenceCopy]
+other = "E-mail adresu, temu i poruku obrađujemo radi odgovora na upit (član 6(1)(f) GDPR-a) ili primjenjive zakonske obaveze (6(1)(c)). Obrazac prvo čuva poruku u privatnom sandučiću baze podataka. SMTP2GO šalje obavijest na contact@munichbrief.de, a Cloudflare Email Routing prosljeđuje je u Gmail. Odgovori se pišu u Apple Mailu i šalju preko SMTP2GO-a. Poruke se ne obrađuju vještačkom inteligencijom. Politike pružalaca opisuju i obradu izvan EGP-a; evropski API SMTP2GO-a ne ograničava cijeli e-mail lanac na EU."
+
+[PrivacyRetentionCopy]
+other = "Poruke u administratorskom sandučiću automatski se brišu 90 dana nakon označavanja upita riješenim. Ponovno otvaranje poništava rok. Otvoreni upiti pregledaju se i čuvaju dok su potrebni. Spor ili zakonska obaveza mogu opravdati zadržavanje uz zabilježen razlog i datum pregleda. Kopije u Gmailu i poslani odgovori pregledaju se i brišu odvojeno; stranica ih ne briše. Pružaoci imaju vlastite rokove za podatke o slanju."
+
+[PrivacyPostCopy]
+other = "COCENTER / anschrift.net prima, otvara i skenira pisma kako bi ih operater mogao obraditi. Osnova je legitimni interes za primanje prepiske ili zakonska obaveza (član 6(1)(f) ili (c) GDPR-a). Prema pružaocu, originali se čuvaju šest mjeseci, a skenovi do zatvaranja računa ili zahtjeva za brisanje, osim ako postoji opravdan razlog za čuvanje. Pojedinosti su u njegovoj politici privatnosti."
+
+[PrivacySourcesCopy]
+other = "Sažeci nastaju iz javnih saopćenja Polizeipräsidium München. Njemački izvorni tekstovi i tekstualne RSS kopije čuvaju se za obradu, provjeru promjena i pregled s ograničenim pristupom; automatsko brisanje nije podešeno. Javnost vidi sažetke, ne sačuvane originale. Izostavljanje imena ne garantuje anonimnost. Urednička obrada mora poštovati primjenjive propise o štampi i zaštiti podataka, uključujući posebna pravila za podatke o krivičnim djelima. Zahtjevi za ispravku ili privatnost razmatraju se pojedinačno."
+
+[PrivacyRightsCopy]
+other = "U zavisnosti od primjenjivih pravila možete zatražiti pristup, ispravku, brisanje, ograničenje i, gdje je primjenjivo, prenosivost, ili prigovoriti obradi na osnovu legitimnog interesa. Račun nije potreban. Na zahtjeve za prava iz GDPR-a obično odgovaramo u roku od mjesec dana; zakonski izuzeci i urednička pravila mogu utjecati na ishod. Za nejavni sektor u Bavarskoj možete se obratiti BayLDA-u ili drugom nadležnom tijelu. Uredničke pritužbe mogu slijediti druga pravila."
+
+[ImpressumTitleDescription]
+other = "Podaci o operateru i mogućnosti kontakta s MunichBriefom."
+
+[PrivacyTitleDescription]
+other = "Kako MunichBrief obrađuje podatke stranice, prepisku i javne izvore."
+
+[ImpressumResponsibleCopy]
+other = "Navedeni operater odgovoran je i za urednički sadržaj prema §18(2) MStV-a. MunichBrief je nezavisan od policije."
+
+[ImpressumContactCopy]
+other = "Upite i ispravke pošaljite e-mailom ili obrascem. Navedena adresa služi za poštansku prepisku."
+
+[ContactStorage]
+other = "Poruka se čuva u privatnom sandučiću prije slanja e-mail obavijesti. Riješene poruke brišu se iz tog sandučića nakon 90 dana."

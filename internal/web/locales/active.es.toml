@@ -201,14 +201,14 @@ Footer = { other = "MunichBrief es independiente de la policía. Sin registro ni
 AboutTitle = { other = "Acerca de MunichBrief" }
 AboutIntro = { other = "MunichBrief te ayuda a seguir los comunicados de la policía local en tu idioma. Lee un resumen, descubre dónde y cuándo ocurrió un suceso y consulta el comunicado oficial para conocer los detalles." }
 OpenOfficialSource = { other = "Comunicado oficial" }
-ContactIntro = { other = "¿Tienes una pregunta, has visto un error o te preocupa un comunicado? Escríbenos por correo electrónico." }
+ContactIntro = { other = "¿Tienes una pregunta o quieres señalar una corrección? Usa el formulario o escribe por correo." }
 ContactCorrections = { other = "Correcciones y actualizaciones" }
 ContactCorrectionCopy = { other = "Incluye el enlace a la página de MunichBrief y explica qué hay que corregir. También ayuda el enlace al comunicado oficial actualizado." }
 ContactPrivacy = { other = "Solicitudes de privacidad" }
-ContactPrivacyCopy = { other = "Envía la información personal o sensible por correo electrónico, no mediante una incidencia pública en GitHub. Comparte solo lo necesario para explicar tu solicitud." }
+ContactPrivacyCopy = { other = "Para solicitudes sobre datos personales, usa el formulario privado o el correo. Comparte solo lo necesario y no publiques datos personales en GitHub." }
 ContactTechnical = { other = "Problemas técnicos" }
 ContactTechnicalCopy = { other = "Puedes informar de problemas de visualización y proponer mejoras en GitHub. No incluyas datos personales en las incidencias públicas." }
-ContactPoliceCopy = { other = "MunichBrief no es un canal de contacto con la policía. Para asuntos policiales, utiliza los datos de contacto de su web oficial." }
+ContactPoliceCopy = { other = "MunichBrief es independiente de la policía y no recibe denuncias ni atiende emergencias. Para asuntos policiales, utiliza los datos de contacto de la web oficial de la policía." }
 OpenOfficialPoliceRelease = { other = "Comunicado oficial" }
 SiteDescription = { other = "Los comunicados de la Jefatura de Policía de Múnich (Polizeipräsidium München), resumidos en español." }
 MonitoringCopy = { other = "Usamos Cloudflare para servir y proteger el sitio. Cloudflare trata datos de conexión, incluidas las direcciones IP, y puede generar estadísticas de tráfico. Para mantener el sitio en buen funcionamiento, conservamos nuestros registros técnicos de solicitudes y datos agregados de rendimiento durante 30 días." }
@@ -218,3 +218,145 @@ CoverageCopy = { other = "Esta selección de comunicados policiales no es un reg
 VerifyTranslate = { other = "Verificaciones y traducciones posteriores" }
 
 VerifyTranslateCopy = { other = "Otras comprobaciones mediante IA revisan la categoría y si la policía solicita colaboración ciudadana. Estas comprobaciones tienen prioridad sobre las traducciones. Cada versión se publica cuando su traducción está lista. Las verificaciones completadas pueden actualizar la categoría y la indicación de colaboración ciudadana después de la publicación." }
+
+[ImpressumTitle]
+other = "Aviso legal"
+
+[PrivacyTitle]
+other = "Privacidad"
+
+[LegalGermany]
+other = "Alemania"
+
+[ContactEnglish]
+other = "Por favor, escribe en inglés para que pueda responder a tu consulta."
+
+[ContactForm]
+other = "Enviar una consulta"
+
+[ContactEmail]
+other = "Tu correo electrónico"
+
+[ContactTopic]
+other = "Tema"
+
+[ContactGeneral]
+other = "Consulta general"
+
+[ContactCorrection]
+other = "Corrección"
+
+
+[ContactMessage]
+other = "Mensaje"
+
+[ContactMessageLimit]
+other = "Máximo 5.000 caracteres. No incluyas datos personales innecesarios."
+
+[ContactSend]
+other = "Enviar mensaje"
+
+[ContactReceived]
+other = "He recibido tu mensaje. Gracias."
+
+[ContactInvalid]
+other = "Revisa el formulario e inténtalo de nuevo. Si ha caducado, recarga la página."
+
+[ContactRateLimit]
+other = "Demasiados intentos. Espera 15 minutos."
+
+[ContactEmailInvalid]
+other = "Introduce una dirección de correo válida."
+
+[ContactTopicInvalid]
+other = "Elige uno de los temas de la lista."
+
+[ContactMessageInvalid]
+other = "Escribe un mensaje de hasta 5.000 caracteres."
+
+[ContactSaveFailed]
+other = "No se ha podido guardar el mensaje. Inténtalo más tarde o escribe por correo electrónico."
+
+[ContactUnavailable]
+other = "El formulario no está disponible en este momento. Utiliza el correo indicado arriba."
+
+[PrivacyLinks]
+other = "Información de proveedores y reclamaciones"
+
+[ImpressumResponsible]
+other = "Responsable del sitio web"
+
+[PrivacyController]
+other = "Quién es el responsable"
+
+[PrivacyHosting]
+other = "Alojamiento e inteligencia artificial"
+
+[PrivacyCloudflare]
+other = "Cloudflare y medición del tráfico"
+
+[PrivacyPreferences]
+other = "Preferencias del navegador"
+
+[PrivacyMonitoring]
+other = "Supervisión técnica"
+
+[PrivacyCorrespondence]
+other = "Correo y formulario de contacto"
+
+[PrivacyRetention]
+other = "Conservación y eliminación de mensajes"
+
+[PrivacyPost]
+other = "Correspondencia postal"
+
+[PrivacySources]
+other = "Comunicados policiales y fuentes"
+
+[PrivacyRights]
+other = "Tus derechos y reclamaciones"
+
+[PrivacyControllerCopy]
+other = "Ege Kocabaş gestiona MunichBrief a título personal desde Baviera. La dirección anterior es para correspondencia. Puedes escribir allí o al correo indicado para consultar sobre tus datos personales."
+
+[PrivacyHostingCopy]
+other = "El sitio, la base de datos y todos los procesos de IA funcionan en equipos propios del responsable en Alemania. Los resúmenes, traducciones y verificaciones se realizan localmente; las fuentes no se envían a servicios externos de IA."
+
+[PrivacyCloudflareCopy]
+other = "Cloudflare distribuye y protege el sitio y procesa datos de conexión, incluidas direcciones IP. También puede generar estadísticas en su red. Web Analytics está configurado para excluir visitantes de la UE e insertar automáticamente un script de medición en otras regiones; las restricciones del navegador pueden impedir su ejecución. Esto es independiente del procesamiento necesario para la distribución y seguridad. Zaraz Consent Management y Google Tag Gateway están inactivos. La distribución y protección responden a nuestro interés legítimo en operar un sitio seguro (art. 6(1)(f) RGPD). Las políticas enlazadas explican las transferencias internacionales."
+
+[PrivacyPreferencesCopy]
+other = "Las cookies propias guardan el idioma un año, la confirmación del aviso de IA 30 días y la última búsqueda 30 días en una cookie HttpOnly. Borrar la búsqueda elimina sus criterios. El tema permanece en el almacenamiento local hasta borrarlo; la posición de regreso a la lista se guarda durante la sesión de la pestaña. Los tokens del formulario duran como máximo una hora y las confirmaciones cinco minutos; no contienen mensajes. Estas funciones permiten prestar el servicio solicitado (§25(2)(2) TDDDG; art. 6(1)(f) RGPD). HTMX no guarda copias de páginas en localStorage."
+
+[PrivacyMonitoringCopy]
+other = "Los registros técnicos incluyen método, ruta sin parámetros de consulta, estado, duración e identificadores de solicitud. No registran mensajes, correos electrónicos, cookies ni IP de visitantes. Prometheus y Loki están configurados para conservar métricas y registros 30 días; Grafana los muestra internamente. Los contadores seudónimos basados en IP limitan intentos de contacto durante 15 minutos. Su finalidad es la seguridad y fiabilidad (art. 6(1)(f) RGPD). Cloudflare tiene plazos propios."
+
+[PrivacyCorrespondenceCopy]
+other = "Tratamos tu correo, tema y mensaje para responder a la consulta (art. 6(1)(f) RGPD), o cumplir obligaciones legales cuando corresponda (art. 6(1)(c)). El formulario guarda primero el mensaje en un buzón privado de la base de datos. SMTP2GO envía una notificación a contact@munichbrief.de y Cloudflare Email Routing la reenvía a Gmail. Las respuestas se redactan en Apple Mail y se envían mediante SMTP2GO. No se usa IA para tratar los mensajes. Las políticas enlazadas describen el tratamiento fuera del EEE; usar la API europea de SMTP2GO no sitúa toda la cadena de correo en la UE."
+
+[PrivacyRetentionCopy]
+other = "Los mensajes del buzón de administración se eliminan 90 días después de marcar la consulta como resuelta. Reabrirla cancela el plazo. Las consultas abiertas se revisan y conservan mientras sean necesarias. Un litigio u obligación legal puede justificar conservarlas con un motivo y fecha de revisión registrados. Las copias en Gmail y respuestas enviadas se revisan y eliminan por separado; el sitio no las borra. Los proveedores aplican sus propios plazos a los registros de envío."
+
+[PrivacyPostCopy]
+other = "COCENTER / anschrift.net recibe, abre y escanea las cartas para que el responsable las gestione. La base es el interés legítimo en recibir correspondencia o una obligación legal (art. 6(1)(f) o (c) RGPD). Según el proveedor, guarda los originales seis meses y los escaneos hasta cerrar la cuenta o solicitar su eliminación, salvo conservación justificada. Su política explica los detalles."
+
+[PrivacySourcesCopy]
+other = "Los resúmenes se elaboran con comunicados públicos del Polizeipräsidium München. Los textos alemanes y capturas textuales RSS se conservan para procesarlos, detectar cambios y efectuar revisiones de acceso restringido; no hay borrado automático configurado. El público ve resúmenes, no los originales almacenados. Omitir nombres no garantiza anonimato. El tratamiento editorial debe respetar las normas de prensa y protección de datos aplicables, incluidas las relativas a infracciones. Evaluamos individualmente las solicitudes de corrección o privacidad."
+
+[PrivacyRightsCopy]
+other = "Según las normas aplicables, puedes solicitar acceso, rectificación, supresión, limitación y, cuando proceda, portabilidad, u oponerte al tratamiento basado en intereses legítimos. No necesitas cuenta. Los derechos del RGPD se atienden normalmente en un mes; las excepciones legales y normas editoriales pueden afectar al resultado. Para protección de datos del sector no público en Baviera puedes reclamar ante BayLDA u otra autoridad competente. Las reclamaciones editoriales pueden seguir otras reglas."
+
+[ImpressumTitleDescription]
+other = "Identidad del responsable y formas de contactar con MunichBrief."
+
+[PrivacyTitleDescription]
+other = "Cómo trata MunichBrief los datos del sitio, la correspondencia y las fuentes públicas."
+
+[ImpressumResponsibleCopy]
+other = "El responsable indicado también responde del contenido editorial conforme al §18(2) MStV. MunichBrief es independiente de la policía."
+
+[ImpressumContactCopy]
+other = "Utiliza el correo o el formulario para consultas y correcciones. La dirección indicada es para correspondencia postal."
+
+[ContactStorage]
+other = "Tu mensaje se guarda en un buzón privado antes de enviar la notificación por correo. Los mensajes resueltos se eliminan de ese buzón a los 90 días."

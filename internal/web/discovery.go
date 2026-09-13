@@ -253,6 +253,8 @@ func (s *Server) sitemap(response http.ResponseWriter, request *http.Request) {
 			sitemapURL{Location: origin + "/" + definition.Code},
 			sitemapURL{Location: origin + "/" + definition.Code + "/about"},
 			sitemapURL{Location: origin + "/" + definition.Code + "/contact"},
+			sitemapURL{Location: origin + "/" + definition.Code + "/privacy"},
+			sitemapURL{Location: origin + "/" + definition.Code + "/impressum"},
 		)
 		for _, link := range links {
 			urls = append(urls, sitemapURL{
@@ -449,6 +451,7 @@ func (s *Server) renderAboutMarkdown(response http.ResponseWriter, data aboutPag
 			fmt.Fprintf(&builder, "\n%s\n", markdownText(s.localization.Text(data.Lang, key)))
 		}
 		if section.title == "PrivacyDataHandling" {
+			fmt.Fprintf(&builder, "\n[%s](/%s/privacy)\n", s.localization.Text(data.Lang, "PrivacyTitle"), data.Lang)
 			fmt.Fprintf(&builder, "\n### %s\n\n", markdownText(s.localization.Text(data.Lang, "SourceMetadata")))
 			builder.WriteString("- [Landeshauptstadt München – GeodatenService](https://opendata.muenchen.de/) (dl-de/by-2.0)\n- [GeoNames](https://www.geonames.org/) (CC BY 4.0)\n- [© OpenStreetMap contributors](https://www.openstreetmap.org/copyright) (ODbL 1.0)\n")
 		}

@@ -460,7 +460,7 @@ other = "Ora nu este precizată"
 other = "Pagina {{.Page}} din {{.TotalPages}} · Comunicatele {{.First}}–{{.Last}} din {{.Total}}"
 
 [ContactIntro]
-other = "Ai o întrebare, ai observat o greșeală sau te îngrijorează un comunicat? Scrie-ne prin e-mail."
+other = "Ai o întrebare sau vrei să semnalezi o greșeală? Folosește formularul sau scrie prin e-mail."
 
 [ContactCorrections]
 other = "Corecturi și actualizări"
@@ -472,7 +472,7 @@ other = "Include linkul paginii MunichBrief și explică ce trebuie corectat. Es
 other = "Cereri privind confidențialitatea"
 
 [ContactPrivacyCopy]
-other = "Trimite informațiile personale sau sensibile prin e-mail, nu într-o sesizare publică pe GitHub. Comunică doar datele necesare pentru a explica cererea."
+other = "Pentru solicitări privind datele personale folosește formularul privat sau e-mailul. Include doar ce este necesar, fără date personale în sesizările publice GitHub."
 
 [ContactTechnical]
 other = "Probleme tehnice"
@@ -481,7 +481,7 @@ other = "Probleme tehnice"
 other = "Poți semnala probleme de afișare și propune îmbunătățiri pe GitHub. Nu include date personale în sesizările publice."
 
 [ContactPoliceCopy]
-other = "MunichBrief nu este un canal de contact al poliției. Pentru probleme care țin de poliție, folosește datele de contact de pe site-ul oficial."
+other = "MunichBrief este independent de poliție și nu primește plângeri penale sau solicitări de ajutor în caz de urgență. Pentru probleme care țin de poliție, folosește datele de contact de pe site-ul oficial al acesteia."
 
 
 [MonitoringCopy]
@@ -495,3 +495,144 @@ other = "Verificări și traduceri în fundal"
 
 [VerifyTranslateCopy]
 other = "Verificări IA separate reevaluează categoria și dacă poliția solicită ajutorul publicului. Acestea au prioritate față de traduceri. Fiecare versiune lingvistică apare când traducerea este gata. Verificările încheiate cu succes pot actualiza categoria și eticheta privind solicitarea de ajutor și după publicare."
+
+[ImpressumTitle]
+other = "Informații legale"
+
+[PrivacyTitle]
+other = "Confidențialitate"
+
+[LegalGermany]
+other = "Germania"
+
+[ContactEnglish]
+other = "Te rog să scrii în engleză, ca să îți pot răspunde."
+
+[ContactForm]
+other = "Trimite o solicitare"
+
+[ContactEmail]
+other = "Adresa ta de e-mail"
+
+[ContactTopic]
+other = "Subiect"
+
+[ContactGeneral]
+other = "Întrebare generală"
+
+[ContactCorrection]
+other = "Corectare"
+
+[ContactMessage]
+other = "Mesaj"
+
+[ContactMessageLimit]
+other = "Maximum 5.000 de caractere. Nu include date personale care nu sunt necesare."
+
+[ContactSend]
+other = "Trimite mesajul"
+
+[ContactReceived]
+other = "Mesajul tău a fost primit. Mulțumesc."
+
+[ContactInvalid]
+other = "Verifică formularul și încearcă din nou. Dacă a expirat, reîncarcă pagina."
+
+[ContactRateLimit]
+other = "Prea multe încercări. Așteaptă 15 minute."
+
+[ContactEmailInvalid]
+other = "Introdu o adresă de e-mail validă."
+
+[ContactTopicInvalid]
+other = "Alege unul dintre subiectele din listă."
+
+[ContactMessageInvalid]
+other = "Scrie un mesaj de cel mult 5.000 de caractere."
+
+[ContactSaveFailed]
+other = "Mesajul nu a putut fi salvat. Încearcă mai târziu sau scrie prin e-mail."
+
+[ContactUnavailable]
+other = "Formularul nu este disponibil momentan. Folosește adresa de e-mail de mai sus."
+
+[PrivacyLinks]
+other = "Informații despre furnizori și reclamații"
+
+[ImpressumResponsible]
+other = "Responsabilul site-ului"
+
+[PrivacyController]
+other = "Cine răspunde de date"
+
+[PrivacyHosting]
+other = "Găzduire și inteligență artificială"
+
+[PrivacyCloudflare]
+other = "Cloudflare și măsurarea traficului"
+
+[PrivacyPreferences]
+other = "Preferințele browserului"
+
+[PrivacyMonitoring]
+other = "Monitorizare tehnică"
+
+[PrivacyCorrespondence]
+other = "E-mail și formular de contact"
+
+[PrivacyRetention]
+other = "Păstrarea și ștergerea mesajelor"
+
+[PrivacyPost]
+other = "Corespondență poștală"
+
+[PrivacySources]
+other = "Comunicate ale poliției și surse"
+
+[PrivacyRights]
+other = "Drepturile tale și reclamații"
+
+[PrivacyControllerCopy]
+other = "Ege Kocabaş administrează MunichBrief în nume propriu, din Bavaria. Adresa de mai sus este pentru corespondență. Poți scrie acolo sau la adresa de e-mail indicată pentru întrebări despre datele tale personale."
+
+[PrivacyHostingCopy]
+other = "Site-ul, baza de date și toate procesele de IA rulează pe echipamentele proprii ale operatorului, în Germania. Rezumatele, traducerile și verificările ulterioare sunt procesate local; sursele nu sunt trimise unui furnizor extern de IA."
+
+[PrivacyCloudflareCopy]
+other = "Cloudflare livrează și protejează site-ul, prelucrează date de conexiune, inclusiv adrese IP, și poate genera statistici în propria rețea. Web Analytics exclude vizitatorii din UE și inserează automat un script de măsurare în alte regiuni; restricțiile de securitate ale browserului pot împiedica rularea lui. Livrarea și securitatea sunt prelucrări distincte. Zaraz Consent Management și Google Tag Gateway sunt inactive. Livrarea și protecția se bazează pe interesul legitim de a opera un site sigur (art. 6(1)(f) GDPR). Politicile furnizorilor explică transferurile internaționale."
+
+[PrivacyPreferencesCopy]
+other = "Cookie-urile proprii păstrează limba un an, confirmarea informării despre IA 30 de zile și ultima căutare 30 de zile într-un cookie HttpOnly. Ștergerea căutării elimină criteriile. Tema rămâne în stocarea locală până la ștergere; poziția de revenire în listă se păstrează pentru fila curentă. Tokenurile formularului expiră în cel mult o oră, iar confirmările în cinci minute; nu conțin mesaje. Aceste funcții asigură serviciul solicitat (§25(2)(2) TDDDG; art. 6(1)(f) GDPR). HTMX nu păstrează copii ale paginilor în localStorage."
+
+[PrivacyMonitoringCopy]
+other = "Jurnalele tehnice înregistrează metoda, calea fără parametrii căutării, starea, durata și identificatorii cererilor. Nu înregistrează mesaje, e-mailuri, cookie-uri sau IP-urile vizitatorilor. Prometheus și Loki sunt configurate pentru păstrarea datelor 30 de zile; Grafana le afișează intern. Contoare pseudonime bazate pe IP limitează încercările de contact timp de 15 minute. Scopul este securitatea și fiabilitatea (art. 6(1)(f) GDPR). Cloudflare are termene proprii."
+
+[PrivacyCorrespondenceCopy]
+other = "Prelucrăm adresa de e-mail, subiectul și mesajul pentru a răspunde solicitării (art. 6(1)(f) GDPR) sau pentru obligații legale aplicabile (art. 6(1)(c)). Formularul salvează întâi mesajul într-o căsuță privată din baza de date. SMTP2GO trimite notificarea la contact@munichbrief.de, iar Cloudflare Email Routing o redirecționează către Gmail. Răspunsurile sunt scrise în Apple Mail și trimise prin SMTP2GO. Mesajele nu sunt procesate de IA. Politicile furnizorilor descriu și prelucrarea în afara SEE; folosirea API-ului european SMTP2GO nu limitează întregul circuit de e-mail la UE."
+
+[PrivacyRetentionCopy]
+other = "Mesajele din căsuța de administrare se șterg automat la 90 de zile după marcarea solicitării ca rezolvată. Redeschiderea anulează termenul. Solicitările deschise sunt revizuite și păstrate cât este necesar. Un litigiu sau o obligație legală poate justifica păstrarea cu motiv și dată de revizuire înregistrate. Copiile Gmail și răspunsurile trimise sunt revizuite și șterse separat; site-ul nu le șterge. Furnizorii aplică propriile termene datelor de expediere."
+
+[PrivacyPostCopy]
+other = "COCENTER / anschrift.net primește, deschide și scanează scrisorile pentru a putea fi gestionate de operator. Temeiul este interesul legitim privind corespondența sau o obligație legală (art. 6(1)(f) ori (c) GDPR). Potrivit furnizorului, originalele sunt păstrate șase luni, iar scanările până la închiderea contului sau la o cerere de ștergere, cu excepția unei păstrări justificate. Detaliile se află în politica sa de confidențialitate."
+
+[PrivacySourcesCopy]
+other = "Rezumatele provin din comunicatele publice ale Polizeipräsidium München. Textele germane și copiile textuale RSS sunt păstrate pentru procesare, verificarea modificărilor și control cu acces restricționat; nu este configurată ștergerea automată. Publicul vede rezumate, nu originalele stocate. Omiterea numelor nu garantează anonimatul. Prelucrarea editorială trebuie să respecte normele aplicabile presei și protecției datelor, inclusiv cele privind infracțiunile. Cererile de corectare sau confidențialitate se evaluează individual."
+
+[PrivacyRightsCopy]
+other = "În funcție de normele aplicabile poți solicita acces, rectificare, ștergere, restricționare și, unde se aplică, portabilitate, sau te poți opune prelucrării bazate pe interes legitim. Nu ai nevoie de cont. Cererile privind drepturile GDPR primesc de regulă răspuns într-o lună; excepțiile legale și normele editoriale pot influența rezultatul. Pentru sectorul nepublic din Bavaria te poți adresa BayLDA sau altei autorități competente. Reclamațiile editoriale pot urma reguli diferite."
+
+[ImpressumTitleDescription]
+other = "Datele responsabilului și modalități de contact pentru MunichBrief."
+
+[PrivacyTitleDescription]
+other = "Cum gestionează MunichBrief datele site-ului, corespondența și sursele publice."
+
+[ImpressumResponsibleCopy]
+other = "Operatorul indicat răspunde și de conținutul editorial conform §18(2) MStV. MunichBrief este independent de poliție."
+
+[ImpressumContactCopy]
+other = "Pentru întrebări și corectări folosește e-mailul sau formularul. Adresa indicată este pentru corespondență poștală."
+
+[ContactStorage]
+other = "Mesajul este salvat într-o căsuță privată înaintea notificării prin e-mail. Mesajele rezolvate se șterg din acea căsuță după 90 de zile."

@@ -617,7 +617,7 @@ other = "Zeit nicht angegeben"
 other = "Seite {{.Page}} von {{.TotalPages}} · Meldungen {{.First}}–{{.Last}} von {{.Total}}"
 
 [ContactIntro]
-other = "Fragen, Korrekturen oder Bedenken zu einer Meldung? Schreib uns eine E-Mail."
+other = "Fragen, Korrekturen oder ein Anliegen zu einem Bericht? Nutzen Sie das Formular oder schreiben Sie eine E-Mail."
 
 [ContactCorrections]
 other = "Korrekturen und Aktualisierungen"
@@ -629,7 +629,7 @@ other = "Schicke den Link zur MunichBrief-Seite und beschreibe, was berichtigt w
 other = "Datenschutzanfragen"
 
 [ContactPrivacyCopy]
-other = "Bitte sende persönliche oder sensible Informationen per E-Mail statt über ein öffentliches GitHub-Issue. Teile nur mit, was für deine Anfrage nötig ist."
+other = "Nutzen Sie das private Formular oder E-Mail für Datenschutzanfragen. Teilen Sie nur notwendige Angaben und keine personenbezogenen Daten in öffentlichen GitHub-Issues."
 
 [ContactTechnical]
 other = "Technische Probleme"
@@ -638,7 +638,7 @@ other = "Technische Probleme"
 other = "Darstellungsfehler und Verbesserungsvorschläge kannst du auf GitHub melden. Bitte veröffentliche dort keine persönlichen Informationen."
 
 [ContactPoliceCopy]
-other = "MunichBrief ist keine Kontaktstelle der Polizei. Nutze für polizeiliche Anliegen die Kontaktdaten auf der offiziellen Polizeiwebsite."
+other = "MunichBrief ist von der Polizei unabhängig. Hier können Sie weder eine Anzeige erstatten noch einen Notruf absetzen. Für polizeiliche Anliegen nutzen Sie bitte die Kontaktdaten auf der offiziellen Polizeiseite."
 
 
 [MonitoringCopy]
@@ -652,3 +652,144 @@ other = "Im Hintergrund prüfen und übersetzen"
 
 [VerifyTranslateCopy]
 other = "Weitere KI-Prüfungen kontrollieren die Kategorie und ob die Polizei um Mithilfe bittet. Diese Prüfungen haben Vorrang vor Übersetzungen. Jede Sprachfassung erscheint, sobald ihre Übersetzung fertig ist. Erfolgreiche Prüfungen können die Kategorie und den Mithilfehinweis auch nach der Veröffentlichung aktualisieren."
+
+[ImpressumTitle]
+other = "Impressum"
+
+[PrivacyTitle]
+other = "Datenschutz"
+
+[LegalGermany]
+other = "Deutschland"
+
+[ContactEnglish]
+other = "Bitte schreiben Sie auf Englisch, damit ich Ihre Anfrage beantworten kann."
+
+[ContactForm]
+other = "Anfrage senden"
+
+[ContactEmail]
+other = "Ihre E-Mail-Adresse"
+
+[ContactTopic]
+other = "Thema"
+
+[ContactGeneral]
+other = "Allgemeine Anfrage"
+
+[ContactCorrection]
+other = "Korrektur"
+
+[ContactMessage]
+other = "Nachricht"
+
+[ContactMessageLimit]
+other = "Höchstens 5.000 Zeichen. Bitte geben Sie nur die erforderlichen personenbezogenen Informationen an."
+
+[ContactSend]
+other = "Nachricht senden"
+
+[ContactReceived]
+other = "Ihre Nachricht ist eingegangen. Vielen Dank."
+
+[ContactInvalid]
+other = "Bitte prüfen Sie Ihre Angaben. Laden Sie die Seite neu, falls das Formular abgelaufen ist."
+
+[ContactRateLimit]
+other = "Zu viele Versuche. Bitte warten Sie 15 Minuten."
+
+[ContactEmailInvalid]
+other = "Bitte geben Sie eine gültige E-Mail-Adresse ein."
+
+[ContactTopicInvalid]
+other = "Bitte wählen Sie eines der aufgeführten Themen."
+
+[ContactMessageInvalid]
+other = "Bitte geben Sie eine Nachricht mit höchstens 5.000 Zeichen ein."
+
+[ContactSaveFailed]
+other = "Ihre Nachricht konnte nicht gespeichert werden. Versuchen Sie es später erneut oder schreiben Sie eine E-Mail."
+
+[ContactUnavailable]
+other = "Das Formular ist derzeit nicht verfügbar. Bitte nutzen Sie die oben angegebene E-Mail-Adresse."
+
+[PrivacyLinks]
+other = "Informationen der Anbieter und Beschwerden"
+
+[ImpressumResponsible]
+other = "Verantwortlich für diese Website"
+
+[PrivacyController]
+other = "Verantwortlicher"
+
+[PrivacyHosting]
+other = "Hosting und KI"
+
+[PrivacyCloudflare]
+other = "Cloudflare und Zugriffsmessung"
+
+[PrivacyPreferences]
+other = "Browser-Einstellungen"
+
+[PrivacyMonitoring]
+other = "Technische Überwachung"
+
+[PrivacyCorrespondence]
+other = "E-Mail und Kontaktformular"
+
+[PrivacyRetention]
+other = "Aufbewahrung und Löschung von Nachrichten"
+
+[PrivacyPost]
+other = "Briefpost"
+
+[PrivacySources]
+other = "Polizeiberichte und Quellenmaterial"
+
+[PrivacyRights]
+other = "Ihre Rechte und Beschwerden"
+
+[PrivacyControllerCopy]
+other = "Ege Kocabaş betreibt MunichBrief als Privatperson von Bayern aus. Die oben genannte Anschrift dient der Korrespondenz. Fragen zur Verarbeitung Ihrer personenbezogenen Daten können Sie dorthin oder an die angegebene E-Mail-Adresse richten."
+
+[PrivacyHostingCopy]
+other = "Website, Datenbank und sämtliche KI-Verarbeitung laufen auf eigener Hardware des Betreibers in Deutschland. Zusammenfassungen, Übersetzungen und nachträgliche Prüfungen erfolgen lokal. Quellenmaterial wird nicht an externe KI-Anbieter übermittelt."
+
+[PrivacyCloudflareCopy]
+other = "Cloudflare stellt die Website bereit und schützt sie. Dabei werden Verbindungsdaten einschließlich IP-Adressen verarbeitet; auch netzwerkseitige Zugriffsstatistiken sind möglich. Web Analytics ist so eingestellt, dass Besucher aus der EU ausgeschlossen werden und das Messskript andernorts automatisch eingefügt wird. Sicherheitsvorgaben des Browsers können seine Ausführung verhindern. Davon unabhängig verarbeitet Cloudflare Daten zur Bereitstellung und Sicherheit. Zaraz Consent Management und Google Tag Gateway sind inaktiv. Grundlage für Bereitstellung und Schutz ist unser berechtigtes Interesse am sicheren Betrieb (Art. 6 Abs. 1 lit. f DSGVO). Die unten verlinkten Anbieterinformationen erläutern auch internationale Übermittlungen."
+
+[PrivacyPreferencesCopy]
+other = "Ein Erstanbieter-Cookie speichert die Sprache ein Jahr und die Bestätigung des KI-Hinweises 30 Tage. Die zuletzt angewandten Suchkriterien bleiben 30 Tage in einem HttpOnly-Cookie; beim Zurücksetzen werden sie entfernt. Das Farbschema bleibt bis zum Löschen im lokalen Browserspeicher. Die Rückkehrposition zur Liste wird für den aktuellen Browser-Tab gespeichert. Sicherheitstoken des Kontaktformulars gelten höchstens eine Stunde, Empfangsbestätigungen fünf Minuten; sie enthalten keinen Nachrichtentext. Diese Funktionen unterstützen den gewünschten Dienst (§25 Abs. 2 Nr. 2 TDDDG; Art. 6 Abs. 1 lit. f DSGVO). HTMX legt keine Seitenkopien im localStorage ab."
+
+[PrivacyMonitoringCopy]
+other = "Für einen zuverlässigen Betrieb erfassen technische Protokolle Methode, Pfad ohne Suchparameter, Status, Dauer und Kennungen einer Anfrage. Nachrichten, E-Mail-Adressen, Cookies und Besucher-IP-Adressen werden nicht in Anwendungsprotokollen erfasst. Für Prometheus-Metriken und Loki-Protokolle sind 30 Tage Aufbewahrung konfiguriert; Grafana dient der internen Anzeige. Pseudonyme IP-basierte Zähler begrenzen Kontaktversuche für 15 Minuten. Grundlage ist das berechtigte Interesse an Sicherheit und Zuverlässigkeit (Art. 6 Abs. 1 lit. f DSGVO). Cloudflares Aufbewahrung richtet sich nach eigenen Regeln."
+
+[PrivacyCorrespondenceCopy]
+other = "Bei einer Kontaktaufnahme verarbeiten wir E-Mail-Adresse, Thema und Nachricht zur Beantwortung Ihrer Anfrage (Art. 6 Abs. 1 lit. f DSGVO), gegebenenfalls zur Erfüllung gesetzlicher Pflichten (lit. c). Das Formular speichert die Nachricht zuerst in einem geschützten Datenbank-Postfach. SMTP2GO benachrichtigt contact@munichbrief.de; Cloudflare Email Routing leitet an ein Gmail-Postfach weiter. Antworten werden in Apple Mail geschrieben und über SMTP2GO versendet. Nachrichten werden nicht durch KI verarbeitet. Die verlinkten Anbieterinformationen erläutern auch Verarbeitungen außerhalb des EWR. Der EU-API-Endpunkt von SMTP2GO beschränkt nicht die gesamte E-Mail-Kette auf die EU."
+
+[PrivacyRetentionCopy]
+other = "Nachrichten im Admin-Postfach werden 90 Tage nach Kennzeichnung als erledigt automatisch gelöscht. Beim Wiederöffnen entfällt diese Frist. Offene Anfragen werden überprüft und so lange aufbewahrt, wie sie benötigt werden. Für laufende Streitfälle oder gesetzliche Pflichten kann die Löschung mit dokumentiertem Grund und Prüftermin ausgesetzt werden. Gmail-Kopien und versendete Antworten werden gesondert geprüft und gelöscht; die Website löscht sie nicht mit. Für Versanddaten der Anbieter gelten eigene Fristen."
+
+[PrivacyPostCopy]
+other = "COCENTER / anschrift.net nimmt Briefe an der Korrespondenzanschrift entgegen, öffnet und scannt sie zur Bearbeitung durch den Betreiber. Grundlage sind berechtigte Interessen an der Korrespondenz oder gesetzliche Pflichten (Art. 6 Abs. 1 lit. f bzw. c DSGVO). Nach Angaben des Anbieters werden Originale sechs Monate aufbewahrt; Scans verbleiben bis zur Kontoschließung oder einer Löschanfrage, vorbehaltlich berechtigter Aufbewahrung. Einzelheiten enthält dessen Datenschutzerklärung."
+
+[PrivacySourcesCopy]
+other = "Grundlage der Zusammenfassungen sind öffentliche Mitteilungen des Polizeipräsidiums München. Deutscher Quelltext und RSS-Textstände werden für Verarbeitung, Änderungsprüfung und eingeschränkte Qualitätskontrolle aufbewahrt; eine automatische Löschfrist ist derzeit nicht eingerichtet. Öffentlich erscheinen Zusammenfassungen statt gespeicherter Originale. Auch ohne Namen ist nicht jeder Bericht zwangsläufig anonym. Redaktionelle Verarbeitung unterliegt den jeweils anwendbaren Presse- und Datenschutzregeln einschließlich besonderer Vorgaben für Angaben über Straftaten. Hinweise auf Fehler oder persönlich betreffende Berichte prüfen wir im Einzelfall."
+
+[PrivacyRightsCopy]
+other = "Je nach anwendbaren Vorschriften bestehen Rechte auf Auskunft, Berichtigung, Löschung, Einschränkung, Widerspruch gegen interessenbasierte Verarbeitung und gegebenenfalls Datenübertragbarkeit. Ein Konto ist zur Kontaktaufnahme nicht erforderlich. DSGVO-Anträge beantworten wir grundsätzlich innerhalb eines Monats; gesetzliche Ausnahmen und redaktionelle Regeln können das Ergebnis beeinflussen. Für Datenschutz im nichtöffentlichen Bereich in Bayern können Sie sich an das BayLDA oder eine andere zuständige Aufsichtsbehörde wenden. Für redaktionelle Beschwerden können andere Regeln gelten."
+
+[ImpressumTitleDescription]
+other = "Angaben zum Betreiber und Kontaktmöglichkeiten für MunichBrief."
+
+[PrivacyTitleDescription]
+other = "Wie MunichBrief Website-Daten, Korrespondenz und öffentliche Quellen verarbeitet."
+
+[ImpressumResponsibleCopy]
+other = "Der oben genannte Betreiber ist auch für redaktionelle Inhalte nach §18 Abs. 2 MStV verantwortlich. MunichBrief ist von der Polizei unabhängig."
+
+[ImpressumContactCopy]
+other = "Anfragen und Korrekturhinweise können Sie per E-Mail oder Kontaktformular senden. Die Anschrift dient dem Briefverkehr."
+
+[ContactStorage]
+other = "Ihre Nachricht wird vor dem E-Mail-Versand in einem geschützten Postfach gespeichert. Erledigte Anfragen werden dort nach 90 Tagen gelöscht."

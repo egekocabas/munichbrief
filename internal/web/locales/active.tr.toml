@@ -201,14 +201,14 @@ Footer = { other = "MunichBrief, polisten bağımsız bir projedir. Üyelik gere
 AboutTitle = { other = "MunichBrief hakkında" }
 AboutIntro = { other = "MunichBrief, yerel polis bültenlerini kendi dilinizde takip etmenizi sağlar. Olayın özetini, nerede ve ne zaman gerçekleştiğini okuyabilir, ayrıntılar için resmî bülteni açabilirsiniz." }
 OpenOfficialSource = { other = "Resmî bülten" }
-ContactIntro = { other = "Sorunuz mu var, bir hata mı fark ettiniz veya bir bültenle ilgili endişeniz mi var? Bize e-posta gönderebilirsiniz." }
+ContactIntro = { other = "Bir sorunuz veya düzeltme talebiniz mi var? Aşağıdaki formu kullanabilir ya da e-posta gönderebilirsiniz." }
 ContactCorrections = { other = "Düzeltmeler ve güncellemeler" }
 ContactCorrectionCopy = { other = "MunichBrief sayfasının bağlantısını ekleyip neyin düzeltilmesi gerektiğini açıklayın. Varsa güncellenmiş resmî bültenin bağlantısını da paylaşın." }
 ContactPrivacy = { other = "Gizlilik talepleri" }
-ContactPrivacyCopy = { other = "Kişisel veya hassas bilgileri herkese açık GitHub kayıtlarına yazmak yerine e-postayla iletin. Talebinizi açıklamak için gereken bilgilerle sınırlı kalın." }
+ContactPrivacyCopy = { other = "Kişisel verilerle ilgili taleplerinizi form veya e-postayla iletin. Yalnızca gerekli bilgileri paylaşın; kişisel bilgileri herkese açık GitHub kayıtlarına yazmayın." }
 ContactTechnical = { other = "Teknik sorunlar" }
 ContactTechnicalCopy = { other = "Görünüm sorunlarını ve geliştirme önerilerinizi GitHub üzerinden bildirebilirsiniz. Herkese açık kayıtlarda kişisel bilgi paylaşmayın." }
-ContactPoliceCopy = { other = "MunichBrief, polise ulaşmak için kullanılan bir kanal değildir. Polisle ilgili konularda resmî polis sitesindeki iletişim bilgilerini kullanın." }
+ContactPoliceCopy = { other = "MunichBrief, polisten bağımsız bir projedir. Buradan polise ihbarda bulunamaz veya acil yardım isteyemezsiniz. Polisle ilgili konularda resmî polis sitesindeki iletişim bilgilerini kullanın." }
 OpenOfficialPoliceRelease = { other = "Resmî bülten" }
 SiteDescription = { other = "Münih Emniyet Müdürlüğünün (Polizeipräsidium München) yayımladığı bültenlerin Türkçe özetleri." }
 MonitoringCopy = { other = "Siteyi sunmak ve korumak için Cloudflare kullanıyoruz. Cloudflare, IP adresleri dâhil bağlantı verilerini işler ve ziyaret istatistikleri oluşturabilir. Sitenin sorunsuz çalışmasını sağlamak için tuttuğumuz teknik istek kayıtlarını ve toplu performans ölçümlerini 30 gün saklıyoruz." }
@@ -218,3 +218,145 @@ CoverageCopy = { other = "Burada yalnızca yayımlanan polis bültenlerinden der
 VerifyTranslate = { other = "Arka planda doğrulama ve çeviri" }
 
 VerifyTranslateCopy = { other = "Ayrı yapay zekâ kontrolleri, olayın kategorisini ve polisin halktan bilgi isteyip istemediğini yeniden değerlendirir. Bu kontroller çevirilere göre önceliklidir. Her dildeki özet, çevirisi hazır olduğunda yayımlanır. Başarılı kontroller, yayımdan sonra da kategori ve bilgi çağrısı etiketlerini güncelleyebilir." }
+
+[ImpressumTitle]
+other = "Yasal bilgiler"
+
+[PrivacyTitle]
+other = "Gizlilik"
+
+[LegalGermany]
+other = "Almanya"
+
+[ContactEnglish]
+other = "Sorunuzu yanıtlayabilmem için lütfen İngilizce yazın."
+
+[ContactForm]
+other = "Mesaj gönderin"
+
+[ContactEmail]
+other = "E-posta adresiniz"
+
+[ContactTopic]
+other = "Konu"
+
+[ContactGeneral]
+other = "Genel soru"
+
+[ContactCorrection]
+other = "Düzeltme"
+
+
+[ContactMessage]
+other = "Mesajınız"
+
+[ContactMessageLimit]
+other = "En fazla 5.000 karakter. Lütfen gereksiz kişisel bilgiler paylaşmayın."
+
+[ContactSend]
+other = "Mesajı gönder"
+
+[ContactReceived]
+other = "Mesajınız alındı. Teşekkür ederim."
+
+[ContactInvalid]
+other = "Lütfen formu kontrol edip tekrar deneyin. Formun süresi dolduysa sayfayı yenileyin."
+
+[ContactRateLimit]
+other = "Çok fazla deneme yaptınız. Lütfen 15 dakika bekleyin."
+
+[ContactEmailInvalid]
+other = "Geçerli bir e-posta adresi girin."
+
+[ContactTopicInvalid]
+other = "Listeden bir konu seçin."
+
+[ContactMessageInvalid]
+other = "En fazla 5.000 karakterlik bir mesaj yazın."
+
+[ContactSaveFailed]
+other = "Mesajınız kaydedilemedi. Lütfen daha sonra tekrar deneyin veya e-posta gönderin."
+
+[ContactUnavailable]
+other = "Form şu anda kullanılamıyor. Lütfen yukarıdaki e-posta adresini kullanın."
+
+[PrivacyLinks]
+other = "Hizmet sağlayıcılar ve şikâyetler"
+
+[ImpressumResponsible]
+other = "Web sitesinden sorumlu kişi"
+
+[PrivacyController]
+other = "Verilerinizden kim sorumlu?"
+
+[PrivacyHosting]
+other = "Barındırma ve yapay zekâ"
+
+[PrivacyCloudflare]
+other = "Cloudflare ve ziyaret ölçümleri"
+
+[PrivacyPreferences]
+other = "Tarayıcı tercihleri"
+
+[PrivacyMonitoring]
+other = "Teknik izleme"
+
+[PrivacyCorrespondence]
+other = "E-posta ve iletişim formu"
+
+[PrivacyRetention]
+other = "Mesajların saklanması ve silinmesi"
+
+[PrivacyPost]
+other = "Posta yoluyla iletişim"
+
+[PrivacySources]
+other = "Polis bültenleri ve kaynak metinler"
+
+[PrivacyRights]
+other = "Haklarınız ve şikâyetler"
+
+[PrivacyControllerCopy]
+other = "MunichBrief’i Bavyera’da yaşayan Ege Kocabaş bireysel olarak işletir. Yukarıdaki adres yazışma adresidir. Kişisel verilerinizle ilgili sorularınızı bu adrese veya belirtilen e-posta adresine iletebilirsiniz."
+
+[PrivacyHostingCopy]
+other = "Web sitesi, veritabanı ve tüm yapay zekâ işlemleri, işletmecinin Almanya’daki kendi donanımında çalışır. Özetler, çeviriler ve sonraki kontroller yerel olarak yapılır; kaynak metinler harici bir yapay zekâ sağlayıcısına gönderilmez."
+
+[PrivacyCloudflareCopy]
+other = "Cloudflare, siteyi ziyaretçilere sunmak ve korumak için IP adresleri dâhil bağlantı verilerini işler. Kendi ağı üzerinden ziyaret istatistikleri de oluşturabilir. Web Analytics ayarında AB’deki ziyaretçiler kapsam dışıdır; diğer bölgelerde performans ölçüm kodu otomatik eklenir. Tarayıcının güvenlik kuralları bu kodun çalışmasını engelleyebilir. Cloudflare’ın sitenin sunumu ve güvenliği için yaptığı işlemler bundan ayrıdır. Zaraz onay yönetimi ve Google Tag Gateway etkin değildir. Sunum ve koruma işlemleri, sitenin güvenli çalışmasına yönelik meşru menfaate dayanır (GDPR madde 6(1)(f)). Aşağıdaki sağlayıcı açıklamaları yurt dışına veri aktarımını da ele alır."
+
+[PrivacyPreferencesCopy]
+other = "Dil tercihi bir yıl, yapay zekâ bilgilendirmesinin onayı 30 gün süreyle birinci taraf çerezlerde saklanır. Son uygulanan arama ölçütleri 30 gün boyunca HttpOnly çerezde tutulur; aramayı temizlemek bunları siler. Tema tercihi siz silene kadar tarayıcının yerel depolamasında kalır. Listeye dönüş konumu yalnızca açık tarayıcı sekmesinde tutulur. İletişim formunun güvenlik belirteci en fazla bir saat, alındı bilgisi beş dakika geçerlidir; mesajınızı içermezler. Bu işlevler talep ettiğiniz hizmeti sağlar (TDDDG §25(2)(2); GDPR madde 6(1)(f)). HTMX, localStorage içinde sayfa kopyaları saklamaz."
+
+[PrivacyMonitoringCopy]
+other = "Sitenin güvenilir çalışması için teknik kayıtlarda istek yöntemi, sorgu parametreleri olmadan sayfa yolu, durum, süre ve istek kimlikleri tutulur. Uygulama kayıtlarına mesajlar, e-posta adresleri, çerezler veya ziyaretçilerin IP adresleri yazılmaz. Prometheus ölçümleri ve Loki kayıtları için saklama süresi 30 gün olarak ayarlanmıştır; Grafana bu teknik izleme verilerini gösterir. İletişim denemeleri, IP adresinden türetilen kısa ömürlü takma kimlikli sayaçlarla 15 dakika boyunca sınırlandırılır. Amaç güvenlik ve güvenilirliktir (GDPR madde 6(1)(f)). Cloudflare’ın saklama süreleri ayrıdır."
+
+[PrivacyCorrespondenceCopy]
+other = "Bize yazdığınızda e-posta adresinizi, seçtiğiniz konuyu ve mesajınızı sorunuza yanıt vermek için işleriz (GDPR madde 6(1)(f)); gerektiğinde yasal yükümlülükler de geçerlidir (6(1)(c)). Form önce mesajınızı özel bir veritabanı gelen kutusuna kaydeder. SMTP2GO, contact@munichbrief.de adresine bildirim gönderir; Cloudflare Email Routing bunu Gmail gelen kutusuna iletir. Yanıtlar Apple Mail’de yazılır ve SMTP2GO üzerinden gönderilir. Mesajlar yapay zekâya gönderilmez. Sağlayıcı açıklamaları AEA dışındaki işlemleri de kapsar. SMTP2GO’nun AB API adresini kullanmak, tüm e-posta zincirinin yalnızca AB’de işlendiği anlamına gelmez."
+
+[PrivacyRetentionCopy]
+other = "Yönetici gelen kutusundaki mesajlar, konu çözüldü olarak işaretlendikten 90 gün sonra otomatik silinir. Konu yeniden açılırsa bu süre iptal edilir. Açık talepler gözden geçirilir ve ihtiyaç sürdükçe saklanır. Devam eden bir uyuşmazlık veya yasal yükümlülük varsa, gerekçesi ve inceleme tarihi kaydedilerek mesaj tutulabilir. Gmail kopyaları ve gönderilen yanıtlar ayrıca gözden geçirilip silinir; sitedeki silme işlemi bunları silmez. Sağlayıcıların gönderim kayıtları kendi saklama kurallarına tabidir."
+
+[PrivacyPostCopy]
+other = "Yazışma adresine gelen mektuplar COCENTER / anschrift.net tarafından teslim alınır, açılır ve işletmecinin incelemesi için taranır. Bu işlem yazışmaları alabilmeye yönelik meşru menfaate veya yasal yükümlülüğe dayanır (GDPR madde 6(1)(f) veya (c)). Sağlayıcının açıklamasına göre kâğıt asıllar altı ay tutulur; taramalar, saklamayı gerektiren bir neden yoksa hesap kapatılana veya silme talebi iletilene kadar kalır. Ayrıntılar sağlayıcının gizlilik açıklamasındadır."
+
+[PrivacySourcesCopy]
+other = "Özetler, Polizeipräsidium München’in kamuya açık polis bültenlerinden hazırlanır. Almanca kaynak metinler ve RSS metin kayıtları; işleme, kaynak değişikliklerini denetleme ve erişimi kısıtlı inceleme için tutulur. Şu anda otomatik silme süresi tanımlı değildir. Herkese açık sayfalarda asıl metinler yerine özetler gösterilir. İsimlerin çıkarılması her olayın tamamen anonim olduğu anlamına gelmez. Editoryal işlemlerde, suçlarla ilgili bilgilere ilişkin özel kurallar dâhil, geçerli basın ve veri koruma hükümleri gözetilmelidir. Hata bildirimleri ve sizi ilgilendiren olaylara ilişkin talepler ayrı ayrı değerlendirilir."
+
+[PrivacyRightsCopy]
+other = "Geçerli kurallara bağlı olarak verilerinize erişme, düzeltme, silme, işlemeyi kısıtlama, meşru menfaate dayalı işlemeye itiraz etme ve uygun durumlarda verileri taşıma haklarınız olabilir. İletişim kurmak için hesap gerekmez. GDPR kapsamındaki hak talepleri normalde bir ay içinde yanıtlanır; yasal istisnalar ve editoryal kurallar sonucu etkileyebilir. Bavyera’da kamu dışı alandaki veri koruma konularında BayLDA’ya veya başka bir yetkili denetim makamına başvurabilirsiniz. Editoryal şikâyetlerde farklı kurallar geçerli olabilir."
+
+[ImpressumTitleDescription]
+other = "MunichBrief’in işletmecisi ve iletişim bilgileri."
+
+[PrivacyTitleDescription]
+other = "MunichBrief’in site verilerini, yazışmaları ve kamuya açık kaynakları nasıl işlediği."
+
+[ImpressumResponsibleCopy]
+other = "Yukarıda adı belirtilen işletmeci, MStV §18(2) uyarınca editoryal içerikten de sorumludur. MunichBrief, polisten bağımsızdır."
+
+[ImpressumContactCopy]
+other = "Sorularınızı ve düzeltme taleplerinizi e-posta veya iletişim formuyla iletebilirsiniz. Belirtilen adres posta yoluyla yazışma içindir."
+
+[ContactStorage]
+other = "Mesajınız, e-posta bildirimi gönderilmeden önce özel bir gelen kutusuna kaydedilir. Çözülen konuların mesajları bu kutudan 90 gün sonra silinir."

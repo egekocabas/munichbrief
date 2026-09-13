@@ -11,6 +11,10 @@ nameOverride: ""
 fullnameOverride: ""
 
 application:
+  contactEnabled: false
+  contactDailyLimit: 20
+  contactMonthlyLimit: 300
+  contactTrustedProxies: []
   # Used for host-aware public presentation and path restrictions.
   publicHosts: []
   # Required when publicHosts is non-empty; must name one of those HTTPS hosts.

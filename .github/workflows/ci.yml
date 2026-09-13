@@ -103,6 +103,7 @@ jobs:
 
       - name: Validate Helm chart
         run: |
+          bash scripts/check-contact-chart.sh
           helm lint --strict charts/munichbrief
           helm lint --strict charts/munichbrief --values deploy/example-values.yaml
           if helm template munichbrief charts/munichbrief --namespace munichbrief --set admin.enabled=true --set ingress.lan.enabled=true >/dev/null 2>&1; then
