@@ -1,34 +1,24 @@
-# Impressum / legal notice — unpublished draft
+# Impressum — internal review notes
 
-This draft is not registered as a public page and is not linked in the site footer.
-It intentionally contains no invented identity or private address.
+This file replaces the original unpublished draft. Public localized legal notices
+now use the identity and correspondence address explicitly authorized in the
+[decision record](contact-and-legal.md). There is no separate terms/disclaimer page;
+About explains independence, source limitations and AI processing.
 
-## Information awaiting the operator's decision
+The individual operator is named as responsible under §18(2) MStV. The purchased
+address must remain valid and serviceable under the operator's agreement. Email
+and a link to the contact form are provided. A form must support effective direct
+contact and actual timely handling; neither database storage nor an SMTP quota
+provides a legal exemption. The CJEU's discussion of response times in a particular
+case is not a universal fixed response deadline. Individual ownership, free access
+or absence of advertising alone is not an Impressum exemption.
 
-- Provider's legal name and serviceable postal address.
-- A responsible person and address if the journalistic/editorial rules apply.
-- Hosting/operator jurisdiction and any additional details required for this service.
-- The public email contact is contact@munichbrief.de. Email alone is not being
-  represented as sufficient identification.
-
-MunichBrief independently summarizes reports from Polizeipräsidium München. It
-is not operated by or affiliated with the police. AI summaries may contain errors
-or miss later changes. The linked official source remains the reference, and the
-presumption of innocence applies. These statements are informative and do not
-exclude statutory rights or responsibilities.
-
-Being an individual, offering the service for free or carrying no advertising
-is not by itself an exemption from provider-identification duties. Obtain advice
-on this service and on a lawful address arrangement if publishing a home address
-is a concern. A PO box alone does not meet the serviceable-address requirement
-identified by Bavaria's media regulator.
-
-Resolve the required details and review them before publishing a legal notice.
-Deployment configuration can keep details out of Git history, but cannot make
-information private if it must be displayed publicly on the website.
-
-## Sources
+No additional company, telephone, VAT or registration facts are invented. Review
+new duties if the operator or business model changes. Public information is not
+a certification of compliance, and the rejected AI-icon compliance wording is not
+restored to About.
 
 - [BLM guidance](https://www.blm.de/de/wir-regulieren/impressum.cfm)
 - [Section 18 MStV](https://www.gesetze-bayern.de/Content/Document/MStV-18)
 - [Section 5 DDG](https://www.gesetze-im-internet.de/ddg/__5.html)
+- [CJEU C-298/07](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:62007CJ0298)

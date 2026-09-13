@@ -163,3 +163,7 @@ the [Code of Conduct](CODE_OF_CONDUCT.md), and use Conventional Commits for
 commit messages and pull-request titles.
 
 MunichBrief is available under the [MIT License](LICENSE).
+
+Contact form, private inbox and legal-page setup are documented in
+[contact operations](docs/contact-and-legal.md). The form is disabled by default;
+activation needs protected admin access, provider checks and server-side secrets.

@@ -59,9 +59,9 @@ is merged by a pinned, self-hosted HTMX extension. Public history snapshots are
 disabled so search forms do not persist in HTMX's localStorage; history misses
 reload the document. The existing return link restores the list and scroll.
 
-The [privacy draft](privacy-draft.md) and [Impressum draft](impressum-draft.md)
-remain unpublished pending operator details and legal review. About and Contact
-provide current operational information without claiming legal completeness.
+Privacy and Impressum now have localized public routes and footer links. The
+[contact and legal decision record](contact-and-legal.md) covers the confirmed
+operator information, private inbox, retention and activation requirements.
 
 ## Local performance sample
 
@@ -86,7 +86,7 @@ visible keyboard focus, expanded search, page-size changes, language switching,
 native forms with JavaScript disabled, enhanced navigation, browser back/forward,
 and returning from a report to the list's scroll position. All 14 localized
 homepages and About/Contact pages were checked for horizontal overflow at 320px.
-Locale validation checks all 217 keys and their interpolation placeholders.
+Locale validation checks all 264 keys and their interpolation placeholders.
 
 The processing worker test's two-second deadlock guards were increased to ten
 seconds to accommodate SQLite index maintenance under Go's race detector. Its

@@ -1,62 +1,88 @@
-# Privacy notice — unpublished draft
+# Privacy — internal assessment and activation notes
 
-This is a review document, not a published or complete privacy notice. No public
-route or footer link exposes this draft. Operator identity, serviceable address,
-hosting jurisdiction, applicable legal bases, recipients/transfer arrangements,
-Cloudflare account settings and retention must be resolved before publication.
-Do not substitute a project name or an email address for required controller details.
+This file replaces the original unpublished draft; `/de/privacy` and the other
+13 language routes are public, with shared operator details. The confirmed
+[processing inventory and decisions](contact-and-legal.md) supersede the earlier
+unknown-identity and unknown-hosting statements. Account agreements and settings
+still need operator verification before activation; no placeholder appears in
+public pages and no contract acceptance is inferred from this implementation.
 
-## Current processing inventory
+## Ordinary website and correspondence processing
 
-- The site provides summaries of public police reports. German source text and
-  RSS text snapshots are retained for processing and restricted review. No
-  automatic expiry currently applies to these source records. This requires a
-  separate retention and lawful-basis assessment; public availability does not
-  itself settle processing of offence-related personal data.
-- The selected language uses a first-party cookie for one year. Dismissal of the
-  AI notice uses a first-party cookie for 30 days. Theme selection uses browser
-  storage until the visitor clears it.
-- Applying a search saves only the latest criteria in a first-party HttpOnly
-  cookie, expiring 30 days after application. Clearing the search deletes it.
-  Criteria are transmitted with requests to this site, including through its
-  Cloudflare proxy. They do not enter URLs or a server-side search-history table.
-  This is a preference, not a promise of anonymity. HTMX localStorage history
-  snapshots are disabled. Browser-native history behavior remains browser-controlled.
-- Application access logs contain request method, path (without query string),
-  response status, duration and request/correlation identifiers. The application
-  logger does not record search forms, cookie values, visitor IPs or user agents.
-  Separate infrastructure/provider logging must be assessed independently.
-- Internal Prometheus metrics are aggregate operational measurements; Grafana
-  displays internal metrics and Loki logs rather than embedding tracking in the
-  reader website. Reviewed infrastructure configuration specifies 30-day metric
-  and log retention. This is configuration evidence, not a live audit or a
-  guarantee that each entry is deleted at an exact instant. Raw source storage
-  and backups are separate from monitoring retention.
-- Cloudflare proxying was observed on the live site during the September 2026
-  inspection. No browser analytics beacon was observed in that page load.
-  Cloudflare processes traffic data including IP addresses for delivery and
-  protection, and can produce edge analytics without a browser beacon. Account
-  features, recipients, transfers and provider retention remain to be verified.
-- Email contact receives the information supplied by the sender. Mail-provider
-  details, retention and handling procedures require operator confirmation.
-  Public GitHub issues should not contain personal or sensitive information.
+Delivery/security, abuse protection, requested preferences, technical monitoring
+and answering ordinary enquiries are assessed separately from editorial activity.
+The public notice identifies legitimate interests under Article 6(1)(f) GDPR and
+applicable legal obligations under Article 6(1)(c), with purposes and recipients.
+Requested storage/security functions refer to §25(2)(2) TDDDG; this is not a blanket
+analytics exemption. Retention is resolution-based: 90 days is the operator's
+chosen policy, not a GDPR-mandated period. Read/unread does not affect it. Holds
+require review, and copies outside SQLite require separate deletion decisions.
 
-## Required completion before publication
+GDPR requests normally have the Article 12 one-month response period where those
+rights apply. An absence of names in public summaries does not remove privacy
+obligations for IP processing, correspondence or identifiable source material.
+Backups are deferred, but losing messages does not automatically extinguish
+applicable obligations. BayLDA is identified for ordinary non-public-sector
+processing in Bavaria; the notice does not assign it every editorial complaint.
 
-Specify the controller and contacts; purposes and legal bases for each activity;
-necessary-cookie assessment; recipients and any international transfers; actual
-retention periods or criteria; relevant rights and their limits; the competent
-supervisory authority and complaint route; and handling of data obtained from
-public reports. Review GDPR Articles 13/14 and offence-related data requirements
-for this particular service. Do not claim exemptions or compliance without review.
+## Source data and editorial assessment
 
-The operator has chosen not to supply personal details in this task. This draft
-preserves that boundary and must not be presented as a complete legal notice.
+Police source text and RSS snapshots can concern identifiable people and alleged
+offences even where public summaries omit names. Public availability alone is
+not a sufficient legal basis; pseudonymization is not necessarily anonymization.
+Article 10 GDPR restricts offence-related processing. Do not assume Article 6(1)(f)
+alone authorizes all source records or that an AI-generated summary automatically
+qualifies for a media exemption.
+
+The service's selection, summarization, sourcing and corrections have an editorial
+purpose. Article 85 GDPR, §23 MStV and applicable Bavarian press provisions may
+provide a relevant framework, but whether this operator and each particular
+processing activity qualify requires a service-specific assessment. Any privilege
+is purpose-bound; it cannot simply be carried over to contact forms, infrastructure
+logs, analytics or unrelated reuse. Document the scope and rationale with qualified
+advice before claiming an exemption; this implementation makes no such claim.
+
+Raw German sources and RSS snapshots currently have no automatic expiry. They
+support local extraction, checking source changes and restricted review; public
+pages expose resulting summaries, not stored originals. The existing policy is
+unchanged by the contact migration. The need for each category and duration, Article
+13/14 information duties, re-identification risks and correction/removal mechanisms
+remain part of the source-specific assessment. Do not apply the inbox's 90-day
+rule or monitoring's 30-day setting to source text by analogy. See the existing
+[source policy](source-policy.md).
+
+## Providers and transfers
+
+The public notice distinguishes own German hardware/local AI from Cloudflare,
+Google/Gmail, SMTP2GO and postal scanning. Linked provider notices are attributed
+provider statements, not evidence of every account's region, contract or retention.
+Confirm applicable processing agreements and transfer arrangements, including any
+Article 46 safeguards, relevant adequacy coverage and ways to obtain details;
+do not assert a provider/account certification without checking it. Personal Gmail
+must not be described as a verified Workspace DPA arrangement. SMTP2GO's EU API
+endpoint does not make Cloudflare routing, Gmail or other mail processing EU-only.
+
+Cloudflare's supplied RUM setting excludes EU visitors. A page load without a
+beacon cannot establish globally disabled analytics. Preserve and inspect the
+restrictive CSP; distinguish configured injection, observed execution and edge
+analytics. Zaraz/Google Tag Gateway remain inactive as reported. Do not add claims
+about future tracking. Cloudflare retention is not established by Loki/Prometheus
+configuration. COCENTER's six-month paper retention and scan-deletion criteria
+are provider statements; arrange the relevant processing agreement and confirm
+actual account options before accepting sensitive third-party postal data.
 
 ## Sources
 
-- [GDPR](https://eur-lex.europa.eu/eli/reg/2016/679/oj)
-- [Cloudflare traffic analytics](https://developers.cloudflare.com/analytics/faq/about-analytics/)
-- [Cloudflare Web Analytics collection](https://developers.cloudflare.com/web-analytics/data-metrics/data-origin-and-collection/)
-- [Cloudflare cookies](https://developers.cloudflare.com/fundamentals/reference/policies-compliances/cloudflare-cookies/)
-- [Source retention policy](source-policy.md)
+- [GDPR, including Articles 5, 6, 10, 12–14, 28, 44–49 and 85](https://eur-lex.europa.eu/eli/reg/2016/679/oj)
+- [Section 23 MStV](https://www.gesetze-bayern.de/Content/Document/MStV-23)
+- [Article 11 Bavarian Press Act](https://www.gesetze-bayern.de/Content/Document/BayPrG-11)
+- [Section 25 TDDDG](https://www.gesetze-im-internet.de/tdddg/__25.html)
+- [BayLDA complaints](https://www.lda.bayern.de/de/beschwerde.html)
+- [Cloudflare Web Analytics setup](https://developers.cloudflare.com/web-analytics/get-started/)
+- [Cloudflare analytics FAQ](https://developers.cloudflare.com/analytics/faq/about-analytics/)
+- [SMTP2GO API endpoints](https://developers.smtp2go.com/docs/endpoints)
+- [SMTP2GO API authentication and key settings](https://developers.smtp2go.com/reference/authentication)
+- [SMTP2GO rate limiting](https://developers.smtp2go.com/docs/rate-limiting)
+- [SMTP2GO EU data center](https://support.smtp2go.com/hc/en-gb/articles/12974008254873-EU-Data-Center)
+- [Google privacy](https://policies.google.com/privacy)
+- [COCENTER / anschrift.net privacy](https://anschrift.net/datenschutzerklaerung/)

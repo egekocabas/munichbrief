@@ -424,3 +424,9 @@ three-attempt review limit. Jitter never extends an AI retry delay past 5 minute
 Existing persisted retry timestamps remain unchanged; the cap applies when the
 next failure is recorded. Queue ordering and canonical-cycle completion can
 still delay when an eligible retry actually runs.
+
+## Contact and legal pages
+
+See [contact operations and decisions](contact-and-legal.md) for feature activation,
+SMTP2GO credentials and budgets, proxy trust, private inbox access, retention,
+monitoring and failure recovery. Automated backups remain deferred.
