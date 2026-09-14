@@ -886,3 +886,9 @@ other = "Geographic data is filtered for the Munich area and names are normalize
 
 [PagePosition]
 other = "Page {{.Page}} of {{.TotalPages}}"
+
+[ModelVariant]
+other = "Model variant"
+
+[TechnicalDetails]
+other = "Technical details"

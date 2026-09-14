@@ -453,3 +453,9 @@ other = "Los datos geográficos se limitan al área de Múnich y los nombres se 
 
 [PagePosition]
 other = "Página {{.Page}} de {{.TotalPages}}"
+
+[ModelVariant]
+other = "Variante del modelo"
+
+[TechnicalDetails]
+other = "Detalles técnicos"

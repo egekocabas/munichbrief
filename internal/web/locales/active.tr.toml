@@ -453,3 +453,9 @@ other = "Coğrafi veriler Münih ve çevresiyle sınırlandırılır; yer adlar�
 
 [PagePosition]
 other = "Sayfa {{.Page}} / {{.TotalPages}}"
+
+[ModelVariant]
+other = "Model varyantı"
+
+[TechnicalDetails]
+other = "Teknik ayrıntılar"

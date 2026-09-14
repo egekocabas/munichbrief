@@ -453,3 +453,9 @@ other = "Geografski podaci ograničeni su na područje Münchena, a nazivi mjest
 
 [PagePosition]
 other = "Stranica {{.Page}} od {{.TotalPages}}"
+
+[ModelVariant]
+other = "Varijanta modela"
+
+[TechnicalDetails]
+other = "Tehnički detalji"

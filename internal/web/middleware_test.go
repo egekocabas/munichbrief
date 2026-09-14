@@ -96,7 +96,7 @@ func TestAboutHealthReadinessAndRequestHeaders(t *testing.T) {
 		{name: "htmx.min.js", body: "htmx"},
 		{name: "theme.js", body: "munichbrief-theme"},
 		{name: "admin.js", body: "processing-confirmation"},
-		{name: "favicon.svg", body: `fill="#174b73"`},
+		{name: "favicon.svg", body: `<circle cx="32" cy="32" r="29" stroke="currentColor"`},
 	} {
 		registered := staticAssets[asset.name]
 		digest := sha256.Sum256(registered.content)

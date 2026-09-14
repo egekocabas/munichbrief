@@ -18,6 +18,7 @@ import (
 	langregistry "github.com/egekocabas/munichbrief/internal/languages"
 	"github.com/egekocabas/munichbrief/internal/processing"
 	"github.com/egekocabas/munichbrief/internal/store"
+	"golang.org/x/net/html"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -277,7 +278,7 @@ func TestTimelineAndDetailRenderAIContentWithProvenance(t *testing.T) {
 			t.Errorf("detail body does not contain %q", expected)
 		}
 	}
-	if !strings.Contains(detail.Body.String(), `text-alert">Category verification</p>`) {
+	if !strings.Contains(detail.Body.String(), `<h3>Category verification</h3>`) {
 		t.Error("category verification provenance card does not use its own label")
 	}
 	if !strings.Contains(detail.Body.String(), `data-ai-public-assistance-verification-model="assist:4b"`) || detail.Header().Get("X-AI-Public-Assistance-Verification-Model") != "assist:4b" {
@@ -297,7 +298,7 @@ func TestTimelineAndDetailRenderAIContentWithProvenance(t *testing.T) {
 	if markdown.Code != http.StatusOK || !strings.Contains(markdown.Body.String(), `ai_public_assistance_verification_model: "assist:4b"`) {
 		t.Errorf("public assistance verifier Markdown provenance = %d/%q", markdown.Code, markdown.Body.String())
 	}
-	if !strings.Contains(detail.Body.String(), `text-alert">Translation</p>`) {
+	if !strings.Contains(detail.Body.String(), `<h3>English translation</h3>`) {
 		t.Error("translation provenance card does not retain its translation label")
 	}
 }
@@ -448,7 +449,38 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 	if !strings.Contains(englishBody, `class="ai-generated-label"`) {
 		t.Error("detail is missing its permanent AI label")
 	}
-	provenance := regexp.MustCompile(`(?s)<details class="detail-provenance">.*?</details>`).FindString(englishBody)
+	document, err := html.Parse(strings.NewReader(englishBody))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var provenance string
+	var visit func(*html.Node)
+	visit = func(n *html.Node) {
+		if n.Type == html.ElementNode && n.Data == "details" {
+			match := false
+			for _, a := range n.Attr {
+				if a.Key == "class" && a.Val == "detail-provenance" {
+					match = true
+				}
+			}
+			if match && provenance == "" {
+				for _, a := range n.Attr {
+					if a.Key == "open" {
+						t.Error("provenance should start collapsed")
+					}
+				}
+				var out bytes.Buffer
+				if err := html.Render(&out, n); err != nil {
+					t.Fatal(err)
+				}
+				provenance = out.String()
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			visit(c)
+		}
+	}
+	visit(document)
 	if !strings.Contains(provenance, "AI processing") || !strings.Contains(provenance, processing.GermanPresentationPromptVersion) || !strings.Contains(provenance, "Last processed") {
 		t.Error("detail does not preserve source and processing provenance in a collapsed native disclosure")
 	}

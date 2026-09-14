@@ -886,3 +886,9 @@ other = "Geodaten werden auf den Raum München eingegrenzt; Ortsnamen werden fü
 
 [PagePosition]
 other = "Seite {{.Page}} von {{.TotalPages}}"
+
+[ModelVariant]
+other = "Modellvariante"
+
+[TechnicalDetails]
+other = "Technische Details"

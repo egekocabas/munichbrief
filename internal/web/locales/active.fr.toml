@@ -453,3 +453,9 @@ other = "Les données géographiques sont limitées à la région de Munich et l
 
 [PagePosition]
 other = "Page {{.Page}} sur {{.TotalPages}}"
+
+[ModelVariant]
+other = "Variante du modèle"
+
+[TechnicalDetails]
+other = "Détails techniques"

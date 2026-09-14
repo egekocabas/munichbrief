@@ -453,3 +453,9 @@ other = "地理数据经过筛选，仅保留慕尼黑及周边地区的数据�
 
 [PagePosition]
 other = "第 {{.Page}} 页，共 {{.TotalPages}} 页"
+
+[ModelVariant]
+other = "模型变体"
+
+[TechnicalDetails]
+other = "技术详情"

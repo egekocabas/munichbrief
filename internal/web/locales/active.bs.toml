@@ -453,3 +453,9 @@ other = "Geografski podaci ograničeni su na područje Minhena, a nazivi mjesta 
 
 [PagePosition]
 other = "Stranica {{.Page}} od {{.TotalPages}}"
+
+[ModelVariant]
+other = "Varijanta modela"
+
+[TechnicalDetails]
+other = "Tehnički detalji"

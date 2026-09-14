@@ -854,3 +854,26 @@ html[data-theme="dark"]:has(.reader) {
 .credits-page, .credit-component, .credit-notice, .model-license-card { min-width: 0; overflow-wrap: anywhere; }
 .license-text { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; font-size: .8125rem; line-height: 1.65; }
 .credit-notice summary:focus-visible { outline: 2px solid var(--color-civic); outline-offset: 3px; }
+
+@layer components {
+ .detail-source .reader-button { gap:.65rem; }
+ .detail-source .reader-inline-icon { flex:none; }
+ .processing-steps { display:grid; gap:1rem; margin-top:1.25rem; }
+ .processing-step { min-width:0; padding:1.1rem; border:1px solid var(--color-rule); border-radius:.6rem; background:var(--color-paper); }
+ .processing-step-heading { display:flex; align-items:baseline; gap:.65rem; }
+ .processing-step-heading h3 { font-weight:600; font-size:1rem; overflow-wrap:anywhere; }
+ .processing-step-number { display:inline-grid; place-items:center; width:1.5rem; height:1.5rem; flex:none; border-radius:50%; background:var(--color-newsprint); color:var(--color-civic); font-size:.75rem; }
+ .processing-model { display:flex; flex-wrap:wrap; align-items:center; gap:.4rem .6rem; margin-top:1rem; }
+ .processing-caption { width:100%; font-size:.75rem; color:var(--color-muted); }
+ .processing-model strong { font-weight:550; font-size:.95rem; overflow-wrap:anywhere; min-width:0; }
+ .processing-variant { max-width:100%; overflow-wrap:anywhere; border:1px solid var(--color-rule); border-radius:.3rem; padding:.15rem .4rem; font-family:var(--font-mono); font-size:.7rem; color:var(--color-civic); }
+ .processing-facts { display:flex; flex-wrap:wrap; gap:.75rem 1.5rem; margin-top:1rem; font-size:.75rem; }
+ .processing-facts dt { color:var(--color-muted); display:flex; align-items:center; gap:.35rem; }
+ .processing-facts dd { margin-top:.25rem; overflow-wrap:anywhere; }
+ .processing-technical { margin-top:.75rem; border-top:1px solid var(--color-rule); font-size:.75rem; }
+ .processing-technical summary { min-height:44px; padding-top:.85rem; color:var(--color-civic); cursor:pointer; }
+ .processing-technical dl { display:grid; gap:.75rem; margin-top:.5rem; }
+ .processing-technical dt { color:var(--color-muted); }
+ .processing-technical dd { margin-top:.2rem; overflow-wrap:anywhere; }
+ @media(min-width:640px) { .processing-steps { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+}

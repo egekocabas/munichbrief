@@ -301,3 +301,35 @@ delete source data, claim human review, or treat contact retention as source pol
   regression checks, Go vet/staticcheck, vulnerability scan with no findings,
   module metadata consistency, unchanged frontend generation, documentation,
   native CLI notice inspection and Linux amd64/arm64 application builds.
+
+## Incident provenance and admin navigation polish — 14 September 2026
+
+- Added a fixed gap between the official-report label and external icon; replaced
+  the old filled favicon with the reader navbar's outlined circular M, including
+  a dark system-theme variant. Existing admin layout/palette remains unchanged.
+- Removed the duplicate admin-home branding link (Operations remains) and the
+  standalone licence shortcuts on Translations/Verifications. The Licences nav
+  entry and model-review warnings remain; those are relevant to model selection.
+- Redesigned public/review incident provenance as responsive two-column cards
+  (one on mobile), with readable model identities, explicit tag variant badges,
+  compact prompt revisions and native expandable technical details. Full model
+  IDs/prompt names remain in HTML, Markdown and machine-readable provenance.
+  No database values or prompt identifiers were renamed. The recorded tag is the
+  only variant source; no live catalogue lookup or historical quantization guess.
+  The user's private Ansible inventory was inspected, not copied into Git.
+- The local Messages 404 was missing contact configuration, not a routing bug.
+  Added contact enablement and a generated signing secret only to the ignored
+  .local/frontend.env. No SMTP key added. Loaded those settings against a synthetic
+  database and confirmed /admin/contact returns 200. The operator must restart the
+  local app to load them; the existing 8080 listener was not changed.
+- Browser checks: all 14 locales, both themes, 320/390/768/1440px, including open
+  technical details; no overflow and explicit source-icon spacing. Admin header
+  also fits these widths with visible focus. Screenshots: provenance-*.png under
+  docs/previews. Parser regressions cover HF variants, conflicting repository/tag
+  quantizations, filename tags, unknown identities and unchanged raw provenance.
+- Validation: full web race run completed with only the obsolete old-favicon
+  colour assertion failing. Updated that expectation; the affected asset, model
+  display and provenance race tests passed on rerun (12.392s). All other web
+  tests passed in the full run. Go vet/build, frontend generation, documentation
+  and offline licence checks passed; CSS/favicon fingerprints were refreshed.
+  The local env file is ignored and owner-readable only.

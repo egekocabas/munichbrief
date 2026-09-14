@@ -1,5 +1,5 @@
 {{define "title"}}{{.Incident.Title}} · MunichBrief{{end}}
-{{define "detail-official-source-link"}}<div class="detail-source"><a class="reader-button" href="{{.Incident.Record.SourceURL}}" target="_blank" rel="noopener noreferrer">{{t .Lang "OpenOfficialPoliceRelease"}} {{template "external-icon" .}}</a></div>{{end}}
+{{define "detail-official-source-link"}}<div class="detail-source"><a class="reader-button" href="{{.Incident.Record.SourceURL}}" target="_blank" rel="noopener noreferrer"><span>{{t .Lang "OpenOfficialPoliceRelease"}}</span>{{template "external-icon" .}}</a></div>{{end}}
 {{define "content"}}
 <nav class="detail-breadcrumb" aria-label="{{t .Lang "Breadcrumb"}}"><a class="font-bold text-civic no-underline hover:text-civic-dark" href="{{.BackURL}}" data-timeline-back="{{.BackURL}}"><span aria-hidden="true">←</span> {{t .Lang "Back"}}</a></nav>
 
@@ -57,15 +57,21 @@
       <h2 id="ai-processing-heading" class="font-serif text-xl font-bold">{{t .Lang "AIProcessing"}}</h2>
       <span class="rounded-full border border-civic/20 bg-paper px-2.5 py-1 text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-civic">{{.Incident.ProcessingSystem}}</span>
     </div>
-    <ol class="mt-4 grid gap-3 {{if gt (len .Incident.ProcessingSteps) 1}}sm:grid-cols-2{{end}} {{if gt (len .Incident.ProcessingSteps) 2}}lg:grid-cols-3{{end}}">
-      {{range .Incident.ProcessingSteps}}<li class="rounded-md border border-rule bg-paper p-4">
-        <p class="text-[0.65rem] font-extrabold uppercase tracking-[0.1em] text-alert">{{if .Number}}{{t $.Lang "Step"}} {{.Number}}{{else}}{{.Label}}{{end}}</p>
-        <h3 class="mt-1 font-serif text-lg font-bold text-ink">{{.Name}}</h3>
-        <dl class="mt-3 grid gap-2 text-xs text-muted">
-          <div><dt class="font-bold text-ink">{{t $.Lang "Model"}}</dt><dd class="mt-0.5 break-words">{{.Model}}</dd></div>
-          <div><dt class="font-bold text-ink">{{t $.Lang "PromptVersion"}}</dt><dd class="mt-0.5 break-words font-mono">{{.PromptVersion}}</dd></div>
-          {{if .GeneratedAt}}<div><dt class="font-bold text-ink">{{t $.Lang "Generated"}}</dt><dd class="mt-0.5"><time datetime="{{.GeneratedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime $.Lang .GeneratedAt}}</time></dd></div>{{end}}
+    <ol class="processing-steps">
+      {{range .Incident.ProcessingSteps}}<li class="processing-step">
+        <div class="processing-step-heading">
+          {{if .Number}}<span class="processing-step-number" aria-label="{{t $.Lang "Step"}} {{.Number}}">{{.Number}}</span>{{end}}
+          <h3>{{.Name}}</h3>
+        </div>
+        <div class="processing-model"><span class="processing-caption">{{t $.Lang "Model"}}</span><strong>{{.ModelDisplay}}</strong>{{if .ModelVariant}}<span class="processing-variant" aria-label="{{t $.Lang "ModelVariant"}}: {{.ModelVariant}}">{{.ModelVariant}}</span>{{end}}</div>
+        <dl class="processing-facts">
+          <div><dt>{{template "hash-icon" $}} {{t $.Lang "PromptVersion"}}</dt><dd>{{.PromptDisplay}}</dd></div>
+          {{if .GeneratedAt}}<div><dt>{{template "clock-icon" $}} {{t $.Lang "Generated"}}</dt><dd><time datetime="{{.GeneratedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime $.Lang .GeneratedAt}}</time></dd></div>{{end}}
         </dl>
+        <details class="processing-technical"><summary>{{t $.Lang "TechnicalDetails"}}</summary><dl>
+          <div><dt>{{t $.Lang "Model"}}</dt><dd><code>{{.Model}}</code></dd></div>
+          <div><dt>{{t $.Lang "PromptVersion"}}</dt><dd><code>{{.PromptVersion}}</code></dd></div>
+        </dl></details>
       </li>{{end}}
     </ol>
     {{end}}

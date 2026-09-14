@@ -729,3 +729,9 @@ other = "Datele geografice sunt limitate la zona München, iar denumirile sunt u
 
 [PagePosition]
 other = "Pagina {{.Page}} din {{.TotalPages}}"
+
+[ModelVariant]
+other = "Varianta modelului"
+
+[TechnicalDetails]
+other = "Detalii tehnice"

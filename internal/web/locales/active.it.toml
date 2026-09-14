@@ -453,3 +453,9 @@ other = "I dati geografici sono limitati all’area di Monaco e i nomi dei luogh
 
 [PagePosition]
 other = "Pagina {{.Page}} di {{.TotalPages}}"
+
+[ModelVariant]
+other = "Variante del modello"
+
+[TechnicalDetails]
+other = "Dettagli tecnici"

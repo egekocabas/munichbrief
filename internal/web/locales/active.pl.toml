@@ -453,3 +453,9 @@ other = "Dane geograficzne są ograniczane do Monachium i okolic, a nazwy miejsc
 
 [PagePosition]
 other = "Strona {{.Page}} z {{.TotalPages}}"
+
+[ModelVariant]
+other = "Wariant modelu"
+
+[TechnicalDetails]
+other = "Szczegóły techniczne"
