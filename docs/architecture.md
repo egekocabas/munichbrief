@@ -10,8 +10,12 @@ flowchart LR
     Store --> Metadata[Extract metadata]
     Metadata --> German[Generate German summary]
     German --> Translate[Translate independently]
+    German --> Category[Verify category]
+    Store -->|Original report| Assistance[Verify public assistance]
     German --> Reader[Public reader]
     Translate --> Reader
+    Category --> Reader
+    Assistance --> Reader
 ```
 
 ## The journey
