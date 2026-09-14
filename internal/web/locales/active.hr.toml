@@ -149,7 +149,7 @@ TranslatePublishCopy = { other = "Njemački sažetak objavljuje se čim prođe p
 AccuracyOfficialInformation = { other = "Točnost i službene informacije" }
 AccuracyOfficialInformationCopy = { other = "AI sažeci i izdvojeni podaci mogu sadržavati pogreške. Policijska priopćenja mogu se naknadno ažurirati. Najnovije službene informacije ostaju mjerodavne i primjenjuje se pretpostavka nedužnosti." }
 PrivacyDataHandling = { other = "Privatnost i obrada podataka" }
-PrivacyCopy = { other = "Nisu potrebni korisnički računi i nema oglasa. Preglednik pamti jezik godinu dana, a zatvorenu obavijest o umjetnoj inteligenciji i primijenjene pretrage 30 dana. Kriteriji pretrage šalju se kolačićem ove stranice. Tema boja ostaje u pregledniku dok je ne izbrišete. Odabrani redoslijed prikaza pamti se 30 dana u kolačiću ove stranice." }
+PrivacyCopy = { other = "Nisu potrebni korisnički računi i nema oglasa. Preglednik pamti jezik godinu dana, a zatvorenu obavijest o umjetnoj inteligenciji i primijenjene pretrage 30 dana. Kriteriji pretrage šalju se kolačićem ove stranice. Tema boja ostaje u pregledniku dok je ne izbrišete. Odabrani redoslijed prikaza pamti se 30 dana u kolačiću ove stranice. Odabrani filtri nalaze se u adresi stranice pa pretragu možete podijeliti." }
 DataHandlingCopy = { other = "Njemački izvorni tekstovi čuvaju se za obradu i provjeru s ograničenim pristupom. Na javnim stranicama prikazuju se sažeci nastali iz tih tekstova." }
 IndependenceLegalReview = { other = "Neovisnost i pravna provjera" }
 IndependenceLegalReviewCopy = { other = "MunichBrief je neovisan o Bavarskoj policiji. Tehničke zaštite ne zamjenjuju pravnu provjeru. Rokovi čuvanja, pravna osnova, podaci povezani s kaznenim djelima i primjenjive novinarske iznimke zahtijevaju stalnu provjeru." }
@@ -179,7 +179,7 @@ IncidentDate = { other = "Datumu događaja" }
 DateFrom = { other = "Od" }
 DateTo = { other = "Do" }
 ApplySearch = { other = "Primijeni" }
-SearchRemembered = { other = "Pretraživanje se pamti u ovom pregledniku 30 dana." }
+SearchRemembered = { other = "Pretragu možete podijeliti putem poveznice iz adresne trake. Ovaj je preglednik pamti 30 dana." }
 ActiveFilters = { other = "Aktivni filtri" }
 RemoveFilter = { other = "Ukloni filtar" }
 ClearAll = { other = "Poništi sve" }
@@ -323,7 +323,7 @@ other = "Web-stranica, baza podataka i svi postupci umjetne inteligencije rade n
 other = "Cloudflare omogućuje pristup stranici i štiti je, obrađujući podatke o vezi, uključujući IP-adrese. Može izrađivati i statistike na svojoj mreži. Web Analytics isključuje posjetitelje iz EU-a, a drugdje automatski umeće skriptu za mjerenje; sigurnosna pravila preglednika mogu spriječiti izvršavanje. Obrada za isporuku i sigurnost odvojena je od toga. Zaraz Consent Management i Google Tag Gateway nisu aktivni. Isporuka i zaštita temelje se na legitimnom interesu za siguran rad (čl. 6. st. 1. t. f GDPR-a). Pravila pružatelja objašnjavaju međunarodne prijenose."
 
 [PrivacyPreferencesCopy]
-other = "Vlastiti kolačići pamte jezik godinu dana, potvrdu obavijesti o umjetnoj inteligenciji 30 dana i posljednju pretragu 30 dana u HttpOnly kolačiću. Brisanje pretrage uklanja kriterije. Tema ostaje u lokalnoj pohrani dok je ne izbrišete; povratni položaj popisa traje do zatvaranja kartice. Sigurnosni tokeni obrasca vrijede najviše sat, a potvrde primitka pet minuta; ne sadrže poruku. Ove funkcije omogućuju traženu uslugu (§25(2)(2) TDDDG-a; čl. 6. st. 1. t. f GDPR-a). HTMX ne sprema kopije stranica u localStorage. Odabrani redoslijed prikaza pamti se 30 dana u kolačiću ove stranice."
+other = "Vlastiti kolačići pamte jezik godinu dana, potvrdu obavijesti o umjetnoj inteligenciji 30 dana i posljednju pretragu 30 dana u HttpOnly kolačiću. Brisanje pretrage uklanja kriterije. Tema ostaje u lokalnoj pohrani dok je ne izbrišete; povratni položaj popisa traje do zatvaranja kartice. Sigurnosni tokeni obrasca vrijede najviše sat, a potvrde primitka pet minuta; ne sadrže poruku. Ove funkcije omogućuju traženu uslugu (§25(2)(2) TDDDG-a; čl. 6. st. 1. t. f GDPR-a). HTMX ne sprema kopije stranica u localStorage. Odabrani redoslijed prikaza pamti se 30 dana u kolačiću ove stranice. Pojmovi za pretraživanje i filtri dio su adrese stranice te mogu ostati u podijeljenim poveznicama i povijesti preglednika."
 
 [PrivacyMonitoringCopy]
 other = "Tehnički zapisi sadrže metodu, putanju bez parametara pretrage, status, trajanje i identifikatore zahtjeva, ali ne poruke, e-adrese, kolačiće ni IP-adrese posjetitelja. Prometheus i Loki podešeni su na čuvanje 30 dana; Grafana prikazuje interne podatke. Za ograničavanje pokušaja kontakta čuvamo brojač i pseudonimnu oznaku izvedenu iz IP-adrese samo u memoriji aplikacije, bez pohrane izvorne IP-adrese. Ograničenje traje 15 minuta od prvog pokušaja. Istekli brojači uklanjaju se pri sljedećem pokušaju kontakta ili ponovnom pokretanju aplikacije; ako nema novih pokušaja, mogu ostati u memoriji dulje. Svrha je sigurnost i pouzdanost (čl. 6. st. 1. t. f GDPR-a). Cloudflare ima vlastite rokove."

@@ -151,6 +151,15 @@ func (s *Server) timeline(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 	s.setLanguagePreference(response, language)
+	filters, explicit, err := readerURLFilters(request)
+	if err != nil {
+		status := http.StatusBadRequest
+		if len(request.URL.RawQuery) > maxReaderQueryBytes {
+			status = http.StatusRequestURITooLong
+		}
+		http.Error(response, s.localization.Text(language, "SearchInvalid"), status)
+		return
+	}
 	page, err := requestedPage(request)
 	if err != nil {
 		http.Error(response, "invalid page", http.StatusBadRequest)
@@ -162,13 +171,14 @@ func (s *Server) timeline(response http.ResponseWriter, request *http.Request) {
 		http.Error(response, s.localization.Text(language, "SearchInvalid"), http.StatusBadRequest)
 		return
 	}
-	search := strings.HasSuffix(request.URL.Path, "/search")
-	filters := readSearch(request)
-	if scope.PublicOnly && search != filters.Active() {
+	if !explicit {
+		filters = readSearch(request)
+	}
+	search := filters.Active()
+	if scope.PublicOnly && !explicit && search {
 		response.Header().Set("Cache-Control", "private, no-store")
 		addVary(response.Header(), "Cookie")
-		s.writeTimelineView(response, view)
-		http.Redirect(response, request, listingURL(language, filters.Active(), view, size, 1), http.StatusFound)
+		http.Redirect(response, request, listingURL(language, filters, view, size, 1), http.StatusFound)
 		return
 	}
 	var incidents []store.IncidentRecord
@@ -189,10 +199,23 @@ func (s *Server) timeline(response http.ResponseWriter, request *http.Request) {
 		http.NotFound(response, request)
 		return
 	}
+	listURL := listingURL(language, filters, view, size, page)
 	if scope.PublicOnly {
+		if explicit && filters != readSearch(request) {
+			if err := s.writeSearch(response, filters); err != nil {
+				http.Error(response, s.localization.Text(language, "SearchInvalid"), http.StatusBadRequest)
+				return
+			}
+		}
 		s.writeTimelineView(response, view)
+		if explicit && request.URL.RequestURI() != listURL {
+			response.Header().Set("Cache-Control", "private, no-store")
+			addVary(response.Header(), "Cookie")
+			http.Redirect(response, request, listURL, http.StatusFound)
+			return
+		}
 	}
-	base := s.base(request, language, listingURL(language, search, view, size, page))
+	base := s.base(request, language, listURL)
 	if search || view != "published" || size != 20 {
 		base.Robots = "noindex,follow"
 		base.LanguageAlternates = nil
@@ -200,10 +223,10 @@ func (s *Server) timeline(response http.ResponseWriter, request *http.Request) {
 	base.setAIMetadata(aiGeneratedState(incidents), nil)
 	base.StructuredData = structuredPageData(base, "CollectionPage")
 	if page > 1 {
-		base.PreviousCanonicalURL = base.CanonicalOrigin + listingURL(language, search, view, size, page-1)
+		base.PreviousCanonicalURL = base.CanonicalOrigin + listingURL(language, filters, view, size, page-1)
 	}
 	if page < totalPages {
-		base.NextCanonicalURL = base.CanonicalOrigin + listingURL(language, search, view, size, page+1)
+		base.NextCanonicalURL = base.CanonicalOrigin + listingURL(language, filters, view, size, page+1)
 	}
 	data := timelinePage{
 		basePage: base, Groups: s.groupByDay(incidents, base.Lang), Page: page, TotalPages: totalPages, Total: total,
@@ -311,7 +334,7 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 	}
 	base.ModifiedTime = modifiedAt.Format(time.RFC3339)
 	base.StructuredData = structuredArticleData(base, view)
-	data := detailPage{basePage: base, Incident: view, BackURL: listingURL(base.Lang, readSearch(request).Active(), readTimelineView(request), s.options.PageSize, page), ShowOriginalSection: base.Review && view.Record.HasAI}
+	data := detailPage{basePage: base, Incident: view, BackURL: listingURL(base.Lang, readSearch(request), readTimelineView(request), s.options.PageSize, page), ShowOriginalSection: base.Review && view.Record.HasAI}
 	if scope.PublicOnly && wantsMarkdown(request.Header.Get("Accept")) {
 		s.prepareMarkdown(response, base)
 		s.renderDetailMarkdown(response, data)
@@ -688,6 +711,7 @@ type timelinePage struct {
 	PageSize                                                                        int
 	Search                                                                          bool
 	Filters                                                                         store.ReaderFilters
+	FilterFields                                                                    []readerField
 	ListURL, FormURL, ClearURL, PublishedURL, IncidentViewURL, PreviousURL, NextURL string
 	Pages                                                                           []pageLink
 	PageSizes                                                                       []int

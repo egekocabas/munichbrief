@@ -16,7 +16,8 @@
     </nav>
     <details class="reader-search">
       <summary>{{t .Lang "SearchFilters"}}</summary>
-      <form method="post" action="{{.FormURL}}" hx-boost="false" class="reader-search-form">
+      <form method="get" action="/{{.Lang}}/search#timeline-heading" hx-boost="false" class="reader-search-form">
+        {{if eq .View "incident"}}<input type="hidden" name="view" value="incident">{{end}}{{if ne .PageSize 20}}<input type="hidden" name="page_size" value="{{.PageSize}}">{{end}}
         <label class="search-wide">{{t .Lang "SearchText"}}<input type="search" name="q" maxlength="200" value="{{.Filters.Text}}" placeholder="{{t .Lang "SearchPlaceholder"}}"></label>
         <label>{{t .Lang "Area"}}<input name="area" list="reader-areas" maxlength="200" value="{{.Filters.Area}}"><datalist id="reader-areas">{{range .Areas}}<option value="{{.}}">{{end}}</datalist></label>
         <label>{{t .Lang "Category"}}<select name="category"><option value="">{{t .Lang "AllCategories"}}</option>{{range .Categories}}<option value="{{.Value}}" {{if eq $.Filters.Category .Value}}selected{{end}}>{{.Label}}</option>{{end}}</select></label>
@@ -97,7 +98,7 @@
   <div class="reader-pagination-panel">
     <div class="reader-pagination-layout reader-page-settings">
       <form action="{{if .Search}}/{{.Lang}}/search{{else}}/{{.Lang}}{{end}}#timeline-heading" method="get" class="page-size-form">
-        <input type="hidden" name="view" value="{{.View}}"><label>{{t .Lang "PerPage"}} <select name="page_size" data-auto-submit>{{range .PageSizes}}<option value="{{.}}" {{if eq $.PageSize .}}selected{{end}}>{{.}}</option>{{end}}</select></label><button type="submit" class="reader-native-submit">{{t .Lang "ApplySearch"}}</button>
+        {{template "reader-filter-fields" .}}<input type="hidden" name="view" value="{{.View}}"><label>{{t .Lang "PerPage"}} <select name="page_size" data-auto-submit>{{range .PageSizes}}<option value="{{.}}" {{if eq $.PageSize .}}selected{{end}}>{{.}}</option>{{end}}</select></label><button type="submit" class="reader-native-submit">{{t .Lang "ApplySearch"}}</button>
       </form>
       {{if gt .TotalPages 1}}
       <nav class="reader-bottom-navigation" aria-label="{{t .Lang "Pagination"}}">
@@ -124,8 +125,10 @@
 
 {{define "reader-jump-form"}}
 <form action="{{if .Search}}/{{.Lang}}/search{{else}}/{{.Lang}}{{end}}#timeline-heading" method="get" class="page-jump-form">
-  <input type="hidden" name="view" value="{{.View}}"><input type="hidden" name="page_size" value="{{.PageSize}}">
+  {{template "reader-filter-fields" .}}<input type="hidden" name="view" value="{{.View}}"><input type="hidden" name="page_size" value="{{.PageSize}}">
   <label>{{t .Lang "Page"}} <input type="number" inputmode="numeric" name="page" min="1" max="{{.TotalPages}}" value="{{.Page}}" required></label>
   <button type="submit">{{t .Lang "GoToPage"}}</button>
 </form>
 {{end}}
+
+{{define "reader-filter-fields"}}{{range .FilterFields}}<input type="hidden" name="{{.Key}}" value="{{.Value}}">{{end}}{{end}}

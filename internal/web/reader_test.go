@@ -35,7 +35,7 @@ func TestReaderSavedSearchRoutesAndSEO(t *testing.T) {
 		return w
 	}
 	response := apply("/en/search", "q=bicycle&date_field=published", nil)
-	if response.Code != 303 || response.Header().Get("Location") != "/en/search#timeline-heading" {
+	if response.Code != 303 || response.Header().Get("Location") != "/en/search?q=bicycle#timeline-heading" {
 		t.Fatalf("apply %d/%s", response.Code, response.Header().Get("Location"))
 	}
 	var cookie *http.Cookie
@@ -56,10 +56,10 @@ func TestReaderSavedSearchRoutesAndSEO(t *testing.T) {
 		handler.ServeHTTP(w, r)
 		return w
 	}
-	if w := get("/en", cookie); w.Code != 302 || w.Header().Get("Location") != "/en/search" {
+	if w := get("/en", cookie); w.Code != 302 || w.Header().Get("Location") != "/en/search?q=bicycle" {
 		t.Fatalf("restore=%d/%s", w.Code, w.Header().Get("Location"))
 	}
-	w := get("/en/search", cookie)
+	w := get("/en/search?q=bicycle", cookie)
 	for _, want := range []string{`name="robots" content="noindex,follow"`, `hx-history="false"`, "Bicycle recovered", "Clear all", `value="bicycle"`, "Page 1 of 1"} {
 		if !strings.Contains(w.Body.String(), want) {
 			t.Errorf("search missing %s", want)
@@ -73,7 +73,7 @@ func TestReaderSavedSearchRoutesAndSEO(t *testing.T) {
 			t.Errorf("invalid %s = %d", path, w.Code)
 		}
 	}
-	if w := get("/en?view=incident&page_size=10", nil); !strings.Contains(w.Body.String(), `content="noindex,follow"`) {
+	if w := get("/en?page_size=10&view=incident", nil); !strings.Contains(w.Body.String(), `content="noindex,follow"`) {
 		t.Error("alternate view indexable")
 	}
 	if w := get("/en", nil); !strings.Contains(w.Body.String(), `content="index,follow,max-image-preview:large"`) {
@@ -91,7 +91,7 @@ func TestReaderSavedSearchRoutesAndSEO(t *testing.T) {
 	if clear.Code != 303 || clear.Result().Cookies()[0].MaxAge != -1 {
 		t.Fatalf("clear=%d", clear.Code)
 	}
-	removed := apply("/en/search", "remove=q", cookie)
+	removed := apply("/en/search?q=bicycle", "remove=q", cookie)
 	if removed.Code != 303 || removed.Header().Get("Location") != "/en#timeline-heading" {
 		t.Fatal("remove did not clear last filter")
 	}
@@ -121,7 +121,7 @@ func TestReaderRejectsCrossOriginSearch(t *testing.T) {
 	}
 }
 func TestReaderPaginationAndTitles(t *testing.T) {
-	pages := paginationLinks("en", false, "published", 20, 19, 40)
+	pages := paginationLinks("en", store.ReaderFilters{}, "published", 20, 19, 40)
 	var got []int
 	for _, p := range pages {
 		if !p.Gap {
@@ -159,19 +159,19 @@ func TestReaderPreferenceValidationAndNavigation(t *testing.T) {
 		}
 	}
 	for _, size := range []int{10, 20, 30, 50} {
-		path := listingURL("tr", true, "incident", size, 3)
+		path := listingURL("tr", store.ReaderFilters{Text: "bike"}, "incident", size, 3)
 		r := httptest.NewRequest("GET", path, nil)
 		view, actual, err := readerOptions(r, 20)
 		if err != nil || view != "incident" || actual != size || r.URL.Query().Get("page") != "3" {
 			t.Fatalf("navigation round trip: %s / %s / %d / %v", path, view, actual, err)
 		}
-		reset := listingURL("en", true, view, size, 1)
+		reset := listingURL("en", store.ReaderFilters{Text: "bike"}, view, size, 1)
 		if strings.Contains(reset, "page=") {
 			t.Errorf("reset retained page: %s", reset)
 		}
 	}
 	for _, pair := range [][2]int{{1, 1}, {1, 9}, {5, 9}, {9, 9}} {
-		pages := paginationLinks("en", false, "published", 20, pair[0], pair[1])
+		pages := paginationLinks("en", store.ReaderFilters{}, "published", 20, pair[0], pair[1])
 		if pages[0].Number != 1 || pages[len(pages)-1].Number != pair[1] {
 			t.Errorf("missing edge page: %#v", pages)
 		}

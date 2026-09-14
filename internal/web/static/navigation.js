@@ -27,6 +27,7 @@
   };
 
   function validListingQuery(params) {
+    if (params.toString().length > 8192) return false;
     const seen = new Set();
     for (const [key, value] of params) {
       if (seen.has(key)) return false;
@@ -34,6 +35,11 @@
       if (key === "page" && /^[1-9]\d{0,8}$/.test(value)) continue;
       if (key === "page_size" && /^(10|20|30|50)$/.test(value)) continue;
       if (key === "view" && /^(published|incident)$/.test(value)) continue;
+      if (["q", "area", "number"].includes(key) && [...value].length <= 200 && !value.includes("\0")) continue;
+      if (key === "category" && /^(traffic|theft_burglary|robbery_extortion|violence|sexual_offense|fraud_cyber|drugs|fire_hazard|property_damage|missing_wanted|police_operation|other)$/.test(value)) continue;
+      if (key === "assistance" && /^(yes|no)$/.test(value)) continue;
+      if (key === "date_field" && /^(published|incident)$/.test(value)) continue;
+      if ((key === "from" || key === "to") && /^\d{4}-\d{2}-\d{2}$/.test(value)) continue;
       return false;
     }
     return true;

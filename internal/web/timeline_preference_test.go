@@ -90,13 +90,13 @@ func TestTimelinePreferenceExpiryAndSearchReturn(t *testing.T) {
 	r := httptest.NewRequest("GET", "https://munichbrief.de/en/about", nil)
 	r.AddCookie(&http.Cookie{Name: timelineCookieName, Value: "v1.incident." + strconv.FormatInt(now.Add(searchLifetime).Unix(), 10)})
 	r.AddCookie(&http.Cookie{Name: searchCookieName, Value: base64.RawURLEncoding.EncodeToString(state)})
-	if got := s.readerHomeURL(r, "tr"); got != "/tr/search?view=incident" {
+	if got := s.readerHomeURL(r, "tr"); got != "/tr/search?q=bicycle&view=incident" {
 		t.Fatal("lost saved search or language", got)
 	}
 	w := httptest.NewRecorder()
 	s.Handler().ServeHTTP(w, r)
-	if strings.Contains(w.Body.String(), "bicycle") {
-		t.Fatal("search terms exposed on information page")
+	if !strings.Contains(w.Body.String(), `/en/search?q=bicycle&amp;view=incident`) {
+		t.Fatal("Home link lost shareable saved search")
 	}
 	// Cookie's Secure flag follows the established production setting.
 	s.options.SecureCookies = true
@@ -116,7 +116,7 @@ func TestArticleReturnFallbackKeepsSavedViewAndSearch(t *testing.T) {
 	r.AddCookie(&http.Cookie{Name: searchCookieName, Value: base64.RawURLEncoding.EncodeToString(state)})
 	w := httptest.NewRecorder()
 	s.Handler().ServeHTTP(w, r)
-	if w.Code != 200 || !strings.Contains(w.Body.String(), `data-timeline-back="/en/search?view=incident"`) {
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `data-timeline-back="/en/search?q=bicycle&amp;view=incident"`) {
 		t.Fatal("native Back link lost selection", w.Code)
 	}
 	if !strings.Contains(w.Body.String(), `rel="canonical" href="`+r.URL.String()+`"`) {

@@ -3,7 +3,8 @@
 Public lists remain Go-rendered HTML, enhanced by HTMX. All controls have native
 forms or links. Default published lists use 20 reports per page; readers can
 choose 10, 20, 30 or 50. Page, view and size are navigation URL parameters. Search
-criteria only travel in POST bodies and the bounded first-party search cookie.
+criteria are encoded as ordinary query parameters on `/{language}/search`. Empty
+filters and default values are omitted, keeping common shared URLs short.
 
 ## Responsive pagination
 
@@ -19,13 +20,28 @@ search/view persistence and page-size reset behavior are unchanged.
 
 ## Search and chronology
 
-`GET /{language}/search` restores the last criteria. `POST` applies them and
-redirects to the results. `POST /{language}/search/clear` deletes them. Criteria
-expire 30 days after application; GET navigation does not extend their lifetime.
-A homepage visit with active criteria temporarily redirects to the search view.
-Language changes retain criteria (without translating the query) and reset page 1.
-Clear all, filter changes, page-size changes and view changes reset pagination.
-The URL alone cannot reproduce someone else's saved search.
+`GET /{language}/search?q=bicycle&area=Haar` reproduces a search without cookies.
+The native search form uses GET. Explicit URL criteria replace the complete saved
+search; absent fields are never filled from another tab's or recipient's cookie.
+Search parameters on a localized homepage normalize to the search route. An
+empty `/search` explicitly clears criteria and returns to the unfiltered list.
+The legacy POST endpoint remains available; individual removal uses the filters
+in its action URL. `POST /{language}/search/clear` clears the preference.
+
+The latest successful search is also saved for 30 days in a bounded HttpOnly,
+SameSite=Lax cookie (Secure in production). An unchanged search does not renew
+its expiry. Home restores it through a temporary redirect to the full search
+URL. Failed or invalid requests do not change the saved search. Navigation links
+and native pagination forms carry all active criteria. Language changes retain
+criteria without translating the query. Changing filters, language, page size or
+view resets page 1; shared page links retain the requested page.
+
+Query strings are limited to 8 KiB and each free-text field to 200 Unicode code
+points. Repeated known parameters, malformed escapes and invalid filters are
+rejected. Dates are inclusive; default publication-date selection and unused
+empty fields are omitted. The query remains readable key/value data rather than
+an opaque encoded object or server-side share identifier. Links reproduce filter
+and order settings, not a frozen snapshot: source records can change later.
 
 Free text uses Unicode-normalized literal terms combined with AND. FTS5 trigrams
 cover terms of at least three Unicode code points; shorter terms use literal
@@ -74,6 +90,9 @@ Incident URLs and article publication timestamps remain unchanged. Head metadata
 is merged by a pinned, self-hosted HTMX extension. Public history snapshots are
 disabled so search forms do not persist in HTMX's localStorage; history misses
 reload the document. The existing return link restores the list and scroll.
+Search criteria may appear in browser history, copied links and per-tab return
+URLs. Application request logs still record paths without queries; the existing
+same-origin referrer policy prevents sending those URLs to external sites.
 
 Privacy and Impressum now have localized public routes and footer links. The
 [contact and legal decision record](contact-and-legal.md) covers the confirmed
@@ -117,8 +136,8 @@ order, `/en?view=incident` means incident order. Explicit URLs, bookmarks,
 pagination and browser history are not silently reinterpreted by the cookie.
 Selecting publication order therefore also updates the remembered default.
 
-Search stays at `/{language}/search`, with criteria in the existing cookie and
-visible removal/Clear all controls. Article Back links have a server-rendered
+Search stays at `/{language}/search`, with complete criteria in its URL, a saved
+preference for later Home visits, and visible removal/Clear all controls. Article Back links have a server-rendered
 saved-view/search fallback; existing per-tab return state restores the precise
 originating page, page size and scroll position with JavaScript. Incident URLs
 and canonicals do not acquire preference parameters. Personalized responses and
@@ -132,3 +151,11 @@ root redirection, search/clear, explicit publication URLs and native article
 return. Enhanced article return restored the originating second page, page size
 and scroll position. The 390px flow had no horizontal overflow. Both information
 page disclosures were checked in all 14 locales.
+
+## Shareable-search verification
+
+Regression coverage includes empty cookie jars, conflicting saved criteria, all
+filters and multilingual/punctuation round trips, maximum-length URLs, invalid
+and repeated parameters, page boundaries, stale-tab removals and clearing.
+Browser checks exercise native submission, enhanced navigation, copied links in
+a fresh tab after removing preview preferences, and article return/history.

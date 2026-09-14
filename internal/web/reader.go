@@ -43,7 +43,7 @@ func (s *Server) writeTimelineView(w http.ResponseWriter, view string) {
 }
 
 func (s *Server) readerHomeURL(r *http.Request, language string) string {
-	return listingURL(language, readSearch(r).Active(), readTimelineView(r), s.options.PageSize, 1)
+	return listingURL(language, readSearch(r), readTimelineView(r), s.options.PageSize, 1)
 }
 
 type savedSearch struct {
@@ -58,6 +58,57 @@ type pageLink struct {
 }
 type readerChoice struct{ Value, Label string }
 type activeFilter struct{ Key, Label, Value string }
+type readerField struct{ Key, Value string }
+
+const maxReaderQueryBytes = 8192
+
+var readerFilterKeys = []string{"q", "area", "category", "number", "assistance", "date_field", "from", "to"}
+
+// URL filters replace the complete saved search, never merge with it.
+func readerURLFilters(r *http.Request) (store.ReaderFilters, bool, error) {
+	if len(r.URL.RawQuery) > maxReaderQueryBytes {
+		return store.ReaderFilters{}, false, fmt.Errorf("search URL too long")
+	}
+	values, err := url.ParseQuery(r.URL.RawQuery)
+	if err != nil {
+		return store.ReaderFilters{}, false, err
+	}
+	explicit := strings.HasSuffix(r.URL.Path, "/search")
+	for _, key := range append([]string{"page", "page_size", "view"}, readerFilterKeys...) {
+		if len(values[key]) > 1 {
+			return store.ReaderFilters{}, false, fmt.Errorf("repeated query parameter")
+		}
+	}
+	for _, key := range readerFilterKeys {
+		if values.Has(key) {
+			explicit = true
+		}
+	}
+	f, err := readerFiltersFromValues(values)
+	return f, explicit, err
+}
+
+func readerFiltersFromValues(values url.Values) (store.ReaderFilters, error) {
+	f := store.ReaderFilters{Text: strings.TrimSpace(values.Get("q")), Area: strings.TrimSpace(values.Get("area")), Category: values.Get("category"), Number: strings.TrimSpace(values.Get("number")), Assistance: values.Get("assistance"), DateField: values.Get("date_field"), From: values.Get("from"), To: values.Get("to")}
+	if err := f.Validate(); err != nil {
+		return store.ReaderFilters{}, err
+	}
+	// These values have no effect on the result, so omit them from shared URLs.
+	if f.DateField == "published" || (f.From == "" && f.To == "") {
+		f.DateField = ""
+	}
+	return f, nil
+}
+
+func readerFilterValues(f store.ReaderFilters) url.Values {
+	values := url.Values{}
+	for key, value := range map[string]string{"q": f.Text, "area": f.Area, "category": f.Category, "number": f.Number, "assistance": f.Assistance, "date_field": f.DateField, "from": f.From, "to": f.To} {
+		if value != "" && !(key == "date_field" && (value == "published" || (f.From == "" && f.To == ""))) {
+			values.Set(key, value)
+		}
+	}
+	return values
+}
 
 func readSearch(r *http.Request) store.ReaderFilters {
 	c, err := r.Cookie(searchCookieName)
@@ -72,15 +123,20 @@ func readSearch(r *http.Request) store.ReaderFilters {
 	if json.Unmarshal(data, &state) != nil || state.Version != 1 || state.Expires <= time.Now().Unix() || state.Expires > time.Now().Add(searchLifetime+time.Minute).Unix() || state.Filters.Validate() != nil {
 		return store.ReaderFilters{}
 	}
-	return state.Filters
+	filters, _ := readerFiltersFromValues(readerFilterValues(state.Filters))
+	return filters
 }
 func (s *Server) writeSearch(w http.ResponseWriter, f store.ReaderFilters) error {
 	expires := time.Now().Add(searchLifetime)
-	data, err := json.Marshal(savedSearch{Version: 1, Expires: expires.Unix(), Filters: f})
-	if err != nil {
+	var data strings.Builder
+	encoder := json.NewEncoder(&data)
+	// This JSON is base64-encoded cookie data, never HTML. Avoid expanding
+	// ordinary search punctuation into six-byte HTML escape sequences.
+	encoder.SetEscapeHTML(false)
+	if err := encoder.Encode(savedSearch{Version: 1, Expires: expires.Unix(), Filters: f}); err != nil {
 		return err
 	}
-	value := base64.RawURLEncoding.EncodeToString(data)
+	value := base64.RawURLEncoding.EncodeToString([]byte(data.String()))
 	if len(value) > 3800 {
 		return fmt.Errorf("search preferences too large")
 	}
@@ -93,12 +149,12 @@ func (s *Server) writeSearch(w http.ResponseWriter, f store.ReaderFilters) error
 	http.SetCookie(w, cookie)
 	return nil
 }
-func listingURL(language string, search bool, view string, size, page int) string {
+func listingURL(language string, filters store.ReaderFilters, view string, size, page int) string {
 	path := "/" + language
-	if search {
+	if filters.Active() {
 		path += "/search"
 	}
-	q := url.Values{}
+	q := readerFilterValues(filters)
 	if view == "incident" {
 		q.Set("view", view)
 	}
@@ -131,7 +187,7 @@ func readerOptions(r *http.Request, defaultSize int) (string, int, error) {
 	}
 	return view, size, nil
 }
-func paginationLinks(language string, search bool, view string, size, page, total int) []pageLink {
+func paginationLinks(language string, filters store.ReaderFilters, view string, size, page, total int) []pageLink {
 	var out []pageLink
 	for n := 1; n <= total; n++ {
 		show := n == 1 || n == total || (n >= page-2 && n <= page+2)
@@ -141,13 +197,13 @@ func paginationLinks(language string, search bool, view string, size, page, tota
 			}
 			continue
 		}
-		out = append(out, pageLink{Number: n, URL: listingURL(language, search, view, size, n) + "#timeline-heading", Current: n == page})
+		out = append(out, pageLink{Number: n, URL: listingURL(language, filters, view, size, n) + "#timeline-heading", Current: n == page})
 	}
 	// A one-page gap is clearer as a number than an ellipsis.
 	for n := 1; n < len(out)-1; n++ {
 		if out[n].Gap && out[n+1].Number-out[n-1].Number == 2 {
 			p := out[n-1].Number + 1
-			out[n] = pageLink{Number: p, URL: listingURL(language, search, view, size, p) + "#timeline-heading"}
+			out[n] = pageLink{Number: p, URL: listingURL(language, filters, view, size, p) + "#timeline-heading"}
 		}
 	}
 	return out
@@ -163,12 +219,24 @@ func (s *Server) submitSearch(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, s.localization.Text(language, "SearchInvalid"), http.StatusBadRequest)
 		return
 	}
-	f := store.ReaderFilters{Text: strings.TrimSpace(r.PostForm.Get("q")), Area: strings.TrimSpace(r.PostForm.Get("area")), Category: r.PostForm.Get("category"), Number: strings.TrimSpace(r.PostForm.Get("number")), Assistance: r.PostForm.Get("assistance"), DateField: r.PostForm.Get("date_field"), From: r.PostForm.Get("from"), To: r.PostForm.Get("to")}
+	f, err := readerFiltersFromValues(r.PostForm)
+	if err != nil {
+		http.Error(w, s.localization.Text(language, "SearchInvalid"), http.StatusBadRequest)
+		return
+	}
+	urlFilters, explicit, err := readerURLFilters(r)
+	if err != nil {
+		http.Error(w, s.localization.Text(language, "SearchInvalid"), http.StatusBadRequest)
+		return
+	}
 	if strings.HasSuffix(r.URL.Path, "/clear") {
 		f = store.ReaderFilters{}
 	}
 	if remove := r.PostForm.Get("remove"); remove != "" {
-		f = readSearch(r)
+		f = urlFilters
+		if !explicit {
+			f = readSearch(r)
+		}
 		switch remove {
 		case "q":
 			f.Text = ""
@@ -183,6 +251,7 @@ func (s *Server) submitSearch(w http.ResponseWriter, r *http.Request) {
 		case "dates":
 			f.From = ""
 			f.To = ""
+			f.DateField = ""
 		default:
 			http.Error(w, s.localization.Text(language, "SearchInvalid"), http.StatusBadRequest)
 			return
@@ -202,7 +271,7 @@ func (s *Server) submitSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Cache-Control", "private, no-store")
-	http.Redirect(w, r, listingURL(language, f.Active(), view, size, 1)+"#timeline-heading", http.StatusSeeOther)
+	http.Redirect(w, r, listingURL(language, f, view, size, 1)+"#timeline-heading", http.StatusSeeOther)
 }
 func validReaderMutation(r *http.Request) bool {
 	if strings.EqualFold(r.Header.Get("Sec-Fetch-Site"), "cross-site") {
@@ -254,22 +323,31 @@ func (s *Server) groupByIncident(incidents []store.IncidentRecord, language stri
 	return groups
 }
 func (s *Server) decorateReader(data *timelinePage, language string, search bool, view string, size int, f store.ReaderFilters) {
-	data.HomeURL = listingURL(language, search, view, size, 1)
+	data.HomeURL = listingURL(language, f, view, size, 1)
 	data.View = view
 	data.PageSize = size
 	data.Search = search
 	data.Filters = f
-	data.ListURL = listingURL(language, search, view, size, data.Page)
-	data.FormURL = listingURL(language, true, view, size, 1)
+	data.ListURL = listingURL(language, f, view, size, data.Page)
+	data.FormURL = listingURL(language, f, view, size, 1)
+	if !f.Active() {
+		data.FormURL = "/" + language + "/search"
+	}
+	filterValues := readerFilterValues(f)
+	for _, key := range readerFilterKeys {
+		if value := filterValues.Get(key); value != "" {
+			data.FilterFields = append(data.FilterFields, readerField{key, value})
+		}
+	}
 	data.ClearURL = "/" + language + "/search/clear"
-	if u, e := url.Parse(data.FormURL); e == nil && u.RawQuery != "" {
+	if u, e := url.Parse(listingURL(language, store.ReaderFilters{}, view, size, 1)); e == nil && u.RawQuery != "" {
 		data.ClearURL += "?" + u.RawQuery
 	}
-	data.PublishedURL = listingURL(language, search, "published", size, 1) + "#timeline-heading"
-	data.IncidentViewURL = listingURL(language, search, "incident", size, 1) + "#timeline-heading"
-	data.PreviousURL = listingURL(language, search, view, size, data.Page-1) + "#timeline-heading"
-	data.NextURL = listingURL(language, search, view, size, data.Page+1) + "#timeline-heading"
-	data.Pages = paginationLinks(language, search, view, size, data.Page, data.TotalPages)
+	data.PublishedURL = listingURL(language, f, "published", size, 1) + "#timeline-heading"
+	data.IncidentViewURL = listingURL(language, f, "incident", size, 1) + "#timeline-heading"
+	data.PreviousURL = listingURL(language, f, view, size, data.Page-1) + "#timeline-heading"
+	data.NextURL = listingURL(language, f, view, size, data.Page+1) + "#timeline-heading"
+	data.Pages = paginationLinks(language, f, view, size, data.Page, data.TotalPages)
 	data.PageSizes = []int{10, 20, 30, 50}
 	data.First = 0
 	data.Last = 0
@@ -304,7 +382,7 @@ func (s *Server) decorateReader(data *timelinePage, language string, search bool
 		add("dates", label, f.From+" – "+f.To)
 	}
 	for n := range data.LanguageSwitches {
-		data.LanguageSwitches[n].URL = listingURL(data.LanguageSwitches[n].Code, search, view, size, 1)
+		data.LanguageSwitches[n].URL = listingURL(data.LanguageSwitches[n].Code, f, view, size, 1)
 	}
 }
 

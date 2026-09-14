@@ -494,7 +494,7 @@ other = "AI-generated summaries and extracted details may contain errors. Police
 other = "Privacy and data handling"
 
 [PrivacyCopy]
-other = "No account is needed and there is no advertising. This browser remembers your language for one year, dismissed AI notices for 30 days, and applied searches for 30 days. Search criteria are sent in a first-party cookie. The colour theme stays in browser storage until removed. Your preferred timeline order is remembered for 30 days in a first-party cookie."
+other = "No account is needed and there is no advertising. This browser remembers your language for one year, dismissed AI notices for 30 days, and applied searches for 30 days. Search criteria are sent in a first-party cookie. The colour theme stays in browser storage until removed. Your preferred timeline order is remembered for 30 days in a first-party cookie. Search links contain the selected filters and can be shared."
 
 [DataHandlingCopy]
 other = "German source text is retained for processing and restricted review. Public pages show the resulting summaries."
@@ -566,7 +566,7 @@ other = "To"
 other = "Apply"
 
 [SearchRemembered]
-other = "Your search is remembered on this browser for 30 days."
+other = "Share this search using its URL. This browser remembers it for 30 days."
 
 [ActiveFilters]
 other = "Active filters"
@@ -756,7 +756,7 @@ other = "The website, database and all AI processing run on the operator’s own
 other = "Cloudflare delivers and protects the site, processing connection information including IP addresses. It can produce traffic statistics at its network edge. Cloudflare Web Analytics is configured to exclude EU visitors and automatically insert a performance-measurement script elsewhere. Browser security restrictions may prevent that script from running. This is separate from Cloudflare’s delivery and security processing. Zaraz consent management and Google Tag Gateway are inactive. Delivery and protection serve our legitimate interest in operating a secure website (Article 6(1)(f) GDPR). Provider policies linked below explain their processing and international transfers."
 
 [PrivacyPreferencesCopy]
-other = "We remember your language for one year and acknowledgement of the AI notice for 30 days in first-party cookies. The latest applied search is saved in an HttpOnly cookie for 30 days; clearing it removes those criteria. Your theme stays in local browser storage until cleared. Return-to-list position uses storage for the current browser tab. Contact security tokens expire within one hour and receipt confirmations within five minutes; neither contains your message. These preferences and security functions support the service you request (§25(2)(2) TDDDG; Article 6(1)(f) GDPR). HTMX does not save page snapshots in localStorage. Your preferred timeline order is remembered for 30 days in a first-party cookie."
+other = "We remember your language for one year and acknowledgement of the AI notice for 30 days in first-party cookies. The latest applied search is saved in an HttpOnly cookie for 30 days; clearing it removes those criteria. Your theme stays in local browser storage until cleared. Return-to-list position uses storage for the current browser tab. Contact security tokens expire within one hour and receipt confirmations within five minutes; neither contains your message. These preferences and security functions support the service you request (§25(2)(2) TDDDG; Article 6(1)(f) GDPR). HTMX does not save page snapshots in localStorage. Your preferred timeline order is remembered for 30 days in a first-party cookie. Search terms and filters appear in the page URL and may be retained in shared links and browser history."
 
 [PrivacyMonitoringCopy]
 other = "To operate the site reliably, technical logs record request method, path without query parameters, status, duration and request identifiers. Application logs do not record message contents, email addresses, cookies or visitor IP addresses. Prometheus metrics and Loki logs are configured for 30-day retention; Grafana displays this internal monitoring. To limit contact attempts, we keep a counter and an IP-derived pseudonymous identifier only in application memory, without saving the original IP address. The limit applies for 15 minutes from the first attempt. Expired counters are removed at the next contact attempt or when the application restarts; they can remain in memory longer if no further attempt occurs. These measures serve security and reliability (Article 6(1)(f) GDPR). Cloudflare’s own retention is separate."
