@@ -378,7 +378,7 @@ other = "Le informazioni sulle persone coinvolte negli episodi provengono dai co
 other = "IA e decisioni automatizzate"
 
 [PrivacyAutomationCopy]
-other = "L’IA estrae informazioni, riassume, traduce e verifica i resoconti degli episodi. Non la usiamo per prendere decisioni sui visitatori con effetti giuridici o analogamente significativi ai sensi dell’articolo 22 GDPR. I controlli automatici di sicurezza possono bloccare temporaneamente l’invio del modulo; resta possibile contattarci via email."
+other = "L’IA estrae informazioni, riassume, traduce e verifica i resoconti degli episodi. Non la usiamo per prendere decisioni sui visitatori con effetti giuridici o analogamente significativi ai sensi dell’articolo 22 GDPR. I controlli automatici possono impedire la pubblicazione di un resoconto o di una sua traduzione. Alcuni resoconti potrebbero quindi non essere disponibili in tutte le lingue."
 
 [PrivacyObjection]
 other = "Il diritto di opposizione"

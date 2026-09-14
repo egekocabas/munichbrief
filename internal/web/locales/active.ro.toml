@@ -652,7 +652,7 @@ other = "Informațiile despre persoanele implicate în incidente provin din comu
 other = "IA și deciziile automatizate"
 
 [PrivacyAutomationCopy]
-other = "IA extrage informații, rezumă, traduce și verifică relatările despre incidente. Nu o folosim pentru a lua decizii despre vizitatori cu efecte juridice sau de importanță similară în sensul articolului 22 din RGPD. Verificările automate de securitate pot bloca temporar trimiterea formularului; ne poți contacta în continuare prin e-mail."
+other = "IA extrage informații, rezumă, traduce și verifică relatările despre incidente. Nu o folosim pentru a lua decizii despre vizitatori cu efecte juridice sau de importanță similară în sensul articolului 22 din RGPD. Verificările automate pot împiedica publicarea unei relatări despre un incident sau a uneia dintre traducerile sale. Prin urmare, unele relatări pot să nu fie disponibile în toate limbile."
 
 [PrivacyObjection]
 other = "Dreptul la opoziție"

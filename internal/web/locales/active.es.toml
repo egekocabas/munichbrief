@@ -378,7 +378,7 @@ other = "La información sobre las personas implicadas en los sucesos procede de
 other = "IA y decisiones automatizadas"
 
 [PrivacyAutomationCopy]
-other = "La IA extrae información, resume, traduce y comprueba los informes de sucesos. No la utilizamos para tomar decisiones sobre los visitantes que produzcan efectos jurídicos o de importancia similar en el sentido del artículo 22 del RGPD. Las comprobaciones automáticas de seguridad pueden bloquear temporalmente el envío del formulario; puedes seguir contactándonos por correo electrónico."
+other = "La IA extrae información, resume, traduce y comprueba los informes de sucesos. No la utilizamos para tomar decisiones sobre los visitantes que produzcan efectos jurídicos o de importancia similar en el sentido del artículo 22 del RGPD. Las comprobaciones automáticas pueden impedir la publicación de un informe sobre un suceso o de alguna de sus traducciones. Por ello, algunos informes pueden no estar disponibles en todos los idiomas."
 
 [PrivacyObjection]
 other = "Tu derecho de oposición"

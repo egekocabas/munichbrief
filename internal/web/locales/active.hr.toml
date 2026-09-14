@@ -378,7 +378,7 @@ other = "Podaci o osobama uključenima u događaje dolaze iz javnih policijskih 
 other = "Umjetna inteligencija i automatizirane odluke"
 
 [PrivacyAutomationCopy]
-other = "Umjetna inteligencija izdvaja podatke, sažima, prevodi i provjerava izvještaje o događajima. Ne koristimo je za odluke o posjetiteljima koje imaju pravne ili slične značajne učinke u smislu članka 22. GDPR-a. Automatske sigurnosne provjere mogu privremeno onemogućiti slanje obrasca; i dalje nam se možete javiti e-poštom."
+other = "Umjetna inteligencija izdvaja podatke, sažima, prevodi i provjerava izvještaje o događajima. Ne koristimo je za odluke o posjetiteljima koje imaju pravne ili slične značajne učinke u smislu članka 22. GDPR-a. Automatske provjere mogu spriječiti objavljivanje izvještaja o događaju ili nekog od njegovih prijevoda. Zato pojedini izvještaji možda neće biti dostupni na svim jezicima."
 
 [PrivacyObjection]
 other = "Pravo na prigovor"

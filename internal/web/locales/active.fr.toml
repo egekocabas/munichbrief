@@ -378,7 +378,7 @@ other = "Les informations sur les personnes impliquées dans les événements pr
 other = "IA et décisions automatisées"
 
 [PrivacyAutomationCopy]
-other = "L’IA extrait les informations, résume, traduit et vérifie les comptes rendus. Nous ne l’utilisons pas pour prendre des décisions concernant les visiteurs qui produisent des effets juridiques ou d’importance similaire au sens de l’article 22 du RGPD. Les contrôles automatiques de sécurité peuvent bloquer temporairement l’envoi du formulaire ; vous pouvez toujours nous contacter par e-mail."
+other = "L’IA extrait les informations, résume, traduit et vérifie les comptes rendus. Nous ne l’utilisons pas pour prendre des décisions concernant les visiteurs qui produisent des effets juridiques ou d’importance similaire au sens de l’article 22 du RGPD. Les vérifications automatiques peuvent empêcher la publication d’un compte rendu ou de l’une de ses traductions. Certains comptes rendus peuvent donc ne pas être disponibles dans toutes les langues."
 
 [PrivacyObjection]
 other = "Votre droit d’opposition"

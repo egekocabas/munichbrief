@@ -807,7 +807,7 @@ other = "Information about people involved in incidents comes from public police
 other = "AI and automated decisions"
 
 [PrivacyAutomationCopy]
-other = "AI extracts, summarizes, translates and checks incident reports. We do not use it to make decisions about visitors with legal or similarly significant effects under Article 22 GDPR. Automated security checks can temporarily block a contact submission; you can still contact us by email."
+other = "AI extracts, summarizes, translates and checks incident reports. We do not use it to make decisions about visitors with legal or similarly significant effects under Article 22 GDPR. Automated checks may prevent an incident report or one of its translations from being published. As a result, some incidents may not be available in every language."
 
 [PrivacyObjection]
 other = "Your right to object"

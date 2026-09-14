@@ -378,7 +378,7 @@ other = "Informacje o osobach związanych ze zdarzeniami pochodzą z publicznych
 other = "AI i zautomatyzowane decyzje"
 
 [PrivacyAutomationCopy]
-other = "AI wyodrębnia informacje, podsumowuje, tłumaczy i sprawdza relacje ze zdarzeń. Nie używamy jej do podejmowania decyzji dotyczących odwiedzających, które wywołują skutki prawne lub podobnie istotne skutki w rozumieniu art. 22 RODO. Automatyczne kontrole bezpieczeństwa mogą tymczasowo zablokować wysłanie formularza; nadal możesz skontaktować się z nami e-mailem."
+other = "AI wyodrębnia informacje, podsumowuje, tłumaczy i sprawdza relacje ze zdarzeń. Nie używamy jej do podejmowania decyzji dotyczących odwiedzających, które wywołują skutki prawne lub podobnie istotne skutki w rozumieniu art. 22 RODO. Automatyczne kontrole mogą uniemożliwić publikację opisu zdarzenia lub któregoś z jego tłumaczeń. Dlatego niektóre opisy mogą nie być dostępne we wszystkich językach."
 
 [PrivacyObjection]
 other = "Prawo do sprzeciwu"

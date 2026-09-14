@@ -378,7 +378,7 @@ other = "Olaylara karışan ya da olaylardan etkilenen kişiler hakkındaki bilg
 other = "Yapay zekâ ve otomatik kararlar"
 
 [PrivacyAutomationCopy]
-other = "Yapay zekâ, olay bilgilerini çıkarır, özetler, çevirir ve kontrol eder. Ziyaretçiler hakkında GDPR’nin 22. maddesi kapsamında hukuki veya benzer ölçüde önemli sonuçlar doğuran kararlar almak için kullanılmaz. Otomatik güvenlik kontrolleri formun gönderilmesini geçici olarak engelleyebilir; bu durumda bize e-posta ile ulaşabilirsiniz."
+other = "Yapay zekâ, olay bilgilerini çıkarır, özetler, çevirir ve kontrol eder. Ziyaretçiler hakkında GDPR’nin 22. maddesi kapsamında hukuki veya benzer ölçüde önemli sonuçlar doğuran kararlar almak için kullanılmaz. Otomatik kontroller, bir olay haberinin veya çevirisinin yayımlanmasını engelleyebilir. Bu nedenle bazı haberler her dilde bulunmayabilir."
 
 [PrivacyObjection]
 other = "İtiraz hakkınız"

@@ -807,7 +807,7 @@ other = "Informationen über Beteiligte stammen aus öffentlichen Polizeimeldung
 other = "KI und automatisierte Entscheidungen"
 
 [PrivacyAutomationCopy]
-other = "KI erfasst, fasst zusammen, übersetzt und prüft Vorfallsberichte. Wir verwenden sie nicht für Entscheidungen über Besucherinnen und Besucher, die rechtliche oder ähnlich erhebliche Auswirkungen im Sinne von Artikel 22 DSGVO haben. Automatische Sicherheitsprüfungen können das Absenden des Kontaktformulars vorübergehend verhindern; per E-Mail bleiben wir erreichbar."
+other = "KI erfasst, fasst zusammen, übersetzt und prüft Vorfallsberichte. Wir verwenden sie nicht für Entscheidungen über Besucherinnen und Besucher, die rechtliche oder ähnlich erhebliche Auswirkungen im Sinne von Artikel 22 DSGVO haben. Automatische Prüfungen können verhindern, dass ein Vorfallsbericht oder eine seiner Übersetzungen veröffentlicht wird. Deshalb sind manche Berichte möglicherweise nicht in allen Sprachen verfügbar."
 
 [PrivacyObjection]
 other = "Ihr Widerspruchsrecht"
