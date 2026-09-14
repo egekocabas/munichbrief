@@ -17,7 +17,16 @@ func contactDatabase(t *testing.T) *Store {
 		t.Fatal(e)
 	}
 	t.Cleanup(func() { s.Close() })
+	enableContactForTest(t, s)
 	return s
+}
+func enableContactForTest(t *testing.T, s *Store) {
+	t.Helper()
+	for _, control := range []string{"form", "notifications"} {
+		if err := s.SetContactControl(context.Background(), control, true); err != nil {
+			t.Fatal(err)
+		}
+	}
 }
 func contactFixture(n int, now time.Time) ContactMessage {
 	return ContactMessage{SubmissionHash: fmt.Sprintf("%064d", n), Email: "reader@example.org", Topic: "correction", Message: "请更正这个信息。 İstanbul <script>alert(1)</script>", Language: "zh", CreatedAt: now.Unix()}
@@ -182,6 +191,7 @@ func TestContactRestartDurabilityAndStableReferences(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
+	enableContactForTest(t, s)
 	if _, e = s.CreateContact(ctx, contactFixture(1, now)); e != nil {
 		t.Fatal(e)
 	}

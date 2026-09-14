@@ -174,6 +174,7 @@ type Server struct {
 	licensesTemplate               *template.Template
 	licensesAdminTemplate          *template.Template
 	contactStore                   *store.Store
+	contactAvailable               bool
 	contactMu                      sync.Mutex
 	contactLimits                  map[string]contactRate
 	contactAllowed, contactBlocked uint64
@@ -349,7 +350,7 @@ func newWithLanguages(database incidentStore, logger *slog.Logger, options Optio
 	if err != nil {
 		return nil, fmt.Errorf("initialize social card renderer: %w", err)
 	}
-	return &Server{licensesTemplate: credits, licensesAdminTemplate: licenseAdmin, contactStore: contactDatabase, contactLimits: make(map[string]contactRate), legalTemplate: legal, contactAdminTemplate: inbox, store: database, logger: logger, options: options, location: location, languages: definitions, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, contactTemplate: contact, adminTemplate: admin, adminHistoryTemplate: adminHistory, adminRSSHistoryTemplate: adminRSSHistory, adminGazetteerTemplate: adminGazetteer, adminTranslationsTemplate: adminTranslations, adminVerificationsTemplate: adminVerifications, socialCards: socialCards}, nil
+	return &Server{licensesTemplate: credits, licensesAdminTemplate: licenseAdmin, contactStore: contactDatabase, contactAvailable: contactDatabase != nil && options.AdminEnabled && len(options.ContactSecret) >= 32, contactLimits: make(map[string]contactRate), legalTemplate: legal, contactAdminTemplate: inbox, store: database, logger: logger, options: options, location: location, languages: definitions, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, contactTemplate: contact, adminTemplate: admin, adminHistoryTemplate: adminHistory, adminRSSHistoryTemplate: adminRSSHistory, adminGazetteerTemplate: adminGazetteer, adminTranslationsTemplate: adminTranslations, adminVerificationsTemplate: adminVerifications, socialCards: socialCards}, nil
 }
 
 // Handler returns the complete public and optional review route tree.

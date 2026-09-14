@@ -70,6 +70,11 @@ func TestWorkerBudgetAndNotificationFailurePreserveInbox(t *testing.T) {
 		t.Fatal(e)
 	}
 	defer db.Close()
+	for _, control := range []string{"form", "notifications"} {
+		if err := db.SetContactControl(ctx, control, true); err != nil {
+			t.Fatal(err)
+		}
+	}
 	now := time.Now()
 	for n := 1; n <= 3; n++ {
 		_, e = db.CreateContact(ctx, store.ContactMessage{SubmissionHash: fmt.Sprintf("%064d", n), Email: "reader@example.org", Topic: "general", Message: "Synthetic", Language: "en", CreatedAt: now.Unix()})
@@ -106,6 +111,11 @@ func TestWorkerTemporaryBackoffAndPermanentStop(t *testing.T) {
 		t.Fatal(e)
 	}
 	defer db.Close()
+	for _, control := range []string{"form", "notifications"} {
+		if err := db.SetContactControl(ctx, control, true); err != nil {
+			t.Fatal(err)
+		}
+	}
 	now := time.Now()
 	_, e = db.CreateContact(ctx, store.ContactMessage{SubmissionHash: strings.Repeat("a", 64), Email: "reader@example.org", Topic: "general", Message: "Synthetic retry", Language: "en", CreatedAt: now.Unix()})
 	if e != nil {
@@ -137,6 +147,11 @@ func TestWorkerAdminPauseAndTestUseNormalTransport(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
+	for _, control := range []string{"form", "notifications"} {
+		if err := db.SetContactControl(ctx, control, true); err != nil {
+			t.Fatal(err)
+		}
+	}
 	now := time.Now()
 	sender := &fakeSender{result: Result{State: "accepted", Code: "accepted"}}
 	w := Worker{Store: db, Sender: sender, Daily: 20, Monthly: 300, Metrics: &Metrics{}, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}

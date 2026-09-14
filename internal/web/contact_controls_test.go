@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"html"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -125,9 +126,9 @@ func TestContactAdminControlsQuotasTestAndGuards(t *testing.T) {
 			t.Fatal("cross-origin", w.Code)
 		}
 	}
-	s.options.ContactEnabled = false
+	s.contactAvailable = false
 	if w := contactAdminRequest(s, "POST", "/admin/contact/test", testForm, c); w.Code != 409 {
-		t.Fatal("deployment gate", w.Code)
+		t.Fatal("missing contact prerequisites", w.Code)
 	}
 	db.Close()
 	if w := contactAdminRequest(s, "GET", "/admin/contact", nil); w.Code != 503 {
@@ -195,5 +196,56 @@ func TestContactInboxOnlyReceiptAndLocaleParity(t *testing.T) {
 				t.Fatal("privacy copy missing", language.Code, accept, w.Code)
 			}
 		}
+	}
+}
+
+func TestContactAdminOverridesLegacyEnvironmentGate(t *testing.T) {
+	ctx := context.Background()
+	db := fixtureStore(t)
+	options := Options{PageSize: 20, SourceMode: "fixture", PresentationMode: "public", AdminEnabled: true, PublicHosts: []string{"munichbrief.de"}, CanonicalOrigin: "https://munichbrief.de", ContactEnabled: false, ContactSecret: strings.Repeat("s", 32), SecureCookies: true, ContactNotificationsConfigured: true}
+	s, err := NewWithOptions(db, slog.Default(), options)
+	if err != nil {
+		t.Fatal(err)
+	}
+	admin := contactAdminRequest(s, "GET", "/admin/contact", nil)
+	if strings.Contains(admin.Body.String(), "Enable MUNICHBRIEF_CONTACT_ENABLED") {
+		t.Fatal("obsolete environment gate guidance")
+	}
+	get := contactRequest(s, "GET", "/en/contact", nil)
+	if strings.Contains(get.Body.String(), `name="message"`) {
+		t.Fatal("fresh form must stay closed")
+	}
+	for _, control := range []string{"form", "notifications"} {
+		c := findContactCookie(t, contactAdminRequest(s, "GET", "/admin/contact", nil))
+		w := contactAdminRequest(s, "POST", "/admin/contact/settings", url.Values{"token": {c.Value}, "control": {control}, "enabled": {"true"}}, c)
+		if w.Code != http.StatusSeeOther {
+			t.Fatalf("admin could not enable %s with legacy flag false: %d", control, w.Code)
+		}
+	}
+	c := findContactCookie(t, contactRequest(s, "GET", "/en/contact", nil))
+	form := url.Values{"token": {c.Value}, "email": {"reader@example.org"}, "topic": {"general"}, "message": {"Synthetic admin-enabled enquiry"}}
+	if w := contactRequest(s, "POST", "/en/contact", form, c); w.Code != http.StatusSeeOther {
+		t.Fatalf("receipt still gated: %d", w.Code)
+	}
+	if _, err := db.ClaimContact(ctx, time.Now(), 20, 300); err != nil {
+		t.Fatalf("sending still gated: %v", err)
+	}
+	// Reconstruct the server as a restart with the same false flag: saved controls win.
+	s, err = NewWithOptions(db, slog.Default(), options)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w := contactRequest(s, "GET", "/en/contact", nil); !strings.Contains(w.Body.String(), `name="message"`) {
+		t.Fatal("restart overrode saved choice")
+	}
+	for _, control := range []string{"form", "notifications"} {
+		c := findContactCookie(t, contactAdminRequest(s, "GET", "/admin/contact", nil))
+		w := contactAdminRequest(s, "POST", "/admin/contact/settings", url.Values{"token": {c.Value}, "control": {control}, "enabled": {"false"}}, c)
+		if w.Code != http.StatusSeeOther {
+			t.Fatalf("disable %s: %d", control, w.Code)
+		}
+	}
+	if settings, err := db.ContactSettings(ctx); err != nil || settings.FormEnabled || settings.NotificationsEnabled {
+		t.Fatalf("controls did not close: %+v %v", settings, err)
 	}
 }

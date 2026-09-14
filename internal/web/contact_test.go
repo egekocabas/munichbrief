@@ -18,6 +18,11 @@ import (
 func newContactServer(t *testing.T) (*Server, *store.Store) {
 	t.Helper()
 	db := fixtureStore(t)
+	for _, control := range []string{"form", "notifications"} {
+		if err := db.SetContactControl(context.Background(), control, true); err != nil {
+			t.Fatal(err)
+		}
+	}
 	s, e := NewWithOptions(db, slog.Default(), Options{PageSize: 20, SourceMode: "fixture", PresentationMode: "public", AdminEnabled: true, PublicHosts: []string{"munichbrief.de"}, CanonicalOrigin: "https://munichbrief.de", ContactEnabled: true, ContactSecret: strings.Repeat("s", 32), SecureCookies: true})
 	if e != nil {
 		t.Fatal(e)

@@ -24,6 +24,7 @@ func TestContactControlsReceiptPauseAndRestart(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	enableContactForTest(t, s)
 	_, err = s.CreateContact(ctx, contactFixture(1, now))
 	check(err)
 	check(s.SetContactControl(ctx, "notifications", false))
@@ -166,5 +167,67 @@ func TestContactBudgetUTCResetAndLoweredLimit(t *testing.T) {
 		if b.Used != 0 || b.Remaining != b.Limit {
 			t.Fatal(b)
 		}
+	}
+}
+
+func TestContactLaunchClosedMigrationAndSavedControls(t *testing.T) {
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "launch.db")
+	s, err := Open(ctx, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { s.Close() }()
+	settings, err := s.ContactSettings(ctx)
+	if err != nil || settings.FormEnabled || settings.NotificationsEnabled {
+		t.Fatalf("new database must start closed: %+v, %v", settings, err)
+	}
+	now := time.Now()
+	if _, err := s.CreateContact(ctx, contactFixture(1, now)); !errors.Is(err, ErrContactClosed) {
+		t.Fatalf("closed installation accepted correspondence: %v", err)
+	}
+	enableContactForTest(t, s)
+	if _, err := s.CreateContact(ctx, contactFixture(1, now)); err != nil {
+		t.Fatal(err)
+	}
+	testID, err := s.QueueContactTest(ctx, fmt.Sprintf("%064d", 2), now, 20, 300)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Recreate the pre-026 state without modifying any historical migration.
+	if _, err := s.db.ExecContext(ctx, `DELETE FROM schema_migrations WHERE version=26`); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
+	}
+	s, err = Open(ctx, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	settings, err = s.ContactSettings(ctx)
+	if err != nil || settings.FormEnabled || settings.NotificationsEnabled {
+		t.Fatalf("upgrade opened contact: %+v %v", settings, err)
+	}
+	if m, err := s.Contact(ctx, 1); err != nil || m.Message != contactFixture(1, now).Message || m.NotificationState != "pending" {
+		t.Fatalf("upgrade lost correspondence/queue: %+v %v", m, err)
+	}
+	if m, err := s.Contact(ctx, testID); err != nil || m.NotificationCode != "test_disabled" {
+		t.Fatalf("queued test survived closure: %+v %v", m, err)
+	}
+	if _, err := s.ClaimContact(ctx, now, 20, 300); !errors.Is(err, ErrContactPaused) {
+		t.Fatalf("upgrade allowed sending: %v", err)
+	}
+	enableContactForTest(t, s)
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
+	}
+	s, err = Open(ctx, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	settings, err = s.ContactSettings(ctx)
+	if err != nil || !settings.FormEnabled || !settings.NotificationsEnabled {
+		t.Fatalf("restart reset saved controls: %+v %v", settings, err)
 	}
 }

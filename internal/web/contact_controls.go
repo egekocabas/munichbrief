@@ -62,8 +62,8 @@ func (s *Server) contactAdminSettings(w http.ResponseWriter, r *http.Request) {
 		s.renderContactAdmin(w, r, "Invalid contact setting.", http.StatusBadRequest)
 		return
 	}
-	if value == "true" && (!s.options.ContactEnabled || (control == "notifications" && !s.options.ContactNotificationsConfigured)) {
-		s.renderContactAdmin(w, r, "Enable contact support and configure its credentials in the deployment first.", http.StatusConflict)
+	if value == "true" && (!s.contactAvailable || (control == "notifications" && !s.options.ContactNotificationsConfigured)) {
+		s.renderContactAdmin(w, r, "Configure protected administration, the contact signing secret and, for sending, an SMTP2GO key first.", http.StatusConflict)
 		return
 	}
 	if err := s.contactStore.SetContactControl(r.Context(), control, value == "true"); err != nil {
@@ -76,7 +76,7 @@ func (s *Server) contactAdminTest(w http.ResponseWriter, r *http.Request) {
 	if !s.validContactAdminPost(w, r) {
 		return
 	}
-	if !s.options.ContactEnabled || !s.options.ContactNotificationsConfigured {
+	if !s.contactAvailable || !s.options.ContactNotificationsConfigured {
 		s.renderContactAdmin(w, r, "Test email is unavailable in the deployment configuration.", http.StatusConflict)
 		return
 	}

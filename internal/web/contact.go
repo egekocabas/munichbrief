@@ -134,7 +134,7 @@ func (s *Server) renderContact(w http.ResponseWriter, r *http.Request, data cont
 	}
 	base.StructuredData = structuredPageData(base, "ContactPage")
 	data.basePage = base
-	data.Enabled = s.options.ContactEnabled
+	data.Enabled = s.contactAvailable
 	if data.Enabled {
 		settings, err := s.contactStore.ContactSettings(r.Context())
 		if err != nil {
@@ -209,7 +209,7 @@ func (s *Server) submitContact(w http.ResponseWriter, r *http.Request) {
 	data.Email = strings.TrimSpace(r.PostForm.Get("email"))
 	data.Topic = r.PostForm.Get("topic")
 	data.Message = strings.TrimSpace(r.PostForm.Get("message"))
-	if !s.options.ContactEnabled {
+	if !s.contactAvailable {
 		invalid(http.StatusServiceUnavailable, "ContactClosed")
 		return
 	}
@@ -253,7 +253,7 @@ type contactAdminPage struct {
 	Stats                                                   store.ContactStats
 	Settings                                                store.ContactSettings
 	Budgets                                                 []store.ContactBudget
-	DeploymentEnabled, NotificationsConfigured, TestEnabled bool
+	ContactConfigured, NotificationsConfigured, TestEnabled bool
 	Status                                                  string
 	Rate                                                    contactRateStats
 }
@@ -270,8 +270,8 @@ func (s *Server) renderContactAdmin(w http.ResponseWriter, r *http.Request, erro
 	}
 	page := contactAdminPage{Token: s.contactToken(time.Now()), Filter: r.URL.Query().Get("filter"), Error: errorText, Now: time.Now().Unix()}
 	s.setContactCookie(w, page.Token, 3600)
-	page.DeploymentEnabled = s.options.ContactEnabled
-	page.NotificationsConfigured = s.options.ContactNotificationsConfigured && s.options.ContactEnabled
+	page.ContactConfigured = s.contactAvailable
+	page.NotificationsConfigured = s.options.ContactNotificationsConfigured && s.contactAvailable
 	page.Rate = s.contactRateStats(time.Now())
 	var settingsErr error
 	page.Settings, settingsErr = s.contactStore.ContactSettings(r.Context())
@@ -283,7 +283,7 @@ func (s *Server) renderContactAdmin(w http.ResponseWriter, r *http.Request, erro
 		return
 	}
 	page.Paused = !page.NotificationsConfigured || !page.Settings.NotificationsEnabled
-	page.TestEnabled = page.DeploymentEnabled && page.Settings.FormEnabled && page.Settings.NotificationsEnabled && page.NotificationsConfigured
+	page.TestEnabled = page.ContactConfigured && page.Settings.FormEnabled && page.Settings.NotificationsEnabled && page.NotificationsConfigured
 	for _, b := range page.Budgets {
 		if b.Remaining == 0 {
 			page.Paused = true
@@ -363,7 +363,7 @@ func (s *Server) contactAdminMutation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	action := r.PostForm.Get("action")
-	if action == "retry" && (!s.options.ContactEnabled || !s.options.ContactNotificationsConfigured) {
+	if action == "retry" && (!s.contactAvailable || !s.options.ContactNotificationsConfigured) {
 		s.renderContactAdmin(w, r, "Email notifications are unavailable in the deployment configuration.", http.StatusConflict)
 		return
 	}

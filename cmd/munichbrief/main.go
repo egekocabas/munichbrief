@@ -219,7 +219,7 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 	go serve(metricsServer, "metrics", cfg.MetricsAddress, cfg.SourceMode, logger, serveErrors)
 	{
 		var sender contact.Sender
-		if cfg.ContactEnabled && cfg.SMTP2GOAPIKey != "" {
+		if cfg.AdminEnabled && len(cfg.ContactSecret) >= 32 && cfg.SMTP2GOAPIKey != "" {
 			sender = contact.SMTP2GO{APIKey: cfg.SMTP2GOAPIKey}
 		}
 		contactWorker := &contact.Worker{Store: database, Sender: sender, Daily: cfg.ContactDailyLimit, Monthly: cfg.ContactMonthlyLimit, Metrics: contactMetrics, Logger: logger}

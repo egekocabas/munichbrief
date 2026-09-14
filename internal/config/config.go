@@ -38,6 +38,8 @@ const (
 
 // Config contains the application runtime settings.
 type Config struct {
+	// ContactEnabled is a legacy opt-in prerequisite check. Saved admin controls
+	// determine receipt and sending when protected admin and a secret exist.
 	ContactEnabled                         bool
 	ContactSecret, SMTP2GOAPIKey           string
 	ContactTrustedProxies                  []netip.Prefix
