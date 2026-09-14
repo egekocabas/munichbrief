@@ -171,6 +171,7 @@ var gitCommitPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
 
 // Server owns MunichBrief's HTTP route tree and parsed embedded templates.
 type Server struct {
+	licensesAdminTemplate          *template.Template
 	contactStore                   *store.Store
 	contactMu                      sync.Mutex
 	contactLimits                  map[string]contactRate
@@ -248,6 +249,7 @@ func newWithLanguages(database incidentStore, logger *slog.Logger, options Optio
 		return nil, fmt.Errorf("initialize localization: %w", err)
 	}
 	functions := template.FuncMap{
+		"modelLicenseWarning":      modelLicenseWarning,
 		"subtract":                 func(a, b int64) int64 { return a - b },
 		"contactNotificationLabel": contactNotificationLabel,
 		"contactDate":              func(v int64) string { return time.Unix(v, 0).In(location).Format("02 Jan 2006, 15:04 MST") },
@@ -318,6 +320,10 @@ func newWithLanguages(database incidentStore, logger *slog.Logger, options Optio
 	if err != nil {
 		return nil, err
 	}
+	licenseAdmin, err := template.New("licenses_admin").Funcs(functions).Parse(adminSharedTemplate + licensesAdminTemplate)
+	if err != nil {
+		return nil, err
+	}
 	contactDatabase, _ := database.(*store.Store)
 	if options.ContactEnabled && (contactDatabase == nil || len(options.ContactSecret) < 32 || !options.AdminEnabled) {
 		return nil, errors.New("contact requires database, secret and protected admin")
@@ -335,7 +341,7 @@ func newWithLanguages(database incidentStore, logger *slog.Logger, options Optio
 	if err != nil {
 		return nil, fmt.Errorf("initialize social card renderer: %w", err)
 	}
-	return &Server{contactStore: contactDatabase, contactLimits: make(map[string]contactRate), legalTemplate: legal, contactAdminTemplate: inbox, store: database, logger: logger, options: options, location: location, languages: definitions, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, contactTemplate: contact, adminTemplate: admin, adminHistoryTemplate: adminHistory, adminRSSHistoryTemplate: adminRSSHistory, adminGazetteerTemplate: adminGazetteer, adminTranslationsTemplate: adminTranslations, adminVerificationsTemplate: adminVerifications, socialCards: socialCards}, nil
+	return &Server{licensesAdminTemplate: licenseAdmin, contactStore: contactDatabase, contactLimits: make(map[string]contactRate), legalTemplate: legal, contactAdminTemplate: inbox, store: database, logger: logger, options: options, location: location, languages: definitions, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, contactTemplate: contact, adminTemplate: admin, adminHistoryTemplate: adminHistory, adminRSSHistoryTemplate: adminRSSHistory, adminGazetteerTemplate: adminGazetteer, adminTranslationsTemplate: adminTranslations, adminVerificationsTemplate: adminVerifications, socialCards: socialCards}, nil
 }
 
 // Handler returns the complete public and optional review route tree.
@@ -367,6 +373,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /social/{language}/incidents/{id}", s.socialIncident)
 	if s.options.AdminEnabled {
 		mux.HandleFunc("GET /admin", s.admin)
+		mux.HandleFunc("GET /admin/licenses", s.adminLicenses)
 		mux.HandleFunc("GET /admin/contact", s.contactAdmin)
 		mux.HandleFunc("GET /admin/contact/{id}", s.contactAdmin)
 		mux.HandleFunc("POST /admin/contact/{id}", s.contactAdminMutation)

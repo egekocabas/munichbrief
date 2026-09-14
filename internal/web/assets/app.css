@@ -820,3 +820,8 @@ html[data-theme="dark"]:has(.reader) {
  .contact-control-section button:focus-visible, .contact-control-card button:focus-visible, .admin-contact-actions :focus-visible { outline:2px solid var(--color-civic); outline-offset:4px; }
  @media(max-width:639px) { .contact-control-grid { grid-template-columns:minmax(0,1fr); } .contact-control-card { padding:1rem; } }
 }
+
+/* Long original licence text and exact model identifiers must wrap on phones. */
+.credits-page, .credit-component, .credit-notice, .model-license-card { min-width: 0; overflow-wrap: anywhere; }
+.license-text { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; font-size: .8125rem; line-height: 1.65; }
+.credit-notice summary:focus-visible { outline: 2px solid var(--color-civic); outline-offset: 3px; }

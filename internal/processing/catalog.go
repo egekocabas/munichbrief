@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
 	"sort"
@@ -23,6 +24,7 @@ var ErrModelUnavailable = errors.New("ollama model is unavailable")
 // ModelCatalogSnapshot is a point-in-time, sorted view of available model names.
 // An unsuccessful refresh fails closed by returning no models and a non-nil Err.
 type ModelCatalogSnapshot struct {
+	Digests   map[string]string
 	Models    []string
 	CheckedAt time.Time
 	Err       error
@@ -74,13 +76,14 @@ func (c *OllamaModelCatalog) Snapshot() ModelCatalogSnapshot {
 	defer c.mu.RUnlock()
 	result := c.snapshot
 	result.Models = append([]string(nil), result.Models...)
+	result.Digests = maps.Clone(result.Digests)
 	return result
 }
 
 // Refresh replaces the complete snapshot, including failures, so stale model
 // availability can never authorize new processing work.
 func (c *OllamaModelCatalog) Refresh(ctx context.Context) ModelCatalogSnapshot {
-	snapshot := ModelCatalogSnapshot{CheckedAt: c.clock()}
+	snapshot := ModelCatalogSnapshot{CheckedAt: c.clock(), Digests: make(map[string]string)}
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, c.endpoint, nil)
 	if err == nil {
 		request.Header.Set("Accept", "application/json")
@@ -96,7 +99,8 @@ func (c *OllamaModelCatalog) Refresh(ctx context.Context) ModelCatalogSnapshot {
 				if err == nil {
 					var payload struct {
 						Models []struct {
-							Name string `json:"name"`
+							Name   string `json:"name"`
+							Digest string `json:"digest"`
 						} `json:"models"`
 					}
 					if err = json.Unmarshal(body, &payload); err == nil {
@@ -104,6 +108,11 @@ func (c *OllamaModelCatalog) Refresh(ctx context.Context) ModelCatalogSnapshot {
 						for _, item := range payload.Models {
 							name := strings.TrimSpace(item.Name)
 							if name != "" {
+								if _, duplicate := seen[name]; duplicate && snapshot.Digests[name] != item.Digest {
+									snapshot.Digests[name] = ""
+								} else if !duplicate {
+									snapshot.Digests[name] = item.Digest
+								}
 								seen[name] = struct{}{}
 							}
 						}
@@ -119,6 +128,7 @@ func (c *OllamaModelCatalog) Refresh(ctx context.Context) ModelCatalogSnapshot {
 	if err != nil {
 		snapshot.Err = fmt.Errorf("list Ollama models: %w", err)
 		snapshot.Models = nil
+		snapshot.Digests = nil
 	}
 	c.mu.Lock()
 	c.snapshot = snapshot
