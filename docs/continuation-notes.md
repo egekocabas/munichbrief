@@ -61,9 +61,9 @@ does not mean its account settings or the full deployment have been verified.
 - The BayLDA enquiry deliberately omitted the website name, URL and domain email
   address. Correspondence with the German authority can be in German; translate
   and explain its reply for the operator. No English response was requested.
-- The public Contact page still asks visitors to write in English so the operator
-  can reply, while accepting valid submissions in other languages. The authority
-  correspondence preference does not change this website policy.
+- On 14 September 2026 the operator requested removing the English-writing
+  request from every Contact page. HTML, Markdown and all 14 locale catalogues
+  omit it. Valid submissions in every language remain accepted.
 - Form messages are stored in SQLite before success. Full-text notifications go
   through SMTP2GO to the project contact address, then Cloudflare Email Routing
   and the operator's Gmail. Apple Mail reads Gmail; replies use SMTP2GO. No visitor

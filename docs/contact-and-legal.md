@@ -26,7 +26,8 @@ No home address, personal Gmail address, library address, print instructions,
 COCENTER registration details, invented telephone, company or VAT number is published.
 The common operator structure in `internal/web/legal.go` preserves the name's spelling.
 
-Replies are in English; all valid submission languages are accepted. The email
+Replies are in English; all valid submission languages are accepted. At the
+operator’s request, public pages no longer ask visitors to write in English. The email
 chain is SMTP2GO → contact@munichbrief.de → Cloudflare Email Routing → the operator's
 Gmail → Apple Mail. Replies use Apple Mail with SMTP2GO outgoing mail. The website
 neither reads Gmail nor sends replies or acknowledgements to visitor addresses.

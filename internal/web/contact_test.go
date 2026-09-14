@@ -190,7 +190,7 @@ func TestLegalPagesEveryLanguageHTMLAndMarkdown(t *testing.T) {
 			if w.Code != 200 {
 				t.Fatalf("%s/%s %d", lang.Code, path, w.Code)
 			}
-			for _, key := range []string{"PrivacyTitle", "ImpressumTitle", "ContactEnglish"} {
+			for _, key := range []string{"PrivacyTitle", "ImpressumTitle", "ContactHeading"} {
 				if strings.Contains(w.Body.String(), "["+key+"]") {
 					t.Fatal("missing locale", lang.Code, key)
 				}

@@ -160,7 +160,7 @@ func (s *Server) renderContact(w http.ResponseWriter, r *http.Request, data cont
 		s.prepareMarkdown(w, base)
 		w.Header().Set("Cache-Control", "private, no-store")
 		w.WriteHeader(status)
-		fmt.Fprintf(w, "# %s\n\n%s\n\n%s\n\ncontact@munichbrief.de\n\n", s.localization.Text(language, "ContactHeading"), base.Description, s.localization.Text(language, "ContactEnglish"))
+		fmt.Fprintf(w, "# %s\n\n%s\n\ncontact@munichbrief.de\n\n", s.localization.Text(language, "ContactHeading"), base.Description)
 		for _, key := range []string{"ContactCorrectionCopy", "ContactPrivacyCopy", "ContactTechnicalCopy", "ContactPoliceCopy", "ContactStorage"} {
 			fmt.Fprintf(w, "%s\n\n", s.localization.Text(language, key))
 		}
