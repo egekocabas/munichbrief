@@ -350,3 +350,11 @@ delete source data, claim human review, or treat contact retention as source pol
   Subdomains, plus addressing and punycode domains remain accepted. This does
   not verify DNS, mailbox existence or ownership; no network lookup added.
 - Focused store/HTTP validation tests and native browser validity checks passed.
+
+## Simplify incident processing cards — 14 September 2026
+
+- Removed Technical details disclosures as requested, plus unused styles and
+  translations. Model names, variant badges, prompt revisions and timestamps
+  remain visible. Full identities/revisions remain in title attributes; stored
+  records and machine-readable provenance are unchanged. Regenerated CSS and
+  refreshed its inventory fingerprint.

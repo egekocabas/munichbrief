@@ -457,5 +457,3 @@ other = "Sayfa {{.Page}} / {{.TotalPages}}"
 [ModelVariant]
 other = "Model varyantı"
 
-[TechnicalDetails]
-other = "Teknik ayrıntılar"

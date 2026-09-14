@@ -870,11 +870,6 @@ html[data-theme="dark"]:has(.reader) {
  .processing-facts { display:flex; flex-wrap:wrap; gap:.75rem 1.5rem; margin-top:1rem; font-size:.75rem; }
  .processing-facts dt { color:var(--color-muted); display:flex; align-items:center; gap:.35rem; }
  .processing-facts dd { margin-top:.25rem; overflow-wrap:anywhere; }
- .processing-technical { margin-top:.75rem; border-top:1px solid var(--color-rule); font-size:.75rem; }
- .processing-technical summary { min-height:44px; padding-top:.85rem; color:var(--color-civic); cursor:pointer; }
- .processing-technical dl { display:grid; gap:.75rem; margin-top:.5rem; }
- .processing-technical dt { color:var(--color-muted); }
- .processing-technical dd { margin-top:.2rem; overflow-wrap:anywhere; }
  @media(min-width:640px) { .processing-steps { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 }
 

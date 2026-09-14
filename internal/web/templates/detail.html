@@ -63,15 +63,12 @@
           {{if .Number}}<span class="processing-step-number" aria-label="{{t $.Lang "Step"}} {{.Number}}">{{.Number}}</span>{{end}}
           <h3>{{.Name}}</h3>
         </div>
-        <div class="processing-model"><span class="processing-caption">{{t $.Lang "Model"}}</span><strong>{{.ModelDisplay}}</strong>{{if .ModelVariant}}<span class="processing-variant" aria-label="{{t $.Lang "ModelVariant"}}: {{.ModelVariant}}">{{.ModelVariant}}</span>{{end}}</div>
+        <div class="processing-model"><span class="processing-caption">{{t $.Lang "Model"}}</span><strong title="{{.Model}}">{{.ModelDisplay}}</strong>{{if .ModelVariant}}<span class="processing-variant" aria-label="{{t $.Lang "ModelVariant"}}: {{.ModelVariant}}">{{.ModelVariant}}</span>{{end}}</div>
         <dl class="processing-facts">
-          <div><dt>{{template "hash-icon" $}} {{t $.Lang "PromptVersion"}}</dt><dd>{{.PromptDisplay}}</dd></div>
+          <div><dt>{{template "hash-icon" $}} {{t $.Lang "PromptVersion"}}</dt><dd title="{{.PromptVersion}}">{{.PromptDisplay}}</dd></div>
           {{if .GeneratedAt}}<div><dt>{{template "clock-icon" $}} {{t $.Lang "Generated"}}</dt><dd><time datetime="{{.GeneratedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime $.Lang .GeneratedAt}}</time></dd></div>{{end}}
         </dl>
-        <details class="processing-technical"><summary>{{t $.Lang "TechnicalDetails"}}</summary><dl>
-          <div><dt>{{t $.Lang "Model"}}</dt><dd><code>{{.Model}}</code></dd></div>
-          <div><dt>{{t $.Lang "PromptVersion"}}</dt><dd><code>{{.PromptVersion}}</code></dd></div>
-        </dl></details>
+
       </li>{{end}}
     </ol>
     {{end}}

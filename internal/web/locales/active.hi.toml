@@ -457,5 +457,3 @@ other = "पन्ना {{.Page}} / {{.TotalPages}}"
 [ModelVariant]
 other = "मॉडल का संस्करण"
 
-[TechnicalDetails]
-other = "तकनीकी जानकारी"

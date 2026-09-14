@@ -457,5 +457,3 @@ other = "第 {{.Page}} 页，共 {{.TotalPages}} 页"
 [ModelVariant]
 other = "模型变体"
 
-[TechnicalDetails]
-other = "技术详情"

@@ -457,5 +457,3 @@ other = "Page {{.Page}} sur {{.TotalPages}}"
 [ModelVariant]
 other = "Variante du modèle"
 
-[TechnicalDetails]
-other = "Détails techniques"

@@ -457,5 +457,3 @@ other = "Stranica {{.Page}} od {{.TotalPages}}"
 [ModelVariant]
 other = "Varijanta modela"
 
-[TechnicalDetails]
-other = "Tehnički detalji"
