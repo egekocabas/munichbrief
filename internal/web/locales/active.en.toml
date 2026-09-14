@@ -499,11 +499,11 @@ other = "No account is needed and there is no advertising. This browser remember
 [DataHandlingCopy]
 other = "German source text is retained for processing and restricted review. Public pages show the resulting summaries."
 
-[IndependenceLegalReview]
-other = "Independence and legal review"
+[AboutIndependence]
+other = "Independence"
 
-[IndependenceLegalReviewCopy]
-other = "MunichBrief is independent from the Bavarian Police. Technical safeguards do not replace legal review. Retention, lawful basis, offence-related data, and applicable journalistic exceptions require ongoing review."
+[AboutIndependenceCopy]
+other = "MunichBrief is an independent project. It is not affiliated with the Bavarian Police or any other public authority and does not speak on their behalf."
 
 [ContactHeading]
 other = "Contact"

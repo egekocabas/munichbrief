@@ -346,10 +346,10 @@ other = "Nu ai nevoie de cont și nu există reclame. Browserul păstrează limb
 [DataHandlingCopy]
 other = "Textele originale în germană sunt păstrate pentru procesare și verificare cu acces restricționat. Paginile publice afișează rezumatele rezultate."
 
-[IndependenceLegalReview]
-other = "Independență și verificare juridică"
-[IndependenceLegalReviewCopy]
-other = "MunichBrief este independent de Poliția Bavareză. Măsurile tehnice de protecție nu înlocuiesc verificarea juridică. Păstrarea datelor, temeiul legal, datele referitoare la infracțiuni și eventualele excepții jurnalistice necesită evaluare continuă."
+[AboutIndependence]
+other = "Independență"
+[AboutIndependenceCopy]
+other = "MunichBrief este un proiect independent. Nu este afiliat Poliției Bavareze sau vreunei alte autorități publice și nu vorbește în numele acestora."
 [ContactHeading]
 other = "Contact"
 

@@ -151,8 +151,8 @@ AccuracyOfficialInformationCopy = { other = "Yapay zekâ özetlerinde ve olay ay
 PrivacyDataHandling = { other = "Gizlilik ve veri işleme" }
 PrivacyCopy = { other = "Siteyi kullanmak için hesap açmanız gerekmez; sitede reklam yoktur. Dil tercihiniz bir yıl, kapattığınız yapay zekâ bildirimi ve uyguladığınız arama filtreleri 30 gün hatırlanır. Arama ölçütleri siteye ait bir çerezle iletilir. Renk teması, siz silene kadar tarayıcıda saklanır. Seçtiğiniz sıralama, bu siteye ait bir çerezde 30 gün boyunca saklanır. Seçtiğiniz filtreler sayfanın adresinde yer alır; böylece aramanızı paylaşabilirsiniz." }
 DataHandlingCopy = { other = "Almanca kaynak metinler, işleme ve erişimi kısıtlı inceleme amacıyla saklanır. Herkese açık sayfalarda bu metinlerden hazırlanan özetler gösterilir." }
-IndependenceLegalReview = { other = "Bağımsızlık ve hukuki inceleme" }
-IndependenceLegalReviewCopy = { other = "MunichBrief, Bavyera Polisinden bağımsız bir projedir. Teknik önlemler tek başına hukuki uygunluk sağlamaz. Verilerin hangi dayanakla ve ne kadar süre saklandığı, suçla ilgili bilgilerin işlenmesi ve gazeteciliğe tanınan istisnalar ayrıca değerlendirilmelidir." }
+AboutIndependence = { other = "Bağımsızlık" }
+AboutIndependenceCopy = { other = "MunichBrief bağımsız bir projedir. Bavyera Polisi veya başka bir kamu kurumuyla bağlantısı yoktur ve bu kurumlar adına açıklama yapmaz." }
 ContactHeading = { other = "İletişim" }
 ContactPublicLead = { other = "Bir hata mı buldunuz veya öneriniz mi var?" }
 ContactIssueLink = { other = "GitHub’da konu aç" }

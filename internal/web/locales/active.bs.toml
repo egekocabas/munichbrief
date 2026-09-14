@@ -151,8 +151,8 @@ AccuracyOfficialInformationCopy = { other = "AI sažeci i izdvojeni podaci mogu 
 PrivacyDataHandling = { other = "Privatnost i obrada podataka" }
 PrivacyCopy = { other = "Nisu potrebni korisnički računi i nema oglasa. Preglednik pamti jezik godinu dana, a zatvorenu obavijest o umjetnoj inteligenciji i primijenjene pretrage 30 dana. Kriteriji pretrage šalju se kolačićem ove stranice. Tema boja ostaje u pregledniku dok je ne izbrišete. Odabrani redoslijed prikaza pamti se 30 dana u kolačiću ove stranice. Odabrani filteri nalaze se u adresi stranice pa pretragu možete podijeliti." }
 DataHandlingCopy = { other = "Njemački izvorni tekstovi čuvaju se za obradu i provjeru s ograničenim pristupom. Na javnim stranicama prikazuju se sažeci nastali iz tih tekstova." }
-IndependenceLegalReview = { other = "Neovisnost i pravna provjera" }
-IndependenceLegalReviewCopy = { other = "MunichBrief je nezavisan od Bavarske policije. Tehničke zaštite ne zamjenjuju pravnu provjeru. Rokovi čuvanja, pravna osnova, podaci povezani s krivičnim djelima i primjenjivi novinarski izuzeci zahtijevaju stalnu provjeru." }
+AboutIndependence = { other = "Nezavisnost" }
+AboutIndependenceCopy = { other = "MunichBrief je nezavisan projekt. Nije povezan s bavarskom policijom ni s drugim javnim institucijama i ne govori u njihovo ime." }
 ContactHeading = { other = "Kontakt" }
 ContactPublicLead = { other = "Pronašli ste pogrešku ili imate prijedlog?" }
 ContactIssueLink = { other = "Otvorite prijavu na GitHubu" }

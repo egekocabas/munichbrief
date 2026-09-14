@@ -157,8 +157,8 @@ AccuracyOfficialInformationCopy = { other = "Podsumowania i szczegóły wyodręb
 PrivacyDataHandling = { other = "Prywatność i przetwarzanie danych" }
 PrivacyCopy = { other = "Nie potrzebujesz konta i nie ma reklam. Przeglądarka zapamiętuje język przez rok, a zamknięte powiadomienie o AI i zastosowane wyszukiwania przez 30 dni. Kryteria wyszukiwania są przesyłane w pliku cookie witryny. Motyw kolorystyczny pozostaje w przeglądarce do usunięcia. Wybrana kolejność wyświetlania jest zapamiętywana na 30 dni w pliku cookie tej strony. Wybrane filtry są zawarte w adresie strony, dzięki czemu można udostępnić wyszukiwanie." }
 DataHandlingCopy = { other = "Niemieckie teksty źródłowe są przechowywane do przetwarzania i weryfikacji z ograniczonym dostępem. Na publicznych stronach widoczne są przygotowane na ich podstawie podsumowania." }
-IndependenceLegalReview = { other = "Niezależność i weryfikacja prawna" }
-IndependenceLegalReviewCopy = { other = "MunichBrief jest niezależny od policji bawarskiej. Zabezpieczenia techniczne nie zastępują weryfikacji prawnej. Okres przechowywania, podstawa prawna, dane dotyczące wyroków skazujących i naruszeń prawa oraz wszelkie wyjątki dziennikarskie wymagają ciągłej oceny." }
+AboutIndependence = { other = "Niezależność" }
+AboutIndependenceCopy = { other = "MunichBrief jest niezależnym projektem. Nie jest powiązany z bawarską policją ani z innymi organami publicznymi i nie wypowiada się w ich imieniu." }
 ContactHeading = { other = "Kontakt" }
 ContactPublicLead = { other = "Znalazłeś błąd lub masz sugestię?" }
 ContactIssueLink = { other = "Otwórz zgłoszenie w serwisie GitHub" }

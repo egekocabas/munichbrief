@@ -151,8 +151,8 @@ AccuracyOfficialInformationCopy = { other = "AI 生成的摘要和提取的信�
 PrivacyDataHandling = { other = "隐私与数据处理" }
 PrivacyCopy = { other = "无需账号，也没有广告。浏览器会记住语言选择一年，并保留已关闭的人工智能提示和已应用的搜索条件30天。搜索条件通过本站 cookie 传送。配色主题保留在浏览器中，直到你将其清除。 您选择的时间排序方式会保存在本站的 Cookie 中，有效期为 30 天。 所选筛选条件包含在页面网址中，可通过链接分享搜索。" }
 DataHandlingCopy = { other = "德语原文会保留用于处理和内部受限审核。公开页面展示由这些原文生成的摘要。" }
-IndependenceLegalReview = { other = "独立性与法律审查" }
-IndependenceLegalReviewCopy = { other = "MunichBrief 独立于巴伐利亚警方。技术保障不能替代法律审查。数据保留、合法依据、与违法行为有关的数据及适用的新闻业例外均需持续审查。" }
+AboutIndependence = { other = "独立性" }
+AboutIndependenceCopy = { other = "MunichBrief 是一个独立项目，与巴伐利亚警方及其他政府机构无隶属或关联关系，也不代表这些机构发声。" }
 ContactHeading = { other = "联系我们" }
 ContactPublicLead = { other = "发现错误或有建议？" }
 ContactIssueLink = { other = "在 GitHub 上提交问题" }

@@ -151,8 +151,8 @@ AccuracyOfficialInformationCopy = { other = "Les résumés générés par l’IA
 PrivacyDataHandling = { other = "Confidentialité et traitement des données" }
 PrivacyCopy = { other = "Aucun compte n’est nécessaire et il n’y a pas de publicité. Le navigateur mémorise la langue pendant un an, les avis sur l’IA fermés et les recherches appliquées pendant 30 jours. Les critères de recherche sont transmis dans un cookie du site. Le thème reste dans le navigateur jusqu’à sa suppression. L’ordre d’affichage choisi est conservé pendant 30 jours dans un cookie propre à ce site. Les filtres sélectionnés figurent dans l’adresse de la page pour permettre le partage de la recherche." }
 DataHandlingCopy = { other = "Les textes sources en allemand sont conservés pour le traitement et les vérifications à accès restreint. Les pages publiques présentent les résumés qui en sont tirés." }
-IndependenceLegalReview = { other = "Indépendance et examen juridique" }
-IndependenceLegalReviewCopy = { other = "MunichBrief est indépendant de la police bavaroise. Les mesures techniques ne remplacent pas l’examen juridique. La conservation, la base légale, les données relatives aux infractions et les exceptions journalistiques applicables nécessitent un examen continu." }
+AboutIndependence = { other = "Indépendance" }
+AboutIndependenceCopy = { other = "MunichBrief est un projet indépendant. Il n’est affilié ni à la police bavaroise ni à aucune autre autorité publique et ne s’exprime pas en leur nom." }
 ContactHeading = { other = "Contact" }
 ContactPublicLead = { other = "Vous avez trouvé une erreur ou avez une suggestion ?" }
 ContactIssueLink = { other = "Ouvrir un ticket sur GitHub" }

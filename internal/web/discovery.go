@@ -448,7 +448,7 @@ func (s *Server) renderAboutMarkdown(response http.ResponseWriter, data aboutPag
 		{title: "AITransparencyEU", copy: []string{"AITransparencyEUCopy"}},
 		{title: "AccuracyOfficialInformation", copy: []string{"AccuracyOfficialInformationCopy", "CoverageCopy"}},
 		{title: "PrivacyDataHandling", copy: []string{"PrivacyCopy", "DataHandlingCopy", "MonitoringCopy"}},
-		{title: "IndependenceLegalReview", copy: []string{"IndependenceLegalReviewCopy"}},
+		{title: "AboutIndependence", copy: []string{"AboutIndependenceCopy"}},
 	}
 	for _, section := range sections {
 		fmt.Fprintf(&builder, "\n## %s\n", markdownText(s.localization.Text(data.Lang, section.title)))

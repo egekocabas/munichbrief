@@ -499,11 +499,11 @@ other = "Es gibt weder Benutzerkonten noch Werbung. Dieser Browser merkt sich di
 [DataHandlingCopy]
 other = "Die deutschen Quelltexte werden zur Verarbeitung und für interne Prüfungen mit beschränktem Zugriff gespeichert. Öffentlich zu sehen sind die daraus erstellten Zusammenfassungen."
 
-[IndependenceLegalReview]
-other = "Unabhängigkeit und rechtliche Prüfung"
+[AboutIndependence]
+other = "Unabhängigkeit"
 
-[IndependenceLegalReviewCopy]
-other = "MunichBrief ist unabhängig von der Bayerischen Polizei. Technische Schutzmaßnahmen ersetzen keine rechtliche Prüfung. Aufbewahrung, Rechtsgrundlage, Daten zu Straftaten und anwendbare journalistische Ausnahmen erfordern eine fortlaufende Prüfung."
+[AboutIndependenceCopy]
+other = "MunichBrief ist ein unabhängiges Projekt. Es gehört weder zur Bayerischen Polizei noch zu einer anderen Behörde und spricht nicht in deren Namen."
 
 [ContactHeading]
 other = "Kontakt"
