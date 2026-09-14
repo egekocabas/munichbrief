@@ -136,7 +136,7 @@ func TestSourceFailureMarksLaterSourcesNotRun(t *testing.T) {
 		t.Fatal(err)
 	}
 	details, err := store.RefreshDetails(ctx, runID)
-	if err != nil || details.Sources[0].Status != "failed" || details.Sources[1].Status != "not_run" || details.Run.Trigger != string(RefreshTriggerRetry) || details.Run.SourcesCompleted != 2 {
+	if err != nil || details.Sources[0].Status != "failed" || details.Sources[1].Status != "not_run" || details.Run.Trigger != string(RefreshTriggerRetry) || details.Run.SourcesCompleted != 0 || details.Run.SourcesFailed != 1 || details.Run.SourcesSkipped != 1 {
 		t.Fatalf("failure details = %#v, %v", details, err)
 	}
 }

@@ -215,3 +215,24 @@ delete source data, claim human review, or treat contact retention as source pol
 - Full gazetteer race tests and focused matcher/admin race checks cover matching,
   negative cases, typed placeholders and round-trip restoration. Frontend,
   licence and documentation checks cover the admin wording update.
+
+
+## Gazetteer refresh diagnostics — 14 September 2026
+
+- The pasted history is recovered, not currently failing: #40 succeeded with
+  12,136 protected names. Its previous 19 displayed attempts have 12 upstream
+  errors (six 429, six 504) and seven interrupted runs. The reason for process
+  termination cannot be established from the pasted HTML.
+- Fixed restart-triggered downloads that ignored the persisted schedule and reset
+  exponential backoff. Recovery of an interrupted run waits five minutes; normal
+  retry escalation survives restarts. Provider Retry-After extends automatic
+  waits, bounded to seven days. No mirror switching or rate-limit bypass added.
+- Fixed misleading source completion counts (previously included not_run) and
+  zero-entry displays on retained generations. Added plain-language explanations,
+  separate skipped/interrupted counts and readable durations. Old audit rows stay.
+- No migration, live source requests, database edits or new preview listeners.
+  See gazetteer.md for validation and operational interpretation.
+- Completed validation: full gazetteer and web race suites (web: 355 seconds),
+  final focused schedule/admin race checks, Go vet/build, frontend generation,
+  offline licence inventory checks, formatting/diff checks and documentation
+  checks. Eight synthetic browser width/theme combinations passed.

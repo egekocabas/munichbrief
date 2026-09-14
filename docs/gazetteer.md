@@ -70,8 +70,8 @@ size, parsing, row-count, override, matcher, activation/storage, and
 interruption failures. Messages are stripped of control characters and bounded
 to 2 KiB. Response bodies, downloaded payloads, credentials, incident text, and
 the complete name set are never stored in the diagnostic tables or rendered.
-An abandoned running attempt is marked interrupted when the database next
-opens; already completed source results remain intact and untouched sources are
+An abandoned running attempt is marked interrupted when the manager next
+starts; already completed source results remain intact and untouched sources are
 marked not reached. Queries remain paginated or aggregated.
 
 The page provides a confirmed **Refresh now** action for authenticated
@@ -114,3 +114,35 @@ grammar and may place an apostrophe-delimited grammatical suffix after one. A
 missing, duplicated, field-moved, modified, or invented token is invalid. Reader
 titles and summaries are plain text, so Markdown and URLs are rejected before
 persistence.
+
+
+## Refresh recovery and history interpretation
+
+The background manager resumes the saved refresh deadline after a restart instead
+of immediately downloading all sources. It resumes consecutive failure backoff
+from retained history (5, 10, 20 minutes, up to six hours). An abandoned run is
+marked interrupted and scheduled for recovery after five minutes. Changed source
+URLs or parser contracts still trigger a refresh of an otherwise healthy index.
+Explicit manual requests remain available through the existing serialized queue.
+Upstream `Retry-After` values can extend automatic retry delays; valid HTTP dates
+and seconds are supported, with a seven-day upper bound. Invalid headers are
+ignored. Requests remain sequential and generation activation remains atomic.
+
+The history table counts only succeeded/unchanged sources as successful. Failed,
+interrupted and unreached sources have separate counts. An unsuccessful attempt
+shows the retained generation instead of implying its index contains zero names;
+durations are rounded to milliseconds. Old errors remain in the audit history
+after a successful refresh and do not imply a currently broken matcher.
+
+In the operator's 14 September snapshot, refresh #40 succeeded with 12,136 names.
+The preceding displayed attempts contained six HTTP 429 errors, six HTTP 504
+errors and seven interruptions. The alternating startup/interruption pattern is
+consistent with process restarts, but the HTML does not establish why the process
+stopped. Overpass documents 429 as rate limiting and 504 as possible resource
+load shedding: [Overpass resource policy](https://dev.overpass-api.de/overpass-doc/en/preface/commons.html).
+We did not retry live sources or alter the existing database during this review.
+
+Regression checks cover persisted schedules, escalation across restarts,
+interruption recovery, source-contract changes, provider retry headers, successful
+versus unreached counts, admin rendering and retained-index behaviour. Browser
+checks use synthetic history at 320, 390, 768 and 1440 pixels in both themes.

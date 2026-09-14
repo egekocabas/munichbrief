@@ -81,7 +81,7 @@ func TestAdminGazetteerShowsBoundedOperationalStatus(t *testing.T) {
 	}
 	response := httptest.NewRecorder()
 	server.Handler().ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/admin/gazetteer", nil))
-	for _, expected := range []string{"Gazetteer operations", "A headline ending in “– Haar”", "Haar (bei München)", "this exception does not apply to body text", "Place-name gazetteer", "Ready", "1 protected names", "Official Munich places", "City of Munich", "aggregate-hash", "Source payloads and the complete name list are intentionally not rendered", "Stale but operational", "Refresh history", "http_status", "gazetteer-history-table", `role="region"`, `tabindex="0"`, `data-gazetteer-history`, "admin-history-shell", "upstream &lt;script&gt;alert(1)&lt;/script&gt; failed", "/api/admin/gazetteer/refresh", "Refresh now", `id="processing-confirmation"`} {
+	for _, expected := range []string{"0 / 1 successful", "1 failed", "#1 retained", "No replacement activated", "Gazetteer operations", "A headline ending in “– Haar”", "Haar (bei München)", "this exception does not apply to body text", "Place-name gazetteer", "Ready", "1 protected names", "Official Munich places", "City of Munich", "aggregate-hash", "Source payloads and the complete name list are intentionally not rendered", "Stale but operational", "Refresh history", "http_status", "gazetteer-history-table", `role="region"`, `tabindex="0"`, `data-gazetteer-history`, "admin-history-shell", "upstream &lt;script&gt;alert(1)&lt;/script&gt; failed", "/api/admin/gazetteer/refresh", "Refresh now", `id="processing-confirmation"`} {
 		if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), expected) {
 			t.Errorf("gazetteer admin = %d, missing %q", response.Code, expected)
 		}

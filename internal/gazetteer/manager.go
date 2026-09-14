@@ -187,12 +187,15 @@ func (m *Manager) refresh(ctx context.Context, trigger RefreshTrigger) (RefreshR
 }
 
 func (m *Manager) Run(ctx context.Context) {
-	delay := time.Duration(0)
-	failures := 0
-	first := true
+	delay, failures, err := m.resumeSchedule(ctx)
+	if err != nil {
+		m.logger.Error("load gazetteer schedule", "error", err)
+		return
+	}
+	first := delay == 0
 	for {
 		trigger := RefreshTriggerScheduled
-		if first {
+		if first && failures == 0 {
 			trigger = RefreshTriggerStartup
 		} else if failures > 0 {
 			trigger = RefreshTriggerRetry
@@ -217,12 +220,12 @@ func (m *Manager) Run(ctx context.Context) {
 		first = false
 		_, err := m.refresh(ctx, trigger)
 		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
 			m.logger.Error("gazetteer refresh failed; keeping last successful generation", "error", err)
 			failures++
-			delay = 5 * time.Minute * time.Duration(1<<min(failures-1, 6))
-			if delay > 6*time.Hour {
-				delay = 6 * time.Hour
-			}
+			delay = refreshRetryDelay(failures, err, m.clock())
 			next := m.clock().Add(delay)
 			_ = m.store.SetNextRefresh(ctx, next)
 			if m.observer != nil {
@@ -298,4 +301,55 @@ func aggregateSourceHash(snapshots []SourceSnapshot, overrides map[string]string
 	sort.Strings(parts)
 	hash := sha256.Sum256([]byte(strings.Join(parts, "\n")))
 	return hex.EncodeToString(hash[:])
+}
+
+// Resume the persisted deadline and retry escalation instead of issuing another
+// startup download each time the process restarts.
+func (m *Manager) resumeSchedule(ctx context.Context) (time.Duration, int, error) {
+	status, err := m.store.Status(ctx)
+	if err != nil {
+		return 0, 0, err
+	}
+	failures := 0
+	for page := 1; page <= refreshHistoryLimit/refreshPageSize; page++ {
+		history, err := m.store.RefreshHistory(ctx, page)
+		if err != nil {
+			return 0, 0, err
+		}
+		finished := false
+		for _, run := range history.Entries {
+			if run.Status == "succeeded" {
+				finished = true
+				break
+			}
+			if run.Status == "failed" || run.Status == "interrupted" {
+				failures++
+			}
+		}
+		if finished || !history.HasOlder {
+			break
+		}
+	}
+	// A changed source URL or parser contract still needs a fresh download.
+	if m.Ready() && failures == 0 {
+		for _, source := range m.sources {
+			_, _, _, oldURL, contract, err := m.store.SourceValidators(ctx, source.Key)
+			if err != nil {
+				return 0, 0, err
+			}
+			if oldURL != source.URL || contract != sourceContractVersion {
+				return 0, 0, nil
+			}
+		}
+	}
+	return max(time.Duration(0), status.NextRefresh.Sub(m.clock())), failures, nil
+}
+
+func refreshRetryDelay(failures int, failure error, now time.Time) time.Duration {
+	delay := min(6*time.Hour, 5*time.Minute*time.Duration(1<<min(max(failures-1, 0), 7)))
+	var upstream *sourceHTTPError
+	if errors.As(failure, &upstream) {
+		delay = max(delay, upstream.retryAt.Sub(now))
+	}
+	return delay
 }

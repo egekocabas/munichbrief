@@ -123,7 +123,7 @@ func (f *Fetcher) FetchWithDiagnostics(ctx context.Context, definition SourceDef
 	}
 	if response.StatusCode != http.StatusOK {
 		diagnostic.FailureStage = "http_status"
-		return SourceSnapshot{}, false, diagnostic, fmt.Errorf("fetch %s: HTTP %d", definition.Key, response.StatusCode)
+		return SourceSnapshot{}, false, diagnostic, &sourceHTTPError{key: definition.Key, status: response.StatusCode, retryAt: retryAfterTime(response.Header.Get("Retry-After"), f.clock())}
 	}
 	limited := io.LimitReader(response.Body, definition.MaximumSize+1)
 	data, err := io.ReadAll(limited)
@@ -363,4 +363,30 @@ func stringMapAny(values map[string]string) map[string]any {
 		result[key] = value
 	}
 	return result
+}
+
+type sourceHTTPError struct {
+	key     string
+	status  int
+	retryAt time.Time
+}
+
+func (e *sourceHTTPError) Error() string { return fmt.Sprintf("fetch %s: HTTP %d", e.key, e.status) }
+
+// Ignore malformed/past values and bound an upstream delay to seven days.
+func retryAfterTime(value string, now time.Time) time.Time {
+	value = strings.TrimSpace(value)
+	if seconds, err := strconv.ParseInt(value, 10, 64); err == nil {
+		if seconds <= 0 {
+			return time.Time{}
+		}
+		return now.Add(time.Duration(min(seconds, int64(7*24*60*60))) * time.Second)
+	}
+	if at, err := http.ParseTime(value); err == nil && at.After(now) {
+		if at.After(now.Add(7 * 24 * time.Hour)) {
+			return now.Add(7 * 24 * time.Hour)
+		}
+		return at
+	}
+	return time.Time{}
 }

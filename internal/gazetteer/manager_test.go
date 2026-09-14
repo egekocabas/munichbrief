@@ -52,6 +52,15 @@ func TestManagerManualRefreshRequestsAreAsynchronousAndCoalesced(t *testing.T) {
 	if err := <-done; err != nil {
 		t.Fatal(err)
 	}
+	if delay, failures, err := manager.resumeSchedule(ctx); err != nil || delay <= 0 || failures != 0 {
+		t.Fatalf("healthy startup discarded saved schedule: %v %d %v", delay, failures, err)
+	}
+	originalURL := manager.sources[0].URL
+	manager.sources[0].URL = "https://example.test/changed-source"
+	if delay, _, err := manager.resumeSchedule(ctx); err != nil || delay != 0 {
+		t.Fatalf("changed source did not bypass old schedule: %v %v", delay, err)
+	}
+	manager.sources[0].URL = originalURL
 	if got := manager.RequestRefresh(); got != RefreshRequestAccepted {
 		t.Fatalf("first queued request = %q, want %q", got, RefreshRequestAccepted)
 	}
@@ -68,8 +77,7 @@ func TestManagerManualRefreshRequestsAreAsynchronousAndCoalesced(t *testing.T) {
 		manager.Run(runContext)
 		close(runDone)
 	}()
-	<-started // startup refresh
-	<-started // queued manual refresh
+	<-started // queued manual refresh; saved schedule suppresses startup download
 	deadline := time.Now().Add(time.Second)
 	for manager.refreshing.Load() && time.Now().Before(deadline) {
 		time.Sleep(time.Millisecond)
