@@ -20,5 +20,4 @@
       or personal deployment values are included
 - [ ] Privacy, attribution, and fail-closed presentation rules remain intact
 
-The pull-request title must follow Conventional Commits. CI checks the title,
-prohibited files (including incoming history), and secrets.
+The pull-request title must follow Conventional Commits.

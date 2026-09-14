@@ -8,12 +8,6 @@ documentation. They are designed to run both locally and in CI:
 - `check-chart.sh` checks the opt-in public example render for required security
   and routing properties.
 - `check-docs.mjs` verifies local file and heading links in repository Markdown.
-- `check-tracked-files.mjs` rejects tracked files covered by Git ignore rules,
-  including force-added credentials, databases, and backups. When
-  `REPOSITORY_SAFETY_BASE` contains the PR/push base SHA, it also checks incoming
-  commit paths so deleting a prohibited file later does not hide it.
-- `node --test scripts/check-tracked-files.test.mjs` checks the file guard with
-  synthetic files in isolated temporary Git repositories.
 
 Keep checks deterministic and free of credentials. A failed assertion should
 name the file or rendered property that needs attention.

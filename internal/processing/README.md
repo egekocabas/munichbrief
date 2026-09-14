@@ -41,7 +41,7 @@ still constrains the response to the registered title and summary fields. Each
 target keeps one active immutable prompt, and retired prompt versions remain
 registered for audit. The generic factory derives its schema, decoder, step,
 and scope; follow
-[Adding a reader language](../../docs/adding-a-language.md) instead of adding
+[Language support](../../docs/translation.md#languages) instead of adding
 worker or store branches.
 
 Each target also has a durable production route containing an installed model

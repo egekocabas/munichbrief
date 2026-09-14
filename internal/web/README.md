@@ -20,7 +20,7 @@ File ownership is intentionally narrow:
 - `templates/`, `assets/`, and `static/`: embedded UI sources and generated files
 
 Reader routes and discovery metadata consume the shared compile-time language
-registry. Follow [Adding a reader language](../../docs/adding-a-language.md) so
+registry. Follow [Language support](../../docs/translation.md#languages) so
 catalog, processing, SEO, and ingress contracts remain synchronized.
 
 Timeline article links use canonical incident URLs without pagination queries.
@@ -37,9 +37,8 @@ HTML.
 AI-generated reader output uses the centrally selected dark- and light-theme
 labels returned by `selectedAIGeneratedAssetURL` and
 `selectedAILightThemeAssetURL`. Do not choose label variants independently in
-a template. The disclosure scope, legal caveats, and machine-readable
-provenance map are documented in
-[EU AI transparency and compliance posture](../../docs/eu-ai-transparency.md).
+a template. Reader disclosure and provenance are summarized in
+[AI disclosure](../../docs/source-policy.md#ai-disclosure).
 
 After changing templates or frontend sources, run `npm run build` and commit the
 generated files under `static/`. Add boundary tests for public-host routing,

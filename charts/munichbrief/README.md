@@ -6,7 +6,7 @@ source, review presentation, AI disabled, and no ingress.
 
 Public ingress renders one explicit Prefix path for every entry in
 `ingress.public.languageCodes`. Keep that list synchronized with the compiled
-application registry; see [Adding a reader language](../../docs/adding-a-language.md).
+application registry; see [Language support](../../docs/translation.md#languages).
 
 ```bash
 helm install munichbrief ./charts/munichbrief \

@@ -12,6 +12,5 @@ Do not include credentials, databases, real police article copies, generated
 model output, personal information, or private deployment details in reports.
 Follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
-Maintainer commits and PR titles must use Conventional Commits, for example
-`fix(parser): handle standalone release headings`. See the
-[development guide](docs/development.md) for checks and repository safeguards.
+PR titles must use Conventional Commits, for example
+`fix(parser): handle standalone release headings`.
