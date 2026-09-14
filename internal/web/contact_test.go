@@ -246,6 +246,12 @@ func TestLegalPagesEveryLanguageHTMLAndMarkdown(t *testing.T) {
 				}
 			}
 			if path == "impressum" {
+				if !strings.Contains(w.Body.String(), `href="/`+lang.Code+`/contact"`) || !strings.Contains(mw.Body.String(), "](/"+lang.Code+"/contact)") {
+					t.Errorf("%s: missing contact page link in legal notice", lang.Code)
+				}
+				if strings.Contains(mw.Body.String(), "## "+s.localization.Text(lang.Code, "ContactHeading")+"\n") {
+					t.Errorf("%s: duplicate contact section in legal notice", lang.Code)
+				}
 				copy := s.localization.Text(lang.Code, "ImpressumRequestsCopy")
 				if !strings.Contains(w.Body.String(), html.EscapeString(copy)) || !strings.Contains(mw.Body.String(), copy) {
 					t.Errorf("%s: editorial request guidance missing", lang.Code)

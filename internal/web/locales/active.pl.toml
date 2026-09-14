@@ -351,7 +351,7 @@ other = "Jak MunichBrief przetwarza dane strony, korespondencję i źródła pub
 other = "Wskazany operator odpowiada również za treści redakcyjne zgodnie z §18(2) MStV. MunichBrief jest niezależny od policji."
 
 [ImpressumContactCopy]
-other = "Pytania i sprostowania można przesyłać e-mailem lub formularzem. Podany adres służy do korespondencji pocztowej."
+other = "W razie pytań odwiedź naszą stronę kontaktową."
 
 [ContactStorage]
 other = "Wiadomość zapisujemy w prywatnej skrzynce, zanim potwierdzimy jej otrzymanie. Wiadomości oznaczone jako rozwiązane są z niej usuwane po 90 dniach."
@@ -390,10 +390,10 @@ other = "Gdy ma zastosowanie art. 21 RODO, możesz w dowolnym momencie wnieść 
 other = "Ostatnia aktualizacja"
 
 [ImpressumRequests]
-other = "Wnioski dotyczące relacji"
+other = "Kontakt i wnioski dotyczące relacji"
 
 [ImpressumRequestsCopy]
-other = "Jeśli relacja Cię dotyczy, możesz zwrócić się do wskazanego wyżej operatora o sprostowanie, usunięcie lub publikację odpowiedzi. Podaj link do strony i wskaż fragment, którego dotyczy wniosek. Gdy prawo wymaga podpisanego wniosku na piśmie, skorzystaj z adresu pocztowego; sam formularz kontaktowy nie spełnia tego wymogu."
+other = "Jeśli relacja Cię dotyczy, możesz poprosić o sprostowanie, usunięcie lub publikację odpowiedzi. Podaj link do strony i wskaż fragment, którego dotyczy wniosek. Gdy prawo wymaga podpisanego wniosku na piśmie, skorzystaj z adresu pocztowego; sam formularz kontaktowy nie spełnia tego wymogu."
 
 [LicensesTitle]
 other = "Podziękowania i licencje"

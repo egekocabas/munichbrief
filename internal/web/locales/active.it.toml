@@ -351,7 +351,7 @@ other = "Come MunichBrief tratta i dati del sito, la corrispondenza e le fonti p
 other = "L’operatore indicato è anche responsabile dei contenuti editoriali ai sensi del §18(2) MStV. MunichBrief è indipendente dalla polizia."
 
 [ImpressumContactCopy]
-other = "Per richieste e correzioni usa l’email o il modulo. L’indirizzo indicato è destinato alla corrispondenza postale."
+other = "Per qualsiasi richiesta, visita la pagina Contatti."
 
 [ContactStorage]
 other = "Il messaggio viene salvato in una casella privata prima della conferma di ricezione. I messaggi segnati come risolti vengono eliminati dalla casella dopo 90 giorni."
@@ -390,10 +390,10 @@ other = "Quando si applica l’articolo 21 GDPR, puoi opporti in qualsiasi momen
 other = "Ultimo aggiornamento"
 
 [ImpressumRequests]
-other = "Richieste relative a un resoconto"
+other = "Contatti e richieste relative a un resoconto"
 
 [ImpressumRequestsCopy]
-other = "Se un resoconto ti riguarda, puoi contattare il responsabile indicato sopra per chiedere una correzione, la rimozione o la pubblicazione di una replica. Indica il link alla pagina e il passaggio interessato. Quando la legge richiede una richiesta scritta e firmata, usa l’indirizzo postale: il solo modulo di contatto non soddisfa tale requisito."
+other = "Se un resoconto ti riguarda, puoi chiedere una correzione, la rimozione o la pubblicazione di una replica. Indica il link alla pagina e il passaggio interessato. Quando la legge richiede una richiesta scritta e firmata, usa l’indirizzo postale: il solo modulo di contatto non soddisfa tale requisito."
 
 [LicensesTitle]
 other = "Riconoscimenti e licenze"

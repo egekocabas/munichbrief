@@ -625,7 +625,7 @@ other = "Cum gestionează MunichBrief datele site-ului, corespondența și surse
 other = "Operatorul indicat răspunde și de conținutul editorial conform §18(2) MStV. MunichBrief este independent de poliție."
 
 [ImpressumContactCopy]
-other = "Pentru întrebări și corectări folosește e-mailul sau formularul. Adresa indicată este pentru corespondență poștală."
+other = "Pentru întrebări, vizitează pagina noastră de contact."
 
 [ContactStorage]
 other = "Mesajul este salvat într-o căsuță privată înainte de confirmarea primirii. Mesajele marcate ca rezolvate sunt șterse din această căsuță după 90 de zile."
@@ -664,10 +664,10 @@ other = "Când se aplică articolul 21 din RGPD, te poți opune oricând prelucr
 other = "Ultima actualizare"
 
 [ImpressumRequests]
-other = "Solicitări privind o relatare"
+other = "Contact și solicitări privind o relatare"
 
 [ImpressumRequestsCopy]
-other = "Dacă o relatare te privește, poți contacta operatorul indicat mai sus pentru a solicita o corectare, eliminarea sau publicarea unui drept la replică. Include linkul paginii și indică pasajul vizat. Când legea cere o solicitare scrisă și semnată, folosește adresa poștală; formularul de contact singur nu îndeplinește această cerință."
+other = "Dacă o relatare te privește, poți solicita o corectare, eliminarea sau publicarea unui drept la replică. Include linkul paginii și indică pasajul vizat. Când legea cere o solicitare scrisă și semnată, folosește adresa poștală; formularul de contact singur nu îndeplinește această cerință."
 
 [LicensesTitle]
 other = "Contribuții și licențe"

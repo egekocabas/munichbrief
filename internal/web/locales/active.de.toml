@@ -780,7 +780,7 @@ other = "Wie MunichBrief Website-Daten, Korrespondenz und öffentliche Quellen v
 other = "Der oben genannte Betreiber ist auch für redaktionelle Inhalte nach §18 Abs. 2 MStV verantwortlich. MunichBrief ist von der Polizei unabhängig."
 
 [ImpressumContactCopy]
-other = "Anfragen und Korrekturhinweise können Sie per E-Mail oder Kontaktformular senden. Die Anschrift dient dem Briefverkehr."
+other = "Für Anfragen besuchen Sie bitte unsere Kontaktseite."
 
 [ContactStorage]
 other = "Ihre Nachricht wird in einem geschützten Posteingang gespeichert, bevor wir den Eingang bestätigen. Erledigte Anfragen werden dort nach 90 Tagen gelöscht."
@@ -819,10 +819,10 @@ other = "Soweit Artikel 21 DSGVO gilt, können Sie einer Verarbeitung auf Grundl
 other = "Zuletzt aktualisiert"
 
 [ImpressumRequests]
-other = "Anliegen zu einer Meldung"
+other = "Kontakt und Anliegen zu einer Meldung"
 
 [ImpressumRequestsCopy]
-other = "Wenn Sie von einer Meldung betroffen sind, können Sie sich wegen einer Berichtigung, Entfernung oder Gegendarstellung an den oben genannten Betreiber wenden. Bitte nennen Sie den Seitenlink und die betreffende Textstelle. Soweit das Gesetz ein schriftliches, unterzeichnetes Verlangen voraussetzt, nutzen Sie bitte die Postanschrift; das Kontaktformular allein erfüllt diese Formvorgabe nicht."
+other = "Wenn Sie von einer Meldung betroffen sind, können Sie eine Berichtigung, Entfernung oder Gegendarstellung anfragen. Bitte nennen Sie den Seitenlink und die betreffende Textstelle. Soweit das Gesetz ein schriftliches, unterzeichnetes Verlangen voraussetzt, nutzen Sie bitte die Postanschrift; das Kontaktformular allein erfüllt diese Formvorgabe nicht."
 
 [LicensesTitle]
 other = "Danksagungen und Lizenzen"

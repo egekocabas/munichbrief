@@ -38,7 +38,7 @@ func legalPageUpdatedAt(page string) time.Time {
 	case "privacy":
 		return time.Date(2026, time.September, 15, 0, 0, 0, 0, time.UTC)
 	case "impressum":
-		return time.Date(2026, time.September, 13, 0, 0, 0, 0, time.UTC)
+		return time.Date(2026, time.September, 15, 0, 0, 0, 0, time.UTC)
 	default:
 		return time.Time{}
 	}
@@ -73,7 +73,7 @@ func (s *Server) legal(w http.ResponseWriter, r *http.Request) {
 			data.Sections = append(data.Sections, legalSection{key, key + "Copy"})
 		}
 	} else {
-		data.Sections = []legalSection{{"ImpressumResponsible", "ImpressumResponsibleCopy"}, {"ContactHeading", "ImpressumContactCopy"}, {"ImpressumRequests", "ImpressumRequestsCopy"}}
+		data.Sections = []legalSection{{"ImpressumResponsible", "ImpressumResponsibleCopy"}, {"ImpressumRequests", "ImpressumRequestsCopy"}}
 	}
 	if wantsMarkdown(r.Header.Get("Accept")) {
 		s.prepareMarkdown(w, base)
@@ -93,7 +93,11 @@ func writeMarkdownFrontMatterBuilder(w http.ResponseWriter, data legalPage, s *S
 	o := data.Operator
 	fmt.Fprintf(&b, "%s  \n%s  \n%s  \n%s  \n%s  \n%s\n\n", o.Name, o.CareOf, o.Street, o.City, s.localization.Text(data.Lang, "LegalGermany"), o.Email)
 	for _, section := range data.Sections {
-		fmt.Fprintf(&b, "## %s\n\n%s\n\n", s.localization.Text(data.Lang, section.Title), s.localization.Text(data.Lang, section.Copy))
+		fmt.Fprintf(&b, "## %s\n\n", s.localization.Text(data.Lang, section.Title))
+		if section.Copy == "ImpressumRequestsCopy" {
+			fmt.Fprintf(&b, "[%s](/%s/contact)\n\n", markdownText(s.localization.Text(data.Lang, "ImpressumContactCopy")), data.Lang)
+		}
+		fmt.Fprintf(&b, "%s\n\n", s.localization.Text(data.Lang, section.Copy))
 	}
 	fmt.Fprintf(&b, "[%s](/%s/contact#contact-form)\n\n", s.localization.Text(data.Lang, "ContactForm"), data.Lang)
 	if data.Privacy {

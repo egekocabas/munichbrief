@@ -351,7 +351,7 @@ other = "Cómo trata MunichBrief los datos del sitio, la correspondencia y las f
 other = "El responsable indicado también responde del contenido editorial conforme al §18(2) MStV. MunichBrief es independiente de la policía."
 
 [ImpressumContactCopy]
-other = "Utiliza el correo o el formulario para consultas y correcciones. La dirección indicada es para correspondencia postal."
+other = "Para consultas, visita nuestra página de contacto."
 
 [ContactStorage]
 other = "Guardamos tu mensaje en una bandeja privada antes de confirmar su recepción. Los mensajes marcados como resueltos se eliminan de esa bandeja a los 90 días."
@@ -390,10 +390,10 @@ other = "Cuando sea aplicable el artículo 21 del RGPD, puedes oponerte en cualq
 other = "Última actualización"
 
 [ImpressumRequests]
-other = "Solicitudes sobre un informe"
+other = "Contacto y solicitudes sobre un informe"
 
 [ImpressumRequestsCopy]
-other = "Si un informe te afecta, puedes contactar con el responsable indicado arriba para solicitar una corrección, la retirada o la publicación de una réplica. Incluye el enlace a la página e indica el pasaje en cuestión. Cuando la ley exija una solicitud escrita y firmada, utiliza la dirección postal; el formulario de contacto por sí solo no cumple ese requisito."
+other = "Si un informe te afecta, puedes solicitar una corrección, la retirada o la publicación de una réplica. Incluye el enlace a la página e indica el pasaje en cuestión. Cuando la ley exija una solicitud escrita y firmada, utiliza la dirección postal; el formulario de contacto por sí solo no cumple ese requisito."
 
 [LicensesTitle]
 other = "Créditos y licencias"

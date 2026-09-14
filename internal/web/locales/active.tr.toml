@@ -351,7 +351,7 @@ other = "MunichBrief’in site verilerini, yazışmaları ve kamuya açık kayna
 other = "Yukarıda adı belirtilen işletmeci, MStV §18(2) uyarınca editoryal içerikten de sorumludur. MunichBrief, polisten bağımsızdır."
 
 [ImpressumContactCopy]
-other = "Sorularınızı ve düzeltme taleplerinizi e-posta veya iletişim formuyla iletebilirsiniz. Belirtilen adres posta yoluyla yazışma içindir."
+other = "Sorularınız için iletişim sayfamızı ziyaret edebilirsiniz."
 
 [ContactStorage]
 other = "Mesajınızın alındığını onaylamadan önce onu özel bir gelen kutusuna kaydederiz. Çözüldü olarak işaretlenen mesajlar bu kutudan 90 gün sonra silinir."
@@ -390,10 +390,10 @@ other = "GDPR’nin 21. maddesinin geçerli olduğu durumlarda, meşru menfaate 
 other = "Son güncelleme"
 
 [ImpressumRequests]
-other = "Bir haberle ilgili talepler"
+other = "İletişim ve haberlerle ilgili talepler"
 
 [ImpressumRequestsCopy]
-other = "Bir haber sizi ilgilendiriyorsa düzeltme, kaldırma veya cevap hakkı talebinizi yukarıdaki iletişim bilgileri üzerinden site sorumlusuna iletebilirsiniz. Lütfen sayfanın bağlantısını ve ilgili bölümü belirtin. Yasanın imzalı ve yazılı başvuru gerektirdiği durumlarda posta adresini kullanın; yalnızca iletişim formunu göndermek bu koşulu karşılamaz."
+other = "Bir haber sizi ilgilendiriyorsa düzeltme, kaldırma veya cevap hakkı talebinde bulunabilirsiniz. Lütfen sayfanın bağlantısını ve ilgili bölümü belirtin. Yasanın imzalı ve yazılı başvuru gerektirdiği durumlarda posta adresini kullanın; yalnızca iletişim formunu göndermek bu koşulu karşılamaz."
 
 [LicensesTitle]
 other = "Katkılar ve lisanslar"

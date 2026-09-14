@@ -351,7 +351,7 @@ other = "Le traitement des données du site, du courrier et des sources publique
 other = "L’exploitant nommé ci-dessus est également responsable du contenu éditorial au titre du §18(2) MStV. MunichBrief est indépendant de la police."
 
 [ImpressumContactCopy]
-other = "Pour vos demandes et corrections, utilisez l’e-mail ou le formulaire. L’adresse indiquée est destinée au courrier postal."
+other = "Pour toute demande, consultez notre page Contact."
 
 [ContactStorage]
 other = "Votre message est enregistré dans une boîte de réception privée avant que nous confirmions sa réception. Les demandes marquées comme résolues y sont supprimées après 90 jours."
@@ -390,10 +390,10 @@ other = "Lorsque l’article 21 du RGPD s’applique, vous pouvez à tout moment
 other = "Dernière mise à jour"
 
 [ImpressumRequests]
-other = "Demandes concernant un compte rendu"
+other = "Contact et demandes concernant un compte rendu"
 
 [ImpressumRequestsCopy]
-other = "Si un compte rendu vous concerne, vous pouvez contacter le responsable indiqué ci-dessus pour demander une correction, un retrait ou la publication d’un droit de réponse. Joignez le lien de la page et indiquez le passage concerné. Lorsque la loi exige une demande écrite et signée, utilisez l’adresse postale ; le formulaire de contact seul ne satisfait pas à cette exigence."
+other = "Si un compte rendu vous concerne, vous pouvez demander une correction, un retrait ou la publication d’un droit de réponse. Joignez le lien de la page et indiquez le passage concerné. Lorsque la loi exige une demande écrite et signée, utilisez l’adresse postale ; le formulaire de contact seul ne satisfait pas à cette exigence."
 
 [LicensesTitle]
 other = "Crédits et licences"

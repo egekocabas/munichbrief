@@ -351,7 +351,7 @@ other = "Kako MunichBrief obrađuje podatke stranice, korespondenciju i javne iz
 other = "Navedeni voditelj odgovoran je i za urednički sadržaj prema §18(2) MStV-a. MunichBrief je neovisan o policiji."
 
 [ImpressumContactCopy]
-other = "Upite i ispravke pošaljite e-poštom ili obrascem. Navedena adresa služi za poštansku korespondenciju."
+other = "Za upite posjetite našu stranicu za kontakt."
 
 [ContactStorage]
 other = "Poruka se sprema u privatnu pristiglu poštu prije nego što potvrdimo primitak. Riješene poruke brišu se iz nje nakon 90 dana."
@@ -390,10 +390,10 @@ other = "Kada se primjenjuje članak 21. GDPR-a, u svakom trenutku možete prigo
 other = "Posljednje ažuriranje"
 
 [ImpressumRequests]
-other = "Zahtjevi u vezi s izvještajem"
+other = "Kontakt i zahtjevi u vezi s izvještajem"
 
 [ImpressumRequestsCopy]
-other = "Ako se izvještaj odnosi na vas, možete se obratiti gore navedenom voditelju stranice sa zahtjevom za ispravak, uklanjanje ili objavu odgovora. Navedite poveznicu na stranicu i sporni odlomak. Kada zakon zahtijeva potpisani pisani zahtjev, koristite poštansku adresu; samo slanje obrasca za kontakt ne ispunjava taj uvjet."
+other = "Ako se izvještaj odnosi na vas, možete zatražiti ispravak, uklanjanje ili objavu odgovora. Navedite poveznicu na stranicu i sporni odlomak. Kada zakon zahtijeva potpisani pisani zahtjev, koristite poštansku adresu; samo slanje obrasca za kontakt ne ispunjava taj uvjet."
 
 [LicensesTitle]
 other = "Zahvale i licence"
