@@ -369,7 +369,23 @@ kubectl -n munichbrief exec deployment/munichbrief -- \
   > munichbrief-$(date +%Y%m%d-%H%M%S).db
 ```
 
-Check the command exit status and validate the downloaded database with the
+To snapshot the separate gazetteer database, use the deployed version that
+supports `--database gazetteer`:
+
+```bash
+kubectl -n munichbrief exec deployment/munichbrief -- \
+  /munichbrief backup --database gazetteer --output - \
+  > munichbrief-gazetteer-$(date +%Y%m%d-%H%M%S).db
+```
+
+This includes cached source data, generations, and refresh history without
+applying incident-database migrations. A missing gazetteer database is an error.
+Validate this download with `sqlite3 -readonly FILE 'PRAGMA integrity_check;'`;
+do not point the main database's migration command at it. Both streaming modes
+need sufficient pod temporary storage for the snapshot. The two independently
+created snapshots are not an atomic pair.
+
+Check the main database command's exit status and validate its download with the
 `migrate` command. A scheduled job must eventually send backups to storage
 outside the application node and PVC; keeping another file on the same disk is
 not disaster recovery.

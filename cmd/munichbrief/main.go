@@ -475,13 +475,33 @@ func runBackup(ctx context.Context, cfg config.Config, arguments []string, outpu
 	flags := flag.NewFlagSet("backup", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	destination := flags.String("output", "", "backup destination, or - for stdout")
+	databaseKind := flags.String("database", "main", "database to back up: main or gazetteer")
 	if err := flags.Parse(arguments); err != nil {
 		return fmt.Errorf("parse backup arguments: %w", err)
 	}
 	if *destination == "" {
 		return errors.New("backup requires --output PATH (or --output - for stdout)")
 	}
-	database, err := store.Open(ctx, cfg.DatabasePath)
+	if flags.NArg() != 0 {
+		return errors.New("backup does not accept positional arguments")
+	}
+	var database interface {
+		Backup(context.Context, string) error
+		Close() error
+	}
+	var err error
+	switch *databaseKind {
+	case "main":
+		database, err = store.Open(ctx, cfg.DatabasePath)
+	case "gazetteer":
+		// A disabled or missing gazetteer must not become an empty successful backup.
+		if _, err := os.Stat(cfg.GazetteerDatabasePath); err != nil {
+			return fmt.Errorf("inspect gazetteer database: %w", err)
+		}
+		database, err = gazetteer.Open(ctx, cfg.GazetteerDatabasePath)
+	default:
+		return fmt.Errorf("unsupported backup database %q: use main or gazetteer", *databaseKind)
+	}
 	if err != nil {
 		return err
 	}
@@ -632,6 +652,7 @@ func printUsage(writer io.Writer) {
 	fmt.Fprintln(writer, "  munichbrief sync                  Run one live synchronization")
 	fmt.Fprintln(writer, "  munichbrief backup --output PATH  Create a consistent SQLite backup")
 	fmt.Fprintln(writer, "  munichbrief backup --output -     Stream a consistent backup to stdout")
+	fmt.Fprintln(writer, "  munichbrief backup --database gazetteer --output -  Stream a gazetteer backup")
 	fmt.Fprintln(writer, "  munichbrief gazetteer refresh     Refresh and activate place-name data")
 	fmt.Fprintln(writer, "  munichbrief gazetteer status      Show the active gazetteer generation")
 	fmt.Fprintln(writer, "  munichbrief ai-process --incident ID  Request immediate processing for one incident")
