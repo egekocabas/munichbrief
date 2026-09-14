@@ -85,6 +85,10 @@ func TestSitemapContainsOnlyCanonicalPublicDocuments(t *testing.T) {
 	for _, definition := range langregistry.Registered() {
 		wantLocations["https://munichbrief.de/"+definition.Code] = false
 		wantLocations["https://munichbrief.de/"+definition.Code+"/about"] = false
+		wantLocations["https://munichbrief.de/"+definition.Code+"/contact"] = false
+		wantLocations["https://munichbrief.de/"+definition.Code+"/licenses"] = false
+		wantLocations["https://munichbrief.de/"+definition.Code+"/privacy"] = false
+		wantLocations["https://munichbrief.de/"+definition.Code+"/impressum"] = false
 	}
 	wantLocations["https://munichbrief.de/de/incidents/"+formatID(job.IncidentID)] = false
 	wantLocations["https://munichbrief.de/en/incidents/"+formatID(job.IncidentID)] = false
@@ -97,6 +101,11 @@ func TestSitemapContainsOnlyCanonicalPublicDocuments(t *testing.T) {
 			continue
 		}
 		wantLocations[entry.Location] = true
+		for _, page := range []string{"about", "contact", "privacy", "impressum"} {
+			if strings.HasSuffix(entry.Location, "/"+page) && entry.LastMod != informationPageUpdatedAt(page).Format(time.DateOnly) {
+				t.Errorf("%s: lastmod differs from published page revision", entry.Location)
+			}
+		}
 		if strings.Contains(entry.Location, "?") || strings.Contains(entry.Location, "health") || strings.Contains(entry.Location, "admin") {
 			t.Errorf("non-canonical sitemap location %q", entry.Location)
 		}
@@ -389,7 +398,7 @@ func TestPublicMarkdownNegotiationPreservesPrivacyBoundary(t *testing.T) {
 	aboutRequest := publicDiscoveryRequest(http.MethodGet, "/de/about")
 	aboutRequest.Header.Set("Accept", "text/markdown")
 	server.Handler().ServeHTTP(about, aboutRequest)
-	if about.Header().Get("Content-Type") != "text/markdown; charset=utf-8" || !strings.Contains(about.Body.String(), "# So funktioniert MunichBrief") || !strings.Contains(about.Body.String(), "1. **Entdecken**") || !strings.Contains(about.Body.String(), "[Auf GitHub melden](https://github.com/egekocabas/munichbrief/issues)") || !strings.Contains(about.Body.String(), "[contact@munichbrief.de](mailto:contact@munichbrief.de)") {
+	if about.Header().Get("Content-Type") != "text/markdown; charset=utf-8" || !strings.Contains(about.Body.String(), "# Über MunichBrief") || !strings.Contains(about.Body.String(), "1. **Entdecken**") || strings.Contains(about.Body.String(), "## Kontakt") {
 		t.Errorf("about Markdown = %q/%q", about.Header().Get("Content-Type"), about.Body.String())
 	}
 }

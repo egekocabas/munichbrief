@@ -5,6 +5,10 @@ metadata:
   labels:
     {{- include "munichbrief.labels" . | nindent 4 }}
 data:
+  MUNICHBRIEF_CONTACT_ENABLED: {{ .Values.application.contactEnabled | quote }}
+  MUNICHBRIEF_CONTACT_DAILY_LIMIT: {{ .Values.application.contactDailyLimit | quote }}
+  MUNICHBRIEF_CONTACT_MONTHLY_LIMIT: {{ .Values.application.contactMonthlyLimit | quote }}
+  MUNICHBRIEF_CONTACT_TRUSTED_PROXIES: {{ join "," .Values.application.contactTrustedProxies | quote }}
   MUNICHBRIEF_ADDR: ":8080"
   MUNICHBRIEF_METRICS_ADDR: ":9090"
   MUNICHBRIEF_DATABASE_PATH: "/data/munichbrief.db"

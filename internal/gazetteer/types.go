@@ -127,6 +127,8 @@ type RefreshRunStatus struct {
 	SourcesCompleted       int
 	SourcesTotal           int
 	SourcesFailed          int
+	SourcesSkipped         int
+	SourcesInterrupted     int
 }
 
 type RefreshSourceStatus struct {

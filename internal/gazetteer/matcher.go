@@ -131,7 +131,7 @@ func (m *Matcher) protectField(value, field string, replacements []Replacement, 
 	for match := iter.Next(); match != nil; match = iter.Next() {
 		start, end := match.Start(), match.End()
 		entry := m.entries[match.Pattern()]
-		if start < position || !unicodeBoundary(value, start, end) || letterCount(entry.Name) < 3 && touchesDash(value, start, end) || entry.RequiresContext && !hasLocationContext(value, start) {
+		if start < position || !unicodeBoundary(value, start, end) || letterCount(entry.Name) < 3 && touchesDash(value, start, end) || entry.RequiresContext && !hasLocationContext(value, start) && !haarTitleLocation(value, field, entry, start, end) {
 			continue
 		}
 		if visibleKinds[entry.Kind] {
@@ -336,4 +336,28 @@ func hasLocationContext(value string, start int) bool {
 		}
 	}
 	return false
+}
+
+// Police headlines use a separated dash before the final location. Recognize
+// that convention only for the ambiguous municipality Haar, never in prose.
+func haarTitleLocation(value, field string, entry Entry, start, end int) bool {
+	if field != "title" || entry.Name != "Haar" || entry.Kind != KindMunicipality || strings.TrimSpace(value[end:]) != "" {
+		return false
+	}
+	horizontalSpace := func(r rune) bool { return unicode.Is(unicode.Zs, r) || r == '\t' }
+	prefix := value[:start]
+	beforeSpace := strings.TrimRightFunc(prefix, horizontalSpace)
+	if len(beforeSpace) == len(prefix) || beforeSpace == "" {
+		return false
+	}
+	dash, size := utf8.DecodeLastRuneInString(beforeSpace)
+	if dash != '–' && dash != '—' && dash != '-' {
+		return false
+	}
+	beforeDash := beforeSpace[:len(beforeSpace)-size]
+	if beforeDash == "" {
+		return true
+	}
+	last, _ := utf8.DecodeLastRuneInString(beforeDash)
+	return horizontalSpace(last)
 }

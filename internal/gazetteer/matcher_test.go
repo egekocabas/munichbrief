@@ -197,3 +197,52 @@ func benchmarkEntries(count int) []Entry {
 	}
 	return entries
 }
+
+func TestHaarHeadlineLocationContext(t *testing.T) {
+	matcher, err := NewMatcher([]Entry{
+		{Name: "Haar", Kind: KindMunicipality, RequiresContext: true},
+		{Name: "Au", Kind: KindNeighbourhood, RequiresContext: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		title string
+		want  bool
+	}{
+		{"Einbruch – Haar", true}, {"– Haar", true}, {"Einbruch - Haar", true},
+		{"Einbruch — Haar", true}, {"Einbruch\u00a0–\u00a0Haar  ", true},
+		{"Haar", false}, {"Einbruch – Haare", false}, {"Einbruch – haar", false},
+		{"Einbruch – Haar-Süd", false}, {"Einbruch – Haar wird untersucht", false},
+		{"Einbruch– Haar", false}, {"Einbruch –Haar", false},
+		{"Beschreibung –\nHaar", false}, {"Beschreibung –\u2028Haar", false}, {"Beschreibung\n– Haar", false},
+		{"Einbruch – Au", false}, {"Einbruch in Haar", true},
+	} {
+		t.Run(tc.title, func(t *testing.T) {
+			protected, err := matcher.ProtectWithOptions(tc.title, "Ein einzelnes Haar. Beschreibung – Haar", ProtectionOptions{Mode: ProtectionTyped})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := strings.Contains(protected.Title, "__MB_MUNICIPALITY_"); got != tc.want {
+				t.Fatalf("title %q protected=%v want %v", tc.title, got, tc.want)
+			}
+			if strings.Contains(protected.Summary, tokenPrefix) {
+				t.Fatal("title exception leaked into body text")
+			}
+			restoredTitle, restoredSummary, err := Restore(protected, protected.Title, protected.Summary)
+			if err != nil || restoredTitle != tc.title || restoredSummary != "Ein einzelnes Haar. Beschreibung – Haar" {
+				t.Fatalf("round trip changed source: %q %q %v", restoredTitle, restoredSummary, err)
+			}
+		})
+	}
+	for _, entries := range [][]Entry{nil, {{Name: "Haar", Kind: KindStreet, RequiresContext: true}}} {
+		other, err := NewMatcher(entries)
+		if err != nil {
+			t.Fatal(err)
+		}
+		p, err := other.Protect("Einbruch – Haar", "")
+		if err != nil || len(p.Replacements) != 0 {
+			t.Fatalf("exception invented municipality: %#v %v", p, err)
+		}
+	}
+}

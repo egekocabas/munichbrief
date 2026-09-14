@@ -1,5 +1,5 @@
 [SiteDescription]
-other = "Bleiben Sie informiert – mit KI-Zusammenfassungen offizieller Münchner Polizeimeldungen."
+other = "Meldungen des Polizeipräsidiums München, kurz und verständlich zusammengefasst."
 
 [BrandTagline]
 other = "München im Überblick"
@@ -56,13 +56,13 @@ other = "KI-generierte Inhalte"
 other = "Lokale Vorschau: Diese Seite verwendet synthetische Testinhalte."
 
 [AIDisclosureCopy]
-other = "MunichBrief nutzt lokal betriebene KI, um aus offiziellen Meldungen der Münchner Polizei Überschriften, Zusammenfassungen, Übersetzungen, Kategorien und strukturierte Angaben zu erstellen, etwa zum gemeldeten Ort und Zeitpunkt sowie dazu, ob die Polizei um Mithilfe bittet. KI-generierte oder abgeleitete Angaben können Fehler enthalten oder veralten, wenn die ursprüngliche Meldung aktualisiert wird. Jede Vorfallsseite nennt und verlinkt ihre offizielle polizeiliche Quelle; maßgeblich sind die dort veröffentlichten Informationen. MunichBrief ist ein unabhängiges Projekt und steht in keiner Verbindung zur Bayerischen Polizei. Für alle genannten Personen gilt die Unschuldsvermutung, solange ihre Schuld nicht rechtskräftig festgestellt wurde."
+other = "KI erstellt diese Überschriften, Zusammenfassungen, Übersetzungen und Ereignisdetails. Dabei können Fehler entstehen oder Aktualisierungen fehlen. Prüfe die Angaben in der verlinkten Polizeimeldung. MunichBrief ist unabhängig von der Polizei; es gilt die Unschuldsvermutung."
 
 [AIDisclosurePreferenceCopy]
-other = "Mit „Verstanden“ wird dieser Hinweis 30 Tage lang ausgeblendet."
+other = "Für 30 Tage ausblenden."
 
 [AIDisclosureLearnMore]
-other = "Weitere Informationen über MunichBrief und seine Funktionsweise finden Sie auf der Über-Seite."
+other = "So funktioniert es"
 
 [AIDisclosureGotIt]
 other = "Verstanden"
@@ -71,7 +71,7 @@ other = "Verstanden"
 other = "KI-Transparenz und EU-Leitlinien"
 
 [AITransparencyEUCopy]
-other = "MunichBrief verwendet das EU-Label für vollständig KI-generierte Inhalte, weil die Leitlinien der Europäischen Kommission KI-generierte Nachrichtenzusammenfassungen ausdrücklich als Anwendungsfall nennen. Sichtbare Kennzeichnungen und maschinenlesbare Herkunftsangaben unterstützen die Transparenz; die Verwendung des Symbols allein stellt jedoch keine Rechtskonformität fest und bedeutet nicht, dass MunichBrief den freiwilligen Verhaltenskodex unterzeichnet hat."
+other = "Das KI-Kennzeichen macht erkennbar, welche Überschriften, Zusammenfassungen und Übersetzungen mit künstlicher Intelligenz erstellt wurden. Zu jeder Meldung gibt es außerdem Angaben zu den verwendeten Modellen und Verarbeitungsschritten."
 
 [EUIconGuidance]
 other = "EU-Leitlinien zu den Symbolen"
@@ -80,7 +80,7 @@ other = "EU-Leitlinien zu den Symbolen"
 other = "EU-Verhaltenskodex"
 
 [Footer]
-other = "MunichBrief ist unabhängig von der Bayerischen Polizei. Keine Analyse, Konten oder Werbung."
+other = "MunichBrief ist unabhängig von der Polizei. Ohne Anmeldung und ohne Werbung."
 
 [Built]
 other = "Gebaut"
@@ -144,16 +144,16 @@ other = "Lokaler Prototyp"
 other = "Münchner Polizeimeldungen"
 
 [HeroTitle]
-other = "Aktuelle Vorfälle laut Münchner Polizei"
+other = "München, kurz gefasst."
 
 [HeroCopy]
-other = "Ein klarer Überblick über lokale Vorfälle, zusammengefasst aus offiziellen Polizeimeldungen."
+other = "Meldungen des Polizeipräsidiums München, kurz und verständlich zusammengefasst."
 
 [FixtureIncidents]
 other = "Synthetische Meldungen"
 
 [LatestIncidents]
-other = "Neueste Vorfälle"
+other = "Aktuelle Meldungen"
 
 [Reports]
 one = "{{.Count}} Meldung"
@@ -172,10 +172,10 @@ other = "Quellendaten"
 other = "Meldung lesen"
 
 [OpenOfficialSource]
-other = "Offizielle Quelle öffnen"
+other = "Originalmeldung"
 
 [OpenOfficialPoliceRelease]
-other = "Offizielle Polizeimeldung öffnen"
+other = "Originalmeldung"
 
 [Newer]
 other = "Neuer"
@@ -196,16 +196,16 @@ other = "Noch keine Meldungen"
 other = "Führe den Testdaten-Import aus, um die Ansicht zu füllen."
 
 [NoLiveCopy]
-other = "Die Synchronisierung hat noch keine Meldung im aktuellen Zeitraum gefunden."
+other = "Zurzeit gibt es keine Meldungen. Schauen Sie später wieder vorbei."
 
 [BodyUnavailable]
-other = "Der Text ist noch nicht verfügbar. MunichBrief versucht es erneut; nutze solange die offizielle Quelle."
+other = "Diese Zusammenfassung ist noch nicht verfügbar. Die Originalmeldung finden Sie unten."
 
 [SourceRefreshFailed]
-other = "Die letzte Aktualisierung ist fehlgeschlagen; diese gespeicherte Fassung bleibt verfügbar."
+other = "Diese Meldung wurde möglicherweise aktualisiert. Prüfen Sie die offizielle Quelle."
 
 [Back]
-other = "Zurück"
+other = "Alle Meldungen"
 
 [Breadcrumb]
 other = "Brotkrümelnavigation"
@@ -449,13 +449,13 @@ other = "KI-Ausgabe muss geprüft werden"
 other = "Deutscher Originalbericht wird angezeigt."
 
 [AboutTitle]
-other = "So funktioniert MunichBrief"
+other = "Über MunichBrief"
 
 [Methodology]
 other = "Über MunichBrief"
 
 [AboutIntro]
-other = "MunichBrief verwandelt offizielle Meldungen der Münchner Polizei in klare, strukturierte Vorfallszusammenfassungen in mehreren Lesesprachen."
+other = "MunichBrief macht lokale Polizeimeldungen in deiner Sprache zugänglich. Lies eine kurze Zusammenfassung, erfahre Ort und Zeit des Geschehens und öffne die Originalmeldung für weitere Einzelheiten."
 
 [FromReleaseToIncident]
 other = "Von der Meldung zum Vorfall"
@@ -479,10 +479,10 @@ other = "Zusammenfassen"
 other = "Lokale KI-Modelle extrahieren Angaben wie Kategorien, Orte, Daten und öffentliche Mithilfeersuchen und erstellen anschließend eine datensparsame deutsche Zusammenfassung."
 
 [TranslatePublish]
-other = "Übersetzen und veröffentlichen"
+other = "Auf Deutsch veröffentlichen"
 
 [TranslatePublishCopy]
-other = "Deutsche Zusammenfassungen, die die automatisierten Verarbeitungskontrollen bestehen, werden in die verfügbaren Lesesprachen übersetzt. Öffentliche Seiten zeigen KI-generierte Inhalte erst, nachdem die Verarbeitungspipeline erfolgreich abgeschlossen wurde."
+other = "Die deutsche Zusammenfassung erscheint, sobald sie die ersten automatisierten Prüfungen bestanden hat. Übersetzungen und spätere Überprüfungen müssen dafür nicht abgeschlossen sein."
 
 [AccuracyOfficialInformation]
 other = "Genauigkeit und offizielle Informationen"
@@ -494,25 +494,393 @@ other = "KI-generierte Zusammenfassungen und extrahierte Angaben können Fehler 
 other = "Datenschutz und Datenverarbeitung"
 
 [PrivacyCopy]
-other = "MunichBrief hat keine Konten, Analysefunktionen oder Werbung. Ein technisch notwendiges Cookie speichert die gewählte Sprache für ein Jahr. Nach „Verstanden“ merkt sich ein Erstanbieter-Präferenzcookie den KI-Hinweis 30 Tage lang. Das gewählte Farbschema wird lokal im Browser gespeichert."
+other = "Es gibt weder Benutzerkonten noch Werbung. Dieser Browser merkt sich die Sprache ein Jahr lang, geschlossene KI-Hinweise und angewendete Suchen jeweils 30 Tage. Suchkriterien werden in einem eigenen Cookie übertragen. Das Farbschema bleibt bis zum Löschen im Browserspeicher. Die gewählte Sortierung der Meldungen wird für 30 Tage in einem Cookie dieser Website gespeichert. Die gewählten Suchfilter stehen in der URL, sodass du die Suche teilen kannst."
 
 [DataHandlingCopy]
-other = "Extrahierte deutsche Quelltexte werden lokal gespeichert. Im eingeschränkten Prüfmodus können Originaltexte und Verarbeitungszustände zur Qualitätskontrolle angezeigt werden; der öffentliche Modus zeigt keine gespeicherten Originaltexte."
+other = "Die deutschen Quelltexte werden zur Verarbeitung und für interne Prüfungen mit beschränktem Zugriff gespeichert. Öffentlich zu sehen sind die daraus erstellten Zusammenfassungen."
 
-[IndependenceLegalReview]
-other = "Unabhängigkeit und rechtliche Prüfung"
+[AboutIndependence]
+other = "Unabhängigkeit"
 
-[IndependenceLegalReviewCopy]
-other = "MunichBrief ist unabhängig von der Bayerischen Polizei. Technische Schutzmaßnahmen ersetzen keine rechtliche Prüfung. Aufbewahrung, Rechtsgrundlage, Daten zu Straftaten und anwendbare journalistische Ausnahmen erfordern eine fortlaufende Prüfung."
+[AboutIndependenceCopy]
+other = "MunichBrief ist ein unabhängiges Projekt. Es gehört weder zur Bayerischen Polizei noch zu einer anderen Behörde und spricht nicht in deren Namen."
 
 [ContactHeading]
-other = "Fragen, Korrekturen oder Feedback"
+other = "Kontakt"
 
-[ContactPublicLead]
-other = "Einen Fehler gefunden oder einen Vorschlag?"
+[ViewOrder]
+other = "Reihenfolge"
 
-[ContactIssueLink]
-other = "Auf GitHub melden"
+[ByPublication]
+other = "Nach Veröffentlichung"
 
-[ContactPrivateLead]
-other = "Bei Anliegen zum Datenschutz oder anderen Themen, die nicht öffentlich geteilt werden sollten, schreiben Sie an"
+[ByIncident]
+other = "Nach Ereignisdatum"
+
+[SearchFilters]
+other = "Suche und Filter"
+
+[SearchText]
+other = "Meldungen durchsuchen"
+
+[SearchPlaceholder]
+other = "Thema, Ort oder Meldungsnummer eingeben"
+
+[AllCategories]
+other = "Alle Kategorien"
+
+[AnyAssistance]
+other = "Alle Meldungen"
+
+[AssistanceYes]
+other = "Polizei bittet um Hinweise"
+
+[AssistanceNo]
+other = "Keine Bitte um Hinweise"
+
+[DateType]
+other = "Zeitraum nach"
+
+[PublishedDate]
+other = "Veröffentlichungsdatum"
+
+[IncidentDate]
+other = "Ereignisdatum"
+
+[DateFrom]
+other = "Von"
+
+[DateTo]
+other = "Bis"
+
+[ApplySearch]
+other = "Anwenden"
+
+[SearchRemembered]
+other = "Du kannst diese Suche über die URL teilen. Dieser Browser merkt sie sich für 30 Tage."
+
+[ActiveFilters]
+other = "Aktive Filter"
+
+[RemoveFilter]
+other = "Filter entfernen"
+
+[ClearAll]
+other = "Alle zurücksetzen"
+
+[SearchResults]
+other = "Suchergebnisse"
+
+[NoSearchCopy]
+other = "Keine passenden Meldungen. Erweitere die Suche oder setze die Filter zurück."
+
+[Pagination]
+other = "Seitennavigation"
+
+[PerPage]
+other = "Meldungen pro Seite"
+
+[GoToPage]
+other = "Zur Seite"
+
+[PreviousPage]
+other = "Zurück"
+
+[NextPage]
+other = "Weiter"
+
+[SearchInvalid]
+other = "Bitte prüfe die Suche: gültige Daten, Beginn vor dem Ende und höchstens 200 Zeichen je Textfeld."
+
+[DateNotReported]
+other = "Datum nicht angegeben"
+
+[ClockTimeReported]
+other = "Uhrzeit angegeben"
+
+[DayPartReported]
+other = "Tageszeit angegeben"
+
+[TimeNotReported]
+other = "Zeit nicht angegeben"
+
+[PageStatus]
+other = "Seite {{.Page}} von {{.TotalPages}} · Meldungen {{.First}}–{{.Last}} von {{.Total}}"
+
+[ContactIntro]
+other = "Fragen, Korrekturen oder ein Anliegen zu einem Bericht? Nutzen Sie das Formular oder schreiben Sie eine E-Mail."
+
+[ContactCorrections]
+other = "Korrekturen und Aktualisierungen"
+
+[ContactCorrectionCopy]
+other = "Schicke den Link zur MunichBrief-Seite und beschreibe, was berichtigt werden sollte. Ein Link zur aktualisierten Polizeimeldung hilft dabei."
+
+[ContactPrivacy]
+other = "Datenschutzanfragen"
+
+[ContactPrivacyCopy]
+other = "Nutzen Sie das private Formular oder E-Mail für Datenschutzanfragen. Teilen Sie nur notwendige Angaben und keine personenbezogenen Daten in öffentlichen GitHub-Issues."
+
+[ContactTechnical]
+other = "Technische Probleme"
+
+[ContactTechnicalCopy]
+other = "Darstellungsfehler und Verbesserungsvorschläge kannst du auf GitHub melden. Bitte veröffentliche dort keine persönlichen Informationen."
+
+[ContactPoliceCopy]
+other = "MunichBrief ist von der Polizei unabhängig. Hier können Sie weder eine Anzeige erstatten noch einen Notruf absetzen."
+
+[ContactPoliceLink]
+other = "Für polizeiliche Anliegen nutzen Sie bitte die Kontaktdaten auf der offiziellen Polizeiseite."
+
+
+[MonitoringCopy]
+other = "Wir nutzen Cloudflare, um die Website bereitzustellen und zu schützen. Cloudflare verarbeitet Verbindungsdaten, darunter IP-Adressen, und kann Zugriffsstatistiken erstellen. Für einen zuverlässigen Betrieb speichern wir eigene technische Anfrageprotokolle und zusammengefasste Leistungsdaten 30 Tage lang."
+
+[CoverageCopy]
+other = "Die Auswahl veröffentlichter Polizeiberichte ist weder ein vollständiges Verzeichnis aller Vorfälle noch eine Kriminalstatistik. Aktualisierungen können MunichBrief verzögert erreichen. Datum und Uhrzeit stammen aus dem Bericht; auch eine angegebene Uhrzeit kann ungefähr sein."
+
+[VerifyTranslate]
+other = "Im Hintergrund prüfen und übersetzen"
+
+[VerifyTranslateCopy]
+other = "Weitere KI-Prüfungen kontrollieren die Kategorie und ob die Polizei um Mithilfe bittet. Diese Prüfungen haben Vorrang vor Übersetzungen. Jede Sprachfassung erscheint, sobald ihre Übersetzung fertig ist. Erfolgreiche Prüfungen können die Kategorie und den Mithilfehinweis auch nach der Veröffentlichung aktualisieren."
+
+[ImpressumTitle]
+other = "Impressum"
+
+[PrivacyTitle]
+other = "Datenschutz"
+
+[LegalGermany]
+other = "Deutschland"
+
+[ContactForm]
+other = "Anfrage senden"
+
+[ContactEmail]
+other = "Ihre E-Mail-Adresse"
+
+[ContactTopic]
+other = "Thema"
+
+[ContactGeneral]
+other = "Allgemeine Anfrage"
+
+[ContactCorrection]
+other = "Korrektur"
+
+[ContactMessage]
+other = "Nachricht"
+
+[ContactMessageLimit]
+other = "Höchstens 5.000 Zeichen. Bitte geben Sie nur die erforderlichen personenbezogenen Informationen an."
+
+[ContactSend]
+other = "Nachricht senden"
+
+[ContactReceived]
+other = "Ihre Nachricht ist eingegangen. Vielen Dank."
+
+[ContactInvalid]
+other = "Bitte prüfen Sie Ihre Angaben. Laden Sie die Seite neu, falls das Formular abgelaufen ist."
+
+[ContactRateLimit]
+other = "Zu viele Versuche. Bitte warten Sie 15 Minuten."
+
+[ContactEmailInvalid]
+other = "Bitte geben Sie eine gültige E-Mail-Adresse ein."
+
+[ContactTopicInvalid]
+other = "Bitte wählen Sie eines der aufgeführten Themen."
+
+[ContactMessageInvalid]
+other = "Bitte geben Sie eine Nachricht mit höchstens 5.000 Zeichen ein."
+
+[ContactSaveFailed]
+other = "Ihre Nachricht konnte nicht gespeichert werden. Versuchen Sie es später erneut oder schreiben Sie eine E-Mail."
+
+[ContactUnavailable]
+other = "Das Formular ist derzeit nicht verfügbar. Bitte nutzen Sie die oben angegebene E-Mail-Adresse."
+
+[PrivacyLinks]
+other = "Informationen der Anbieter und Beschwerden"
+
+[ImpressumResponsible]
+other = "Verantwortlich für diese Website"
+
+[PrivacyController]
+other = "Verantwortlicher"
+
+[PrivacyHosting]
+other = "Hosting und KI"
+
+[PrivacyCloudflare]
+other = "Cloudflare und Zugriffsmessung"
+
+[PrivacyPreferences]
+other = "Browser-Einstellungen"
+
+[PrivacyMonitoring]
+other = "Technische Überwachung"
+
+[PrivacyCorrespondence]
+other = "E-Mail und Kontaktformular"
+
+[PrivacyRetention]
+other = "Aufbewahrung und Löschung von Nachrichten"
+
+[PrivacyPost]
+other = "Briefpost"
+
+[PrivacySources]
+other = "Polizeiberichte und Quellenmaterial"
+
+[PrivacyRights]
+other = "Ihre Rechte und Beschwerden"
+
+[PrivacyControllerCopy]
+other = "Ege Kocabaş betreibt MunichBrief als Privatperson in Bayern, Deutschland. Die oben genannte Anschrift dient der Korrespondenz. Fragen zur Verarbeitung Ihrer personenbezogenen Daten können Sie dorthin oder an die angegebene E-Mail-Adresse richten."
+
+[PrivacyHostingCopy]
+other = "Website, Datenbank und sämtliche KI-Verarbeitung laufen auf eigener Hardware des Betreibers in Deutschland. Quellenmaterial wird nicht an externe KI-Anbieter übermittelt."
+
+[PrivacyCloudflareCopy]
+other = "Cloudflare stellt die Website bereit und schützt sie. Dabei werden Verbindungsdaten einschließlich IP-Adressen verarbeitet; auch netzwerkseitige Zugriffsstatistiken sind möglich. Web Analytics ist so eingestellt, dass Besucher aus der EU ausgeschlossen werden und das Messskript andernorts automatisch eingefügt wird. Sicherheitsvorgaben des Browsers können seine Ausführung verhindern. Davon unabhängig verarbeitet Cloudflare Daten zur Bereitstellung und Sicherheit. Zaraz Consent Management und Google Tag Gateway sind inaktiv. Grundlage für Bereitstellung und Schutz ist unser berechtigtes Interesse am sicheren Betrieb (Art. 6 Abs. 1 lit. f DSGVO). Die unten verlinkten Anbieterinformationen erläutern auch internationale Übermittlungen."
+
+[PrivacyPreferencesCopy]
+other = "Ein Erstanbieter-Cookie speichert die Sprache ein Jahr und die Bestätigung des KI-Hinweises 30 Tage. Die zuletzt angewandten Suchkriterien bleiben 30 Tage in einem HttpOnly-Cookie; beim Zurücksetzen werden sie entfernt. Das Farbschema bleibt bis zum Löschen im lokalen Browserspeicher. Die Rückkehrposition zur Liste wird für den aktuellen Browser-Tab gespeichert. Sicherheitstoken des Kontaktformulars gelten höchstens eine Stunde, Empfangsbestätigungen fünf Minuten; sie enthalten keinen Nachrichtentext. Diese Funktionen unterstützen den gewünschten Dienst (§25 Abs. 2 Nr. 2 TDDDG; Art. 6 Abs. 1 lit. f DSGVO). HTMX legt keine Seitenkopien im localStorage ab. Die gewählte Sortierung der Meldungen wird für 30 Tage in einem Cookie dieser Website gespeichert. Suchbegriffe und Filter stehen in der Seiten-URL und können in geteilten Links und im Browserverlauf gespeichert bleiben."
+
+[PrivacyMonitoringCopy]
+other = "Für einen zuverlässigen Betrieb erfassen technische Protokolle Methode, Pfad ohne Suchparameter, Status, Dauer und Kennungen einer Anfrage. Nachrichten, E-Mail-Adressen, Cookies und Besucher-IP-Adressen werden nicht in Anwendungsprotokollen erfasst. Für Prometheus-Metriken und Loki-Protokolle sind 30 Tage Aufbewahrung konfiguriert; Grafana dient der internen Anzeige. Zur Begrenzung von Kontaktversuchen speichern wir einen Zähler und eine aus der IP-Adresse abgeleitete pseudonyme Kennung ausschließlich im Arbeitsspeicher, nicht die ursprüngliche IP-Adresse. Das Limit gilt 15 Minuten ab dem ersten Versuch. Abgelaufene Zähler werden beim nächsten Kontaktversuch oder beim Neustart der Anwendung entfernt; ohne weiteren Versuch können sie länger im Arbeitsspeicher bleiben. Grundlage ist das berechtigte Interesse an Sicherheit und Zuverlässigkeit (Art. 6 Abs. 1 lit. f DSGVO). Cloudflares Aufbewahrung richtet sich nach eigenen Regeln."
+
+[PrivacyCorrespondenceCopy]
+other = "Bei einer Kontaktaufnahme verarbeiten wir E-Mail-Adresse, Thema und Nachricht zur Beantwortung Ihrer Anfrage (Art. 6 Abs. 1 lit. f DSGVO), gegebenenfalls zur Erfüllung gesetzlicher Pflichten (lit. c). Das Formular speichert die Nachricht zuerst in einem geschützten Datenbank-Postfach. SMTP2GO benachrichtigt contact@munichbrief.de; Cloudflare Email Routing leitet an ein Gmail-Postfach weiter. Antworten werden in Apple Mail geschrieben und über SMTP2GO versendet. Nachrichten werden nicht durch KI verarbeitet. Die verlinkten Anbieterinformationen erläutern auch Verarbeitungen außerhalb des EWR."
+
+[PrivacyRetentionCopy]
+other = "Nachrichten im Admin-Postfach werden 90 Tage nach Kennzeichnung als erledigt automatisch gelöscht. Beim Wiederöffnen entfällt diese Frist. Offene Anfragen werden überprüft und so lange aufbewahrt, wie sie benötigt werden. Für laufende Streitfälle oder gesetzliche Pflichten kann die Löschung mit dokumentiertem Grund und Prüftermin ausgesetzt werden. Gmail-Kopien und versendete Antworten werden gesondert geprüft und gelöscht. Für Versanddaten der Anbieter gelten eigene Fristen."
+
+[PrivacyPostCopy]
+other = "COCENTER / anschrift.net nimmt Briefe an der Korrespondenzanschrift entgegen, öffnet und scannt sie zur Bearbeitung durch den Betreiber. Grundlage sind berechtigte Interessen an der Korrespondenz oder gesetzliche Pflichten (Art. 6 Abs. 1 lit. f bzw. c DSGVO). Nach Angaben des Anbieters werden Originale sechs Monate aufbewahrt; Scans verbleiben bis zur Kontoschließung oder einer Löschanfrage, vorbehaltlich berechtigter Aufbewahrung. Einzelheiten enthält dessen Datenschutzerklärung."
+
+[PrivacySourcesCopy]
+other = "Grundlage der Zusammenfassungen sind öffentliche Mitteilungen des Polizeipräsidiums München. Deutscher Quelltext und RSS-Textstände werden für die Verarbeitung, die Prüfung von Änderungen und eine eingeschränkte Qualitätskontrolle aufbewahrt. Für diese Daten besteht derzeit keine feste Löschfrist. Öffentlich erscheinen Zusammenfassungen statt gespeicherter Originale. Bitte kontaktieren Sie uns, wenn ein Bericht Sie betrifft oder einen Fehler enthält. Berichtigungs- und Datenschutzanfragen prüfen wir im Einzelfall."
+
+[PrivacyRightsCopy]
+other = "Je nach anwendbaren Vorschriften bestehen Rechte auf Auskunft, Berichtigung, Löschung, Einschränkung, Widerspruch gegen interessenbasierte Verarbeitung und gegebenenfalls Datenübertragbarkeit. Ein Konto ist zur Kontaktaufnahme nicht erforderlich. DSGVO-Anträge beantworten wir grundsätzlich innerhalb eines Monats; gesetzliche Ausnahmen und redaktionelle Regeln können das Ergebnis beeinflussen. Für Datenschutz im nichtöffentlichen Bereich in Bayern können Sie sich an das BayLDA oder eine andere zuständige Aufsichtsbehörde wenden. Für redaktionelle Beschwerden können andere Regeln gelten."
+
+[ImpressumTitleDescription]
+other = "Angaben zum Betreiber und Kontaktmöglichkeiten für MunichBrief."
+
+[PrivacyTitleDescription]
+other = "Wie MunichBrief Website-Daten, Korrespondenz und öffentliche Quellen verarbeitet."
+
+[ImpressumResponsibleCopy]
+other = "ist für diese Website verantwortlich. Anschrift wie oben. MunichBrief ist von der Polizei unabhängig."
+
+[ImpressumContactCopy]
+other = "Für Anfragen besuchen Sie bitte unsere Kontaktseite."
+
+[ContactStorage]
+other = "Ihre Nachricht wird in einem geschützten Posteingang gespeichert, bevor wir den Eingang bestätigen. Erledigte Anfragen werden dort nach 90 Tagen gelöscht."
+
+[ContactClosed]
+other = "Das Kontaktformular wurde geschlossen. Ihre Nachricht wurde nicht gesendet. Bitte schreiben Sie stattdessen an contact@munichbrief.de."
+
+[ContactKeepDraft]
+other = "Sie können Ihre Angaben unten in eine E-Mail kopieren. Dieser Entwurf wurde nicht im Posteingang gespeichert."
+
+[PrivacyRequired]
+other = "Welche Angaben Sie machen möchten"
+
+[PrivacyRequiredCopy]
+other = "Sie können MunichBrief ohne Konto lesen und müssen uns nicht kontaktieren. Es besteht keine gesetzliche oder vertragliche Pflicht, das Kontaktformular zu nutzen. Für eine Anfrage über das Formular benötigen wir Ihre E-Mail-Adresse, ein Thema und eine Nachricht, damit wir Ihr Anliegen bearbeiten und antworten können. Ohne diese Angaben lässt sich das Formular nicht absenden. Alternativ können Sie uns eine E-Mail schreiben. Bitte geben Sie nur die für Ihr Anliegen nötigen personenbezogenen Informationen an."
+
+[PrivacySourcePeople]
+other = "In Berichten erwähnte Personen"
+
+[PrivacySourcePeopleCopy]
+other = "Informationen über Beteiligte stammen aus öffentlichen Polizeimeldungen, nicht unmittelbar von diesen Personen. Je nach Meldung können sie Personenbeschreibungen, die Rolle im Geschehen, mutmaßliche Straftaten, Verletzungen sowie Ort und Zeit eines Vorfalls umfassen. Veröffentlichte Zusammenfassungen sind für alle zugänglich und können von Suchmaschinen erfasst werden. Kontaktanfragen und der private Posteingang werden nicht veröffentlicht."
+
+[PrivacyAutomation]
+other = "KI und automatisierte Entscheidungen"
+
+[PrivacyAutomationCopy]
+other = "KI erfasst, fasst zusammen, übersetzt und prüft Vorfallsberichte. Wir verwenden sie nicht für Entscheidungen über Besucherinnen und Besucher, die rechtliche oder ähnlich erhebliche Auswirkungen im Sinne von Artikel 22 DSGVO haben. Automatische Prüfungen können verhindern, dass ein Vorfallsbericht oder eine seiner Übersetzungen veröffentlicht wird. Deshalb sind manche Berichte möglicherweise nicht in allen Sprachen verfügbar."
+
+[PrivacyObjection]
+other = "Ihr Widerspruchsrecht"
+
+[PrivacyObjectionCopy]
+other = "Soweit Artikel 21 DSGVO gilt, können Sie einer Verarbeitung auf Grundlage berechtigter Interessen jederzeit aus Gründen widersprechen, die sich aus Ihrer besonderen Situation ergeben. Richten Sie Ihren Widerspruch an die oben genannte Kontaktadresse. Wir stellen diese Verarbeitung ein, sofern wir keine zwingenden schutzwürdigen Gründe nachweisen können, die überwiegen, oder die Verarbeitung zur Geltendmachung, Ausübung oder Verteidigung von Rechtsansprüchen benötigen."
+
+[LegalLastUpdated]
+other = "Zuletzt aktualisiert"
+
+[ImpressumRequests]
+other = "Kontakt und Anliegen zu einer Meldung"
+
+[ImpressumRequestsCopy]
+other = "Wenn Sie von einer Meldung betroffen sind, können Sie eine Berichtigung, Entfernung oder Gegendarstellung anfragen. Bitte nennen Sie den Seitenlink und die betreffende Textstelle. Soweit das Gesetz ein schriftliches, unterzeichnetes Verlangen voraussetzt, nutzen Sie bitte die Postanschrift; das Kontaktformular allein erfüllt diese Formvorgabe nicht."
+
+[LicensesTitle]
+other = "Danksagungen und Lizenzen"
+
+[LicensesDescription]
+other = "Software, Schriften, Modelle und Daten, die MunichBrief ermöglichen."
+
+[LicensesProject]
+other = "MunichBrief-Quellcode"
+
+[LicensesSoftware]
+other = "Software"
+
+[LicensesFonts]
+other = "Schriftarten"
+
+[LicensesAssets]
+other = "Bilder und Symbole"
+
+[LicensesData]
+other = "Datenquellen"
+
+[LicensesModels]
+other = "Modellverweise"
+
+[LicensesService]
+other = "Software für die KI-Verarbeitung"
+
+[LicensesLicense]
+other = "Lizenz"
+
+[LicensesSource]
+other = "Originalquelle"
+
+[LicensesRead]
+other = "Lizenz und Hinweise lesen"
+
+[LicensesDownload]
+other = "Vollständigen Text herunterladen"
+
+[LicensesIntro]
+other = "Der eigene Quellcode von MunichBrief steht unter der MIT-Lizenz. Für Komponenten Dritter und Quellenmaterial gelten die jeweiligen eigenen Bedingungen."
+
+[LicensesOriginal]
+other = "Lizenztexte und Urheberrechtshinweise werden in ihrer Originalsprache wiedergegeben."
+
+[LicensesModelIntro]
+other = "Diese Verweise erläutern die Bedingungen der für MunichBrief geprüften Modelle. Sie sind keine aktuelle Liste der eingesetzten Modelle; die einzelnen Berichte enthalten weiterhin Angaben zu ihrer KI-Verarbeitung. Modelllizenzen gelten nicht automatisch für erzeugte Zusammenfassungen."
+
+[LicensesIconChanges]
+other = "KI-Symbole: © Europäische Union. MunichBrief hat die helle Variante um einen grauen Hintergrund und eine Umrandung ergänzt. Die dunkle Variante verwendet die Originalgrafik. Die Verwendung bedeutet keine Unterstützung durch die EU."
+
+[LicensesDataChanges]
+other = "Geodaten werden auf den Raum München eingegrenzt; Ortsnamen werden für den Abgleich vereinheitlicht. Die Originaldatensätze sind bei den verlinkten Anbietern verfügbar. Polizeimeldungen sind eigenständiges Quellenmaterial und fallen nicht unter die MIT-Lizenz von MunichBrief."
+
+[PagePosition]
+other = "Seite {{.Page}} von {{.TotalPages}}"
+
+[ModelVariant]
+other = "Modellvariante"
+

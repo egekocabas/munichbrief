@@ -1,0 +1,31 @@
+{{define "title"}}{{t .Lang "ContactHeading"}} · MunichBrief{{end}}
+{{define "content"}}
+<article class="reader-about reader-contact">
+ <header><h1>{{t .Lang "ContactHeading"}}</h1><p class="reader-intro-copy">{{t .Lang "ContactIntro"}}</p>
+ <p class="mt-4 text-sm text-muted">{{t .Lang "LegalLastUpdated"}}: <time datetime="{{.DocumentModifiedDate}}">{{.UpdatedLabel}}</time></p>
+ </header>
+ <a class="contact-email" href="mailto:contact@munichbrief.de">contact@munichbrief.de</a>
+ <section><h2>{{t .Lang "ContactCorrections"}}</h2><p>{{t .Lang "ContactCorrectionCopy"}}</p></section>
+ <section><h2>{{t .Lang "ContactPrivacy"}}</h2><p>{{t .Lang "ContactPrivacyCopy"}}</p></section>
+ <section><h2>{{t .Lang "ContactTechnical"}}</h2><p>{{t .Lang "ContactTechnicalCopy"}} <a href="https://github.com/egekocabas/munichbrief/issues" target="_blank" rel="noopener noreferrer">GitHub {{template "external-icon" .}}</a></p></section>
+ <p class="incident-note">{{t .Lang "ContactPoliceCopy"}} <a class="text-civic underline underline-offset-4" href="https://kontakte.polizei.bayern.de/" target="_blank" rel="noopener noreferrer">{{t .Lang "ContactPoliceLink"}}</a></p>
+<section id="contact-form" class="border-t border-rule py-8" hx-history="false">
+ <h2 class="text-2xl font-semibold">{{t .Lang "ContactForm"}}</h2>
+ <p class="mt-3 leading-7 text-muted">{{t .Lang "ContactStorage"}} <a class="font-bold text-civic underline" href="/{{.Lang}}/privacy">{{t .Lang "PrivacyTitle"}}</a></p>
+ {{if .Received}}<div role="status" aria-atomic="true" class="contact-confirmation">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <span>{{t .Lang "ContactReceived"}}</span>
+ </div>{{end}}
+ {{if .Error}}<div role="alert" class="mt-5 border-l-4 border-alert p-4 text-alert"><p>{{t .Lang .Error}}</p>{{range $field,$key:=.Errors}}<p><a class="underline" href="#contact-{{$field}}">{{t $.Lang $key}}</a></p>{{end}}</div>{{end}}
+ {{if .Enabled}}<form method="post" action="/{{.Lang}}/contact#contact-form" class="contact-form mt-6 grid gap-5" hx-boost="false">
+ <input type="hidden" name="token" value="{{.Token}}">
+ <div hidden aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
+ <div><label for="contact-email">{{t .Lang "ContactEmail"}}</label><input id="contact-email" name="email" type="email" pattern="{{contactEmailPattern}}" autocomplete="email" maxlength="254" required value="{{.Email}}" {{if index .Errors "email"}}aria-invalid="true" aria-describedby="contact-email-error"{{end}}>{{with index .Errors "email"}}<p id="contact-email-error" class="text-alert">{{t $.Lang .}}</p>{{end}}</div>
+ <div><label for="contact-topic">{{t .Lang "ContactTopic"}}</label><select id="contact-topic" name="topic" required {{if index .Errors "topic"}}aria-invalid="true"{{end}}><option value="general" {{if eq .Topic "general"}}selected{{end}}>{{t .Lang "ContactGeneral"}}</option><option value="correction" {{if eq .Topic "correction"}}selected{{end}}>{{t .Lang "ContactCorrection"}}</option><option value="privacy" {{if eq .Topic "privacy"}}selected{{end}}>{{t .Lang "ContactPrivacy"}}</option></select></div>
+ <div><label for="contact-message">{{t .Lang "ContactMessage"}}</label><textarea id="contact-message" name="message" rows="9" required aria-describedby="contact-message-help{{if index .Errors "message"}} contact-message-error{{end}}" {{if index .Errors "message"}}aria-invalid="true"{{end}}>{{.Message}}</textarea><p id="contact-message-help" class="mt-2 text-sm text-muted">{{t .Lang "ContactMessageLimit"}}</p>{{with index .Errors "message"}}<p id="contact-message-error" class="text-alert">{{t $.Lang .}}</p>{{end}}</div>
+ <button type="submit" class="justify-self-start rounded-lg bg-civic px-6 py-3 font-bold text-on-accent">{{t .Lang "ContactSend"}}</button>
+ </form>{{else}}{{if ne .Error "ContactClosed"}}<p class="mt-4 text-muted">{{t .Lang "ContactUnavailable"}}</p>{{end}}{{end}}
+ {{if .Draft}}<div class="contact-form mt-5 grid gap-4"><p>{{t .Lang "ContactKeepDraft"}}</p><div><label for="contact-draft-email">{{t .Lang "ContactEmail"}}</label><input id="contact-draft-email" value="{{.Email}}" readonly></div><div><label for="contact-draft-message">{{t .Lang "ContactMessage"}}</label><textarea id="contact-draft-message" rows="9" readonly>{{.Message}}</textarea></div><a class="font-bold text-civic underline" href="mailto:contact@munichbrief.de">contact@munichbrief.de</a></div>{{end}}
+ </section>
+ </article>
+{{end}}

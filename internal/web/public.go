@@ -39,6 +39,12 @@ func (s *Server) redirectRoot(response http.ResponseWriter, request *http.Reques
 	if page, err := requestedPage(request); err == nil {
 		canonicalTarget = timelineURL(language, page)
 	}
+	if request.URL.RawQuery == "" && s.scope(request).PublicOnly {
+		preferred, _ := url.Parse(s.readerHomeURL(request, language))
+		target = preferred
+		canonicalTarget = target.RequestURI()
+	}
+	response.Header().Set("Cache-Control", "private, no-store")
 	s.prepareRedirectDiscovery(response, request, canonicalTarget)
 	http.Redirect(response, request, target.RequestURI(), http.StatusFound)
 }
@@ -67,7 +73,7 @@ func (s *Server) base(request *http.Request, language, canonicalRelativeURL stri
 	canonicalOrigin := s.canonicalOrigin(request)
 	languageDefinition, _ := s.languageByCode(language)
 	page := basePage{
-		Lang: language, LanguageTag: languageDefinition.Tag.String(), CanonicalLanguageCode: s.canonicalLanguage().Code, HomeURL: "/" + language, AboutURL: "/" + language + "/about",
+		Lang: language, LanguageTag: languageDefinition.Tag.String(), CanonicalLanguageCode: s.canonicalLanguage().Code, HomeURL: s.readerHomeURL(request, language), AboutURL: "/" + language + "/about",
 		CurrentURL:      request.URL.RequestURI(),
 		Description:     s.localization.Text(language, "SiteDescription"),
 		CanonicalOrigin: canonicalOrigin, CanonicalURL: canonicalOrigin + canonicalRelativeURL,
@@ -133,8 +139,8 @@ func (s *Server) prepareHTML(response http.ResponseWriter, request *http.Request
 		response.Header().Set("Content-Signal", contentSignal)
 		addVary(response.Header(), "Accept")
 	}
-	if page.Review {
-		response.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive")
+	if strings.HasPrefix(page.Robots, "noindex") {
+		response.Header().Set("X-Robots-Tag", page.Robots)
 	}
 }
 
@@ -145,35 +151,96 @@ func (s *Server) timeline(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 	s.setLanguagePreference(response, language)
+	filters, explicit, err := readerURLFilters(request)
+	if err != nil {
+		status := http.StatusBadRequest
+		if len(request.URL.RawQuery) > maxReaderQueryBytes {
+			status = http.StatusRequestURITooLong
+		}
+		http.Error(response, s.localization.Text(language, "SearchInvalid"), status)
+		return
+	}
 	page, err := requestedPage(request)
 	if err != nil {
 		http.Error(response, "invalid page", http.StatusBadRequest)
 		return
 	}
 	scope := s.scope(request)
-	incidents, total, err := s.store.ListPresentationEntries(request.Context(), s.options.PageSize, (page-1)*s.options.PageSize, s.options.SourceMode, scope)
+	view, size, err := readerOptions(request, s.options.PageSize)
+	if err != nil {
+		http.Error(response, s.localization.Text(language, "SearchInvalid"), http.StatusBadRequest)
+		return
+	}
+	if !explicit {
+		filters = readSearch(request)
+	}
+	search := filters.Active()
+	if scope.PublicOnly && !explicit && search {
+		response.Header().Set("Cache-Control", "private, no-store")
+		addVary(response.Header(), "Cookie")
+		http.Redirect(response, request, listingURL(language, filters, view, size, 1), http.StatusFound)
+		return
+	}
+	var incidents []store.IncidentRecord
+	var total int
+	if scope.PublicOnly {
+		var result store.ReaderResult
+		result, err = s.store.ListReaderEntries(request.Context(), store.ReaderQuery{Language: language, SourceMode: s.options.SourceMode, View: view, Limit: size, Offset: (page - 1) * size, Filters: filters})
+		incidents, total = result.Records, result.Total
+	} else {
+		incidents, total, err = s.store.ListPresentationEntries(request.Context(), size, (page-1)*size, s.options.SourceMode, scope)
+	}
 	if err != nil {
 		s.internalError(response, request, "list incidents", err)
 		return
 	}
-	totalPages := max(1, (total+s.options.PageSize-1)/s.options.PageSize)
-	if page > totalPages && total > 0 {
+	totalPages := max(1, (total+size-1)/size)
+	if page > totalPages {
 		http.NotFound(response, request)
 		return
 	}
-	base := s.base(request, language, timelineURL(language, page))
+	listURL := listingURL(language, filters, view, size, page)
+	if scope.PublicOnly {
+		if explicit && filters != readSearch(request) {
+			if err := s.writeSearch(response, filters); err != nil {
+				http.Error(response, s.localization.Text(language, "SearchInvalid"), http.StatusBadRequest)
+				return
+			}
+		}
+		s.writeTimelineView(response, view)
+		if explicit && request.URL.RequestURI() != listURL {
+			response.Header().Set("Cache-Control", "private, no-store")
+			addVary(response.Header(), "Cookie")
+			http.Redirect(response, request, listURL, http.StatusFound)
+			return
+		}
+	}
+	base := s.base(request, language, listURL)
+	if search || view != "published" || size != 20 {
+		base.Robots = "noindex,follow"
+		base.LanguageAlternates = nil
+	}
 	base.setAIMetadata(aiGeneratedState(incidents), nil)
 	base.StructuredData = structuredPageData(base, "CollectionPage")
 	if page > 1 {
-		base.PreviousCanonicalURL = base.CanonicalOrigin + timelineURL(language, page-1)
+		base.PreviousCanonicalURL = base.CanonicalOrigin + listingURL(language, filters, view, size, page-1)
 	}
 	if page < totalPages {
-		base.NextCanonicalURL = base.CanonicalOrigin + timelineURL(language, page+1)
+		base.NextCanonicalURL = base.CanonicalOrigin + listingURL(language, filters, view, size, page+1)
 	}
 	data := timelinePage{
 		basePage: base, Groups: s.groupByDay(incidents, base.Lang), Page: page, TotalPages: totalPages, Total: total,
 		Shown:    len(incidents),
 		Previous: page - 1, Next: page + 1, HasPrevious: page > 1, HasNext: page < totalPages,
+	}
+	s.decorateReader(&data, language, search, view, size, filters)
+	if scope.PublicOnly && view == "incident" {
+		data.Groups = s.groupByIncident(incidents, language)
+	}
+	data.Areas, err = s.store.ReaderAreas(request.Context(), language, s.options.SourceMode)
+	if err != nil {
+		s.internalError(response, request, "list reader areas", err)
+		return
 	}
 	if scope.PublicOnly && wantsMarkdown(request.Header.Get("Accept")) {
 		s.prepareMarkdown(response, base)
@@ -267,7 +334,7 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 	}
 	base.ModifiedTime = modifiedAt.Format(time.RFC3339)
 	base.StructuredData = structuredArticleData(base, view)
-	data := detailPage{basePage: base, Incident: view, BackURL: timelineURL(base.Lang, page), ShowOriginalSection: base.Review && view.Record.HasAI}
+	data := detailPage{basePage: base, Incident: view, BackURL: listingURL(base.Lang, readSearch(request), readTimelineView(request), s.options.PageSize, page), ShowOriginalSection: base.Review && view.Record.HasAI}
 	if scope.PublicOnly && wantsMarkdown(request.Header.Get("Accept")) {
 		s.prepareMarkdown(response, base)
 		s.renderDetailMarkdown(response, data)
@@ -295,14 +362,16 @@ func (s *Server) about(response http.ResponseWriter, request *http.Request) {
 	if strings.HasPrefix(base.SocialImageURL, "https://") {
 		base.SocialImageSecureURL = base.SocialImageURL
 	}
+	base.DocumentModifiedDate = informationPageUpdatedAt("about").Format(time.DateOnly)
 	base.StructuredData = structuredPageData(base, "AboutPage")
+	data := aboutPage{basePage: base, UpdatedLabel: s.formatIncidentDate(language, informationPageUpdatedAt("about"))}
 	if s.scope(request).PublicOnly && wantsMarkdown(request.Header.Get("Accept")) {
 		s.prepareMarkdown(response, base)
-		s.renderAboutMarkdown(response, aboutPage{basePage: base})
+		s.renderAboutMarkdown(response, data)
 		return
 	}
 	s.prepareHTML(response, request, base)
-	if err := s.aboutTemplate.ExecuteTemplate(response, "layout", aboutPage{basePage: base}); err != nil {
+	if err := s.aboutTemplate.ExecuteTemplate(response, "layout", data); err != nil {
 		s.logger.ErrorContext(request.Context(), "render about page", "error", err)
 	}
 }
@@ -315,13 +384,14 @@ func (s *Server) setLanguagePreference(response http.ResponseWriter, language st
 	})
 }
 
-func (s *Server) incidentForLanguage(record store.IncidentRecord, language string) incidentView {
+func (s *Server) incidentForLanguage(record store.IncidentRecord, language string) (view incidentView) {
+	defer func() { view.Title = readerTitle(view.Title, record.Number) }()
 	languageDefinition, registered := s.languageByCode(language)
 	if !registered {
 		languageDefinition = s.canonicalLanguage()
 	}
 	state := record.ProcessingState()
-	view := incidentView{
+	view = incidentView{
 		Record: record, ContentLanguage: s.canonicalLanguage().Tag.String(),
 		ProcessingState: strings.ReplaceAll(state, "_", "-"), ProcessingLabel: s.processingLabel(state, language),
 	}
@@ -504,6 +574,7 @@ type basePage struct {
 	BuildCommitURL                      string
 	BuildTime                           string
 	BuildTimeLabel                      string
+	DocumentModifiedDate                string
 }
 
 func structuredPageData(page basePage, pageType string) template.JS {
@@ -512,6 +583,9 @@ func structuredPageData(page basePage, pageType string) template.JS {
 		"@type": pageType, "@id": page.CanonicalURL + "#webpage", "url": page.CanonicalURL,
 		"name": page.SocialTitle, "description": page.Description, "inLanguage": page.LanguageTag,
 		"isPartOf": map[string]any{"@id": websiteID},
+	}
+	if page.DocumentModifiedDate != "" {
+		webPage["dateModified"] = page.DocumentModifiedDate
 	}
 	if page.AIGeneratedState != "false" {
 		webPage["digitalSourceType"] = schemaTrainedAlgorithmicMedia
@@ -635,18 +709,31 @@ type processingStepView struct {
 
 type timelinePage struct {
 	basePage
-	Groups      []dayGroup
-	Shown       int
-	Page        int
-	TotalPages  int
-	Total       int
-	Previous    int
-	Next        int
-	HasPrevious bool
-	HasNext     bool
+	View                                                                            string
+	PageSize                                                                        int
+	Search                                                                          bool
+	Filters                                                                         store.ReaderFilters
+	FilterFields                                                                    []readerField
+	ListURL, FormURL, ClearURL, PublishedURL, IncidentViewURL, PreviousURL, NextURL string
+	Pages                                                                           []pageLink
+	PageSizes                                                                       []int
+	Categories                                                                      []readerChoice
+	Areas                                                                           []string
+	ActiveFilters                                                                   []activeFilter
+	First, Last                                                                     int
+	Groups                                                                          []dayGroup
+	Shown                                                                           int
+	Page                                                                            int
+	TotalPages                                                                      int
+	Total                                                                           int
+	Previous                                                                        int
+	Next                                                                            int
+	HasPrevious                                                                     bool
+	HasNext                                                                         bool
 }
 
 type dayGroup struct {
+	TimeLabel string
 	ID        string
 	Label     string
 	Incidents []incidentView
@@ -659,7 +746,10 @@ type detailPage struct {
 	ShowOriginalSection bool
 }
 
-type aboutPage struct{ basePage }
+type aboutPage struct {
+	basePage
+	UpdatedLabel string
+}
 
 func (s *Server) preferredLanguage(request *http.Request) string {
 	if cookie, err := request.Cookie("munichbrief_language"); err == nil {

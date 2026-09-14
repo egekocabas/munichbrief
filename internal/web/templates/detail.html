@@ -1,64 +1,42 @@
 {{define "title"}}{{.Incident.Title}} · MunichBrief{{end}}
-{{define "detail-official-source-link"}}<div class="mt-6 flex justify-end"><a class="inline-flex min-h-11 items-center justify-center rounded-md bg-civic px-4 text-sm font-extrabold text-on-accent no-underline hover:bg-civic-dark" href="{{.Incident.Record.SourceURL}}" target="_blank" rel="noopener noreferrer">{{t .Lang "OpenOfficialPoliceRelease"}} <span class="ml-2" aria-hidden="true">↗</span></a></div>{{end}}
+{{define "detail-official-source-link"}}<div class="detail-source"><a class="reader-button" href="{{.Incident.Record.SourceURL}}" target="_blank" rel="noopener noreferrer"><span>{{t .Lang "OpenOfficialPoliceRelease"}}</span>{{template "external-icon" .}}</a></div>{{end}}
 {{define "content"}}
-<nav class="py-5 text-sm" aria-label="{{t .Lang "Breadcrumb"}}"><a class="font-bold text-civic no-underline hover:text-civic-dark" href="{{.BackURL}}" data-timeline-back="{{.BackURL}}"><span aria-hidden="true">←</span> {{t .Lang "Back"}}</a></nav>
+<nav class="detail-breadcrumb" aria-label="{{t .Lang "Breadcrumb"}}"><a class="font-bold text-civic no-underline hover:text-civic-dark" href="{{.BackURL}}" data-timeline-back="{{.BackURL}}"><span aria-hidden="true">←</span> {{t .Lang "Back"}}</a></nav>
 
-<article class="mx-auto max-w-4xl overflow-hidden rounded-lg border border-rule bg-paper" data-ai-generated="{{.Incident.Record.HasAI}}"{{if .Incident.Record.HasAI}} data-ai-model="{{.Incident.Record.AIModel}}"{{if .Incident.Record.AIMetadataModel}} data-ai-metadata-model="{{.Incident.Record.AIMetadataModel}}"{{end}}{{if .Incident.Record.AIPublicAssistanceVerificationModel}} data-ai-public-assistance-verification-model="{{.Incident.Record.AIPublicAssistanceVerificationModel}}"{{end}}{{if .Incident.Record.AICategoryVerificationModel}} data-ai-category-verification-model="{{.Incident.Record.AICategoryVerificationModel}}"{{end}}{{if and .Incident.Translated .Incident.Record.AITranslationModel}} data-ai-translation-model="{{.Incident.Record.AITranslationModel}}"{{end}} data-digital-source-type="http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia"{{end}}>
-  {{/* Publication context and language-neutral incident metadata. */}}
-  <header class="border-b border-rule px-5 py-7 sm:px-8 sm:py-9">
-    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.7rem] font-extrabold uppercase tracking-[0.09em] text-muted">
-      {{if .Incident.Record.Number}}<span class="text-alert">{{t .Lang "Report"}} {{.Incident.Record.Number}}</span>{{end}}
+<article class="reader-detail" data-ai-generated="{{.Incident.Record.HasAI}}"{{if .Incident.Record.HasAI}} data-ai-model="{{.Incident.Record.AIModel}}"{{if .Incident.Record.AIMetadataModel}} data-ai-metadata-model="{{.Incident.Record.AIMetadataModel}}"{{end}}{{if .Incident.Record.AIPublicAssistanceVerificationModel}} data-ai-public-assistance-verification-model="{{.Incident.Record.AIPublicAssistanceVerificationModel}}"{{end}}{{if .Incident.Record.AICategoryVerificationModel}} data-ai-category-verification-model="{{.Incident.Record.AICategoryVerificationModel}}"{{end}}{{if and .Incident.Translated .Incident.Record.AITranslationModel}} data-ai-translation-model="{{.Incident.Record.AITranslationModel}}"{{end}} data-digital-source-type="http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia"{{end}}>
+  <header class="detail-header">
+    <div class="detail-publication">
+
       <span>{{t .Lang "Published"}}: <time datetime="{{.Incident.Record.PublishedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime .Lang .Incident.Record.PublishedAt}}</time></span>
     </div>
-    {{if .Review}}<p class="mt-4 text-[0.68rem] font-extrabold uppercase tracking-[0.1em] text-civic data-[state=failed]:text-amber-700 data-[state=needs-review]:text-amber-700 data-[state=retrying]:text-amber-700 data-[state=running]:text-amber-700" data-state="{{.Incident.ProcessingState}}">{{.Incident.ProcessingLabel}}</p>{{end}}
-    {{if or .Incident.Record.HasAI .Incident.CategoryLabel .Incident.AreaName .Incident.EventText .Incident.PublicAssistance}}
-      <div class="mt-4 flex flex-wrap items-center gap-2">
-        {{if .Incident.Record.HasAI}}{{template "ai-generated-label" .}}{{end}}
-        {{if or .Incident.CategoryLabel .Incident.AreaName .Incident.EventText .Incident.PublicAssistance}}<dl class="contents text-xs">
-          {{if .Incident.CategoryLabel}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{t .Lang "Category"}}</dt><dd class="font-bold text-civic">{{.Incident.CategoryLabel}}</dd></div>{{end}}
-          {{if .Incident.AreaName}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{t .Lang "Area"}}</dt><dd class="font-bold text-civic">{{.Incident.AreaName}}</dd></div>{{end}}
-          {{if .Incident.EventText}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{.Incident.EventLabel}}</dt><dd class="font-bold text-civic">{{.Incident.EventText}}</dd></div>{{end}}
-          {{if .Incident.PublicAssistance}}<div class="inline-flex items-center rounded-full border border-alert/30 bg-alert-soft px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-alert">{{t .Lang "PublicAssistanceNeeded"}}</dt></div>{{end}}
-        </dl>{{end}}
-      </div>
-    {{end}}
-    {{if and (not .Incident.Record.HasAI) .Review .Fixture}}{{/* Review-only fixture preview does not change machine-readable AI state. */}}{{template "fixture-ai-label-preview" .}}{{end}}
-    <h1 class="mt-3 max-w-3xl font-serif text-3xl font-bold leading-[1.08] tracking-[-0.03em] text-ink sm:text-5xl" lang="{{.Incident.ContentLanguage}}">{{.Incident.Title}}</h1>
-    <dl class="mt-6 grid gap-3 border-t border-rule/70 pt-4 text-sm text-muted sm:grid-cols-2">
-      <div><dt class="font-bold text-ink">{{t .Lang "PublishedWithin"}}</dt><dd class="mt-0.5">{{.Incident.Record.SourceTitle}}</dd></div>
-      <div><dt class="font-bold text-ink">{{t .Lang "LastProcessed"}}</dt><dd class="mt-0.5"><time datetime="{{.Incident.Record.UpdatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime .Lang .Incident.Record.UpdatedAt}}</time></dd></div>
+    <h1 lang="{{.Incident.ContentLanguage}}">{{.Incident.Title}}</h1>
+    {{if or .Incident.CategoryLabel .Incident.AreaName .Incident.EventText .Incident.PublicAssistance .Incident.Record.Number}}
+    <dl class="detail-meta">
+      {{if .Incident.CategoryLabel}}<div><dt>{{t .Lang "Category"}}</dt><dd>{{.Incident.CategoryLabel}}</dd></div>{{end}}
+      {{if .Incident.AreaName}}<div><dt>{{t .Lang "Area"}}</dt><dd>{{template "pin-icon" .}} {{.Incident.AreaName}}</dd></div>{{end}}
+      {{if .Incident.EventText}}<div><dt>{{.Incident.EventLabel}}</dt><dd>{{template "clock-icon" .}} {{.Incident.EventText}}</dd></div>{{end}}
+      {{if .Incident.Record.Number}}<div><dt>{{t .Lang "Report"}}</dt><dd>{{template "hash-icon" .}} {{.Incident.Record.Number}}</dd></div>{{end}}
+      {{if .Incident.PublicAssistance}}<div class="detail-assistance"><dt class="sr-only">{{t .Lang "PublicAssistance"}}</dt><dd class="assistance-tag">{{t .Lang "PublicAssistanceNeeded"}}</dd></div>{{end}}
     </dl>
+    {{end}}
+    {{if .Incident.Record.HasAI}}<div class="detail-ai-label">{{template "ai-generated-label" .}}</div>{{end}}
+    {{if .Review}}<p class="incident-note" data-state="{{.Incident.ProcessingState}}">{{.Incident.ProcessingLabel}}</p>{{end}}
+    {{if and (not .Incident.Record.HasAI) .Review .Fixture}}{{template "fixture-ai-label-preview" .}}{{end}}
   </header>
+
+  {{template "reader-ai-disclosure" .}}
 
   {{if .Incident.Record.HasAI}}
   {{/* Accepted canonical or translated presentation shown to readers. */}}
-  <section class="px-5 py-7 sm:px-8 sm:py-9" aria-labelledby="ai-summary-heading">
-    <h2 id="ai-summary-heading" class="border-l-3 border-civic pl-4 text-sm font-semibold leading-6 text-muted sm:text-base"><span class="font-extrabold text-civic">{{t .Lang "AISummary"}}.</span> {{t .Lang "VerifySource"}}</h2>
-    <div class="prose-copy mt-5 max-w-3xl" lang="{{.Incident.ContentLanguage}}"><p class="text-lg leading-relaxed text-muted">{{.Incident.Summary}}</p></div>
+  <section class="detail-summary" aria-labelledby="ai-summary-heading">
+    <h2 id="ai-summary-heading" class="detail-summary-note"><span class="font-semibold text-civic">{{t .Lang "AISummary"}}.</span> {{t .Lang "VerifySource"}}</h2>
+    <div class="prose-copy detail-copy" lang="{{.Incident.ContentLanguage}}"><p class="text-ink">{{.Incident.Summary}}</p></div>
     {{if .Incident.PublicAssistance}}<aside class="mt-6 rounded-md border border-alert/30 bg-alert-soft px-4 py-3" aria-label="{{t .Lang "PublicAssistance"}}"><p class="font-bold text-alert">{{.Incident.PublicAssistanceLabel}}</p>{{if .Incident.PublicAssistanceTypes}}<ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">{{range .Incident.PublicAssistanceTypes}}<li>{{.}}</li>{{end}}</ul>{{end}}<p class="mt-2 text-sm text-muted">{{t .Lang "PublicAssistanceSourceCopy"}}</p></aside>{{end}}
     {{template "detail-official-source-link" .}}
   </section>
 
-  {{/* Canonical and translation provenance are separate processing layers. */}}
-  <section class="bg-newsprint/35 px-5 py-7 sm:px-8" aria-labelledby="ai-processing-heading">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <h2 id="ai-processing-heading" class="font-serif text-xl font-bold">{{t .Lang "AIProcessing"}}</h2>
-      <span class="rounded-full border border-civic/20 bg-paper px-2.5 py-1 text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-civic">{{.Incident.ProcessingSystem}}</span>
-    </div>
-    <ol class="mt-4 grid gap-3 {{if gt (len .Incident.ProcessingSteps) 1}}sm:grid-cols-2{{end}} {{if gt (len .Incident.ProcessingSteps) 2}}lg:grid-cols-3{{end}}">
-      {{range .Incident.ProcessingSteps}}<li class="rounded-md border border-rule bg-paper p-4">
-        <p class="text-[0.65rem] font-extrabold uppercase tracking-[0.1em] text-alert">{{if .Number}}{{t $.Lang "Step"}} {{.Number}}{{else}}{{.Label}}{{end}}</p>
-        <h3 class="mt-1 font-serif text-lg font-bold text-ink">{{.Name}}</h3>
-        <dl class="mt-3 grid gap-2 text-xs text-muted">
-          <div><dt class="font-bold text-ink">{{t $.Lang "Model"}}</dt><dd class="mt-0.5 break-words">{{.Model}}</dd></div>
-          <div><dt class="font-bold text-ink">{{t $.Lang "PromptVersion"}}</dt><dd class="mt-0.5 break-words font-mono">{{.PromptVersion}}</dd></div>
-          {{if .GeneratedAt}}<div><dt class="font-bold text-ink">{{t $.Lang "Generated"}}</dt><dd class="mt-0.5"><time datetime="{{.GeneratedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime $.Lang .GeneratedAt}}</time></dd></div>{{end}}
-        </dl>
-      </li>{{end}}
-    </ol>
-  </section>
   {{else}}
-  <section class="px-5 py-7 sm:px-8 sm:py-9" lang="de">
+  <section class="detail-summary" lang="de">
     <p class="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-alert">{{t .Lang "OriginalGerman"}}</p>
     <p class="mt-2 border-l-2 border-amber-600 pl-3 text-sm text-amber-800">{{.Incident.ProcessingLabel}}. {{t .Lang "OriginalShown"}}</p>
     <div class="incident-body mt-6 text-base leading-7 text-ink">{{.Incident.Record.BodyDE}}</div>
@@ -66,9 +44,40 @@
   </section>
   {{end}}
 
+  {{/* Canonical and translation provenance are separate processing layers. */}}
+  <details class="detail-provenance">
+    <summary>{{if .Incident.Record.HasAI}}{{t .Lang "AIProcessing"}}{{else}}{{t .Lang "PublishedWithin"}}{{end}}</summary>
+    <div class="detail-provenance-content">
+    <dl class="detail-source-meta">
+      <div><dt>{{t .Lang "PublishedWithin"}}</dt><dd>{{.Incident.Record.SourceTitle}}</dd></div>
+      <div><dt>{{t .Lang "LastProcessed"}}</dt><dd><time datetime="{{.Incident.Record.UpdatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime .Lang .Incident.Record.UpdatedAt}}</time></dd></div>
+    </dl>
+    {{if .Incident.Record.HasAI}}
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h2 id="ai-processing-heading" class="font-serif text-xl font-bold">{{t .Lang "AIProcessing"}}</h2>
+      <span class="rounded-full border border-civic/20 bg-paper px-2.5 py-1 text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-civic">{{.Incident.ProcessingSystem}}</span>
+    </div>
+    <ol class="processing-steps">
+      {{range .Incident.ProcessingSteps}}<li class="processing-step">
+        <div class="processing-step-heading">
+          {{if .Number}}<span class="processing-step-number" aria-label="{{t $.Lang "Step"}} {{.Number}}">{{.Number}}</span>{{end}}
+          <h3>{{.Name}}</h3>
+        </div>
+        <div class="processing-model"><span class="processing-caption">{{t $.Lang "Model"}}</span><strong title="{{.Model}}">{{.ModelDisplay}}</strong>{{if .ModelVariant}}<span class="processing-variant" aria-label="{{t $.Lang "ModelVariant"}}: {{.ModelVariant}}">{{.ModelVariant}}</span>{{end}}</div>
+        <dl class="processing-facts">
+          <div><dt>{{template "hash-icon" $}} {{t $.Lang "PromptVersion"}}</dt><dd title="{{.PromptVersion}}">{{.PromptDisplay}}</dd></div>
+          {{if .GeneratedAt}}<div><dt>{{template "clock-icon" $}} {{t $.Lang "Generated"}}</dt><dd><time datetime="{{.GeneratedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime $.Lang .GeneratedAt}}</time></dd></div>{{end}}
+        </dl>
+
+      </li>{{end}}
+    </ol>
+    {{end}}
+    </div>
+  </details>
+
   {{if .ShowOriginalSection}}
   {{/* Review mode keeps the retained German source available for comparison. */}}
-  <details class="group border-t border-rule px-5 py-5 sm:px-8">
+  <details class="detail-provenance">
     <summary class="cursor-pointer font-bold text-civic marker:text-muted">{{t .Lang "OriginalGerman"}}</summary>
     <div class="mt-5" lang="de"><p class="text-sm text-muted">{{t .Lang "OriginalQACopy"}}</p><h2 class="mt-5 font-serif text-2xl font-bold">{{.Incident.Record.TitleDE}}</h2><div class="incident-body mt-4 leading-7 text-ink">{{.Incident.Record.BodyDE}}</div></div>
   </details>

@@ -1,5 +1,6 @@
 (() => {
   const storageKey = "munichbrief-timeline-return";
+  document.documentElement.classList.add("reader-js");
   const currentURL = () => location.pathname + location.search;
 
   const readReturn = () => {
@@ -11,9 +12,9 @@
       const referrer = document.referrer ? new URL(document.referrer) : null;
       const navigationType = performance.getEntriesByType("navigation")[0]?.type;
       if (timeline.origin !== location.origin || incident.origin !== location.origin ||
-          !/^\/[a-z][a-z0-9-]*$/.test(timeline.pathname) ||
-          !/^(\?page=[1-9]\d*)?$/.test(timeline.search) || timeline.hash ||
-          !new RegExp("^" + timeline.pathname + "/incidents/[1-9]\\d*$").test(incident.pathname) ||
+          !/^\/[a-z][a-z0-9-]*(?:\/search)?$/.test(timeline.pathname) ||
+          !validListingQuery(timeline.searchParams) || timeline.hash ||
+          !new RegExp("^" + timeline.pathname.replace(/\/search$/, "") + "/incidents/[1-9]\\d*$").test(incident.pathname) ||
           incident.search || incident.hash ||
           !Number.isFinite(saved.scrollY) || saved.scrollY < 0) return null;
       // A fresh direct visit must not inherit an unrelated earlier visit's Back link.
@@ -25,6 +26,27 @@
     }
   };
 
+  function validListingQuery(params) {
+    if (params.toString().length > 8192) return false;
+    const seen = new Set();
+    for (const [key, value] of params) {
+      if (seen.has(key)) return false;
+      seen.add(key);
+      if (key === "page" && /^[1-9]\d{0,8}$/.test(value)) continue;
+      if (key === "page_size" && /^(10|20|30|50)$/.test(value)) continue;
+      if (key === "view" && /^(published|incident)$/.test(value)) continue;
+      if (["q", "area", "number"].includes(key) && [...value].length <= 200 && !value.includes("\0")) continue;
+      if (key === "category" && /^(traffic|theft_burglary|robbery_extortion|violence|sexual_offense|fraud_cyber|drugs|fire_hazard|property_damage|missing_wanted|police_operation|other)$/.test(value)) continue;
+      if (key === "assistance" && /^(yes|no)$/.test(value)) continue;
+      if (key === "date_field" && /^(published|incident)$/.test(value)) continue;
+      if ((key === "from" || key === "to") && /^\d{4}-\d{2}-\d{2}$/.test(value)) continue;
+      return false;
+    }
+    return true;
+  }
+  document.addEventListener("change", (event) => {
+    if (event.target instanceof HTMLSelectElement && event.target.matches("[data-auto-submit]")) event.target.form?.requestSubmit();
+  });
   let returnTo = readReturn();
   const saveReturn = () => {
     try {
@@ -42,7 +64,17 @@
     }
   };
 
+  const updateDocumentLanguage = () => {
+    // HTMX replaces the body contents, so keep the document language in sync
+    // for readers and language-specific typography after switching languages.
+    const language = document.querySelector("#content")?.dataset.languageTag;
+    if (language) document.documentElement.lang = language;
+    const aiState = document.querySelector("#content")?.dataset.aiState;
+    if (aiState) document.documentElement.dataset.aiGenerated = aiState;
+  };
+
   const updateNavigation = () => {
+    updateDocumentLanguage();
     const back = document.querySelector("[data-timeline-back]");
     if (back) updateBackLink(back);
     if (returnTo?.restore && currentURL() === returnTo.timeline) {
@@ -82,7 +114,13 @@
     if (event.detail.elt.matches("[data-timeline-back]")) updateBackLink(event.detail.elt);
   });
   document.addEventListener("DOMContentLoaded", updateNavigation);
+  document.addEventListener("htmx:afterSwap", updateDocumentLanguage);
   document.addEventListener("htmx:afterSettle", updateNavigation);
   document.addEventListener("htmx:historyRestore", updateNavigation);
+  document.addEventListener("htmx:historyCacheMiss", () => {
+    // Public history snapshots are disabled. A native restoration also keeps
+    // every head tag and document attribute aligned with the server response.
+    location.reload();
+  });
   window.addEventListener("pageshow", updateNavigation);
 })();

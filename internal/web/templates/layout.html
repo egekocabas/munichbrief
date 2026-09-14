@@ -1,7 +1,7 @@
 {{define "layout"}}
 <!doctype html>
 <html lang="{{.LanguageTag}}" prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" data-ai-generated="{{.AIGeneratedState}}">
-<head>
+<head hx-head="merge">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="{{.Description}}">
@@ -46,30 +46,28 @@
   <link rel="stylesheet" href="{{assetURL "app.css"}}">
   <script defer src="{{assetURL "navigation.js"}}"></script>
   <script defer src="{{assetURL "htmx.min.js"}}"></script>
+  <script defer src="{{assetURL "head-support.js"}}"></script>
 </head>
-<body hx-boost="true" hx-indicator="#navigation-progress" class="flex min-h-screen flex-col text-ink antialiased">
+<body hx-boost="true" hx-ext="head-support" hx-history="false" hx-indicator="#navigation-progress" class="reader flex min-h-screen flex-col text-ink antialiased">
   <div id="navigation-progress" class="htmx-progress fixed inset-x-0 top-0 z-50 h-0.5 bg-civic" aria-hidden="true"></div>
   <a class="sr-only z-50 rounded-sm bg-paper px-4 py-2 font-bold text-civic focus:not-sr-only focus:fixed focus:left-4 focus:top-4" href="#content">{{t .Lang "SkipToContent"}}</a>
   {{/* Shared reader navigation and language switcher. */}}
-  <header class="border-b border-rule/90 bg-paper/95">
-    <div class="page-shell flex min-h-16 flex-wrap items-center justify-between gap-3 py-3 sm:min-h-18 sm:flex-nowrap sm:gap-6">
-      <a class="group inline-flex min-w-0 items-center gap-2 text-ink no-underline sm:gap-3" href="{{.HomeURL}}" aria-label="MunichBrief">
-        <span class="grid size-9 shrink-0 place-items-center rounded-[0.6rem_0.6rem_0.6rem_0.18rem] bg-civic font-serif text-lg font-bold text-on-accent transition-colors group-hover:bg-civic-dark sm:size-10 sm:text-xl" aria-hidden="true">M</span>
-        <span class="min-w-0 leading-tight"><strong class="block font-serif text-base tracking-tight sm:text-lg">MunichBrief</strong><small class="hidden text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted sm:block">{{t .Lang "BrandTagline"}}</small></span>
+  <header class="reader-header">
+    <div class="page-shell reader-header-inner">
+      <a class="reader-brand" href="{{.HomeURL}}" aria-label="MunichBrief">
+        <span class="reader-brand-mark" aria-hidden="true">M</span>
+        <span class="min-w-0 leading-tight"><strong class="reader-brand-name">MunichBrief</strong><small class="reader-brand-tagline">{{t .Lang "BrandTagline"}}</small></span>
       </a>
-      <div class="flex w-full shrink-0 items-center justify-between gap-1 sm:w-auto sm:justify-end sm:gap-4">
-        <nav class="flex items-center gap-1 text-sm font-bold" aria-label="{{t .Lang "PrimaryNavigation"}}">
-          <a class="rounded-md px-2 py-2 text-ink no-underline hover:bg-newsprint hover:text-civic sm:px-3" href="{{.AboutURL}}">{{t .Lang "About"}}</a>
+      <div class="reader-controls">
+        <nav class="reader-nav" aria-label="{{t .Lang "PrimaryNavigation"}}">
+          <a class="reader-about-link" href="{{.AboutURL}}">{{t .Lang "About"}}</a>
         </nav>
-        <a class="inline-flex size-9 items-center justify-center rounded-md text-ink no-underline hover:bg-newsprint hover:text-civic" href="https://github.com/egekocabas/munichbrief" target="_blank" rel="noopener noreferrer" aria-label="MunichBrief on GitHub">
-          <svg class="size-5" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 .7a11.5 11.5 0 0 0-3.64 22.4c.58.1.79-.25.79-.56v-2.23c-3.22.7-3.9-1.37-3.9-1.37-.52-1.34-1.28-1.7-1.28-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.57-.3-5.27-1.29-5.27-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.16 1.18a10.95 10.95 0 0 1 5.75 0c2.2-1.49 3.16-1.18 3.16-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.71 5.39-5.29 5.68.42.36.79 1.06.79 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .7Z"/></svg>
-        </a>
-        <button class="inline-flex size-9 items-center justify-center rounded-md border border-rule bg-white text-civic hover:border-civic/40 hover:bg-newsprint" type="button" data-theme-toggle aria-label="{{t .Lang "DarkMode"}}" aria-pressed="false" title="{{t .Lang "DarkMode"}}">
+        <button class="reader-icon-button" type="button" data-theme-toggle aria-label="{{t .Lang "DarkMode"}}" aria-pressed="false" title="{{t .Lang "DarkMode"}}">
           <svg class="theme-icon-moon size-5" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.4 15.5A8.8 8.8 0 0 1 8.5 3.6 9 9 0 1 0 20.4 15.5Z"/></svg>
           <svg class="theme-icon-sun size-5" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0-5a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1Zm0 17a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1ZM3 11h1a1 1 0 1 1 0 2H3a1 1 0 1 1 0-2Zm17 0h1a1 1 0 1 1 0 2h-1a1 1 0 1 1 0-2ZM5.6 4.2l.7.7a1 1 0 0 1-1.4 1.4l-.7-.7a1 1 0 0 1 1.4-1.4Zm13.5 13.5.7.7a1 1 0 0 1-1.4 1.4l-.7-.7a1 1 0 0 1 1.4-1.4ZM18.4 4.2a1 1 0 0 1 1.4 1.4l-.7.7a1 1 0 0 1-1.4-1.4l.7-.7ZM6.3 17.7a1 1 0 0 1 0 1.4l-.7.7a1 1 0 0 1-1.4-1.4l.7-.7a1 1 0 0 1 1.4 0Z"/></svg>
         </button>
         <details class="language-menu relative">
-          <summary class="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-md border border-rule bg-white px-2.5 text-xs font-extrabold uppercase tracking-[0.08em] text-civic hover:border-civic/40 hover:bg-newsprint" aria-label="{{t .Lang "Language"}}: {{.Lang}}">
+          <summary class="reader-language-button" aria-label="{{t .Lang "Language"}}: {{.Lang}}">
             <svg class="size-5" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm6.92 6h-3.01a15.7 15.7 0 0 0-1.35-3.11A8.04 8.04 0 0 1 18.92 8ZM12 4c.83 1.2 1.48 2.54 1.9 4h-3.8A13.7 13.7 0 0 1 12 4ZM4.26 14a8 8 0 0 1 0-4h3.39a16.5 16.5 0 0 0 0 4H4.26Zm.82 2h3.01c.3 1.1.76 2.15 1.35 3.11A8.04 8.04 0 0 1 5.08 16Zm3.01-8H5.08a8.04 8.04 0 0 1 4.36-3.11A15.7 15.7 0 0 0 8.09 8ZM12 20a13.7 13.7 0 0 1-1.9-4h3.8A13.7 13.7 0 0 1 12 20Zm2.35-6h-4.7a14.6 14.6 0 0 1 0-4h4.7a14.6 14.6 0 0 1 0 4Zm.21 5.11A15.7 15.7 0 0 0 15.91 16h3.01a8.04 8.04 0 0 1-4.36 3.11ZM16.35 14a16.5 16.5 0 0 0 0-4h3.39a8 8 0 0 1 0 4h-3.39Z"/></svg>
             <span>{{.Lang}}</span>
           </summary>
@@ -83,47 +81,36 @@
       </div>
     </div>
   </header>
-  <main id="content" class="page-shell flex-1">
+  <main id="content" data-language-tag="{{.LanguageTag}}" data-ai-state="{{.AIGeneratedState}}" class="page-shell flex-1">
     {{/* Review mode is an operational safety warning and is never dismissible. */}}
     {{if .ShowReviewNotice}}<aside class="mt-4 border-l-3 border-alert bg-alert-soft px-4 py-3 text-sm font-bold leading-relaxed text-alert" aria-label="{{t .Lang "NoticeLabel"}}">{{t .Lang "ReviewNotice"}}</aside>{{end}}
     {{/* Page-specific reader content is rendered below the shared notice. */}}
     {{template "content" .}}
   </main>
   {{/* Shared reader footer. */}}
-  <footer class="mt-12 border-t border-rule bg-paper">
+  <footer class="reader-footer">
     <div class="page-shell py-6 text-center text-xs leading-relaxed text-muted">
       <p>{{t .Lang "Footer"}}</p>
+      <div class="reader-footer-links"><a href="{{.AboutURL}}">{{t .Lang "About"}}</a>
+ <a href="/{{.Lang}}/contact">{{t .Lang "ContactHeading"}}</a>
+ <a href="/{{.Lang}}/privacy">{{t .Lang "PrivacyTitle"}}</a>
+ <a href="/{{.Lang}}/impressum">{{t .Lang "ImpressumTitle"}}</a>
+ <a href="/{{.Lang}}/licenses">{{t .Lang "LicensesTitle"}}</a>
+        <a class="reader-icon-button" href="https://github.com/egekocabas/munichbrief" target="_blank" rel="noopener noreferrer" aria-label="MunichBrief on GitHub">
+          <svg class="size-5" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 .7a11.5 11.5 0 0 0-3.64 22.4c.58.1.79-.25.79-.56v-2.23c-3.22.7-3.9-1.37-3.9-1.37-.52-1.34-1.28-1.7-1.28-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.57-.3-5.27-1.29-5.27-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.16 1.18a10.95 10.95 0 0 1 5.75 0c2.2-1.49 3.16-1.18 3.16-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.71 5.39-5.29 5.68.42.36.79 1.06.79 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .7Z"/></svg>
+        </a>
+      </div>
       {{if .BuildCommit}}<p class="mt-2">{{t .Lang "Built"}} ({{if .BuildCommitURL}}<a class="font-mono font-bold text-civic hover:text-civic-dark" href="{{.BuildCommitURL}}">{{.BuildCommit}}</a>{{else}}<strong class="font-mono">{{.BuildCommit}}</strong>{{end}}) <time datetime="{{.BuildTime}}">{{.BuildTimeLabel}}</time></p>{{end}}
     </div>
   </footer>
-  {{if .ShowAIDisclosure}}
-  <aside id="ai-disclosure" class="ai-disclosure" aria-labelledby="ai-disclosure-title">
-    <div class="ai-disclosure-panel">
-      <div class="min-w-0 flex-1">
-        <div class="ai-disclosure-heading">
-          <div class="ai-disclosure-icon" aria-hidden="true">
-            {{template "ai-generated-label-images" .}}
-          </div>
-          <h2 id="ai-disclosure-title" class="font-serif text-lg font-bold text-ink">{{t .Lang "AIDisclosureTitle"}}</h2>
-        </div>
-        {{if .Fixture}}<p class="mt-1 text-sm font-bold text-alert">{{t .Lang "AIDisclosureFixtureCopy"}}</p>{{end}}
-        <p class="mt-1 text-sm leading-relaxed text-muted">{{t .Lang "AIDisclosureCopy"}}</p>
-        <p class="mt-1 text-xs leading-relaxed text-muted">{{t .Lang "AIDisclosurePreferenceCopy"}} <a class="font-bold text-civic hover:text-civic-dark" href="{{.AboutURL}}">{{t .Lang "AIDisclosureLearnMore"}}</a></p>
-      </div>
-      <form class="ai-disclosure-form" method="post" action="/ai-disclosure/acknowledge" hx-post="/ai-disclosure/acknowledge" hx-target="#ai-disclosure" hx-swap="delete">
-        <input type="hidden" name="return_to" value="{{.CurrentURL}}">
-        <button class="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-civic px-5 py-2 text-sm font-extrabold text-on-accent hover:bg-civic-dark" type="submit">{{t .Lang "AIDisclosureGotIt"}}</button>
-      </form>
-    </div>
-  </aside>
-  {{end}}
+
 </body>
 </html>
 {{end}}
 
 {{define "ai-generated-label-images"}}
-<img class="ai-label-image-light" src="{{aiLabelLightAssetURL}}" alt="">
-<img class="ai-label-image-dark" src="{{aiLabelAssetURL}}" alt="">
+<img class="ai-label-image-light" width="1790" height="567" src="{{aiLabelLightAssetURL}}" alt="">
+<img class="ai-label-image-dark" width="1790" height="567" src="{{aiLabelAssetURL}}" alt="">
 {{end}}
 
 {{define "ai-generated-label"}}
@@ -139,3 +126,30 @@
   <span class="text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-civic">{{t .Lang "AIFixtureLabelPreview"}}</span>
 </div>
 {{end}}
+
+{{define "reader-ai-disclosure"}}
+{{if .ShowAIDisclosure}}
+<aside id="ai-disclosure" class="ai-disclosure" aria-labelledby="ai-disclosure-title">
+  <div class="ai-disclosure-panel">
+    <div class="min-w-0">
+      <div class="ai-disclosure-heading">
+        <h2 id="ai-disclosure-title">{{t .Lang "AIDisclosureTitle"}}</h2>
+        <div class="ai-disclosure-icon" aria-hidden="true">{{template "ai-generated-label-images" .}}</div>
+      </div>
+      {{if .Fixture}}<p class="mt-1 text-sm font-medium text-alert">{{t .Lang "AIDisclosureFixtureCopy"}}</p>{{end}}
+      <p class="ai-disclosure-copy">{{t .Lang "AIDisclosureCopy"}}</p>
+      <p class="ai-disclosure-preference">{{t .Lang "AIDisclosurePreferenceCopy"}} <a href="{{.AboutURL}}">{{t .Lang "AIDisclosureLearnMore"}}</a></p>
+    </div>
+    <form class="ai-disclosure-form" method="post" action="/ai-disclosure/acknowledge" hx-post="/ai-disclosure/acknowledge" hx-target="#ai-disclosure" hx-swap="delete">
+      <input type="hidden" name="return_to" value="{{.CurrentURL}}">
+      <button class="reader-button" type="submit">{{t .Lang "AIDisclosureGotIt"}}</button>
+    </form>
+  </div>
+</aside>
+{{end}}
+{{end}}
+
+{{define "external-icon"}}<svg class="reader-inline-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M14 4h6v6m0-6L10 14"/><path d="M10 5H5a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-5"/></svg>{{end}}
+{{define "pin-icon"}}<svg class="reader-inline-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>{{end}}
+{{define "clock-icon"}}<svg class="reader-inline-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>{{end}}
+{{define "hash-icon"}}<svg class="reader-inline-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M10 3 6 21M18 3l-4 18M4 9h17M3 15h17"/></svg>{{end}}

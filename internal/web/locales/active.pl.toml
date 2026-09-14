@@ -1,4 +1,3 @@
-SiteDescription = { other = "Bądź na bieżąco dzięki podsumowaniom AI oficjalnych komunikatów policji w Monachium." }
 BrandTagline = { other = "Monachium w skrócie" }
 SocialImageAlt = { other = "Podgląd MunichBrief z Parkiem Olimpijskim w Monachium." }
 SocialIncidentLabel = { other = "Zdarzenie" }
@@ -17,15 +16,14 @@ AIGeneratedContent = { other = "Treść wygenerowana przez AI" }
 AIFixtureLabelPreview = { other = "Podgląd oznaczenia — te syntetyczne dane nie zostały przetworzone przez AI" }
 AIDisclosureTitle = { other = "Treść wygenerowana przez AI" }
 AIDisclosureFixtureCopy = { other = "Podgląd lokalny: ta strona korzysta z syntetycznych treści testowych." }
-AIDisclosureCopy = { other = "MunichBrief korzysta z lokalnie uruchamianej AI do tworzenia tytułów, podsumowań, tłumaczeń, kategorii i ustrukturyzowanych szczegółów, takich jak zgłoszone miejsce i czas oraz informacja, czy policja prosi o pomoc publiczną, na podstawie oficjalnych komunikatów policji w Monachium. Informacje wygenerowane lub wywnioskowane przez AI mogą zawierać błędy albo stać się nieaktualne po zmianie komunikatu źródłowego. Każda strona zdarzenia wskazuje oficjalne źródło policyjne i zawiera do niego odsyłacz; oficjalnych informacji należy szukać w tym źródle. MunichBrief jest niezależnym projektem i nie jest powiązany z policją bawarską. Każda wymieniona osoba jest uznawana za niewinną, dopóki jej wina nie zostanie udowodniona." }
+AIDisclosureCopy = { other = "Nagłówki, podsumowania, tłumaczenia i szczegóły zdarzeń tworzy AI. Mogą zawierać błędy lub nie uwzględniać aktualizacji. Sprawdź informacje w podlinkowanym oficjalnym komunikacie. MunichBrief działa niezależnie od policji; obowiązuje domniemanie niewinności." }
 AIDisclosurePreferenceCopy = { other = "Wybranie „Rozumiem” zapamięta tę informację przez 30 dni." }
 AIDisclosureLearnMore = { other = "Więcej informacji o MunichBrief i sposobie działania znajduje się na stronie O nas." }
 AIDisclosureGotIt = { other = "Rozumiem" }
 AITransparencyEU = { other = "Przejrzystość AI i wytyczne UE" }
-AITransparencyEUCopy = { other = "MunichBrief stosuje unijne oznaczenie treści w pełni wygenerowanych przez AI, ponieważ wytyczne Komisji Europejskiej wyraźnie wymieniają generowane przez AI podsumowania wiadomości jako przykład zastosowania. Widoczne oznaczenia i pochodzenie czytelne maszynowo wspierają przejrzystość, lecz samo użycie ikony nie dowodzi zgodności z prawem ani nie oznacza, że MunichBrief podpisał dobrowolny kodeks postępowania." }
+AITransparencyEUCopy = { other = "Oznaczenie AI wskazuje nagłówki, podsumowania i tłumaczenia przygotowane z użyciem sztucznej inteligencji. Każdy komunikat zawiera też informacje o wykorzystanych modelach i etapach przetwarzania." }
 EUIconGuidance = { other = "Wytyczne UE dotyczące ikony" }
 EUCodePractice = { other = "Kodeks postępowania UE" }
-Footer = { other = "MunichBrief jest niezależny od policji bawarskiej. Bez analityki, kont i reklam." }
 Built = { other = "Wersja" }
 Language = { other = "Język" }
 German = { other = "Niemiecki" }
@@ -46,8 +44,7 @@ SwitchToPolish = { other = "Przejdź do wersji polskiej" }
 SwitchToRussian = { other = "Przejdź do wersji rosyjskiej" }
 HeroEyebrowFixture = { other = "Lokalny prototyp" }
 HeroEyebrowLive = { other = "Komunikaty policji w Monachium" }
-HeroTitle = { other = "Najnowsze zdarzenia zgłoszone przez policję w Monachium" }
-HeroCopy = { other = "Przejrzysty przegląd lokalnych zdarzeń, podsumowany na podstawie oficjalnych komunikatów policji." }
+HeroTitle = { other = "Monachium w skrócie." }
 FixtureIncidents = { other = "Syntetyczne zgłoszenia" }
 LatestIncidents = { other = "Najnowsze zdarzenia" }
 Reports = { one = "{{.Count}} zgłoszenie", few = "{{.Count}} zgłoszenia", many = "{{.Count}} zgłoszeń", other = "{{.Count}} zgłoszenia" }
@@ -55,8 +52,6 @@ ShownTotal = { other = "Wyświetlono {{.Shown}} z {{.Total}}" }
 Report = { other = "Komunikat policji" }
 SourceMetadata = { other = "Metadane źródła" }
 ReadIncident = { other = "Przeczytaj zgłoszenie" }
-OpenOfficialSource = { other = "Otwórz oficjalne źródło" }
-OpenOfficialPoliceRelease = { other = "Otwórz oficjalny komunikat policji" }
 Newer = { other = "Nowsze" }
 Older = { other = "Starsze" }
 Page = { other = "Strona" }
@@ -147,9 +142,7 @@ Running = { other = "Trwa podsumowywanie i tłumaczenie przez AI" }
 Retrying = { other = "AI jest chwilowo niedostępna; zaplanowano ponowną próbę" }
 NeedsReview = { other = "Wynik AI wymaga weryfikacji" }
 OriginalShown = { other = "Wyświetlany jest oryginalny komunikat niemiecki." }
-AboutTitle = { other = "Jak działa MunichBrief" }
 Methodology = { other = "O MunichBrief" }
-AboutIntro = { other = "MunichBrief przekształca oficjalne komunikaty policji w Monachium w jasne, ustrukturyzowane podsumowania zdarzeń w wielu językach dla czytelników." }
 FromReleaseToIncident = { other = "Od komunikatu do zdarzenia" }
 Discover = { other = "Wykrywanie" }
 DiscoverCopy = { other = "Nowe komunikaty są wykrywane wyłącznie za pośrednictwem oficjalnego kanału RSS policji w Monachium." }
@@ -157,16 +150,308 @@ Organize = { other = "Porządkowanie" }
 OrganizeCopy = { other = "Komunikaty zawierające wiele zgłoszeń są dzielone według ich oficjalnych numerów. Zgłoszenia opublikowane oddzielnie pozostają oddzielne." }
 Summarize = { other = "Podsumowanie" }
 SummarizeCopy = { other = "Lokalne modele AI wyodrębniają szczegóły, takie jak kategoria, miejsce, data i prośby o pomoc publiczną, a następnie tworzą niemieckie podsumowanie z minimalizacją danych." }
-TranslatePublish = { other = "Tłumaczenie i publikacja" }
-TranslatePublishCopy = { other = "Niemieckie podsumowania, które przejdą automatyczne kontrole przetwarzania, są tłumaczone na dostępne języki. Strony publiczne pokazują treści wygenerowane przez AI dopiero po pomyślnym zakończeniu całego potoku przetwarzania." }
+TranslatePublish = { other = "Publikacja po niemiecku" }
+TranslatePublishCopy = { other = "Niemieckie podsumowanie pojawia się, gdy przejdzie wstępne automatyczne kontrole. Nie czeka na tłumaczenia ani późniejsze weryfikacje." }
 AccuracyOfficialInformation = { other = "Dokładność i informacje oficjalne" }
 AccuracyOfficialInformationCopy = { other = "Podsumowania i szczegóły wyodrębnione przez AI mogą zawierać błędy. Komunikaty policji mogą być aktualizowane po publikacji. Najnowsze oficjalne informacje pozostają rozstrzygające i obowiązuje domniemanie niewinności." }
 PrivacyDataHandling = { other = "Prywatność i przetwarzanie danych" }
-PrivacyCopy = { other = "MunichBrief nie ma kont, analityki ani reklam. Niezbędny plik cookie przechowuje wybrany język przez rok. Po wybraniu „Rozumiem” własny plik cookie zapamiętuje informację o AI przez 30 dni. Wybrany motyw kolorystyczny jest przechowywany lokalnie w przeglądarce." }
-DataHandlingCopy = { other = "Wyodrębniony niemiecki tekst źródłowy jest przechowywany lokalnie. Ograniczony tryb weryfikacji może pokazywać oryginalne teksty i stany przetwarzania na potrzeby kontroli jakości; tryb publiczny nie pokazuje zapisanych oryginałów." }
-IndependenceLegalReview = { other = "Niezależność i weryfikacja prawna" }
-IndependenceLegalReviewCopy = { other = "MunichBrief jest niezależny od policji bawarskiej. Zabezpieczenia techniczne nie zastępują weryfikacji prawnej. Okres przechowywania, podstawa prawna, dane dotyczące wyroków skazujących i naruszeń prawa oraz wszelkie wyjątki dziennikarskie wymagają ciągłej oceny." }
-ContactHeading = { other = "Pytania, poprawki lub opinie" }
-ContactPublicLead = { other = "Znalazłeś błąd lub masz sugestię?" }
-ContactIssueLink = { other = "Otwórz zgłoszenie w serwisie GitHub" }
-ContactPrivateLead = { other = "W sprawach dotyczących prywatności lub treści, których nie należy udostępniać publicznie, napisz na adres" }
+PrivacyCopy = { other = "Nie potrzebujesz konta i nie ma reklam. Przeglądarka zapamiętuje język przez rok, a zamknięte powiadomienie o AI i zastosowane wyszukiwania przez 30 dni. Kryteria wyszukiwania są przesyłane w pliku cookie witryny. Motyw kolorystyczny pozostaje w przeglądarce do usunięcia. Wybrana kolejność wyświetlania jest zapamiętywana na 30 dni w pliku cookie tej strony. Wybrane filtry są zawarte w adresie strony, dzięki czemu można udostępnić wyszukiwanie." }
+DataHandlingCopy = { other = "Niemieckie teksty źródłowe są przechowywane do przetwarzania i weryfikacji z ograniczonym dostępem. Na publicznych stronach widoczne są przygotowane na ich podstawie podsumowania." }
+AboutIndependence = { other = "Niezależność" }
+AboutIndependenceCopy = { other = "MunichBrief jest niezależnym projektem. Nie jest powiązany z bawarską policją ani z innymi organami publicznymi i nie wypowiada się w ich imieniu." }
+ContactHeading = { other = "Kontakt" }
+ViewOrder = { other = "Kolejność wyświetlania" }
+ByPublication = { other = "Według daty publikacji" }
+ByIncident = { other = "Według daty zdarzenia" }
+SearchFilters = { other = "Wyszukiwanie i filtry" }
+SearchText = { other = "Szukaj komunikatów" }
+SearchPlaceholder = { other = "Wpisz temat, miejsce lub numer komunikatu" }
+AllCategories = { other = "Wszystkie kategorie" }
+AnyAssistance = { other = "Wszystkie komunikaty" }
+AssistanceYes = { other = "Policja prosi o informacje" }
+AssistanceNo = { other = "Bez prośby o informacje" }
+DateType = { other = "Zakres dat według" }
+PublishedDate = { other = "Daty publikacji" }
+IncidentDate = { other = "Daty zdarzenia" }
+DateFrom = { other = "Od" }
+DateTo = { other = "Do" }
+ApplySearch = { other = "Zastosuj" }
+SearchRemembered = { other = "Aby udostępnić wyszukiwanie, skopiuj adres strony. Ta przeglądarka zapamiętuje je na 30 dni." }
+ActiveFilters = { other = "Aktywne filtry" }
+RemoveFilter = { other = "Usuń filtr" }
+ClearAll = { other = "Wyczyść wszystko" }
+SearchResults = { other = "Wyniki wyszukiwania" }
+NoSearchCopy = { other = "Brak komunikatów spełniających te kryteria. Poszerz wyszukiwanie lub wyczyść filtry." }
+Pagination = { other = "Nawigacja po stronach" }
+PerPage = { other = "Komunikatów na stronie" }
+GoToPage = { other = "Przejdź do strony" }
+PreviousPage = { other = "Poprzednia" }
+NextPage = { other = "Następna" }
+SearchInvalid = { other = "Sprawdź poprawność i kolejność dat. Każde pole tekstowe może zawierać do 200 znaków." }
+DateNotReported = { other = "Nie podano daty" }
+ClockTimeReported = { other = "Podano godzinę" }
+DayPartReported = { other = "Podano porę dnia" }
+TimeNotReported = { other = "Nie podano czasu" }
+PageStatus = { other = "Strona {{.Page}} z {{.TotalPages}} · Komunikaty {{.First}}–{{.Last}} z {{.Total}}" }
+HeroCopy = { other = "Komunikaty Komendy Policji w Monachium (Polizeipräsidium München) w skrócie po polsku." }
+Footer = { other = "MunichBrief działa niezależnie od policji. Bez konta i reklam." }
+AboutTitle = { other = "O MunichBrief" }
+AboutIntro = { other = "MunichBrief pomaga śledzić lokalne komunikaty policyjne w Twoim języku. Przeczytaj krótkie podsumowanie, sprawdź miejsce i czas zdarzenia, a po szczegóły sięgnij do oficjalnego komunikatu." }
+OpenOfficialSource = { other = "Oficjalny komunikat" }
+ContactIntro = { other = "Masz pytanie lub chcesz zgłosić sprostowanie? Skorzystaj z formularza albo napisz e-mail." }
+ContactCorrections = { other = "Poprawki i aktualizacje" }
+ContactCorrectionCopy = { other = "Dołącz link do strony MunichBrief i wyjaśnij, co trzeba poprawić. Przyda się też link do zaktualizowanego oficjalnego komunikatu." }
+ContactPrivacy = { other = "Wnioski dotyczące prywatności" }
+ContactPrivacyCopy = { other = "Wnioski dotyczące danych osobowych przesyłaj prywatnym formularzem lub e-mailem. Podawaj tylko niezbędne informacje i nie publikuj danych osobowych w zgłoszeniach GitHub." }
+ContactTechnical = { other = "Problemy techniczne" }
+ContactTechnicalCopy = { other = "Problemy z wyświetlaniem i propozycje ulepszeń możesz zgłaszać na GitHubie. Nie podawaj danych osobowych w publicznych zgłoszeniach." }
+ContactPoliceCopy = { other = "MunichBrief jest niezależny od policji i nie przyjmuje zgłoszeń przestępstw ani wezwań o pomoc w nagłych sytuacjach." }
+ContactPoliceLink = { other = "W sprawach policyjnych skorzystaj z danych kontaktowych na oficjalnej stronie policji." }
+OpenOfficialPoliceRelease = { other = "Oficjalny komunikat" }
+SiteDescription = { other = "Komunikaty Komendy Policji w Monachium (Polizeipräsidium München) w skrócie po polsku." }
+MonitoringCopy = { other = "Korzystamy z Cloudflare, aby udostępniać i chronić witrynę. Cloudflare przetwarza dane połączeń, w tym adresy IP, i może tworzyć statystyki ruchu. Aby zapewnić sprawne działanie strony, przechowujemy własne techniczne dzienniki żądań i zbiorcze dane o wydajności przez 30 dni." }
+
+CoverageCopy = { other = "To wybór opublikowanych komunikatów policji, a nie pełny rejestr lokalnych zdarzeń ani statystyka przestępczości. Aktualizacje mogą pojawiać się w MunichBrief z opóźnieniem. Daty i godziny pochodzą ze źródła; podana godzina również może być przybliżona." }
+
+VerifyTranslate = { other = "Weryfikacja i tłumaczenie w tle" }
+
+VerifyTranslateCopy = { other = "Osobne kontrole AI ponownie sprawdzają kategorię i to, czy policja prosi mieszkańców o pomoc. Mają pierwszeństwo przed tłumaczeniami. Każda wersja językowa pojawia się, gdy jej tłumaczenie jest gotowe. Udane weryfikacje mogą zaktualizować kategorię i oznaczenie prośby o pomoc już po publikacji." }
+
+[ImpressumTitle]
+other = "Informacje prawne"
+
+[PrivacyTitle]
+other = "Prywatność"
+
+[LegalGermany]
+other = "Niemcy"
+
+[ContactForm]
+other = "Wyślij wiadomość"
+
+[ContactEmail]
+other = "Twój adres e-mail"
+
+[ContactTopic]
+other = "Temat"
+
+[ContactGeneral]
+other = "Pytanie ogólne"
+
+[ContactCorrection]
+other = "Sprostowanie"
+
+
+[ContactMessage]
+other = "Wiadomość"
+
+[ContactMessageLimit]
+other = "Maksymalnie 5 000 znaków. Nie podawaj zbędnych danych osobowych."
+
+[ContactSend]
+other = "Wyślij wiadomość"
+
+[ContactReceived]
+other = "Wiadomość została odebrana. Dziękuję."
+
+[ContactInvalid]
+other = "Sprawdź formularz i spróbuj ponownie. Jeśli wygasł, odśwież stronę."
+
+[ContactRateLimit]
+other = "Zbyt wiele prób. Odczekaj 15 minut."
+
+[ContactEmailInvalid]
+other = "Podaj prawidłowy adres e-mail."
+
+[ContactTopicInvalid]
+other = "Wybierz jeden z tematów z listy."
+
+[ContactMessageInvalid]
+other = "Wpisz wiadomość zawierającą najwyżej 5 000 znaków."
+
+[ContactSaveFailed]
+other = "Nie udało się zapisać wiadomości. Spróbuj później lub napisz e-mail."
+
+[ContactUnavailable]
+other = "Formularz jest obecnie niedostępny. Skorzystaj z adresu e-mail podanego powyżej."
+
+[PrivacyLinks]
+other = "Informacje dostawców i skargi"
+
+[ImpressumResponsible]
+other = "Osoba odpowiedzialna za stronę"
+
+[PrivacyController]
+other = "Administrator danych"
+
+[PrivacyHosting]
+other = "Hosting i sztuczna inteligencja"
+
+[PrivacyCloudflare]
+other = "Cloudflare i pomiar ruchu"
+
+[PrivacyPreferences]
+other = "Preferencje przeglądarki"
+
+[PrivacyMonitoring]
+other = "Monitoring techniczny"
+
+[PrivacyCorrespondence]
+other = "E-mail i formularz kontaktowy"
+
+[PrivacyRetention]
+other = "Przechowywanie i usuwanie wiadomości"
+
+[PrivacyPost]
+other = "Korespondencja pocztowa"
+
+[PrivacySources]
+other = "Komunikaty policji i materiały źródłowe"
+
+[PrivacyRights]
+other = "Twoje prawa i skargi"
+
+[PrivacyControllerCopy]
+other = "Ege Kocabaş prowadzi MunichBrief osobiście, z Bawarii w Niemczech. Powyższy adres służy do korespondencji. Pytania dotyczące danych osobowych można przesłać pocztą lub na podany adres e-mail."
+
+[PrivacyHostingCopy]
+other = "Strona, baza danych i wszystkie procesy AI działają na własnym sprzęcie operatora w Niemczech. Materiały źródłowe nie trafiają do zewnętrznego dostawcy AI."
+
+[PrivacyCloudflareCopy]
+other = "Cloudflare dostarcza i chroni stronę, przetwarzając dane połączenia, w tym adresy IP. Może też tworzyć statystyki w swojej sieci. Web Analytics wyklucza użytkowników z UE i automatycznie dodaje skrypt pomiarowy w innych regionach; zasady bezpieczeństwa przeglądarki mogą zablokować jego wykonanie. Obsługa dostarczania i bezpieczeństwa jest odrębna. Zaraz Consent Management oraz Google Tag Gateway są nieaktywne. Dostarczanie i ochrona wynikają z uzasadnionego interesu bezpiecznego prowadzenia strony (art. 6 ust. 1 lit. f RODO). Polityki dostawców opisują także transfery międzynarodowe."
+
+[PrivacyPreferencesCopy]
+other = "Własne pliki cookie zachowują język przez rok, potwierdzenie informacji o AI przez 30 dni oraz ostatnie kryteria wyszukiwania przez 30 dni w cookie HttpOnly. Wyczyszczenie wyszukiwania usuwa kryteria. Motyw pozostaje w pamięci lokalnej do usunięcia, a pozycja powrotu do listy w bieżącej karcie. Tokeny formularza wygasają najpóźniej po godzinie, potwierdzenia odbioru po pięciu minutach; nie zawierają wiadomości. Funkcje te służą żądanej usłudze (§25(2)(2) TDDDG; art. 6 ust. 1 lit. f RODO). HTMX nie zapisuje kopii stron w localStorage. Wybrana kolejność wyświetlania jest zapamiętywana na 30 dni w pliku cookie tej strony. Wyszukiwane hasła i filtry pojawiają się w adresie strony i mogą pozostać w udostępnionych linkach oraz w historii przeglądarki."
+
+[PrivacyMonitoringCopy]
+other = "Logi techniczne obejmują metodę, ścieżkę bez parametrów zapytania, status, czas trwania i identyfikatory żądań. Nie zapisują wiadomości, adresów e-mail, cookie ani IP odwiedzających. Prometheus i Loki mają ustawiony okres 30 dni; Grafana prezentuje dane wewnętrznie. Aby ograniczać próby kontaktu, przechowujemy licznik i pseudonimowy identyfikator utworzony na podstawie IP wyłącznie w pamięci aplikacji, bez zapisywania samego adresu IP. Limit obowiązuje przez 15 minut od pierwszej próby. Wygasłe liczniki są usuwane przy następnej próbie kontaktu lub ponownym uruchomieniu aplikacji; jeśli nie ma kolejnych prób, mogą pozostać w pamięci dłużej. Celem jest bezpieczeństwo i niezawodność (art. 6 ust. 1 lit. f RODO). Cloudflare ma odrębne okresy przechowywania."
+
+[PrivacyCorrespondenceCopy]
+other = "Adres e-mail, temat i treść przetwarzamy w celu odpowiedzi (art. 6 ust. 1 lit. f RODO) lub wykonania obowiązku prawnego, gdy ma zastosowanie (lit. c). Formularz najpierw zapisuje wiadomość w prywatnej skrzynce bazy danych. SMTP2GO wysyła powiadomienie na contact@munichbrief.de, a Cloudflare Email Routing przekazuje je do Gmaila. Odpowiedzi powstają w Apple Mail i są wysyłane przez SMTP2GO. Wiadomości nie są przetwarzane przez AI. Polityki dostawców opisują także przetwarzanie poza EOG."
+
+[PrivacyRetentionCopy]
+other = "Wiadomości w skrzynce administracyjnej są usuwane po 90 dniach od oznaczenia sprawy jako rozwiązanej. Ponowne otwarcie anuluje termin. Otwarte sprawy są przeglądane i przechowywane tak długo, jak to potrzebne. Spór lub obowiązek prawny może uzasadniać dalsze przechowywanie z odnotowanym powodem i datą przeglądu. Kopie Gmail i wysłane odpowiedzi są przeglądane i usuwane osobno. Dane dotyczące wysyłki podlegają okresom dostawców."
+
+[PrivacyPostCopy]
+other = "COCENTER / anschrift.net odbiera, otwiera i skanuje listy, aby operator mógł się nimi zająć. Podstawą jest uzasadniony interes w odbiorze korespondencji lub obowiązek prawny (art. 6 ust. 1 lit. f lub c RODO). Według dostawcy oryginały są przechowywane sześć miesięcy, a skany do zamknięcia konta lub żądania usunięcia, z zastrzeżeniem uzasadnionego dalszego przechowywania. Szczegóły opisuje jego polityka prywatności."
+
+[PrivacySourcesCopy]
+other = "Streszczenia powstają na podstawie publicznych komunikatów Polizeipräsidium München. Niemieckie teksty źródłowe i tekstowe kopie RSS są zachowywane do przetwarzania, sprawdzania zmian i kontroli z ograniczonym dostępem. Obecnie nie ustalono stałego terminu usuwania tych danych. Publiczne strony pokazują streszczenia, a nie zachowane oryginały. Skontaktuj się z nami, jeśli opis dotyczy Ciebie lub zawiera błąd. Wnioski o sprostowanie i ochronę prywatności rozpatrujemy indywidualnie."
+
+[PrivacyRightsCopy]
+other = "Zależnie od właściwych przepisów możesz żądać dostępu, sprostowania, usunięcia, ograniczenia oraz, gdy ma zastosowanie, przenoszenia danych albo sprzeciwić się przetwarzaniu opartemu na uzasadnionym interesie. Konto nie jest potrzebne. Na wnioski dotyczące praw RODO odpowiadamy zwykle w ciągu miesiąca; wyjątki prawne i zasady redakcyjne mogą wpływać na wynik. W sprawach sektora niepublicznego w Bawarii można złożyć skargę do BayLDA lub innego właściwego organu. Skargi redakcyjne mogą podlegać innym zasadom."
+
+[ImpressumTitleDescription]
+other = "Dane operatora i sposoby kontaktu z MunichBrief."
+
+[PrivacyTitleDescription]
+other = "Jak MunichBrief przetwarza dane strony, korespondencję i źródła publiczne."
+
+[ImpressumResponsibleCopy]
+other = "odpowiada za tę stronę internetową. Adres podano powyżej. MunichBrief jest niezależny od policji."
+
+[ImpressumContactCopy]
+other = "W razie pytań odwiedź naszą stronę kontaktową."
+
+[ContactStorage]
+other = "Wiadomość zapisujemy w prywatnej skrzynce, zanim potwierdzimy jej otrzymanie. Wiadomości oznaczone jako rozwiązane są z niej usuwane po 90 dniach."
+
+[ContactClosed]
+other = "Formularz kontaktowy został zamknięty. Twoja wiadomość nie została wysłana. Napisz na contact@munichbrief.de."
+
+[ContactKeepDraft]
+other = "Możesz skopiować poniższe dane do e-maila. Ten szkic nie został zapisany w skrzynce odbiorczej."
+
+[PrivacyRequired]
+other = "Jakie dane trzeba podać"
+
+[PrivacyRequiredCopy]
+other = "MunichBrief można czytać bez konta i bez kontaktowania się z nami. Nie masz prawnego ani umownego obowiązku korzystania z formularza kontaktowego. Do jego wysłania potrzebujemy adresu e-mail, tematu i wiadomości, aby rozpatrzyć sprawę i odpowiedzieć. Bez tych pól formularza nie można wysłać. Możesz też napisać do nas bezpośrednio e-mailem. Podaj tylko dane osobowe potrzebne do załatwienia swojej sprawy."
+
+[PrivacySourcePeople]
+other = "Osoby wspomniane w relacjach"
+
+[PrivacySourcePeopleCopy]
+other = "Informacje o osobach związanych ze zdarzeniami pochodzą z publicznych komunikatów policji, a nie bezpośrednio od tych osób. Zależnie od komunikatu mogą obejmować opisy osób, ich rolę w zdarzeniu, zarzucane czyny, obrażenia oraz miejsce i czas zdarzenia. Opublikowane podsumowania są dostępne dla wszystkich i mogą być indeksowane przez wyszukiwarki. Wiadomości kontaktowe i zawartość prywatnej skrzynki nie są publikowane."
+
+[PrivacyAutomation]
+other = "AI i zautomatyzowane decyzje"
+
+[PrivacyAutomationCopy]
+other = "AI wyodrębnia informacje, podsumowuje, tłumaczy i sprawdza relacje ze zdarzeń. Nie używamy jej do podejmowania decyzji dotyczących odwiedzających, które wywołują skutki prawne lub podobnie istotne skutki w rozumieniu art. 22 RODO. Automatyczne kontrole mogą uniemożliwić publikację opisu zdarzenia lub któregoś z jego tłumaczeń. Dlatego niektóre opisy mogą nie być dostępne we wszystkich językach."
+
+[PrivacyObjection]
+other = "Prawo do sprzeciwu"
+
+[PrivacyObjectionCopy]
+other = "Gdy ma zastosowanie art. 21 RODO, możesz w dowolnym momencie wnieść sprzeciw wobec przetwarzania opartego na prawnie uzasadnionych interesach z przyczyn związanych z Twoją szczególną sytuacją. Wyślij sprzeciw na podany wyżej adres kontaktowy. Zaprzestaniemy tego przetwarzania, chyba że wykażemy nadrzędne, prawnie uzasadnione podstawy przeważające nad Twoimi prawami lub przetwarzanie będzie niezbędne do ustalenia, dochodzenia albo obrony roszczeń."
+
+[LegalLastUpdated]
+other = "Ostatnia aktualizacja"
+
+[ImpressumRequests]
+other = "Kontakt i wnioski dotyczące relacji"
+
+[ImpressumRequestsCopy]
+other = "Jeśli relacja Cię dotyczy, możesz poprosić o sprostowanie, usunięcie lub publikację odpowiedzi. Podaj link do strony i wskaż fragment, którego dotyczy wniosek. Gdy prawo wymaga podpisanego wniosku na piśmie, skorzystaj z adresu pocztowego; sam formularz kontaktowy nie spełnia tego wymogu."
+
+[LicensesTitle]
+other = "Podziękowania i licencje"
+
+[LicensesDescription]
+other = "Oprogramowanie, kroje pisma, modele i dane wykorzystywane przez MunichBrief."
+
+[LicensesProject]
+other = "Kod MunichBrief"
+
+[LicensesSoftware]
+other = "Oprogramowanie"
+
+[LicensesFonts]
+other = "Kroje pisma"
+
+[LicensesAssets]
+other = "Obrazy i ikony"
+
+[LicensesData]
+other = "Źródła danych"
+
+[LicensesModels]
+other = "Informacje o modelach"
+
+[LicensesService]
+other = "Oprogramowanie do uruchamiania modeli"
+
+[LicensesLicense]
+other = "Licencja"
+
+[LicensesSource]
+other = "Źródło oryginalne"
+
+[LicensesRead]
+other = "Przeczytaj licencję i informacje"
+
+[LicensesDownload]
+other = "Pobierz pełny tekst"
+
+[LicensesIntro]
+other = "Własny kod MunichBrief jest dostępny na licencji MIT. Komponenty innych autorów i materiały źródłowe zachowują swoje warunki użytkowania."
+
+[LicensesOriginal]
+other = "Teksty licencji i informacje o prawach autorskich podajemy w języku oryginalnym."
+
+[LicensesModelIntro]
+other = "Te informacje wyjaśniają warunki modeli sprawdzonych dla MunichBrief. Nie są aktualną listą używanych modeli; każda wiadomość zachowuje własne informacje o przetwarzaniu przez AI. Licencje modeli nie obejmują automatycznie wygenerowanych podsumowań."
+
+[LicensesIconChanges]
+other = "Ikony AI: © Unia Europejska. MunichBrief dodał szare tło i obramowanie do jasnej wersji. Ciemna wersja zachowuje oryginalną grafikę. Użycie ikon nie oznacza poparcia projektu przez UE."
+
+[LicensesDataChanges]
+other = "Dane geograficzne są ograniczane do Monachium i okolic, a nazwy miejsc ujednolicane w celu dopasowania lokalizacji. Oryginalne zbiory danych są dostępne u dostawców wskazanych w odnośnikach. Komunikaty policji stanowią odrębne materiały źródłowe i nie są objęte licencją MIT projektu MunichBrief."
+
+[PagePosition]
+other = "Strona {{.Page}} z {{.TotalPages}}"
+
+[ModelVariant]
+other = "Wariant modelu"
+

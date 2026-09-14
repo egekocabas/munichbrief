@@ -7,11 +7,12 @@
   "scripts": {
     "build": "npm run build:css && npm run build:vendor",
     "build:css": "tailwindcss -i internal/web/assets/app.css -o internal/web/static/app.css --minify",
-    "build:vendor": "cp node_modules/htmx.org/dist/htmx.min.js internal/web/static/htmx.min.js",
+    "build:vendor": "cp node_modules/htmx.org/dist/htmx.min.js internal/web/static/htmx.min.js && cp node_modules/htmx-ext-head-support/dist/head-support.js internal/web/static/head-support.js",
     "watch:css": "tailwindcss -i internal/web/assets/app.css -o internal/web/static/app.css --watch"
   },
   "devDependencies": {
     "@tailwindcss/cli": "4.3.3",
+    "htmx-ext-head-support": "2.0.5",
     "htmx.org": "2.0.10",
     "tailwindcss": "4.3.3"
   }

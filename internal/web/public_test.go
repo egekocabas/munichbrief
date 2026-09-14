@@ -18,6 +18,7 @@ import (
 	langregistry "github.com/egekocabas/munichbrief/internal/languages"
 	"github.com/egekocabas/munichbrief/internal/processing"
 	"github.com/egekocabas/munichbrief/internal/store"
+	"golang.org/x/net/html"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -37,7 +38,7 @@ func TestTimelineAndDetailRenderFixtureData(t *testing.T) {
 		"Fahrradunfall; eine Person leicht verletzt",
 		"Größerer Polizeieinsatz",
 		"Not yet summarized or translated",
-		"20 shown / 28 total",
+		"Reports 1–20 of 28",
 		"Page 1 of 2",
 		"/en?page=2",
 		`src="` + staticAssets["theme.js"].path + `"`,
@@ -56,7 +57,7 @@ func TestTimelineAndDetailRenderFixtureData(t *testing.T) {
 	if olderTimeline.Code != http.StatusOK {
 		t.Fatalf("older timeline status = %d, want 200", olderTimeline.Code)
 	}
-	for _, expected := range []string{"Page 2 of 2", "Beschädigte Eingangstür", "← Newer", `data-timeline-url="/en?page=2"`} {
+	for _, expected := range []string{"Page 2 of 2", "Beschädigte Eingangstür", "Previous", `data-timeline-url="/en?page=2"`} {
 		if !strings.Contains(olderTimeline.Body.String(), expected) {
 			t.Errorf("older timeline body does not contain %q", expected)
 		}
@@ -83,7 +84,7 @@ func TestTimelineAndDetailRenderFixtureData(t *testing.T) {
 	if !strings.Contains(detail.Body.String(), records[0].TitleDE) {
 		t.Errorf("detail body does not contain incident title %q", records[0].TitleDE)
 	}
-	for _, expected := range []string{`href="/en"`, `data-timeline-back="/en"`, `>←</span> Back</a>`, `target="_blank"`, staticAssets["navigation.js"].path} {
+	for _, expected := range []string{`href="/en"`, `data-timeline-back="/en"`, `>←</span> All reports</a>`, `target="_blank"`, staticAssets["navigation.js"].path} {
 		if !strings.Contains(detail.Body.String(), expected) {
 			t.Errorf("direct detail body does not contain %q", expected)
 		}
@@ -277,7 +278,7 @@ func TestTimelineAndDetailRenderAIContentWithProvenance(t *testing.T) {
 			t.Errorf("detail body does not contain %q", expected)
 		}
 	}
-	if !strings.Contains(detail.Body.String(), `text-alert">Category verification</p>`) {
+	if !strings.Contains(detail.Body.String(), `<h3>Category verification</h3>`) {
 		t.Error("category verification provenance card does not use its own label")
 	}
 	if !strings.Contains(detail.Body.String(), `data-ai-public-assistance-verification-model="assist:4b"`) || detail.Header().Get("X-AI-Public-Assistance-Verification-Model") != "assist:4b" {
@@ -297,7 +298,7 @@ func TestTimelineAndDetailRenderAIContentWithProvenance(t *testing.T) {
 	if markdown.Code != http.StatusOK || !strings.Contains(markdown.Body.String(), `ai_public_assistance_verification_model: "assist:4b"`) {
 		t.Errorf("public assistance verifier Markdown provenance = %d/%q", markdown.Code, markdown.Body.String())
 	}
-	if !strings.Contains(detail.Body.String(), `text-alert">Translation</p>`) {
+	if !strings.Contains(detail.Body.String(), `<h3>English translation</h3>`) {
 		t.Error("translation provenance card does not retain its translation label")
 	}
 }
@@ -417,14 +418,13 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 			t.Errorf("timeline body unexpectedly contains public assistance detail %q", unexpected)
 		}
 	}
-	timelineReport := strings.Index(timelineBody, ">Police report: ")
-	timelineLabel := strings.Index(timelineBody, `<span class="ai-generated-label"`)
-	timelineCategory := strings.Index(timelineBody, ">Category</dt>")
-	if timelineReport < 0 || timelineLabel < 0 || timelineCategory < 0 || timelineReport > timelineLabel || timelineLabel > timelineCategory {
-		t.Error("timeline does not keep the police report first and group generated metadata after the AI label")
+	// The headline leads the report; attribution stays present within each article.
+	generatedArticle := regexp.MustCompile(`(?s)<article class="incident-entry" data-ai-generated="true".*?</article>`).FindString(timelineBody)
+	if generatedArticle == "" || !strings.Contains(generatedArticle, `class="ai-generated-label"`) || !strings.Contains(generatedArticle, `class="sr-only">Police report</dt>`) {
+		t.Error("timeline report is missing its permanent AI label or source number")
 	}
-	if !strings.Contains(timelineBody, `<dl class="contents text-xs">`) {
-		t.Error("timeline metadata tags do not wrap independently beside the AI label")
+	if title, attribution := strings.Index(generatedArticle, `class="incident-title"`), strings.Index(generatedArticle, `class="incident-attribution"`); title < 0 || attribution < 0 || title > attribution {
+		t.Error("timeline does not lead with the report before secondary attribution")
 	}
 
 	english := httptest.NewRecorder()
@@ -436,22 +436,55 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 		"German presentation", processing.GermanPresentationPromptVersion,
 		"English translation", "translate:4b", processing.EnglishTranslationPromptVersion,
 		"Incident time", "24 August 2026, 22:30", "Public assistance needed", "Police request public assistance", "Photo or video material",
-		"AI-generated summary", "Verify important details against the latest official information.", "Open official police release",
+		"AI-generated summary", "Verify important details against the latest official information.", "Official report",
 		`aria-label="Public assistance"`,
 	} {
 		if !strings.Contains(englishBody, expected) {
 			t.Errorf("English detail body does not contain %q", expected)
 		}
 	}
-	detailReport := strings.Index(englishBody, ">Police report ")
-	detailLabel := strings.Index(englishBody, `<span class="ai-generated-label"`)
-	detailCategory := strings.Index(englishBody, ">Category</dt>")
-	if detailReport < 0 || detailLabel < 0 || detailCategory < 0 || detailReport > detailLabel || detailLabel > detailCategory {
-		t.Error("detail does not keep the police report first and group generated metadata after the AI label")
+	if title, metadata := strings.Index(englishBody, "<h1 "), strings.Index(englishBody, `class="detail-meta"`); title < 0 || metadata < 0 || title > metadata {
+		t.Error("detail does not put the headline before secondary metadata")
 	}
-	if !strings.Contains(englishBody, `<dl class="contents text-xs">`) {
-		t.Error("detail metadata tags do not wrap independently beside the AI label")
+	if !strings.Contains(englishBody, `class="ai-generated-label"`) {
+		t.Error("detail is missing its permanent AI label")
 	}
+	document, err := html.Parse(strings.NewReader(englishBody))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var provenance string
+	var visit func(*html.Node)
+	visit = func(n *html.Node) {
+		if n.Type == html.ElementNode && n.Data == "details" {
+			match := false
+			for _, a := range n.Attr {
+				if a.Key == "class" && a.Val == "detail-provenance" {
+					match = true
+				}
+			}
+			if match && provenance == "" {
+				for _, a := range n.Attr {
+					if a.Key == "open" {
+						t.Error("provenance should start collapsed")
+					}
+				}
+				var out bytes.Buffer
+				if err := html.Render(&out, n); err != nil {
+					t.Fatal(err)
+				}
+				provenance = out.String()
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			visit(c)
+		}
+	}
+	visit(document)
+	if !strings.Contains(provenance, "AI processing") || !strings.Contains(provenance, processing.GermanPresentationPromptVersion) || !strings.Contains(provenance, "Last processed") {
+		t.Error("detail does not preserve source and processing provenance in a collapsed native disclosure")
+	}
+
 	if count := strings.Count(english.Body.String(), ">Crash at Harras</"); count != 1 {
 		t.Errorf("English detail renders the incident heading %d times, want 1", count)
 	}
@@ -469,7 +502,7 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 			t.Errorf("English detail unexpectedly renders redundant source copy %q", redundantSourceCopy)
 		}
 	}
-	if source, processing := strings.Index(english.Body.String(), "Open official police release"), strings.Index(english.Body.String(), "AI processing"); source < 0 || processing < 0 || source > processing {
+	if source, processing := strings.Index(english.Body.String(), "Official report"), strings.Index(english.Body.String(), "AI processing"); source < 0 || processing < 0 || source > processing {
 		t.Error("English detail does not place the official release link before AI processing")
 	}
 	for _, assistanceDetail := range []string{"Police request public assistance", "Photo or video material", "Witness observations"} {
@@ -480,7 +513,7 @@ func TestTimelineAndDetailRenderStagedMetadataAndProvenance(t *testing.T) {
 
 	germanDetail := httptest.NewRecorder()
 	handler.ServeHTTP(germanDetail, httptest.NewRequest(http.MethodGet, "/de/incidents/"+formatID(incidentID), nil))
-	for _, expected := range []string{"Kategorie", "Verkehr", "Gebiet", "Harras", "Veröffentlicht in", "Vorfallsmetadaten", "Deutsche Darstellung", "qwen3.5:4b", "Vorfallszeit", "24. August 2026, 22:30", "Öffentliche Mithilfe benötigt", "Polizei bittet um Mithilfe", "Foto- oder Videomaterial", "KI-generierte Zusammenfassung", "Wichtige Angaben bitte anhand der aktuellen offiziellen Informationen prüfen.", "Offizielle Polizeimeldung öffnen"} {
+	for _, expected := range []string{"Kategorie", "Verkehr", "Gebiet", "Harras", "Veröffentlicht in", "Vorfallsmetadaten", "Deutsche Darstellung", "qwen3.5:4b", "Vorfallszeit", "24. August 2026, 22:30", "Öffentliche Mithilfe benötigt", "Polizei bittet um Mithilfe", "Foto- oder Videomaterial", "KI-generierte Zusammenfassung", "Wichtige Angaben bitte anhand der aktuellen offiziellen Informationen prüfen.", "Originalmeldung"} {
 		if !strings.Contains(germanDetail.Body.String(), expected) {
 			t.Errorf("German detail body does not contain %q", expected)
 		}
@@ -601,7 +634,7 @@ func TestLiveTimelineFallbackAndIncidentAttribution(t *testing.T) {
 	}
 	timeline := httptest.NewRecorder()
 	server.Handler().ServeHTTP(timeline, englishRequest(http.MethodGet, "/en", nil))
-	for _, expected := range []string{"Live incident", "Live metadata fallback", "Open official source"} {
+	for _, expected := range []string{"Live incident", "Live metadata fallback", "Official report"} {
 		if !strings.Contains(timeline.Body.String(), expected) {
 			t.Errorf("live timeline does not contain %q", expected)
 		}
@@ -622,7 +655,7 @@ func TestLiveTimelineFallbackAndIncidentAttribution(t *testing.T) {
 	}
 	detail := httptest.NewRecorder()
 	server.Handler().ServeHTTP(detail, englishRequest(http.MethodGet, "/en/incidents/"+formatID(incidentID), nil))
-	for _, expected := range []string{"Last processed", "Open official police release", documents[0].SourceURL} {
+	for _, expected := range []string{"Last processed", "Official report", documents[0].SourceURL} {
 		if !strings.Contains(detail.Body.String(), expected) {
 			t.Errorf("live detail does not contain %q", expected)
 		}
@@ -732,7 +765,7 @@ func TestLocalizedRoutesAndLanguagePreference(t *testing.T) {
 
 	english := httptest.NewRecorder()
 	handler.ServeHTTP(english, httptest.NewRequest(http.MethodGet, "/en/about?page=2", nil))
-	if english.Code != http.StatusOK || english.Header().Get("Content-Language") != "en-GB" || !strings.Contains(english.Body.String(), "How MunichBrief works") {
+	if english.Code != http.StatusOK || english.Header().Get("Content-Language") != "en-GB" || !strings.Contains(english.Body.String(), "About MunichBrief") {
 		t.Fatalf("English page = %d/%q", english.Code, english.Header().Get("Content-Language"))
 	}
 	if !strings.Contains(english.Body.String(), `href="/de/about?page=2"`) || !strings.Contains(english.Body.String(), `hreflang="de-DE"`) {
@@ -752,7 +785,7 @@ func TestLocalizedRoutesAndLanguagePreference(t *testing.T) {
 	germanRequest := httptest.NewRequest(http.MethodGet, "/de", nil)
 	germanRequest.Header.Set("Accept-Language", "en")
 	handler.ServeHTTP(german, germanRequest)
-	if german.Header().Get("Content-Language") != "de-DE" || !strings.Contains(german.Body.String(), "Aktuelle Vorfälle laut Münchner Polizei") {
+	if german.Header().Get("Content-Language") != "de-DE" || !strings.Contains(german.Body.String(), "München, kurz gefasst.") {
 		t.Fatal("localized path did not override the browser language")
 	}
 
@@ -777,13 +810,13 @@ func TestLocalizedRoutesAndLanguagePreference(t *testing.T) {
 	}
 
 	for _, localized := range []struct{ path, tag, copy string }{
-		{path: "/zh/about", tag: "zh-CN", copy: "MunichBrief 的工作方式"},
-		{path: "/hi/about", tag: "hi-IN", copy: "MunichBrief कैसे काम करता है"},
-		{path: "/es/about", tag: "es-ES", copy: "Cómo funciona MunichBrief"},
-		{path: "/fr/about", tag: "fr-FR", copy: "Comment fonctionne MunichBrief"},
-		{path: "/ro/about", tag: "ro-RO", copy: "Cum funcționează MunichBrief"},
-		{path: "/pl/about", tag: "pl-PL", copy: "Jak działa MunichBrief"},
-		{path: "/ru/about", tag: "ru-RU", copy: "Как работает MunichBrief"},
+		{path: "/zh/about", tag: "zh-CN", copy: "关于 MunichBrief"},
+		{path: "/hi/about", tag: "hi-IN", copy: "MunichBrief के बारे में"},
+		{path: "/es/about", tag: "es-ES", copy: "Acerca de MunichBrief"},
+		{path: "/fr/about", tag: "fr-FR", copy: "À propos de MunichBrief"},
+		{path: "/ro/about", tag: "ro-RO", copy: "Despre MunichBrief"},
+		{path: "/pl/about", tag: "pl-PL", copy: "O MunichBrief"},
+		{path: "/ru/about", tag: "ru-RU", copy: "О MunichBrief"},
 	} {
 		response := httptest.NewRecorder()
 		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, localized.path, nil))
@@ -856,8 +889,8 @@ func TestTranslationCatalogsAreCompleteAndPluralized(t *testing.T) {
 		{language: "de", count: 2, expected: "2 Meldungen"},
 		{language: "en", count: 1, expected: "1 report"},
 		{language: "en", count: 2, expected: "2 reports"},
-		{language: "tr", count: 1, expected: "1 bildirim"},
-		{language: "tr", count: 2, expected: "2 bildirim"},
+		{language: "tr", count: 1, expected: "1 bülten"},
+		{language: "tr", count: 2, expected: "2 bülten"},
 		{language: "hr", count: 1, expected: "1 priopćenje"},
 		{language: "hr", count: 2, expected: "2 priopćenja"},
 		{language: "hr", count: 5, expected: "5 priopćenja"},
@@ -977,7 +1010,7 @@ func TestPublicModeHidesUnprocessedStaleAndOriginalContent(t *testing.T) {
 	}
 	empty := httptest.NewRecorder()
 	publicServer.Handler().ServeHTTP(empty, englishRequest(http.MethodGet, "/en", nil))
-	if !strings.Contains(empty.Body.String(), "0 shown / 0 total") {
+	if !strings.Contains(empty.Body.String(), "Reports 0–0 of 0") {
 		t.Fatalf("empty public timeline count = %q", empty.Body.String())
 	}
 	if strings.Contains(empty.Body.String(), records[0].TitleDE) {
@@ -1007,7 +1040,7 @@ func TestPublicModeHidesUnprocessedStaleAndOriginalContent(t *testing.T) {
 	}
 	readyTimeline := httptest.NewRecorder()
 	publicServer.Handler().ServeHTTP(readyTimeline, englishRequest(http.MethodGet, "/en", nil))
-	if !strings.Contains(readyTimeline.Body.String(), presentation.SummaryEN) || !strings.Contains(readyTimeline.Body.String(), "1 shown / 1 total") || strings.Contains(readyTimeline.Body.String(), processedRecord.BodyDE) {
+	if !strings.Contains(readyTimeline.Body.String(), presentation.SummaryEN) || !strings.Contains(readyTimeline.Body.String(), "Reports 1–1 of 1") || strings.Contains(readyTimeline.Body.String(), processedRecord.BodyDE) {
 		t.Fatalf("public timeline did not isolate the safe presentation: %q", readyTimeline.Body.String())
 	}
 	if strings.Contains(readyTimeline.Body.String(), "AI-generated summary") || strings.Contains(readyTimeline.Body.String(), "Not yet summarized or translated") {

@@ -159,6 +159,7 @@ type StepModelStatus struct {
 
 // PipelineModelStatus is the review-facing model configuration snapshot.
 type PipelineModelStatus struct {
+	ModelDigests     map[string]string          `json:"-"`
 	Steps            []StepModelStatus          `json:"steps"`
 	PostProcessors   []PostProcessorModelStatus `json:"post_processors"`
 	Models           []string                   `json:"models"`
@@ -503,7 +504,7 @@ func (w *PipelineWorker) ModelStatus(ctx context.Context) (PipelineModelStatus, 
 		byKey[setting.StepKey] = setting.PreferredModel
 	}
 	catalog := w.catalog.Snapshot()
-	status := PipelineModelStatus{Models: append([]string(nil), catalog.Models...), CatalogAvailable: catalog.Available(), Ready: catalog.Available()}
+	status := PipelineModelStatus{ModelDigests: catalog.Digests, Models: append([]string(nil), catalog.Models...), CatalogAvailable: catalog.Available(), Ready: catalog.Available()}
 	if catalog.Err != nil {
 		status.CatalogError = catalog.Err.Error()
 	}

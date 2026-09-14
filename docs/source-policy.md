@@ -46,7 +46,7 @@ model resolve phrases such as “Monday”, “yesterday afternoon”, or “thi
 morning” without application-side German phrase parsing. Publication time is
 never substituted for incident time. The stage returns one primary date and,
 when available, either a clock time or day part. Unknown or contradictory
-timing remains absent. Reader pages continue to group by publication date while
+timing remains absent. Reader pages default to publication-date grouping and also offer an incident-date view, while
 displaying the time stated in the report separately.
 
 Public-assistance metadata is set only for an explicit source appeal. Reader
@@ -113,6 +113,12 @@ Before public deployment, review:
 German Copyright Act section 5 requires a case-specific assessment for
 qualifying official works and does not establish that every police release may
 be reused without restriction.
+
+Separately, the [Bavarian Police usage terms](https://www.polizei.bayern.de/wir-ueber-uns/impressum/index.html),
+checked on 13 September 2026, expressly permit reprinting and analysis of press
+releases with source attribution. This supports the project's attributed
+press-release reuse; it does not settle personal-information rights, unrelated
+third-party material, source retention or automated-access restrictions.
 
 ## Repository data policy
 

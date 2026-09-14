@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/egekocabas/munichbrief/internal/licensing"
 	"github.com/egekocabas/munichbrief/internal/store"
 )
 
@@ -251,7 +252,11 @@ func (s *Server) sitemap(response http.ResponseWriter, request *http.Request) {
 		}
 		urls = append(urls,
 			sitemapURL{Location: origin + "/" + definition.Code},
-			sitemapURL{Location: origin + "/" + definition.Code + "/about"},
+			sitemapURL{Location: origin + "/" + definition.Code + "/about", LastMod: informationPageUpdatedAt("about").Format(time.DateOnly)},
+			sitemapURL{Location: origin + "/" + definition.Code + "/contact", LastMod: informationPageUpdatedAt("contact").Format(time.DateOnly)},
+			sitemapURL{Location: origin + "/" + definition.Code + "/licenses", LastMod: licensing.CreditsUpdatedAt()},
+			sitemapURL{Location: origin + "/" + definition.Code + "/privacy", LastMod: informationPageUpdatedAt("privacy").Format(time.DateOnly)},
+			sitemapURL{Location: origin + "/" + definition.Code + "/impressum", LastMod: informationPageUpdatedAt("impressum").Format(time.DateOnly)},
 		)
 		for _, link := range links {
 			urls = append(urls, sitemapURL{
@@ -294,6 +299,9 @@ func writeMarkdownFrontMatter(builder *strings.Builder, title string, page baseP
 	fmt.Fprintf(builder, "---\ntitle: %s\ndescription: %s\nlanguage: %s\ncanonical: %s\nai_generated: %t\nai_generated_state: %s\n",
 		yamlQuoted(title+" · MunichBrief"), yamlQuoted(pageDescription(page)), yamlQuoted(page.LanguageTag), yamlQuoted(page.CanonicalURL),
 		page.AIGeneratedState != "false", yamlQuoted(page.AIGeneratedState))
+	if page.DocumentModifiedDate != "" {
+		fmt.Fprintf(builder, "date_modified: %s\n", yamlQuoted(page.DocumentModifiedDate))
+	}
 	if page.AIGeneratedState != "false" {
 		fmt.Fprintf(builder, "digital_source_type: %s\n", yamlQuoted(iptcTrainedAlgorithmicMedia))
 	}
@@ -325,7 +333,7 @@ func (s *Server) renderTimelineMarkdown(response http.ResponseWriter, data timel
 	fmt.Fprintf(&builder, "# %s\n\n%s\n\n%s\n",
 		markdownText(s.localization.Text(data.Lang, "HeroTitle")),
 		markdownText(s.localization.Text(data.Lang, "HeroCopy")),
-		markdownText(s.localization.ShownTotal(data.Lang, data.Shown, data.Total)))
+		markdownText(s.localization.Format(data.Lang, "PageStatus", data)))
 	if len(data.Groups) == 0 {
 		fmt.Fprintf(&builder, "\n## %s\n\n", markdownText(s.localization.Text(data.Lang, "NoIncidents")))
 		copyKey := "NoLiveCopy"
@@ -336,6 +344,9 @@ func (s *Server) renderTimelineMarkdown(response http.ResponseWriter, data timel
 	}
 	for _, group := range data.Groups {
 		fmt.Fprintf(&builder, "\n## %s\n", markdownText(group.Label))
+		if group.TimeLabel != "" {
+			fmt.Fprintf(&builder, "\n%s\n", markdownText(group.TimeLabel))
+		}
 		for _, incident := range group.Incidents {
 			link := fmt.Sprintf("%s/%s/incidents/%d", data.CanonicalOrigin, data.Lang, incident.Record.ID)
 			if incident.Record.HasAI {
@@ -416,6 +427,7 @@ func (s *Server) renderAboutMarkdown(response http.ResponseWriter, data aboutPag
 	var builder strings.Builder
 	writeMarkdownFrontMatter(&builder, s.localization.Text(data.Lang, "About"), data.basePage)
 	fmt.Fprintf(&builder, "# %s\n\n%s\n", markdownText(s.localization.Text(data.Lang, "AboutTitle")), markdownText(s.localization.Text(data.Lang, "AboutIntro")))
+	fmt.Fprintf(&builder, "\n%s: %s\n", s.localization.Text(data.Lang, "LegalLastUpdated"), data.UpdatedLabel)
 	fmt.Fprintf(&builder, "\n## %s\n", markdownText(s.localization.Text(data.Lang, "FromReleaseToIncident")))
 	steps := []struct {
 		title string
@@ -425,6 +437,7 @@ func (s *Server) renderAboutMarkdown(response http.ResponseWriter, data aboutPag
 		{title: "Organize", copy: "OrganizeCopy"},
 		{title: "Summarize", copy: "SummarizeCopy"},
 		{title: "TranslatePublish", copy: "TranslatePublishCopy"},
+		{title: "VerifyTranslate", copy: "VerifyTranslateCopy"},
 	}
 	for index, step := range steps {
 		fmt.Fprintf(&builder, "\n%d. **%s**\n\n   %s\n", index+1, markdownText(s.localization.Text(data.Lang, step.title)), markdownText(s.localization.Text(data.Lang, step.copy)))
@@ -433,18 +446,21 @@ func (s *Server) renderAboutMarkdown(response http.ResponseWriter, data aboutPag
 		title string
 		copy  []string
 	}{
-		{title: "AccuracyOfficialInformation", copy: []string{"AccuracyOfficialInformationCopy"}},
-		{title: "PrivacyDataHandling", copy: []string{"PrivacyCopy", "DataHandlingCopy"}},
-		{title: "IndependenceLegalReview", copy: []string{"IndependenceLegalReviewCopy"}},
+		{title: "AITransparencyEU", copy: []string{"AITransparencyEUCopy"}},
+		{title: "AccuracyOfficialInformation", copy: []string{"AccuracyOfficialInformationCopy", "CoverageCopy"}},
+		{title: "PrivacyDataHandling", copy: []string{"PrivacyCopy", "DataHandlingCopy", "MonitoringCopy"}},
+		{title: "AboutIndependence", copy: []string{"AboutIndependenceCopy"}},
 	}
 	for _, section := range sections {
 		fmt.Fprintf(&builder, "\n## %s\n", markdownText(s.localization.Text(data.Lang, section.title)))
 		for _, key := range section.copy {
 			fmt.Fprintf(&builder, "\n%s\n", markdownText(s.localization.Text(data.Lang, key)))
 		}
+		if section.title == "PrivacyDataHandling" {
+			fmt.Fprintf(&builder, "\n[%s](/%s/privacy)\n", s.localization.Text(data.Lang, "PrivacyTitle"), data.Lang)
+			fmt.Fprintf(&builder, "\n### %s\n\n", markdownText(s.localization.Text(data.Lang, "SourceMetadata")))
+			builder.WriteString("- [Landeshauptstadt München – GeodatenService](https://opendata.muenchen.de/) (dl-de/by-2.0)\n- [GeoNames](https://www.geonames.org/) (CC BY 4.0)\n- [© OpenStreetMap contributors](https://www.openstreetmap.org/copyright) (ODbL 1.0)\n")
+		}
 	}
-	fmt.Fprintf(&builder, "\n## %s\n", markdownText(s.localization.Text(data.Lang, "ContactHeading")))
-	fmt.Fprintf(&builder, "\n%s [%s](https://github.com/egekocabas/munichbrief/issues).\n", markdownText(s.localization.Text(data.Lang, "ContactPublicLead")), markdownText(s.localization.Text(data.Lang, "ContactIssueLink")))
-	fmt.Fprintf(&builder, "\n%s [contact@munichbrief.de](mailto:contact@munichbrief.de).\n", markdownText(s.localization.Text(data.Lang, "ContactPrivateLead")))
 	_, _ = io.WriteString(response, builder.String())
 }

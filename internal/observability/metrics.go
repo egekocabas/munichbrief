@@ -10,12 +10,14 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/egekocabas/munichbrief/internal/contact"
 	"github.com/egekocabas/munichbrief/internal/store"
 )
 
 // Metrics stores fixed-cardinality counters and gauges using atomics so
 // instrumentation does not serialize request or worker paths.
 type Metrics struct {
+	Contact                *contact.Metrics
 	version                string
 	startedAt              time.Time
 	feedAttempts           atomic.Uint64
@@ -305,6 +307,9 @@ func (m *Metrics) Wrap(next http.Handler) http.Handler {
 }
 
 func (m *Metrics) write(writer io.Writer) {
+	if m.Contact != nil {
+		m.Contact.Write(writer)
+	}
 	fmt.Fprintf(writer, "# HELP munichbrief_build_info Build information.\n")
 	fmt.Fprintf(writer, "# TYPE munichbrief_build_info gauge\n")
 	fmt.Fprintf(writer, "munichbrief_build_info{version=%s} 1\n", strconv.Quote(m.version))

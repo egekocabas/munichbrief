@@ -1,3 +1,9 @@
+{{- if and .Values.application.contactEnabled (not .Values.admin.enabled) }}
+{{- fail "contactEnabled requires protected administration" }}
+{{- end }}
+{{- if and .Values.application.contactEnabled (not .Values.application.existingSecret) }}
+{{- fail "contactEnabled requires application.existingSecret containing CONTACT_SECRET" }}
+{{- end }}
 {{- if and .Values.admin.enabled (not .Values.ingress.lan.enabled) }}
 {{- fail "admin.enabled requires ingress.lan.enabled" }}
 {{- end }}

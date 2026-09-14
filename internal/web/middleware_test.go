@@ -19,10 +19,10 @@ func TestAboutHealthReadinessAndRequestHeaders(t *testing.T) {
 	request := englishRequest(http.MethodGet, "/en/about", nil)
 	request.Header.Set("X-Request-ID", "test-request")
 	handler.ServeHTTP(about, request)
-	if about.Code != http.StatusOK || !strings.Contains(about.Body.String(), "How MunichBrief works") {
+	if about.Code != http.StatusOK || !strings.Contains(about.Body.String(), "About MunichBrief") {
 		t.Fatalf("about response = %d/%q", about.Code, about.Body.String())
 	}
-	for _, expected := range []string{"From release to incident", "Translate and publish", "Accuracy and official information", "Privacy and data handling", "Independence and legal review", "Questions, corrections, or feedback", `href="https://github.com/egekocabas/munichbrief/issues"`, `href="mailto:contact@munichbrief.de"`} {
+	for _, expected := range []string{"From release to incident", "Publish in German", "Check and translate in the background", "Accuracy and official information", "Privacy and data handling", "Independence", "Contact"} {
 		if !strings.Contains(about.Body.String(), expected) {
 			t.Errorf("about response does not contain structured section %q", expected)
 		}
@@ -96,7 +96,7 @@ func TestAboutHealthReadinessAndRequestHeaders(t *testing.T) {
 		{name: "htmx.min.js", body: "htmx"},
 		{name: "theme.js", body: "munichbrief-theme"},
 		{name: "admin.js", body: "processing-confirmation"},
-		{name: "favicon.svg", body: `fill="#174b73"`},
+		{name: "favicon.svg", body: `<circle cx="32" cy="32" r="29" stroke="currentColor"`},
 	} {
 		registered := staticAssets[asset.name]
 		digest := sha256.Sum256(registered.content)

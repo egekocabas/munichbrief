@@ -1,86 +1,134 @@
 {{define "title"}}MunichBrief{{end}}
 {{define "content"}}
-{{/* Timeline introduction and result count. */}}
-<section class="border-b border-rule pt-8 pb-5 sm:pt-11 sm:pb-4">
-  <div class="grid items-end gap-6 md:grid-cols-[minmax(0,1fr)_auto]">
-    <div class="max-w-3xl">
-      <p class="mb-2 text-xs font-extrabold uppercase tracking-[0.16em] text-alert">{{if .Fixture}}{{t .Lang "HeroEyebrowFixture"}}{{else}}{{t .Lang "HeroEyebrowLive"}}{{end}}</p>
-      <h1 class="font-serif text-4xl font-bold leading-[1.04] tracking-[-0.035em] text-ink sm:text-5xl">{{t .Lang "HeroTitle"}}</h1>
-      <p class="mt-4 max-w-2xl text-base leading-relaxed text-muted sm:text-lg">{{t .Lang "HeroCopy"}}</p>
-    </div>
-    <p class="justify-self-end font-mono text-sm font-semibold tabular-nums text-muted">{{shownTotal .Lang .Shown .Total}}</p>
-  </div>
+<section class="reader-intro" aria-labelledby="reader-heading">
+  {{if .Fixture}}<p class="reader-eyebrow">{{t .Lang "HeroEyebrowFixture"}}</p>{{end}}
+  <h1 id="reader-heading">{{t .Lang "HeroTitle"}}</h1>
+  <p class="reader-intro-copy">{{t .Lang "HeroCopy"}}</p>
 </section>
 
-{{/* Publication-day groups remain the primary timeline structure. */}}
-<section class="py-7" aria-labelledby="timeline-heading" data-timeline-url="/{{.Lang}}{{if gt .Page 1}}?page={{.Page}}{{end}}">
-  <div class="mb-6 flex items-end justify-between gap-4">
-    <div>
-      <p class="mb-1 text-xs font-extrabold uppercase tracking-[0.14em] text-alert">{{t .Lang "Timeline"}}</p>
-      <h2 id="timeline-heading" class="font-serif text-2xl font-bold tracking-tight text-ink sm:text-3xl">{{if .Fixture}}{{t .Lang "FixtureIncidents"}}{{else}}{{t .Lang "LatestIncidents"}}{{end}}</h2>
-    </div>
+{{template "reader-ai-disclosure" .}}
+
+<section class="reader-timeline" aria-labelledby="timeline-heading" data-timeline-url="{{.ListURL}}">
+  <div class="reader-discovery">
+    <nav class="reader-view-switch" aria-label="{{t .Lang "ViewOrder"}}">
+      <a href="{{.PublishedURL}}" {{if eq .View "published"}}aria-current="page"{{end}}>{{t .Lang "ByPublication"}}</a>
+      <a href="{{.IncidentViewURL}}" {{if eq .View "incident"}}aria-current="page"{{end}}>{{t .Lang "ByIncident"}}</a>
+    </nav>
+    <details class="reader-search">
+      <summary>{{t .Lang "SearchFilters"}}</summary>
+      <form method="get" action="/{{.Lang}}/search#timeline-heading" hx-boost="false" class="reader-search-form">
+        {{if eq .View "incident"}}<input type="hidden" name="view" value="incident">{{end}}{{if ne .PageSize 20}}<input type="hidden" name="page_size" value="{{.PageSize}}">{{end}}
+        <label class="search-wide">{{t .Lang "SearchText"}}<input type="search" name="q" maxlength="200" value="{{.Filters.Text}}" placeholder="{{t .Lang "SearchPlaceholder"}}"></label>
+        <label>{{t .Lang "Area"}}<input name="area" list="reader-areas" maxlength="200" value="{{.Filters.Area}}"><datalist id="reader-areas">{{range .Areas}}<option value="{{.}}">{{end}}</datalist></label>
+        <label>{{t .Lang "Category"}}<select name="category"><option value="">{{t .Lang "AllCategories"}}</option>{{range .Categories}}<option value="{{.Value}}" {{if eq $.Filters.Category .Value}}selected{{end}}>{{.Label}}</option>{{end}}</select></label>
+        <label>{{t .Lang "Report"}}<input name="number" maxlength="200" value="{{.Filters.Number}}"></label>
+        <label>{{t .Lang "PublicAssistance"}}<select name="assistance"><option value="">{{t .Lang "AnyAssistance"}}</option><option value="yes" {{if eq .Filters.Assistance "yes"}}selected{{end}}>{{t .Lang "AssistanceYes"}}</option><option value="no" {{if eq .Filters.Assistance "no"}}selected{{end}}>{{t .Lang "AssistanceNo"}}</option></select></label>
+        <label>{{t .Lang "DateType"}}<select name="date_field"><option value="published" {{if ne .Filters.DateField "incident"}}selected{{end}}>{{t .Lang "PublishedDate"}}</option><option value="incident" {{if eq .Filters.DateField "incident"}}selected{{end}}>{{t .Lang "IncidentDate"}}</option></select></label>
+        <label>{{t .Lang "DateFrom"}}<input type="date" name="from" value="{{.Filters.From}}"></label>
+        <label>{{t .Lang "DateTo"}}<input type="date" name="to" value="{{.Filters.To}}"></label>
+        <div class="search-wide search-submit"><button class="reader-button" type="submit">{{t .Lang "ApplySearch"}}</button><p>{{t .Lang "SearchRemembered"}}</p></div>
+      </form>
+    </details>
+    {{if .ActiveFilters}}<div class="active-filters" aria-label="{{t .Lang "ActiveFilters"}}">
+      {{range .ActiveFilters}}<form method="post" action="{{$.FormURL}}" hx-boost="false"><button type="submit" name="remove" value="{{.Key}}" aria-label="{{t $.Lang "RemoveFilter"}}: {{.Label}} — {{.Value}}">{{.Label}}: {{.Value}} <span aria-hidden="true">×</span></button></form>{{end}}
+      <form method="post" action="{{.ClearURL}}" hx-boost="false"><button class="clear-filters" type="submit">{{t .Lang "ClearAll"}}</button></form>
+    </div>{{end}}
+  </div>
+  <div class="reader-section-heading">
+    <div><h2 id="timeline-heading" tabindex="-1">{{if .Search}}{{t .Lang "SearchResults"}}{{else if .Fixture}}{{t .Lang "FixtureIncidents"}}{{else}}{{t .Lang "LatestIncidents"}}{{end}}</h2><p class="reader-result-status" role="status">{{message .Lang "PageStatus" .}}</p></div>
+    {{template "reader-prev-next" .}}
   </div>
 
   {{if .Groups}}
-  <div class="divide-y divide-rule">
+  <div class="timeline-days">
     {{range .Groups}}
-    <section class="grid min-w-0 gap-4 py-6 first:pt-0 lg:grid-cols-[10rem_minmax(0,1fr)] lg:gap-8" aria-labelledby="day-{{.ID}}">
-      <header class="min-w-0 lg:pt-1">
-        <h3 id="day-{{.ID}}" class="text-xs font-extrabold uppercase leading-relaxed tracking-[0.1em] text-muted lg:sticky lg:top-4">{{.Label}}</h3>
-      </header>
-      <div class="grid min-w-0 gap-3">
+    <section class="timeline-day" aria-labelledby="day-{{.ID}}">
+      <header class="timeline-date"><h3 id="day-{{.ID}}">{{.Label}}</h3>{{if .TimeLabel}}<p class="timeline-time-group">{{.TimeLabel}}</p>{{end}}</header>
+      <div class="timeline-entries">
         {{range .Incidents}}
-        <article class="min-w-0 rounded-lg border border-rule bg-paper px-4 py-4 transition-colors hover:border-civic/35 sm:px-5 sm:py-5" data-ai-generated="{{.Record.HasAI}}"{{if .Record.HasAI}} data-ai-model="{{.Record.AIModel}}"{{if .Record.AIMetadataModel}} data-ai-metadata-model="{{.Record.AIMetadataModel}}"{{end}}{{if .Record.AIPublicAssistanceVerificationModel}} data-ai-public-assistance-verification-model="{{.Record.AIPublicAssistanceVerificationModel}}"{{end}}{{if .Record.AICategoryVerificationModel}} data-ai-category-verification-model="{{.Record.AICategoryVerificationModel}}"{{end}}{{if and .Translated .Record.AITranslationModel}} data-ai-translation-model="{{.Record.AITranslationModel}}"{{end}} data-digital-source-type="http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia"{{end}}>
-          {{if not .Record.HasIncident}}<div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.7rem] font-extrabold uppercase tracking-[0.09em] text-muted"><span class="text-alert">{{t $.Lang "SourceMetadata"}}</span></div>{{end}}
+        <article class="incident-entry" data-ai-generated="{{.Record.HasAI}}"{{if .Record.HasAI}} data-ai-model="{{.Record.AIModel}}"{{if .Record.AIMetadataModel}} data-ai-metadata-model="{{.Record.AIMetadataModel}}"{{end}}{{if .Record.AIPublicAssistanceVerificationModel}} data-ai-public-assistance-verification-model="{{.Record.AIPublicAssistanceVerificationModel}}"{{end}}{{if .Record.AICategoryVerificationModel}} data-ai-category-verification-model="{{.Record.AICategoryVerificationModel}}"{{end}}{{if and .Translated .Record.AITranslationModel}} data-ai-translation-model="{{.Record.AITranslationModel}}"{{end}} data-digital-source-type="http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia"{{end}}>
           {{if .Record.HasIncident}}
-            {{if .Record.Number}}<div class="text-[0.7rem] font-extrabold uppercase tracking-[0.09em] text-alert">{{t $.Lang "Report"}}: {{.Record.Number}}</div>{{end}}
-            {{if $.Review}}<p class="mt-3 text-[0.68rem] font-extrabold uppercase tracking-[0.1em] text-civic data-[state=failed]:text-amber-700 data-[state=needs-review]:text-amber-700 data-[state=retrying]:text-amber-700 data-[state=running]:text-amber-700" data-state="{{.ProcessingState}}">{{.ProcessingLabel}}</p>{{end}}
-            {{if or .Record.HasAI .CategoryLabel .AreaName .EventText .PublicAssistance}}
-              <div class="mt-3 flex flex-wrap items-center gap-2">
-                {{if .Record.HasAI}}{{template "ai-generated-label" $}}{{end}}
-                {{if or .CategoryLabel .AreaName .EventText .PublicAssistance}}<dl class="contents text-xs">
-                  {{if .CategoryLabel}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{t $.Lang "Category"}}</dt><dd class="font-bold text-civic">{{.CategoryLabel}}</dd></div>{{end}}
-                  {{if .AreaName}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{t $.Lang "Area"}}</dt><dd class="font-bold text-civic">{{.AreaName}}</dd></div>{{end}}
-                  {{if .EventText}}<div class="inline-flex items-center gap-1.5 rounded-full border border-rule bg-newsprint/60 px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-muted">{{.EventLabel}}</dt><dd class="font-bold text-civic">{{.EventText}}</dd></div>{{end}}
-                  {{if .PublicAssistance}}<div class="inline-flex items-center rounded-full border border-alert/30 bg-alert-soft px-2.5 py-1"><dt class="font-extrabold uppercase tracking-[0.06em] text-alert">{{t $.Lang "PublicAssistanceNeeded"}}</dt></div>{{end}}
-                </dl>{{end}}
-              </div>
+            {{if or .CategoryLabel .PublicAssistance}}
+            <div class="incident-kicker">
+              {{if .CategoryLabel}}<dl><div class="incident-category"><dt class="sr-only">{{t $.Lang "Category"}}</dt><dd>{{.CategoryLabel}}</dd></div></dl>{{end}}
+              {{if .PublicAssistance}}<span class="assistance-tag">{{t $.Lang "PublicAssistanceNeeded"}}</span>{{end}}
+            </div>
             {{end}}
-            {{if and (not .Record.HasAI) $.Review $.Fixture}}{{/* Review-only fixture preview does not change machine-readable AI state. */}}{{template "fixture-ai-label-preview" $}}{{end}}
-            <h4 class="mt-3 font-serif text-xl font-bold leading-tight tracking-[-0.015em] sm:text-2xl"><a class="text-ink no-underline hover:text-civic" href="{{incidentURL $.Lang .Record.ID}}" data-incident-link lang="{{.ContentLanguage}}">{{.Title}}</a></h4>
-            <p class="mt-2 leading-relaxed text-muted" lang="{{.ContentLanguage}}">{{.Summary}}</p>
-            {{if .ShowOriginalMessage}}<p class="mt-3 border-l-2 border-amber-600 pl-3 text-sm text-amber-800">{{t $.Lang "OriginalShown"}}</p>{{end}}
-            {{if eq .Record.FetchStatus "error"}}<p class="mt-3 border-l-2 border-amber-600 pl-3 text-sm text-amber-800">{{t $.Lang "SourceRefreshFailed"}}</p>{{end}}
+            <h4 class="incident-title"><a href="{{incidentURL $.Lang .Record.ID}}" data-incident-link lang="{{.ContentLanguage}}">{{.Title}}</a></h4>
+            {{if or .AreaName .EventText .Record.Number}}
+            <dl class="incident-meta">
+              {{if .AreaName}}<div><dt class="sr-only">{{t $.Lang "Area"}}</dt><dd>{{template "pin-icon" .}}<span>{{.AreaName}}</span></dd></div>{{end}}
+              {{if .EventText}}<div><dt class="sr-only">{{.EventLabel}}</dt><dd>{{template "clock-icon" .}}<span>{{.EventText}}</span></dd></div>{{end}}
+              {{if .Record.Number}}<div><dt class="sr-only">{{t $.Lang "Report"}}</dt><dd>{{template "hash-icon" .}}<span>{{.Record.Number}}</span></dd></div>{{end}}
+            </dl>
+            {{end}}
+            <p class="incident-summary" lang="{{.ContentLanguage}}">{{.Summary}}</p>
+            {{if $.Review}}<p class="incident-note" data-state="{{.ProcessingState}}">{{.ProcessingLabel}}</p>{{end}}
+            {{if .ShowOriginalMessage}}<p class="incident-note">{{t $.Lang "OriginalShown"}}</p>{{end}}
+            {{if and $.Review (eq .Record.FetchStatus "error")}}<p class="incident-note">{{t $.Lang "SourceRefreshFailed"}}</p>{{end}}
           {{else}}
-            <h4 class="mt-3 font-serif text-xl font-bold leading-tight" lang="de">{{.Record.TitleDE}}</h4>
-            <p class="mt-2 text-muted">{{t $.Lang "BodyUnavailable"}}</p>
+            <p class="reader-eyebrow">{{t $.Lang "SourceMetadata"}}</p>
+            <h4 class="incident-title" lang="de">{{.Record.TitleDE}}</h4>
+            <p class="incident-summary">{{t $.Lang "BodyUnavailable"}}</p>
           {{end}}
-          <footer class="mt-4 flex flex-col gap-3 border-t border-rule/70 pt-3 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
-            <span class="min-w-0 truncate">{{.Record.SourceTitle}}</span>
-            <span class="flex flex-wrap items-center gap-3">
-              {{if and .Record.HasIncident .PublicAssistance}}<a class="shrink-0 font-extrabold text-civic no-underline hover:text-civic-dark" href="{{.Record.SourceURL}}" target="_blank" rel="noopener noreferrer">{{t $.Lang "OpenOfficialSource"}} <span aria-hidden="true">↗</span></a>{{end}}
-              {{if .Record.HasIncident}}<a class="shrink-0 font-extrabold text-civic no-underline hover:text-civic-dark" href="{{incidentURL $.Lang .Record.ID}}" data-incident-link>{{t $.Lang "ReadIncident"}} <span aria-hidden="true">→</span></a>{{else}}<a class="shrink-0 font-extrabold text-civic no-underline hover:text-civic-dark" href="{{.Record.SourceURL}}" rel="noopener noreferrer">{{t $.Lang "OpenOfficialSource"}} <span aria-hidden="true">↗</span></a>{{end}}
-            </span>
+          <footer class="incident-footer">
+            <div class="incident-attribution">
+              {{if .Record.HasAI}}{{template "ai-generated-label" $}}{{end}}
+
+              <span class="sr-only">{{.Record.SourceTitle}}</span>
+            </div>
+            <div class="incident-actions">
+              {{if and .Record.HasIncident .PublicAssistance}}<a href="{{.Record.SourceURL}}" target="_blank" rel="noopener noreferrer">{{t $.Lang "OpenOfficialSource"}} {{template "external-icon" .}}</a>{{end}}
+              {{if .Record.HasIncident}}<a class="incident-read" href="{{incidentURL $.Lang .Record.ID}}" data-incident-link>{{t $.Lang "ReadIncident"}} <span aria-hidden="true">→</span></a>{{else}}<a href="{{.Record.SourceURL}}" rel="noopener noreferrer">{{t $.Lang "OpenOfficialSource"}} {{template "external-icon" .}}</a>{{end}}
+            </div>
           </footer>
+          {{if and (not .Record.HasAI) $.Review $.Fixture}}{{template "fixture-ai-label-preview" $}}{{end}}
         </article>
         {{end}}
       </div>
     </section>
     {{end}}
   </div>
-  {{if or .HasPrevious .HasNext}}
-  {{/* Pagination follows publication order rather than extracted incident time. */}}
-  <nav class="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-4 border-t border-rule pt-5 text-sm text-muted" aria-label="{{t .Lang "Timeline"}}">
-    {{if .HasPrevious}}<a class="font-bold text-civic no-underline hover:text-civic-dark" href="/{{.Lang}}?page={{.Previous}}">← {{t .Lang "Newer"}}</a>{{else}}<span></span>{{end}}
-    <span>{{t .Lang "Page"}} {{.Page}} {{t .Lang "Of"}} {{.TotalPages}}</span>
-    {{if .HasNext}}<a class="justify-self-end font-bold text-civic no-underline hover:text-civic-dark" href="/{{.Lang}}?page={{.Next}}">{{t .Lang "Older"}} →</a>{{end}}
-  </nav>
-  {{end}}
   {{else}}
-  <div class="rounded-lg border border-dashed border-rule bg-paper px-6 py-14 text-center">
-    <h3 class="font-serif text-2xl font-bold">{{t .Lang "NoIncidents"}}</h3>
-    <p class="mx-auto mt-2 max-w-xl text-muted">{{if .Fixture}}{{t .Lang "NoFixtureCopy"}}{{else}}{{t .Lang "NoLiveCopy"}}{{end}}</p>
+  <div class="reader-empty">
+    <h3>{{t .Lang "NoIncidents"}}</h3>
+    <p>{{if .Search}}{{t .Lang "NoSearchCopy"}}{{else if .Fixture}}{{t .Lang "NoFixtureCopy"}}{{else}}{{t .Lang "NoLiveCopy"}}{{end}}</p>
   </div>
   {{end}}
+  <div class="reader-pagination-panel">
+    <div class="reader-pagination-layout reader-page-settings">
+      <form action="{{if .Search}}/{{.Lang}}/search{{else}}/{{.Lang}}{{end}}#timeline-heading" method="get" class="page-size-form">
+        {{template "reader-filter-fields" .}}<input type="hidden" name="view" value="{{.View}}"><label>{{t .Lang "PerPage"}} <select name="page_size" data-auto-submit>{{range .PageSizes}}<option value="{{.}}" {{if eq $.PageSize .}}selected{{end}}>{{.}}</option>{{end}}</select></label><button type="submit" class="reader-native-submit">{{t .Lang "ApplySearch"}}</button>
+      </form>
+      {{if gt .TotalPages 1}}
+      <nav class="reader-bottom-navigation" aria-label="{{t .Lang "Pagination"}}">
+        {{if .HasPrevious}}<a class="reader-page-direction" href="{{.PreviousURL}}" rel="prev">{{t .Lang "PreviousPage"}}</a>{{else}}<span class="reader-page-direction" aria-disabled="true">{{t .Lang "PreviousPage"}}</span>{{end}}
+        <div class="reader-numbered-pages">{{range .Pages}}{{if .Gap}}<span aria-hidden="true">…</span>{{else}}<a href="{{.URL}}" {{if .Current}}aria-current="page"{{end}} aria-label="{{t $.Lang "Page"}} {{.Number}}">{{.Number}}</a>{{end}}{{end}}</div>
+        <span class="reader-compact-page" aria-current="page">{{message .Lang "PagePosition" .}}</span>
+        {{if .HasNext}}<a class="reader-page-direction" href="{{.NextURL}}" rel="next">{{t .Lang "NextPage"}}</a>{{else}}<span class="reader-page-direction" aria-disabled="true">{{t .Lang "NextPage"}}</span>{{end}}
+      </nav>
+      <div class="reader-page-jump">
+        <div class="reader-desktop-jump">{{template "reader-jump-form" .}}</div>
+        <details class="reader-mobile-jump"><summary>{{t .Lang "GoToPage"}}</summary>{{template "reader-jump-form" .}}</details>
+      </div>
+      {{else}}<p class="reader-single-page">{{message .Lang "PagePosition" .}}</p>{{end}}
+    </div>
+  </div>
 </section>
 {{end}}
+{{define "reader-prev-next"}}
+<nav class="reader-prev-next" aria-label="{{t .Lang "Pagination"}}">
+ {{if .HasPrevious}}<a href="{{.PreviousURL}}" rel="prev">{{t .Lang "PreviousPage"}}</a>{{else}}<span aria-disabled="true">{{t .Lang "PreviousPage"}}</span>{{end}}
+ {{if .HasNext}}<a href="{{.NextURL}}" rel="next">{{t .Lang "NextPage"}}</a>{{else}}<span aria-disabled="true">{{t .Lang "NextPage"}}</span>{{end}}
+</nav>
+{{end}}
+
+{{define "reader-jump-form"}}
+<form action="{{if .Search}}/{{.Lang}}/search{{else}}/{{.Lang}}{{end}}#timeline-heading" method="get" class="page-jump-form">
+  {{template "reader-filter-fields" .}}<input type="hidden" name="view" value="{{.View}}"><input type="hidden" name="page_size" value="{{.PageSize}}">
+  <label>{{t .Lang "Page"}} <input type="number" inputmode="numeric" name="page" min="1" max="{{.TotalPages}}" value="{{.Page}}" required></label>
+  <button type="submit">{{t .Lang "GoToPage"}}</button>
+</form>
+{{end}}
+
+{{define "reader-filter-fields"}}{{range .FilterFields}}<input type="hidden" name="{{.Key}}" value="{{.Value}}">{{end}}{{end}}

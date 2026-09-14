@@ -259,3 +259,26 @@ func TestLoadRejectsUnidentifiableUserAgent(t *testing.T) {
 		t.Fatal("Load() error = nil, want repository-identifying user-agent error")
 	}
 }
+
+func TestContactConfiguration(t *testing.T) {
+	t.Setenv("MUNICHBRIEF_CONTACT_ENABLED", "true")
+	t.Setenv("MUNICHBRIEF_ADMIN_ENABLED", "true")
+	t.Setenv("MUNICHBRIEF_CONTACT_SECRET", "01234567890123456789012345678901")
+	t.Setenv("MUNICHBRIEF_CONTACT_TRUSTED_PROXIES", "127.0.0.1/32,::1/128")
+	cfg, err := Load()
+	if err != nil || !cfg.ContactEnabled || len(cfg.ContactTrustedProxies) != 2 || cfg.ContactDailyLimit != 20 || cfg.ContactMonthlyLimit != 300 {
+		t.Fatalf("contact defaults or proxies: %v", err)
+	}
+	for _, tc := range []struct{ name, value string }{
+		{"MUNICHBRIEF_CONTACT_SECRET", "short"}, {"MUNICHBRIEF_ADMIN_ENABLED", "false"},
+		{"MUNICHBRIEF_CONTACT_DAILY_LIMIT", "0"}, {"MUNICHBRIEF_CONTACT_MONTHLY_LIMIT", "x"},
+		{"MUNICHBRIEF_CONTACT_TRUSTED_PROXIES", "trust-everything"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv(tc.name, tc.value)
+			if _, err := Load(); err == nil {
+				t.Fatal("accepted invalid contact configuration")
+			}
+		})
+	}
+}

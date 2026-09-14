@@ -1,4 +1,3 @@
-SiteDescription = { other = "Münih Polisinin resmî bildirimlerinin yapay zekâ özetleriyle bilgi sahibi olun." }
 BrandTagline = { other = "Bir bakışta Münih" }
 SocialImageAlt = { other = "Münih Olimpiyat Parkı’nı gösteren MunichBrief önizlemesi." }
 SocialIncidentLabel = { other = "Olay" }
@@ -17,15 +16,14 @@ AIGeneratedContent = { other = "Yapay zekâ tarafından oluşturulan içerik" }
 AIFixtureLabelPreview = { other = "Etiket önizlemesi — bu sentetik test içeriği yapay zekâ ile işlenmemiştir" }
 AIDisclosureTitle = { other = "Yapay zekâ tarafından oluşturulan içerik" }
 AIDisclosureFixtureCopy = { other = "Yerel önizleme: bu sayfa sentetik test içeriği kullanır." }
-AIDisclosureCopy = { other = "MunichBrief, Münih Polisinin resmî bildirimlerinden başlıklar, özetler, çeviriler, kategoriler ve bildirilen yer ile zaman veya polisin halktan yardım isteyip istemediği gibi yapılandırılmış ayrıntılar oluşturmak için yerel olarak çalıştırılan yapay zekâ kullanır. Yapay zekâ tarafından oluşturulan veya çıkarılan bilgiler hata içerebilir ya da özgün bildirim güncellendiğinde eskiyebilir. Her olay sayfası resmî polis kaynağını belirtir ve bağlantısını verir; doğrulanmış bilgi için lütfen bu kaynağa başvurun. MunichBrief bağımsız bir projedir ve Bavyera Polisiyle bağlantılı değildir. Adı geçen herkes, suçluluğu kanıtlanana kadar masum kabul edilir." }
-AIDisclosurePreferenceCopy = { other = "“Anladım” seçildiğinde bu uyarı 30 gün boyunca hatırlanır." }
-AIDisclosureLearnMore = { other = "MunichBrief ve çalışma biçimi hakkında daha fazla bilgi Hakkında sayfasındadır." }
+AIDisclosureCopy = { other = "Başlıklar, özetler, çeviriler ve olay ayrıntıları yapay zekâyla hazırlanır. Hatalar olabilir veya güncellemeler gözden kaçabilir. Bilgileri doğrulamak için bağlantıdaki resmî bültene bakın. MunichBrief polisten bağımsızdır; masumiyet karinesi esastır." }
+AIDisclosurePreferenceCopy = { other = "Bu bildirimi 30 gün boyunca gösterme." }
+AIDisclosureLearnMore = { other = "Nasıl çalışıyor?" }
 AIDisclosureGotIt = { other = "Anladım" }
 AITransparencyEU = { other = "Yapay zekâ şeffaflığı ve AB rehberi" }
-AITransparencyEUCopy = { other = "MunichBrief, Avrupa Komisyonu rehberinde yapay zekâ tarafından oluşturulan haber özetleri açıkça bir kullanım alanı olarak belirtildiği için AB Tamamen Yapay Zekâ Tarafından Oluşturuldu etiketini kullanır. Görünür etiketler ve makinece okunabilir kaynak bilgileri şeffaflığı destekler; ancak simgenin kullanılması tek başına yasal uygunluk sağlamaz veya MunichBrief’in gönüllü Uygulama Kuralları’nı imzaladığı anlamına gelmez." }
+AITransparencyEUCopy = { other = "Yapay zekâ etiketi, başlıkların, özetlerin ve çevirilerin yapay zekâyla hazırlandığını gösterir. Her bültenin sayfasında kullanılan modeller ve işleme adımları hakkında da bilgi bulunur." }
 EUIconGuidance = { other = "AB simge rehberi" }
 EUCodePractice = { other = "AB Uygulama Kuralları" }
-Footer = { other = "MunichBrief, Bavyera Polisinden bağımsızdır. Analiz, hesap veya reklam yoktur." }
 Built = { other = "Derleme" }
 Language = { other = "Dil" }
 German = { other = "Almanca" }
@@ -43,24 +41,21 @@ SwitchToSpanish = { other = "İspanyolca sürüme geç" }
 SwitchToFrench = { other = "Fransızca sürüme geç" }
 HeroEyebrowFixture = { other = "Yerel prototip" }
 HeroEyebrowLive = { other = "Münih Polisi bildirimleri" }
-HeroTitle = { other = "Münih Polisi tarafından bildirilen son olaylar" }
-HeroCopy = { other = "Resmî polis bildirimlerinden özetlenen yerel olayların açık bir görünümü." }
+HeroTitle = { other = "Münih’ten kısa kısa." }
 FixtureIncidents = { other = "Sentetik bildirimler" }
-LatestIncidents = { other = "Son olaylar" }
-Reports = { one = "{{.Count}} bildirim", other = "{{.Count}} bildirim" }
+LatestIncidents = { other = "Son bültenler" }
+Reports = { one = "{{.Count}} bülten", other = "{{.Count}} bülten" }
 ShownTotal = { other = "{{.Shown}} gösteriliyor / toplam {{.Total}}" }
-Report = { other = "Polis bildirimi" }
+Report = { other = "Bülten numarası" }
 SourceMetadata = { other = "Kaynak üst verileri" }
-ReadIncident = { other = "Bildirimi oku" }
-OpenOfficialSource = { other = "Resmî kaynağı aç" }
-OpenOfficialPoliceRelease = { other = "Resmî polis bildirimini aç" }
+ReadIncident = { other = "Özeti oku" }
 Newer = { other = "Daha yeni" }
 Older = { other = "Daha eski" }
 Page = { other = "Sayfa" }
 Of = { other = "/" }
-NoIncidents = { other = "Henüz bildirim yok" }
+NoIncidents = { other = "Gösterilecek bülten yok" }
 NoFixtureCopy = { other = "Bu görünümü doldurmak için test verisi içe aktarımını çalıştırın." }
-NoLiveCopy = { other = "Eşitleyici henüz geçerli zaman aralığında bir bildirim bulmadı." }
+NoLiveCopy = { other = "Yeni bültenler hazır olduğunda burada görünecek." }
 BodyUnavailable = { other = "Bildirim metni henüz kullanılamıyor. MunichBrief yeniden deniyor; bu sırada resmî kaynağı kullanın." }
 SourceRefreshFailed = { other = "Son kaynak yenilemesi başarısız oldu; kaydedilmiş bu kopya kullanılabilir durumda." }
 Back = { other = "Geri" }
@@ -72,8 +67,8 @@ Model = { other = "Model" }
 PromptVersion = { other = "İstem sürümü" }
 Category = { other = "Kategori" }
 CategoryTraffic = { other = "Trafik" }
-CategoryTheftBurglary = { other = "Hırsızlık ve konut dokunulmazlığının ihlali" }
-CategoryRobberyExtortion = { other = "Yağma ve şantaj" }
+CategoryTheftBurglary = { other = "Hırsızlık ve izinsiz giriş" }
+CategoryRobberyExtortion = { other = "Soygun ve şantaj" }
 CategoryViolence = { other = "Şiddet" }
 CategorySexualOffense = { other = "Cinsel suçlar" }
 CategoryFraudCyber = { other = "Dolandırıcılık ve siber suç" }
@@ -85,13 +80,13 @@ CategoryPoliceOperation = { other = "Polis operasyonu" }
 CategoryOther = { other = "Diğer" }
 Area = { other = "Bölge" }
 ReportKind = { other = "Bildirim türü" }
-PublicAssistance = { other = "Halktan yardım" }
-PublicAssistanceRequested = { other = "Polis halktan yardım istiyor" }
-PublicAssistanceNeeded = { other = "Halkın yardımı gerekiyor" }
-PublicAssistanceSourceCopy = { other = "Talimatlar, iletişim yolları ve diğer ayrıntılar yalnızca resmî kaynakta bulunur." }
-TimeStatedInReport = { other = "Olay zamanı" }
+PublicAssistance = { other = "Bilgi çağrısı" }
+PublicAssistanceRequested = { other = "Polis, bilgi sahibi olan kişilerin kendisine ulaşmasını istiyor." }
+PublicAssistanceNeeded = { other = "Polis bilgi istiyor" }
+PublicAssistanceSourceCopy = { other = "Polisin açıklamaları, iletişim bilgileri ve konuyla ilgili diğer ayrıntılar resmî bültende yer alır." }
+TimeStatedInReport = { other = "Bültende belirtilen olay zamanı" }
 DayPartMorning = { other = "sabah" }
-DayPartMidday = { other = "öğle" }
+DayPartMidday = { other = "öğle saatleri" }
 DayPartAfternoon = { other = "öğleden sonra" }
 DayPartEvening = { other = "akşam" }
 DayPartNight = { other = "gece" }
@@ -134,39 +129,329 @@ OriginalGerman = { other = "Özgün Almanca metin" }
 OriginalQACopy = { other = "Yalnızca kısıtlı inceleme modunda kalite kontrolü için görünür." }
 AuthoritativeSource = { other = "Yetkili kaynak" }
 FixtureSourceCopy = { other = "Bu sayfa sentetik test içeriği kullanır." }
-LiveSourceCopy = { other = "Bu, resmî olmayan bir sunumdur. Bavyera Polisi bildirimi esas alınır." }
+LiveSourceCopy = { other = "Bu sayfa polis tarafından yayımlanmaz. Esas alınması gereken kaynak, Bavyera Polisinin resmî bültenidir." }
 NotProcessed = { other = "Henüz özetlenmedi veya çevrilmedi" }
 Queued = { other = "Yapay zekâ özeti ve çeviri sıraya alındı" }
 Running = { other = "Yapay zekâ özeti ve çeviri işleniyor" }
 Retrying = { other = "Yapay zekâ geçici olarak kullanılamıyor; yeniden deneme planlandı" }
 NeedsReview = { other = "Yapay zekâ çıktısının incelenmesi gerekiyor" }
-OriginalShown = { other = "Özgün Almanca bildirim gösteriliyor." }
-AboutTitle = { other = "MunichBrief nasıl çalışır?" }
+OriginalShown = { other = "Bu içerik henüz özetlenmediği için Almanca kaynak metin gösteriliyor." }
 Methodology = { other = "MunichBrief hakkında" }
-AboutIntro = { other = "MunichBrief, Münih Polisinin resmî bildirimlerini birden fazla okuma dilinde açık ve yapılandırılmış olay özetlerine dönüştürür." }
-FromReleaseToIncident = { other = "Bildirimden olaya" }
+FromReleaseToIncident = { other = "Bir bülten nasıl özete dönüşür?" }
 Discover = { other = "Keşfet" }
-DiscoverCopy = { other = "Yeni bildirimler yalnızca Münih Polisinin resmî RSS akışı üzerinden bulunur." }
+DiscoverCopy = { other = "Yeni bültenler, Münih Emniyet Müdürlüğünün resmî RSS akışından alınır." }
 Organize = { other = "Düzenle" }
-OrganizeCopy = { other = "Birden fazla rapor içeren bildirimler resmî rapor numaralarına göre ayrılır. Ayrı yayımlanan raporlar ayrı kalır." }
+OrganizeCopy = { other = "Bir bültende birden fazla olay varsa her olay, resmî bülten numarasıyla ayrı gösterilir. Ayrı yayımlanan bültenler birleştirilmez." }
 Summarize = { other = "Özetle" }
-SummarizeCopy = { other = "Yerel yapay zekâ modelleri kategori, yer, tarih ve halktan yardım talepleri gibi ayrıntıları çıkarır, ardından verileri en aza indirilmiş bir Almanca özet oluşturur." }
-TranslatePublish = { other = "Çevir ve yayımla" }
-TranslatePublishCopy = { other = "Otomatik işleme kontrollerini geçen Almanca özetler mevcut okuma dillerine çevrilir. Herkese açık sayfalar, yapay zekâ tarafından oluşturulan içeriği yalnızca işlem hattı başarıyla tamamlandıktan sonra gösterir." }
+SummarizeCopy = { other = "Yerel yapay zekâ modelleri olayın türünü, yerini, tarihini ve polisin bilgi isteyip istemediğini belirler. Ardından gereksiz kişisel ayrıntıları dışarıda bırakan bir Almanca özet hazırlanır." }
+TranslatePublish = { other = "Önce Almanca yayımlama" }
+TranslatePublishCopy = { other = "Almanca özet, ilk otomatik kontrolleri geçer geçmez yayımlanır. Çevirilerin veya sonraki doğrulamaların tamamlanması beklenmez." }
 AccuracyOfficialInformation = { other = "Doğruluk ve resmî bilgiler" }
-AccuracyOfficialInformationCopy = { other = "Yapay zekâ özetleri ve çıkarılan ayrıntılar hata içerebilir. Polis bildirimleri yayımlandıktan sonra güncellenebilir. En güncel resmî bilgiler esas alınır ve masumiyet karinesi geçerlidir." }
+AccuracyOfficialInformationCopy = { other = "Yapay zekâ özetlerinde ve olay ayrıntılarında hatalar olabilir. Polis bültenleri yayımlandıktan sonra güncellenebilir; en güncel bilgi için resmî bültene bakın. Hakkında suç isnadı bulunan herkes, suçluluğu kanıtlanana kadar masum sayılır." }
 PrivacyDataHandling = { other = "Gizlilik ve veri işleme" }
-PrivacyCopy = { other = "MunichBrief’te hesap, analiz veya reklam yoktur. Gerekli bir çerez seçilen dili bir yıl saklar. “Anladım”ı seçtikten sonra birinci taraf tercih çerezi yapay zekâ açıklamasını 30 gün hatırlar. Seçilen renk teması tarayıcınızda yerel olarak saklanır." }
-DataHandlingCopy = { other = "Çıkarılan Almanca kaynak metni yerel olarak saklanır. Kısıtlı inceleme modu, kalite kontrolü için özgün metinleri ve işleme durumlarını gösterebilir; herkese açık mod saklanan özgün metinleri göstermez." }
-IndependenceLegalReview = { other = "Bağımsızlık ve hukuki inceleme" }
-IndependenceLegalReviewCopy = { other = "MunichBrief, Bavyera Polisinden bağımsızdır. Teknik önlemler hukuki incelemenin yerini tutmaz. Saklama, hukuki dayanak, suçla ilgili veriler ve uygulanabilir gazetecilik istisnaları sürekli inceleme gerektirir." }
-ContactHeading = { other = "Sorular, düzeltmeler veya geri bildirim" }
-ContactPublicLead = { other = "Bir hata mı buldunuz veya öneriniz mi var?" }
-ContactIssueLink = { other = "GitHub’da konu aç" }
-ContactPrivateLead = { other = "Gizlilikle ilgili endişeler veya herkese açık paylaşılmaması gereken konular için e-posta gönderin:" }
+PrivacyCopy = { other = "Siteyi kullanmak için hesap açmanız gerekmez; sitede reklam yoktur. Dil tercihiniz bir yıl, kapattığınız yapay zekâ bildirimi ve uyguladığınız arama filtreleri 30 gün hatırlanır. Arama ölçütleri siteye ait bir çerezle iletilir. Renk teması, siz silene kadar tarayıcıda saklanır. Seçtiğiniz sıralama, bu siteye ait bir çerezde 30 gün boyunca saklanır. Seçtiğiniz filtreler sayfanın adresinde yer alır; böylece aramanızı paylaşabilirsiniz." }
+DataHandlingCopy = { other = "Almanca kaynak metinler, işleme ve erişimi kısıtlı inceleme amacıyla saklanır. Herkese açık sayfalarda bu metinlerden hazırlanan özetler gösterilir." }
+AboutIndependence = { other = "Bağımsızlık" }
+AboutIndependenceCopy = { other = "MunichBrief bağımsız bir projedir. Bavyera Polisi veya başka bir kamu kurumuyla bağlantısı yoktur ve bu kurumlar adına açıklama yapmaz." }
+ContactHeading = { other = "İletişim" }
 SwitchToRomanian = { other = "Rumence sürüme geç" }
 SwitchToPolish = { other = "Lehçe sürüme geç" }
 SwitchToRussian = { other = "Rusça sürüme geç" }
 RomanianTranslationStep = { other = "Rumence çeviri" }
 PolishTranslationStep = { other = "Lehçe çeviri" }
 RussianTranslationStep = { other = "Rusça çeviri" }
+ViewOrder = { other = "Sıralama" }
+ByPublication = { other = "Yayın tarihine göre" }
+ByIncident = { other = "Olay tarihine göre" }
+SearchFilters = { other = "Arama ve filtreler" }
+SearchText = { other = "Bültenlerde ara" }
+SearchPlaceholder = { other = "Konu, yer veya bülten numarası yazın" }
+AllCategories = { other = "Tüm kategoriler" }
+AnyAssistance = { other = "Tüm bültenler" }
+AssistanceYes = { other = "Bilgi istenenler" }
+AssistanceNo = { other = "Bilgi istenmeyenler" }
+DateType = { other = "Tarih aralığı ölçütü" }
+PublishedDate = { other = "Yayın tarihi" }
+IncidentDate = { other = "Olay tarihi" }
+DateFrom = { other = "Başlangıç" }
+DateTo = { other = "Bitiş" }
+ApplySearch = { other = "Uygula" }
+SearchRemembered = { other = "Bu aramayı adres çubuğundaki bağlantıyla paylaşabilirsiniz. Tarayıcınız aramayı 30 gün hatırlar." }
+ActiveFilters = { other = "Etkin filtreler" }
+RemoveFilter = { other = "Filtreyi kaldır" }
+ClearAll = { other = "Tümünü temizle" }
+SearchResults = { other = "Arama sonuçları" }
+NoSearchCopy = { other = "Bu filtrelere uygun bülten bulunamadı. Aramanızı genişletin veya filtreleri temizleyin." }
+Pagination = { other = "Sayfalar" }
+PerPage = { other = "Sayfa başına bülten" }
+GoToPage = { other = "Sayfaya git" }
+PreviousPage = { other = "Önceki" }
+NextPage = { other = "Sonraki" }
+SearchInvalid = { other = "Lütfen aramanızı kontrol edin: tarihleri doğru sırayla girin ve her metin alanında en fazla 200 karakter kullanın." }
+DateNotReported = { other = "Tarih belirtilmemiş" }
+ClockTimeReported = { other = "Saat belirtilmiş" }
+DayPartReported = { other = "Günün bir bölümü belirtilmiş" }
+TimeNotReported = { other = "Zaman belirtilmemiş" }
+PageStatus = { other = "Sayfa {{.Page}} / {{.TotalPages}} · {{.Total}} bültenin {{.First}}–{{.Last}} arası" }
+HeroCopy = { other = "Münih Emniyet Müdürlüğünün (Polizeipräsidium München) yayımladığı bültenlerin Türkçe özetleri." }
+Footer = { other = "MunichBrief, polisten bağımsız bir projedir. Üyelik gerektirmez ve reklam içermez." }
+AboutTitle = { other = "MunichBrief hakkında" }
+AboutIntro = { other = "MunichBrief, yerel polis bültenlerini kendi dilinizde takip etmenizi sağlar. Olayın özetini, nerede ve ne zaman gerçekleştiğini okuyabilir, ayrıntılar için resmî bülteni açabilirsiniz." }
+OpenOfficialSource = { other = "Resmî bülten" }
+ContactIntro = { other = "Bir sorunuz veya düzeltme talebiniz mi var? Aşağıdaki formu kullanabilir ya da e-posta gönderebilirsiniz." }
+ContactCorrections = { other = "Düzeltmeler ve güncellemeler" }
+ContactCorrectionCopy = { other = "MunichBrief sayfasının bağlantısını ekleyip neyin düzeltilmesi gerektiğini açıklayın. Varsa güncellenmiş resmî bültenin bağlantısını da paylaşın." }
+ContactPrivacy = { other = "Gizlilik talepleri" }
+ContactPrivacyCopy = { other = "Kişisel verilerle ilgili taleplerinizi form veya e-postayla iletin. Yalnızca gerekli bilgileri paylaşın; kişisel bilgileri herkese açık GitHub kayıtlarına yazmayın." }
+ContactTechnical = { other = "Teknik sorunlar" }
+ContactTechnicalCopy = { other = "Görünüm sorunlarını ve geliştirme önerilerinizi GitHub üzerinden bildirebilirsiniz. Herkese açık kayıtlarda kişisel bilgi paylaşmayın." }
+ContactPoliceCopy = { other = "MunichBrief, polisten bağımsız bir projedir. Buradan polise ihbarda bulunamaz veya acil yardım isteyemezsiniz." }
+ContactPoliceLink = { other = "Polisle ilgili konularda resmî polis sitesindeki iletişim bilgilerini kullanın." }
+OpenOfficialPoliceRelease = { other = "Resmî bülten" }
+SiteDescription = { other = "Münih Emniyet Müdürlüğünün (Polizeipräsidium München) yayımladığı bültenlerin Türkçe özetleri." }
+MonitoringCopy = { other = "Siteyi sunmak ve korumak için Cloudflare kullanıyoruz. Cloudflare, IP adresleri dâhil bağlantı verilerini işler ve ziyaret istatistikleri oluşturabilir. Sitenin sorunsuz çalışmasını sağlamak için tuttuğumuz teknik istek kayıtlarını ve toplu performans ölçümlerini 30 gün saklıyoruz." }
+
+CoverageCopy = { other = "Burada yalnızca yayımlanan polis bültenlerinden derlenen olaylar yer alır; tüm olayları kapsayan bir kayıt veya suç istatistiği sunulmaz. Güncellemeler MunichBrief’e gecikmeli yansıyabilir. Olayın tarihi ve saati bültenden alınır; saat belirtilmiş olsa da yaklaşık olabilir." }
+
+VerifyTranslate = { other = "Arka planda doğrulama ve çeviri" }
+
+VerifyTranslateCopy = { other = "Ayrı yapay zekâ kontrolleri, olayın kategorisini ve polisin halktan bilgi isteyip istemediğini yeniden değerlendirir. Bu kontroller çevirilere göre önceliklidir. Her dildeki özet, çevirisi hazır olduğunda yayımlanır. Başarılı kontroller, yayımdan sonra da kategori ve bilgi çağrısı etiketlerini güncelleyebilir." }
+
+[ImpressumTitle]
+other = "Yasal bilgiler"
+
+[PrivacyTitle]
+other = "Gizlilik"
+
+[LegalGermany]
+other = "Almanya"
+
+[ContactForm]
+other = "Mesaj gönderin"
+
+[ContactEmail]
+other = "E-posta adresiniz"
+
+[ContactTopic]
+other = "Konu"
+
+[ContactGeneral]
+other = "Genel soru"
+
+[ContactCorrection]
+other = "Düzeltme"
+
+
+[ContactMessage]
+other = "Mesajınız"
+
+[ContactMessageLimit]
+other = "En fazla 5.000 karakter. Lütfen gereksiz kişisel bilgiler paylaşmayın."
+
+[ContactSend]
+other = "Mesajı gönder"
+
+[ContactReceived]
+other = "Mesajınız alındı. Teşekkür ederim."
+
+[ContactInvalid]
+other = "Lütfen formu kontrol edip tekrar deneyin. Formun süresi dolduysa sayfayı yenileyin."
+
+[ContactRateLimit]
+other = "Çok fazla deneme yaptınız. Lütfen 15 dakika bekleyin."
+
+[ContactEmailInvalid]
+other = "Geçerli bir e-posta adresi girin."
+
+[ContactTopicInvalid]
+other = "Listeden bir konu seçin."
+
+[ContactMessageInvalid]
+other = "En fazla 5.000 karakterlik bir mesaj yazın."
+
+[ContactSaveFailed]
+other = "Mesajınız kaydedilemedi. Lütfen daha sonra tekrar deneyin veya e-posta gönderin."
+
+[ContactUnavailable]
+other = "Form şu anda kullanılamıyor. Lütfen yukarıdaki e-posta adresini kullanın."
+
+[PrivacyLinks]
+other = "Hizmet sağlayıcılar ve şikâyetler"
+
+[ImpressumResponsible]
+other = "Web sitesinden sorumlu kişi"
+
+[PrivacyController]
+other = "Verilerinizden kim sorumlu?"
+
+[PrivacyHosting]
+other = "Barındırma ve yapay zekâ"
+
+[PrivacyCloudflare]
+other = "Cloudflare ve ziyaret ölçümleri"
+
+[PrivacyPreferences]
+other = "Tarayıcı tercihleri"
+
+[PrivacyMonitoring]
+other = "Teknik izleme"
+
+[PrivacyCorrespondence]
+other = "E-posta ve iletişim formu"
+
+[PrivacyRetention]
+other = "Mesajların saklanması ve silinmesi"
+
+[PrivacyPost]
+other = "Posta yoluyla iletişim"
+
+[PrivacySources]
+other = "Polis bültenleri ve kaynak metinler"
+
+[PrivacyRights]
+other = "Haklarınız ve şikâyetler"
+
+[PrivacyControllerCopy]
+other = "MunichBrief’i Almanya’nın Bavyera eyaletinde yaşayan Ege Kocabaş bireysel olarak işletir. Yukarıdaki adres yazışma adresidir. Kişisel verilerinizle ilgili sorularınızı bu adrese veya belirtilen e-posta adresine iletebilirsiniz."
+
+[PrivacyHostingCopy]
+other = "Web sitesi, veritabanı ve tüm yapay zekâ işlemleri, işletmecinin Almanya’daki kendi donanımında çalışır. Kaynak metinler harici bir yapay zekâ sağlayıcısına gönderilmez."
+
+[PrivacyCloudflareCopy]
+other = "Cloudflare, siteyi ziyaretçilere sunmak ve korumak için IP adresleri dâhil bağlantı verilerini işler. Kendi ağı üzerinden ziyaret istatistikleri de oluşturabilir. Web Analytics ayarında AB’deki ziyaretçiler kapsam dışıdır; diğer bölgelerde performans ölçüm kodu otomatik eklenir. Tarayıcının güvenlik kuralları bu kodun çalışmasını engelleyebilir. Cloudflare’ın sitenin sunumu ve güvenliği için yaptığı işlemler bundan ayrıdır. Zaraz onay yönetimi ve Google Tag Gateway etkin değildir. Sunum ve koruma işlemleri, sitenin güvenli çalışmasına yönelik meşru menfaate dayanır (GDPR madde 6(1)(f)). Aşağıdaki sağlayıcı açıklamaları yurt dışına veri aktarımını da ele alır."
+
+[PrivacyPreferencesCopy]
+other = "Dil tercihi bir yıl, yapay zekâ bilgilendirmesinin onayı 30 gün süreyle birinci taraf çerezlerde saklanır. Son uygulanan arama ölçütleri 30 gün boyunca HttpOnly çerezde tutulur; aramayı temizlemek bunları siler. Tema tercihi siz silene kadar tarayıcının yerel depolamasında kalır. Listeye dönüş konumu yalnızca açık tarayıcı sekmesinde tutulur. İletişim formunun güvenlik belirteci en fazla bir saat, alındı bilgisi beş dakika geçerlidir; mesajınızı içermezler. Bu işlevler talep ettiğiniz hizmeti sağlar (TDDDG §25(2)(2); GDPR madde 6(1)(f)). HTMX, localStorage içinde sayfa kopyaları saklamaz. Seçtiğiniz sıralama, bu siteye ait bir çerezde 30 gün boyunca saklanır. Arama terimleri ve filtreler sayfa adresine eklenir; paylaşılan bağlantılarda ve tarayıcı geçmişinde kalabilir."
+
+[PrivacyMonitoringCopy]
+other = "Sitenin güvenilir çalışması için teknik kayıtlarda istek yöntemi, sorgu parametreleri olmadan sayfa yolu, durum, süre ve istek kimlikleri tutulur. Uygulama kayıtlarına mesajlar, e-posta adresleri, çerezler veya ziyaretçilerin IP adresleri yazılmaz. Prometheus ölçümleri ve Loki kayıtları için saklama süresi 30 gün olarak ayarlanmıştır; Grafana bu teknik izleme verilerini gösterir. İletişim denemelerini sınırlandırmak için IP adresinin kendisini kaydetmeden, bu adresten türetilen takma bir kimliği ve deneme sayacını yalnızca uygulamanın belleğinde tutarız. Sınır, ilk denemeden itibaren 15 dakika geçerlidir. Süresi dolan sayaçlar bir sonraki iletişim denemesinde veya uygulama yeniden başlatıldığında silinir; yeni bir deneme yapılmazsa bellekte daha uzun kalabilirler. Amaç güvenlik ve güvenilirliktir (GDPR madde 6(1)(f)). Cloudflare’ın saklama süreleri ayrıdır."
+
+[PrivacyCorrespondenceCopy]
+other = "Bize yazdığınızda e-posta adresinizi, seçtiğiniz konuyu ve mesajınızı sorunuza yanıt vermek için işleriz (GDPR madde 6(1)(f)); gerektiğinde yasal yükümlülükler de geçerlidir (6(1)(c)). Form önce mesajınızı özel bir veritabanı gelen kutusuna kaydeder. SMTP2GO, contact@munichbrief.de adresine bildirim gönderir; Cloudflare Email Routing bunu Gmail gelen kutusuna iletir. Yanıtlar Apple Mail’de yazılır ve SMTP2GO üzerinden gönderilir. Mesajlar yapay zekâya gönderilmez. Sağlayıcı açıklamaları AEA dışındaki işlemleri de kapsar."
+
+[PrivacyRetentionCopy]
+other = "Yönetici gelen kutusundaki mesajlar, konu çözüldü olarak işaretlendikten 90 gün sonra otomatik silinir. Konu yeniden açılırsa bu süre iptal edilir. Açık talepler gözden geçirilir ve ihtiyaç sürdükçe saklanır. Devam eden bir uyuşmazlık veya yasal yükümlülük varsa, gerekçesi ve inceleme tarihi kaydedilerek mesaj tutulabilir. Gmail kopyaları ve gönderilen yanıtlar ayrıca gözden geçirilip silinir. Sağlayıcıların gönderim kayıtları kendi saklama kurallarına tabidir."
+
+[PrivacyPostCopy]
+other = "Yazışma adresine gelen mektuplar COCENTER / anschrift.net tarafından teslim alınır, açılır ve işletmecinin incelemesi için taranır. Bu işlem yazışmaları alabilmeye yönelik meşru menfaate veya yasal yükümlülüğe dayanır (GDPR madde 6(1)(f) veya (c)). Sağlayıcının açıklamasına göre kâğıt asıllar altı ay tutulur; taramalar, saklamayı gerektiren bir neden yoksa hesap kapatılana veya silme talebi iletilene kadar kalır. Ayrıntılar sağlayıcının gizlilik açıklamasındadır."
+
+[PrivacySourcesCopy]
+other = "Özetler, Polizeipräsidium München’in kamuya açık polis bültenlerinden hazırlanır. Almanca kaynak metinler ve RSS metin kayıtları; işleme, kaynak değişikliklerini denetleme ve erişimi kısıtlı inceleme amacıyla saklanır. Bu kayıtlar için şu anda belirlenmiş bir silme süresi yoktur. Herkese açık sayfalarda saklanan asıl metinler yerine özetler gösterilir. Bir haber sizi ilgilendiriyorsa veya hata içeriyorsa lütfen bize ulaşın. Düzeltme ve kişisel verilerle ilgili talepleri ayrı ayrı değerlendiririz."
+
+[PrivacyRightsCopy]
+other = "Geçerli kurallara bağlı olarak verilerinize erişme, düzeltme, silme, işlemeyi kısıtlama, meşru menfaate dayalı işlemeye itiraz etme ve uygun durumlarda verileri taşıma haklarınız olabilir. İletişim kurmak için hesap gerekmez. GDPR kapsamındaki hak talepleri normalde bir ay içinde yanıtlanır; yasal istisnalar ve editoryal kurallar sonucu etkileyebilir. Bavyera’da kamu dışı alandaki veri koruma konularında BayLDA’ya veya başka bir yetkili denetim makamına başvurabilirsiniz. Editoryal şikâyetlerde farklı kurallar geçerli olabilir."
+
+[ImpressumTitleDescription]
+other = "MunichBrief’in işletmecisi ve iletişim bilgileri."
+
+[PrivacyTitleDescription]
+other = "MunichBrief’in site verilerini, yazışmaları ve kamuya açık kaynakları nasıl işlediği."
+
+[ImpressumResponsibleCopy]
+other = "web sitesinden sorumludur. Adres yukarıda belirtilmiştir. MunichBrief, polisten bağımsızdır."
+
+[ImpressumContactCopy]
+other = "Sorularınız için iletişim sayfamızı ziyaret edebilirsiniz."
+
+[ContactStorage]
+other = "Mesajınızın alındığını onaylamadan önce onu özel bir gelen kutusuna kaydederiz. Çözüldü olarak işaretlenen mesajlar bu kutudan 90 gün sonra silinir."
+
+[ContactClosed]
+other = "İletişim formu kullanıma kapatıldı. Mesajınız gönderilmedi. Lütfen contact@munichbrief.de adresine e-posta gönderin."
+
+[ContactKeepDraft]
+other = "Aşağıdaki bilgilerinizi kopyalayıp e-postanıza ekleyebilirsiniz. Bu taslak gelen kutusuna kaydedilmedi."
+
+[PrivacyRequired]
+other = "Hangi bilgileri paylaşmalısınız?"
+
+[PrivacyRequiredCopy]
+other = "MunichBrief’i hesap açmadan ve bizimle iletişime geçmeden okuyabilirsiniz. İletişim formunu kullanmanız yasal veya sözleşmeden doğan bir zorunluluk değildir. Talebinizi değerlendirebilmemiz ve yanıtlayabilmemiz için formda e-posta adresinizi, konuyu ve mesajınızı belirtmeniz gerekir. Bu alanlar doldurulmadan form gönderilemez. Dilerseniz doğrudan e-posta da yazabilirsiniz. Lütfen yalnızca talebiniz için gerekli kişisel bilgileri paylaşın."
+
+[PrivacySourcePeople]
+other = "Haberlerde adı geçen veya tarif edilen kişiler"
+
+[PrivacySourcePeopleCopy]
+other = "Olaylara karışan ya da olaylardan etkilenen kişiler hakkındaki bilgiler doğrudan bu kişilerden değil, kamuya açık polis duyurularından alınır. Duyurunun içeriğine göre kişi tariflerini, olayla bağlantılarını, suç iddialarını, yaralanmaları, olayın yerini ve zamanını içerebilir. Yayımlanan özetler herkese açıktır ve arama motorlarında yer alabilir. İletişim mesajları ve özel gelen kutusu yayımlanmaz."
+
+[PrivacyAutomation]
+other = "Yapay zekâ ve otomatik kararlar"
+
+[PrivacyAutomationCopy]
+other = "Yapay zekâ, olay bilgilerini çıkarır, özetler, çevirir ve kontrol eder. Ziyaretçiler hakkında GDPR’nin 22. maddesi kapsamında hukuki veya benzer ölçüde önemli sonuçlar doğuran kararlar almak için kullanılmaz. Otomatik kontroller, bir olay haberinin veya çevirisinin yayımlanmasını engelleyebilir. Bu nedenle bazı haberler her dilde bulunmayabilir."
+
+[PrivacyObjection]
+other = "İtiraz hakkınız"
+
+[PrivacyObjectionCopy]
+other = "GDPR’nin 21. maddesinin geçerli olduğu durumlarda, meşru menfaate dayalı veri işlemeye kendi durumunuzdan kaynaklanan nedenlerle dilediğiniz zaman itiraz edebilirsiniz. İtirazınızı yukarıdaki iletişim adresine gönderin. Haklarınıza ağır basan zorlayıcı meşru gerekçeler ortaya koyamadığımız veya hukuki taleplerin ileri sürülmesi, kullanılması ya da savunulması için gerekli olmadığı sürece ilgili veri işlemeyi durdururuz."
+
+[LegalLastUpdated]
+other = "Son güncelleme"
+
+[ImpressumRequests]
+other = "İletişim ve haberlerle ilgili talepler"
+
+[ImpressumRequestsCopy]
+other = "Bir haber sizi ilgilendiriyorsa düzeltme, kaldırma veya cevap hakkı talebinde bulunabilirsiniz. Lütfen sayfanın bağlantısını ve ilgili bölümü belirtin. Yasanın imzalı ve yazılı başvuru gerektirdiği durumlarda posta adresini kullanın; yalnızca iletişim formunu göndermek bu koşulu karşılamaz."
+
+[LicensesTitle]
+other = "Katkılar ve lisanslar"
+
+[LicensesDescription]
+other = "MunichBrief’te kullanılan yazılımlar, yazı tipleri, modeller ve veri kaynakları."
+
+[LicensesProject]
+other = "MunichBrief kaynak kodu"
+
+[LicensesSoftware]
+other = "Yazılımlar"
+
+[LicensesFonts]
+other = "Yazı tipleri"
+
+[LicensesAssets]
+other = "Görseller ve simgeler"
+
+[LicensesData]
+other = "Veri kaynakları"
+
+[LicensesModels]
+other = "Model bilgileri"
+
+[LicensesService]
+other = "Yapay zekâ çalıştırma yazılımı"
+
+[LicensesLicense]
+other = "Lisans"
+
+[LicensesSource]
+other = "Orijinal kaynak"
+
+[LicensesRead]
+other = "Lisansı ve bildirimleri oku"
+
+[LicensesDownload]
+other = "Tam metni indir"
+
+[LicensesIntro]
+other = "MunichBrief’in kendi kaynak kodu MIT lisansıyla sunulur. Üçüncü taraf bileşenler ve kaynak içerikler kendi kullanım koşullarına tabidir."
+
+[LicensesOriginal]
+other = "Lisans metinleri ve telif hakkı bildirimleri orijinal dillerinde yer alır."
+
+[LicensesModelIntro]
+other = "Bu bilgiler, MunichBrief için incelenen modellerin koşullarını açıklar; şu anda kullanılan modellerin listesi değildir. Her haberin yapay zekâ işlem bilgileri ayrıca korunur. Model lisansları, oluşturulan özetlere kendiliğinden uygulanmaz."
+
+[LicensesIconChanges]
+other = "Yapay zekâ simgeleri: © Avrupa Birliği. MunichBrief, açık tema sürümüne gri arka plan ve çerçeve eklemiştir. Koyu tema sürümünde orijinal çizim kullanılır. Simgelerin kullanılması AB’nin projeyi desteklediği anlamına gelmez."
+
+[LicensesDataChanges]
+other = "Coğrafi veriler Münih ve çevresiyle sınırlandırılır; yer adları eşleştirme için standartlaştırılır. Özgün veri kümelerine bağlantılardaki sağlayıcılardan ulaşabilirsiniz. Polis bültenleri ayrı kaynaklardır ve MunichBrief’in MIT lisansı kapsamında değildir."
+
+[PagePosition]
+other = "Sayfa {{.Page}} / {{.TotalPages}}"
+
+[ModelVariant]
+other = "Model varyantı"
+

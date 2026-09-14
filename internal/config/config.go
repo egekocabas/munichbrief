@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/netip"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -37,32 +38,38 @@ const (
 
 // Config contains the application runtime settings.
 type Config struct {
-	Address                  string
-	MetricsAddress           string
-	DatabasePath             string
-	GazetteerEnabled         bool
-	GazetteerDatabasePath    string
-	GazetteerRefreshInterval time.Duration
-	GazetteerHTTPTimeout     time.Duration
-	SourceMode               string
-	PageSize                 int
-	FeedURL                  string
-	UserAgent                string
-	HTTPTimeout              time.Duration
-	RefreshAfter             time.Duration
-	AIEnabled                bool
-	OllamaBaseURL            string
-	AIInterval               time.Duration
-	AITimeout                time.Duration
-	AIContextSize            int
-	AIImmediate              bool
-	AIWindowStart            time.Duration
-	AIWindowEnd              time.Duration
-	PresentationMode         string
-	SecureCookies            bool
-	AdminEnabled             bool
-	PublicHosts              []string
-	CanonicalOrigin          string
+	// ContactEnabled is a legacy opt-in prerequisite check. Saved admin controls
+	// determine receipt and sending when protected admin and a secret exist.
+	ContactEnabled                         bool
+	ContactSecret, SMTP2GOAPIKey           string
+	ContactTrustedProxies                  []netip.Prefix
+	ContactDailyLimit, ContactMonthlyLimit int
+	Address                                string
+	MetricsAddress                         string
+	DatabasePath                           string
+	GazetteerEnabled                       bool
+	GazetteerDatabasePath                  string
+	GazetteerRefreshInterval               time.Duration
+	GazetteerHTTPTimeout                   time.Duration
+	SourceMode                             string
+	PageSize                               int
+	FeedURL                                string
+	UserAgent                              string
+	HTTPTimeout                            time.Duration
+	RefreshAfter                           time.Duration
+	AIEnabled                              bool
+	OllamaBaseURL                          string
+	AIInterval                             time.Duration
+	AITimeout                              time.Duration
+	AIContextSize                          int
+	AIImmediate                            bool
+	AIWindowStart                          time.Duration
+	AIWindowEnd                            time.Duration
+	PresentationMode                       string
+	SecureCookies                          bool
+	AdminEnabled                           bool
+	PublicHosts                            []string
+	CanonicalOrigin                        string
 }
 
 // Load reads configuration from the environment and applies local-safe defaults.
@@ -87,6 +94,37 @@ func Load() (Config, error) {
 		AIContextSize:            defaultAIContext,
 		AIImmediate:              defaultAIImmediate,
 		SecureCookies:            defaultSecureCookie,
+	}
+	cfg.ContactSecret = os.Getenv("MUNICHBRIEF_CONTACT_SECRET")
+	cfg.SMTP2GOAPIKey = os.Getenv("MUNICHBRIEF_SMTP2GO_API_KEY")
+	cfg.ContactDailyLimit, cfg.ContactMonthlyLimit = 20, 300
+	var contactErr error
+	if raw := os.Getenv("MUNICHBRIEF_CONTACT_ENABLED"); raw != "" {
+		cfg.ContactEnabled, contactErr = strconv.ParseBool(raw)
+		if contactErr != nil {
+			return Config{}, errors.New("invalid contact enabled setting")
+		}
+	}
+	for name, target := range map[string]*int{"MUNICHBRIEF_CONTACT_DAILY_LIMIT": &cfg.ContactDailyLimit, "MUNICHBRIEF_CONTACT_MONTHLY_LIMIT": &cfg.ContactMonthlyLimit} {
+		if raw := os.Getenv(name); raw != "" {
+			n, e := strconv.Atoi(raw)
+			if e != nil || n < 1 || n > 100000 {
+				return Config{}, fmt.Errorf("invalid %s", name)
+			}
+			*target = n
+		}
+	}
+	for _, raw := range strings.Split(os.Getenv("MUNICHBRIEF_CONTACT_TRUSTED_PROXIES"), ",") {
+		if raw = strings.TrimSpace(raw); raw != "" {
+			prefix, e := netip.ParsePrefix(raw)
+			if e != nil {
+				return Config{}, errors.New("invalid contact trusted proxy CIDR")
+			}
+			cfg.ContactTrustedProxies = append(cfg.ContactTrustedProxies, prefix)
+		}
+	}
+	if cfg.ContactEnabled && len(cfg.ContactSecret) < 32 {
+		return Config{}, errors.New("contact requires a secret of at least 32 bytes")
 	}
 	cfg.GazetteerEnabled = cfg.SourceMode == "live"
 	var err error
@@ -195,6 +233,9 @@ func Load() (Config, error) {
 	ollamaURL, err := url.Parse(cfg.OllamaBaseURL)
 	if err != nil || (ollamaURL.Scheme != "http" && ollamaURL.Scheme != "https") || ollamaURL.Host == "" || ollamaURL.User != nil || ollamaURL.RawQuery != "" || ollamaURL.Fragment != "" {
 		return Config{}, fmt.Errorf("MUNICHBRIEF_OLLAMA_BASE_URL must be an absolute HTTP(S) URL without credentials, query, or fragment")
+	}
+	if cfg.ContactEnabled && !cfg.AdminEnabled {
+		return Config{}, errors.New("contact inbox requires protected administration")
 	}
 	return cfg, nil
 }

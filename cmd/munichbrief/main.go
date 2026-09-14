@@ -16,8 +16,10 @@ import (
 	"time"
 
 	"github.com/egekocabas/munichbrief/internal/config"
+	"github.com/egekocabas/munichbrief/internal/contact"
 	"github.com/egekocabas/munichbrief/internal/gazetteer"
 	"github.com/egekocabas/munichbrief/internal/ingest"
+	"github.com/egekocabas/munichbrief/internal/licensing"
 	"github.com/egekocabas/munichbrief/internal/observability"
 	"github.com/egekocabas/munichbrief/internal/processing"
 	"github.com/egekocabas/munichbrief/internal/source"
@@ -49,6 +51,12 @@ func main() {
 }
 
 func run(ctx context.Context, logger *slog.Logger, arguments []string) error {
+	if len(arguments) > 0 && arguments[0] == "licenses" {
+		if len(arguments) != 1 {
+			return fmt.Errorf("usage: munichbrief licenses")
+		}
+		return licensing.WriteNotices(os.Stdout)
+	}
 	cfg, err := config.Load()
 	if err != nil {
 		return err
@@ -189,7 +197,10 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 	}
 	processor := webProcessor(aiWorker)
 
+	contactMetrics := &contact.Metrics{}
+	metrics.Contact = contactMetrics
 	webServer, err := web.NewWithOptions(database, logger, web.Options{
+		ContactDailyLimit: cfg.ContactDailyLimit, ContactMonthlyLimit: cfg.ContactMonthlyLimit, ContactEnabled: cfg.ContactEnabled, ContactSecret: cfg.ContactSecret, ContactTrustedProxies: cfg.ContactTrustedProxies, ContactMetrics: contactMetrics, ContactNotificationsConfigured: cfg.SMTP2GOAPIKey != "",
 		PageSize: cfg.PageSize, SourceMode: cfg.SourceMode, PresentationMode: cfg.PresentationMode,
 		SecureCookies: cfg.SecureCookies,
 		AdminEnabled:  cfg.AdminEnabled, PublicHosts: cfg.PublicHosts, CanonicalOrigin: cfg.CanonicalOrigin, Processor: processor,
@@ -206,6 +217,14 @@ func runServer(ctx context.Context, logger *slog.Logger, cfg config.Config) erro
 	serveErrors := make(chan error, 2)
 	go serve(httpServer, "reader", cfg.Address, cfg.SourceMode, logger, serveErrors)
 	go serve(metricsServer, "metrics", cfg.MetricsAddress, cfg.SourceMode, logger, serveErrors)
+	{
+		var sender contact.Sender
+		if cfg.AdminEnabled && len(cfg.ContactSecret) >= 32 && cfg.SMTP2GOAPIKey != "" {
+			sender = contact.SMTP2GO{APIKey: cfg.SMTP2GOAPIKey}
+		}
+		contactWorker := &contact.Worker{Store: database, Sender: sender, Daily: cfg.ContactDailyLimit, Monthly: cfg.ContactMonthlyLimit, Metrics: contactMetrics, Logger: logger}
+		go contactWorker.Run(ctx)
+	}
 	if liveSyncer != nil {
 		go runLiveSyncLoop(ctx, berlinLocation, liveSyncer, metrics, logger)
 	}
@@ -456,13 +475,33 @@ func runBackup(ctx context.Context, cfg config.Config, arguments []string, outpu
 	flags := flag.NewFlagSet("backup", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	destination := flags.String("output", "", "backup destination, or - for stdout")
+	databaseKind := flags.String("database", "main", "database to back up: main or gazetteer")
 	if err := flags.Parse(arguments); err != nil {
 		return fmt.Errorf("parse backup arguments: %w", err)
 	}
 	if *destination == "" {
 		return errors.New("backup requires --output PATH (or --output - for stdout)")
 	}
-	database, err := store.Open(ctx, cfg.DatabasePath)
+	if flags.NArg() != 0 {
+		return errors.New("backup does not accept positional arguments")
+	}
+	var database interface {
+		Backup(context.Context, string) error
+		Close() error
+	}
+	var err error
+	switch *databaseKind {
+	case "main":
+		database, err = store.Open(ctx, cfg.DatabasePath)
+	case "gazetteer":
+		// A disabled or missing gazetteer must not become an empty successful backup.
+		if _, err := os.Stat(cfg.GazetteerDatabasePath); err != nil {
+			return fmt.Errorf("inspect gazetteer database: %w", err)
+		}
+		database, err = gazetteer.Open(ctx, cfg.GazetteerDatabasePath)
+	default:
+		return fmt.Errorf("unsupported backup database %q: use main or gazetteer", *databaseKind)
+	}
 	if err != nil {
 		return err
 	}
@@ -607,11 +646,13 @@ func liveSyncRetryDelay(failedAttempts int) time.Duration {
 
 func printUsage(writer io.Writer) {
 	fmt.Fprintln(writer, "MunichBrief commands:")
+	fmt.Fprintln(writer, "  munichbrief licenses              Print bundled licences without configuration or network access")
 	fmt.Fprintln(writer, "  munichbrief serve                 Run the reader and scheduler (default)")
 	fmt.Fprintln(writer, "  munichbrief migrate               Apply and verify database migrations")
 	fmt.Fprintln(writer, "  munichbrief sync                  Run one live synchronization")
 	fmt.Fprintln(writer, "  munichbrief backup --output PATH  Create a consistent SQLite backup")
 	fmt.Fprintln(writer, "  munichbrief backup --output -     Stream a consistent backup to stdout")
+	fmt.Fprintln(writer, "  munichbrief backup --database gazetteer --output -  Stream a gazetteer backup")
 	fmt.Fprintln(writer, "  munichbrief gazetteer refresh     Refresh and activate place-name data")
 	fmt.Fprintln(writer, "  munichbrief gazetteer status      Show the active gazetteer generation")
 	fmt.Fprintln(writer, "  munichbrief ai-process --incident ID  Request immediate processing for one incident")

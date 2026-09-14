@@ -44,6 +44,9 @@ func (s *Store) recoverInterruptedRefreshes(ctx context.Context, at time.Time) e
 	}
 	defer tx.Rollback()
 	message := "gazetteer refresh interrupted before completion"
+	if _, err := tx.ExecContext(ctx, `UPDATE gazetteer_state SET next_refresh_at=? WHERE singleton=1 AND EXISTS (SELECT 1 FROM gazetteer_refresh_runs WHERE status='running')`, formatTime(at.Add(5*time.Minute))); err != nil {
+		return err
+	}
 	formatted := formatTime(at)
 	if _, err := tx.ExecContext(ctx, `UPDATE gazetteer_sources SET last_checked_at=?,last_failure_at=?,last_error=?,consecutive_failures=consecutive_failures+1,last_failure_run_id=(SELECT attempt.run_id FROM gazetteer_refresh_sources attempt JOIN gazetteer_refresh_runs run ON run.id=attempt.run_id WHERE run.status='running' AND attempt.status='fetching' AND attempt.source_key=gazetteer_sources.source_key ORDER BY attempt.run_id DESC LIMIT 1) WHERE EXISTS (SELECT 1 FROM gazetteer_refresh_sources attempt JOIN gazetteer_refresh_runs run ON run.id=attempt.run_id WHERE run.status='running' AND attempt.status='fetching' AND attempt.source_key=gazetteer_sources.source_key)`, formatted, formatted, message); err != nil {
 		return err
@@ -203,7 +206,7 @@ func (s *Store) RefreshHistory(ctx context.Context, page int) (RefreshHistoryPag
 	return result, nil
 }
 
-const refreshRunSelect = `SELECT run.id,run.trigger_kind,run.status,run.started_at,COALESCE(run.completed_at,''),run.duration_seconds,COALESCE(run.active_generation_before,0),COALESCE(run.active_generation_after,0),run.entry_count,run.changed,run.all_not_modified,run.failure_stage,run.failed_source_key,run.error_message,COUNT(source.source_key),COALESCE(SUM(CASE WHEN source.status IN ('succeeded','not_modified','failed','not_run','interrupted') THEN 1 ELSE 0 END),0),COALESCE(SUM(CASE WHEN source.status='failed' THEN 1 ELSE 0 END),0) FROM gazetteer_refresh_runs run LEFT JOIN gazetteer_refresh_sources source ON source.run_id=run.id GROUP BY run.id`
+const refreshRunSelect = `SELECT run.id,run.trigger_kind,run.status,run.started_at,COALESCE(run.completed_at,''),run.duration_seconds,COALESCE(run.active_generation_before,0),COALESCE(run.active_generation_after,0),run.entry_count,run.changed,run.all_not_modified,run.failure_stage,run.failed_source_key,run.error_message,COUNT(source.source_key),COALESCE(SUM(CASE WHEN source.status IN ('succeeded','not_modified') THEN 1 ELSE 0 END),0),COALESCE(SUM(CASE WHEN source.status='failed' THEN 1 ELSE 0 END),0),COALESCE(SUM(CASE WHEN source.status='not_run' THEN 1 ELSE 0 END),0),COALESCE(SUM(CASE WHEN source.status='interrupted' THEN 1 ELSE 0 END),0) FROM gazetteer_refresh_runs run LEFT JOIN gazetteer_refresh_sources source ON source.run_id=run.id GROUP BY run.id`
 
 type rowScanner interface{ Scan(...any) error }
 
@@ -212,7 +215,7 @@ func scanRefreshRun(row rowScanner) (RefreshRunStatus, error) {
 	var started, completed string
 	var durationSeconds float64
 	var changed, notModified sql.NullBool
-	err := row.Scan(&result.ID, &result.Trigger, &result.Status, &started, &completed, &durationSeconds, &result.ActiveGenerationBefore, &result.ActiveGenerationAfter, &result.EntryCount, &changed, &notModified, &result.FailureStage, &result.FailedSourceKey, &result.ErrorMessage, &result.SourcesTotal, &result.SourcesCompleted, &result.SourcesFailed)
+	err := row.Scan(&result.ID, &result.Trigger, &result.Status, &started, &completed, &durationSeconds, &result.ActiveGenerationBefore, &result.ActiveGenerationAfter, &result.EntryCount, &changed, &notModified, &result.FailureStage, &result.FailedSourceKey, &result.ErrorMessage, &result.SourcesTotal, &result.SourcesCompleted, &result.SourcesFailed, &result.SourcesSkipped, &result.SourcesInterrupted)
 	if err != nil {
 		return result, err
 	}

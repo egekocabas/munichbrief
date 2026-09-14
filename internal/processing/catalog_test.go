@@ -72,3 +72,25 @@ func TestOllamaModelCatalogFailsClosed(t *testing.T) {
 func catalogResponse(status int, body string) *http.Response {
 	return &http.Response{StatusCode: status, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body))}
 }
+
+func TestCatalogueDigestSnapshotIsolationAndConflicts(t *testing.T) {
+	digest := strings.Repeat("a", 64)
+	transport := roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return catalogResponse(http.StatusOK, `{"models":[{"name":"model","digest":"`+digest+`"},{"name":"conflict","digest":"one"},{"name":"conflict","digest":"two"},{"name":"missing"}]}`), nil
+	})
+	c, err := NewOllamaModelCatalog("http://ollama.test", time.Second, &http.Client{Transport: transport})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := c.Refresh(context.Background())
+	if s.Digests["model"] != digest || s.Digests["conflict"] != "" || s.Digests["missing"] != "" {
+		t.Fatal("unsafe digest association", s.Digests)
+	}
+	s.Digests["model"] = "changed"
+	if c.Snapshot().Digests["model"] != digest {
+		t.Fatal("mutable digest cache")
+	}
+	if !c.Snapshot().Has("missing") {
+		t.Fatal("licence metadata changed existing model availability")
+	}
+}

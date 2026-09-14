@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/BurntSushi/toml"
 	langregistry "github.com/egekocabas/munichbrief/internal/languages"
@@ -20,7 +21,31 @@ type localization struct {
 	bundle *i18n.Bundle
 }
 
+// Embedded catalogues and the standard registry are immutable for this binary.
+// Custom registries still validate independently (including synthetic tests).
+var standardLocalization = sync.OnceValues(func() (*localization, error) {
+	return buildLocalization(langregistry.Registered())
+})
+
 func newLocalization(languages []readerLanguage) (*localization, error) {
+	standard := langregistry.Registered()
+	same := len(languages) == len(standard)
+	if same {
+		for i, l := range languages {
+			r := standard[i]
+			if l.Code != r.Code || l.Tag != r.Tag || l.Catalog != r.Catalog || l.Canonical != r.Canonical || l.SwitchMessageID != r.SwitchMessageID || l.StepMessageID != r.StepMessageID {
+				same = false
+				break
+			}
+		}
+	}
+	if same {
+		return standardLocalization()
+	}
+	return buildLocalization(languages)
+}
+
+func buildLocalization(languages []readerLanguage) (*localization, error) {
 	if len(languages) == 0 {
 		return nil, fmt.Errorf("at least one reader language is required")
 	}
@@ -156,4 +181,12 @@ func messageIDDifference(left, right map[string]struct{}) []string {
 	}
 	sort.Strings(difference)
 	return difference
+}
+
+func (l *localization) Format(locale, id string, data any) string {
+	value, err := i18n.NewLocalizer(l.bundle, locale).Localize(&i18n.LocalizeConfig{MessageID: id, TemplateData: data})
+	if err != nil {
+		return "[" + id + "]"
+	}
+	return value
 }

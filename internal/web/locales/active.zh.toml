@@ -1,4 +1,3 @@
-SiteDescription = { other = "通过官方慕尼黑警方通报的 AI 摘要及时了解情况。" }
 BrandTagline = { other = "慕尼黑一览" }
 SocialImageAlt = { other = "以慕尼黑奥林匹克公园为背景的 MunichBrief 预览图。" }
 SocialIncidentLabel = { other = "事件" }
@@ -17,15 +16,14 @@ AIGeneratedContent = { other = "AI 生成的内容" }
 AIFixtureLabelPreview = { other = "标签预览——此合成测试内容尚未经过 AI 处理" }
 AIDisclosureTitle = { other = "AI 生成的内容" }
 AIDisclosureFixtureCopy = { other = "本地预览：此页面使用合成测试内容。" }
-AIDisclosureCopy = { other = "MunichBrief 使用本地运行的 AI，根据慕尼黑警方官方通报生成标题、摘要、译文、类别和结构化信息，例如所报告的区域、时间以及警方是否请求公众协助。AI 生成或推断的信息可能有误，原通报更新后也可能过时。每个事件页面都会标明并链接到警方官方来源；权威信息请以该来源为准。MunichBrief 是独立项目，与巴伐利亚警方无隶属关系。在未经依法证明有罪之前，所有被提及者均应被推定无罪。" }
+AIDisclosureCopy = { other = "标题、摘要、翻译和事件详情由人工智能生成，可能有误，也可能未反映最新更新。请通过链接查看官方通报核实信息。MunichBrief 独立于警方；所有涉事者均适用无罪推定原则。" }
 AIDisclosurePreferenceCopy = { other = "选择“知道了”后，此提示将被记住 30 天。" }
 AIDisclosureLearnMore = { other = "有关 MunichBrief 及其工作方式的更多信息，请参阅“关于”页面。" }
 AIDisclosureGotIt = { other = "知道了" }
 AITransparencyEU = { other = "AI 透明度与欧盟指南" }
-AITransparencyEUCopy = { other = "MunichBrief 使用欧盟“完全由 AI 生成”标签，因为欧盟委员会指南明确将 AI 生成的新闻摘要列为适用场景。可见标签和机器可读的来源信息有助于提高透明度，但使用该图标本身并不证明符合法律要求，也不表示 MunichBrief 已签署自愿性的《行为准则》。" }
+AITransparencyEUCopy = { other = "人工智能标签用于标明由人工智能生成的标题、摘要和翻译。每条通报的页面还提供所用模型和处理步骤的信息。" }
 EUIconGuidance = { other = "欧盟图标指南" }
 EUCodePractice = { other = "欧盟行为准则" }
-Footer = { other = "MunichBrief 独立于巴伐利亚警方。不使用分析工具、用户账户或广告。" }
 Built = { other = "构建" }
 Language = { other = "语言" }
 German = { other = "德语" }
@@ -43,8 +41,7 @@ SwitchToSpanish = { other = "切换至西班牙语版本" }
 SwitchToFrench = { other = "切换至法语版本" }
 HeroEyebrowFixture = { other = "本地原型" }
 HeroEyebrowLive = { other = "慕尼黑警方通报" }
-HeroTitle = { other = "慕尼黑警方最新通报的事件" }
-HeroCopy = { other = "根据警方官方通报整理的清晰本地事件概览。" }
+HeroTitle = { other = "慕尼黑，简明速览。" }
 FixtureIncidents = { other = "合成测试通报" }
 LatestIncidents = { other = "最新事件" }
 Reports = { other = "{{.Count}} 条通报" }
@@ -52,8 +49,6 @@ ShownTotal = { other = "显示 {{.Shown}} 条 / 共 {{.Total}} 条" }
 Report = { other = "警方通报" }
 SourceMetadata = { other = "来源元数据" }
 ReadIncident = { other = "阅读通报" }
-OpenOfficialSource = { other = "打开官方来源" }
-OpenOfficialPoliceRelease = { other = "打开警方官方通报" }
 Newer = { other = "较新" }
 Older = { other = "较早" }
 Page = { other = "第" }
@@ -141,9 +136,7 @@ Running = { other = "正在生成 AI 摘要与翻译" }
 Retrying = { other = "AI 暂时不可用；已安排重试" }
 NeedsReview = { other = "AI 输出需要审查" }
 OriginalShown = { other = "当前显示德语原始通报。" }
-AboutTitle = { other = "MunichBrief 的工作方式" }
 Methodology = { other = "关于 MunichBrief" }
-AboutIntro = { other = "MunichBrief 将慕尼黑警方官方通报转化为多种读者语言的清晰结构化事件摘要。" }
 FromReleaseToIncident = { other = "从通报到事件" }
 Discover = { other = "发现" }
 DiscoverCopy = { other = "新通报仅通过慕尼黑警方官方 RSS 源发现。" }
@@ -151,22 +144,314 @@ Organize = { other = "整理" }
 OrganizeCopy = { other = "包含多则报告的通报按官方报告编号拆分；单独发布的报告仍保持独立。" }
 Summarize = { other = "摘要" }
 SummarizeCopy = { other = "本地 AI 模型提取类别、地点、日期和公众协助请求等信息，然后生成尽量减少个人数据的德语摘要。" }
-TranslatePublish = { other = "翻译与发布" }
-TranslatePublishCopy = { other = "通过自动处理检查的德语摘要会被翻译成可用的读者语言。只有处理流程成功完成后，公共页面才会显示 AI 生成的内容。" }
+TranslatePublish = { other = "先发布德语摘要" }
+TranslatePublishCopy = { other = "德语摘要通过初步自动检查后便会发布，无需等待翻译或后续核查完成。" }
 AccuracyOfficialInformation = { other = "准确性与官方信息" }
 AccuracyOfficialInformationCopy = { other = "AI 生成的摘要和提取的信息可能有误。警方通报可能在发布后更新。最新官方信息始终具有权威性，并适用无罪推定原则。" }
 PrivacyDataHandling = { other = "隐私与数据处理" }
-PrivacyCopy = { other = "MunichBrief 不设账户，不使用分析工具或广告。一个必要 Cookie 会将所选语言保存一年。选择“知道了”后，第一方偏好 Cookie 会将 AI 提示记住 30 天。所选配色主题仅保存在您的浏览器中。" }
-DataHandlingCopy = { other = "提取的德语来源文本存储在本地。受限审查模式可显示原文和处理状态以便质量控制；公共模式不会显示已存储的原文。" }
-IndependenceLegalReview = { other = "独立性与法律审查" }
-IndependenceLegalReviewCopy = { other = "MunichBrief 独立于巴伐利亚警方。技术保障不能替代法律审查。数据保留、合法依据、与违法行为有关的数据及适用的新闻业例外均需持续审查。" }
-ContactHeading = { other = "问题、更正或反馈" }
-ContactPublicLead = { other = "发现错误或有建议？" }
-ContactIssueLink = { other = "在 GitHub 上提交问题" }
-ContactPrivateLead = { other = "如有隐私相关问题或任何不宜公开分享的事项，请发送电子邮件至" }
+PrivacyCopy = { other = "无需账号，也没有广告。浏览器会记住语言选择一年，并保留已关闭的人工智能提示和已应用的搜索条件30天。搜索条件通过本站 cookie 传送。配色主题保留在浏览器中，直到你将其清除。 您选择的时间排序方式会保存在本站的 Cookie 中，有效期为 30 天。 所选筛选条件包含在页面网址中，可通过链接分享搜索。" }
+DataHandlingCopy = { other = "德语原文会保留用于处理和内部受限审核。公开页面展示由这些原文生成的摘要。" }
+AboutIndependence = { other = "独立性" }
+AboutIndependenceCopy = { other = "MunichBrief 是一个独立项目，与巴伐利亚警方及其他政府机构无隶属或关联关系，也不代表这些机构发声。" }
+ContactHeading = { other = "联系我们" }
 SwitchToRomanian = { other = "切换到罗马尼亚语版本" }
 SwitchToPolish = { other = "切换到波兰语版本" }
 SwitchToRussian = { other = "切换到俄语版本" }
 RomanianTranslationStep = { other = "罗马尼亚语翻译" }
 PolishTranslationStep = { other = "波兰语翻译" }
 RussianTranslationStep = { other = "俄语翻译" }
+ViewOrder = { other = "排列方式" }
+ByPublication = { other = "按发布日期" }
+ByIncident = { other = "按事件日期" }
+SearchFilters = { other = "搜索与筛选" }
+SearchText = { other = "搜索通报" }
+SearchPlaceholder = { other = "输入主题、地点或通报编号" }
+AllCategories = { other = "所有类别" }
+AnyAssistance = { other = "所有通报" }
+AssistanceYes = { other = "警方征集线索" }
+AssistanceNo = { other = "未征集线索" }
+DateType = { other = "日期筛选依据" }
+PublishedDate = { other = "发布日期" }
+IncidentDate = { other = "事件日期" }
+DateFrom = { other = "开始日期" }
+DateTo = { other = "结束日期" }
+ApplySearch = { other = "应用" }
+SearchRemembered = { other = "复制页面网址即可分享此搜索。此浏览器会记住搜索条件 30 天。" }
+ActiveFilters = { other = "当前筛选条件" }
+RemoveFilter = { other = "移除此条件" }
+ClearAll = { other = "清除全部" }
+SearchResults = { other = "搜索结果" }
+NoSearchCopy = { other = "没有符合条件的通报。请扩大搜索范围或清除筛选条件。" }
+Pagination = { other = "分页导航" }
+PerPage = { other = "每页通报数" }
+GoToPage = { other = "跳转" }
+PreviousPage = { other = "上一页" }
+NextPage = { other = "下一页" }
+SearchInvalid = { other = "请检查日期是否有效、先后顺序是否正确；每个文本框最多可输入200个字符。" }
+DateNotReported = { other = "未注明日期" }
+ClockTimeReported = { other = "注明了钟点" }
+DayPartReported = { other = "仅注明时段" }
+TimeNotReported = { other = "未注明时间" }
+PageStatus = { other = "第{{.Page}}页，共{{.TotalPages}}页 · 第{{.First}}–{{.Last}}条，共{{.Total}}条" }
+HeroCopy = { other = "慕尼黑警察总部（Polizeipräsidium München）官方通报的中文摘要。" }
+Footer = { other = "MunichBrief 独立于警方运营。无需注册，不含广告。" }
+AboutTitle = { other = "关于 MunichBrief" }
+AboutIntro = { other = "MunichBrief 帮助你用熟悉的语言了解当地警方通报。先阅读简短摘要，了解事件发生的时间和地点，再查看官方原文获取详情。" }
+OpenOfficialSource = { other = "官方通报" }
+ContactIntro = { other = "有疑问或需要更正信息？请使用下方表单，或发送电子邮件。" }
+ContactCorrections = { other = "更正与更新" }
+ContactCorrectionCopy = { other = "请附上 MunichBrief 页面链接，并说明需要更正的内容。如有更新后的官方通报，也请提供链接。" }
+ContactPrivacy = { other = "隐私相关请求" }
+ContactPrivacyCopy = { other = "个人数据相关请求请通过私人表单或电子邮件发送。只提供必要信息，不要在公开的 GitHub 问题中发布个人数据。" }
+ContactTechnical = { other = "技术问题" }
+ContactTechnicalCopy = { other = "你可以在 GitHub 上反馈显示问题或提出改进建议。请勿在公开的问题中填写个人信息。" }
+ContactPoliceCopy = { other = "MunichBrief 独立于警方，不受理报案或紧急求助。" }
+ContactPoliceLink = { other = "涉及警方事务，请使用警方官方网站提供的联系方式。" }
+OpenOfficialPoliceRelease = { other = "官方通报" }
+SiteDescription = { other = "慕尼黑警察总部（Polizeipräsidium München）官方通报的中文摘要。" }
+MonitoringCopy = { other = "我们使用 Cloudflare 提供网站访问和安全防护。Cloudflare 会处理包括 IP 地址在内的连接数据，并可生成流量统计。为保障网站稳定运行，我们将自己的技术请求日志和汇总性能数据保留30天。" }
+
+CoverageCopy = { other = "这里收录的是已发布的警方通报，并非所有本地事件的完整记录，也不是犯罪统计。通报更新可能会延迟反映在 MunichBrief 上。事件日期和时间以原文为依据；即使写明了几点几分，也可能只是大致时间。" }
+
+VerifyTranslate = { other = "后台核查和翻译" }
+
+VerifyTranslateCopy = { other = "随后，独立的人工智能核查会重新检查事件分类，以及警方是否请求公众协助。这些核查优先于翻译处理。各语言版本在翻译完成后发布。核查成功完成后，已发布页面的分类和公众协助标签也可能更新。" }
+
+[ImpressumTitle]
+other = "法律声明"
+
+[PrivacyTitle]
+other = "隐私说明"
+
+[LegalGermany]
+other = "德国"
+
+[ContactForm]
+other = "发送咨询"
+
+[ContactEmail]
+other = "您的电子邮箱"
+
+[ContactTopic]
+other = "主题"
+
+[ContactGeneral]
+other = "一般咨询"
+
+[ContactCorrection]
+other = "更正信息"
+
+
+[ContactMessage]
+other = "留言"
+
+[ContactMessageLimit]
+other = "最多 5,000 个字符。请勿提供不必要的个人信息。"
+
+[ContactSend]
+other = "发送留言"
+
+[ContactReceived]
+other = "您的留言已收到，谢谢。"
+
+[ContactInvalid]
+other = "请检查表单后重试。如果表单已过期，请刷新页面。"
+
+[ContactRateLimit]
+other = "尝试次数过多，请等待 15 分钟后重试。"
+
+[ContactEmailInvalid]
+other = "请输入有效的电子邮箱地址。"
+
+[ContactTopicInvalid]
+other = "请选择列表中的主题。"
+
+[ContactMessageInvalid]
+other = "请输入不超过 5,000 个字符的留言。"
+
+[ContactSaveFailed]
+other = "留言未能保存。请稍后重试，或通过电子邮件联系。"
+
+[ContactUnavailable]
+other = "表单暂时无法使用，请通过上方的电子邮箱联系。"
+
+[PrivacyLinks]
+other = "服务商信息与投诉"
+
+[ImpressumResponsible]
+other = "网站负责人"
+
+[PrivacyController]
+other = "数据负责人"
+
+[PrivacyHosting]
+other = "服务器与人工智能"
+
+[PrivacyCloudflare]
+other = "Cloudflare 与访问测量"
+
+[PrivacyPreferences]
+other = "浏览器偏好设置"
+
+[PrivacyMonitoring]
+other = "技术监测"
+
+[PrivacyCorrespondence]
+other = "电子邮件与联系表单"
+
+[PrivacyRetention]
+other = "留言的保存与删除"
+
+[PrivacyPost]
+other = "纸质信件"
+
+[PrivacySources]
+other = "警方通报与原始资料"
+
+[PrivacyRights]
+other = "您的权利与投诉"
+
+[PrivacyControllerCopy]
+other = "MunichBrief 由居住在德国巴伐利亚州的 Ege Kocabaş 以个人身份运营。上方地址为通信地址。有关个人数据处理的问题，可寄信或发送电子邮件联系。"
+
+[PrivacyHostingCopy]
+other = "网站、数据库和所有人工智能处理均在运营者位于德国的自有设备上运行。原始资料不会发送给外部人工智能服务商。"
+
+[PrivacyCloudflareCopy]
+other = "Cloudflare 提供网站访问和安全防护，会处理包括 IP 地址在内的连接数据，也可在其网络端生成访问统计。Web Analytics 已设置为排除欧盟访客，并在其他地区自动插入性能测量脚本；浏览器安全限制可能阻止该脚本运行。这与网站传输和安全处理相互独立。Zaraz 同意管理及 Google Tag Gateway 未启用。网站传输与防护基于安全运营的合法利益（GDPR 第 6(1)(f) 条）。服务商政策说明了数据处理及跨境传输。"
+
+[PrivacyPreferencesCopy]
+other = "第一方 Cookie 将语言偏好保存一年，将人工智能提示确认保存 30 天，并通过 HttpOnly Cookie 将最近一次搜索条件保存 30 天；清除搜索会删除这些条件。主题保存在浏览器本地存储中，直到您清除；返回列表的位置仅保留在当前标签页。联系表单安全令牌最长有效一小时，收件确认最长五分钟，均不包含留言内容。这些功能支持您请求的服务（TDDDG §25(2)(2)；GDPR 第 6(1)(f) 条）。HTMX 不会在 localStorage 中保存页面快照。 您选择的时间排序方式会保存在本站的 Cookie 中，有效期为 30 天。 搜索词和筛选条件会出现在页面网址中，并可能保留在分享的链接和浏览器历史记录中。"
+
+[PrivacyMonitoringCopy]
+other = "技术日志记录请求方法、不含查询参数的路径、状态、耗时及请求标识，不记录留言、电子邮箱、Cookie 或访客 IP 地址。Prometheus 指标及 Loki 日志的保留时间设置为 30 天，Grafana 用于内部查看。为限制联系尝试次数，我们仅在应用内存中保存计数器和由 IP 地址生成的假名标识，不保存原始 IP 地址。限制从首次尝试起持续 15 分钟。过期计数器会在下一次联系尝试或应用重启时删除；如果没有新的尝试，它们可能在内存中保留更久。这些措施用于安全与可靠运行（GDPR 第 6(1)(f) 条）。Cloudflare 有独立的保留规则。"
+
+[PrivacyCorrespondenceCopy]
+other = "我们处理您的电子邮箱、所选主题及留言，以回复咨询（GDPR 第 6(1)(f) 条），或履行适用的法定义务（第 6(1)(c) 条）。表单先把留言存入数据库的私人收件箱。SMTP2GO 向 contact@munichbrief.de 发送通知，Cloudflare Email Routing 再转发到 Gmail。回复在 Apple Mail 中撰写，经 SMTP2GO 发出。留言不会交给人工智能处理。下方服务商政策也说明欧洲经济区之外的处理。"
+
+[PrivacyRetentionCopy]
+other = "管理员收件箱中的留言在咨询标记为已解决 90 天后自动删除；重新打开咨询会取消期限。未解决的咨询会定期检查，并在仍有需要时保留。持续中的争议或法定义务可能需要继续保留，并记录原因与复查日期。Gmail 副本和已发送回复会另行检查、删除。服务商的发送记录遵循其各自的保留政策。"
+
+[PrivacyPostCopy]
+other = "寄往通信地址的信件由 COCENTER / anschrift.net 接收、拆封及扫描，以便运营者处理。依据为收取信件的合法利益或法定义务（GDPR 第 6(1)(f) 或 (c) 条）。服务商表示，纸质原件保存六个月；扫描件保留到关闭账户或提出删除请求，但有合理保留理由的情况除外。详情见其隐私政策。"
+
+[PrivacySourcesCopy]
+other = "摘要来源于 Polizeipräsidium München 的公开通报。德文原始文本及 RSS 文本快照保留用于处理、检查来源变化和受限审核。这些记录目前没有固定的删除期限。公开页面展示摘要，而非已存储的原文。如果报道涉及您或存在错误，请联系我们。我们会逐一评估更正和隐私请求。"
+
+[PrivacyRightsCopy]
+other = "依适用规定，您可以请求访问、更正、删除、限制处理，在适用时请求数据可携带，或反对基于合法利益的处理。联系无需注册账户。GDPR 权利请求通常在一个月内答复；法律例外与编辑相关规则可能影响结果。对于巴伐利亚非公共部门的数据保护事项，您可向 BayLDA 或其他主管监管机构投诉；编辑相关投诉可能适用不同规则。"
+
+[ImpressumTitleDescription]
+other = "MunichBrief 运营者信息及联系方式。"
+
+[PrivacyTitleDescription]
+other = "MunichBrief 如何处理网站数据、来信和公开资料。"
+
+[ImpressumResponsibleCopy]
+other = "负责本网站。地址见上文。MunichBrief 独立于警方。"
+
+[ImpressumContactCopy]
+other = "如需咨询，请访问联系页面。"
+
+[ContactStorage]
+other = "我们会先将留言保存到私有收件箱，再确认收到。留言标记为已处理后，将在 90 天后从该收件箱删除。"
+
+[ContactClosed]
+other = "联系表单已关闭，您的留言未发送。请改用电子邮件联系 contact@munichbrief.de。"
+
+[ContactKeepDraft]
+other = "您可以将下方内容复制到邮件中。这份草稿尚未保存到收件箱。"
+
+[PrivacyRequired]
+other = "需要提供哪些信息"
+
+[PrivacyRequiredCopy]
+other = "您无需注册账户或联系我们即可阅读 MunichBrief，也没有使用联系表单的法律或合同义务。如需通过表单联系我们，请填写电子邮箱、主题和留言，以便我们处理并回复。缺少这些信息时，表单无法提交。您也可以直接发送电子邮件。请仅提供处理您所述事项所必需的个人信息。"
+
+[PrivacySourcePeople]
+other = "报道中涉及的人员"
+
+[PrivacySourcePeopleCopy]
+other = "事件相关人员的信息来自警方公开通报，而非直接向这些人员收集。视通报内容而定，信息可能包括人员描述、与事件的关系、涉嫌违法犯罪行为、伤情以及事件发生的地点和时间。已发布的摘要对所有人开放，并可能被搜索引擎收录。联系留言和私人收件箱内容不会公开。"
+
+[PrivacyAutomation]
+other = "人工智能与自动化决策"
+
+[PrivacyAutomationCopy]
+other = "人工智能用于提取、概括、翻译和核查事件报道。我们不会利用它对访客作出 GDPR 第22条所指的、具有法律效力或类似重大影响的决定。自动检查可能阻止某篇事件报道或其某个译文的发布。因此，部分报道可能无法提供所有语言版本。"
+
+[PrivacyObjection]
+other = "您的反对权"
+
+[PrivacyObjectionCopy]
+other = "在 GDPR 第21条适用的情况下，您可以随时基于自身具体情况，反对以合法利益为依据的个人数据处理。请将异议发送至上述联系地址。我们将停止相关处理，除非能够证明存在优先于您权利的重大合法理由，或处理是提出、行使或维护法律请求所必需的。"
+
+[LegalLastUpdated]
+other = "最后更新"
+
+[ImpressumRequests]
+other = "联系与报道相关请求"
+
+[ImpressumRequestsCopy]
+other = "如果某篇报道涉及您，您可以提出更正、删除或刊登回应的请求。请附上页面链接，并指出相关段落。如法律要求提交经签署的书面请求，请使用邮寄地址；仅提交联系表单不符合这一要求。"
+
+[LicensesTitle]
+other = "致谢与许可"
+
+[LicensesDescription]
+other = "了解 MunichBrief 所使用的软件、字体、模型和数据来源。"
+
+[LicensesProject]
+other = "MunichBrief 代码"
+
+[LicensesSoftware]
+other = "软件"
+
+[LicensesFonts]
+other = "字体"
+
+[LicensesAssets]
+other = "图片与图标"
+
+[LicensesData]
+other = "数据来源"
+
+[LicensesModels]
+other = "模型参考信息"
+
+[LicensesService]
+other = "模型运行软件"
+
+[LicensesLicense]
+other = "许可证"
+
+[LicensesSource]
+other = "原始来源"
+
+[LicensesRead]
+other = "查看许可与声明"
+
+[LicensesDownload]
+other = "下载完整文本"
+
+[LicensesIntro]
+other = "MunichBrief 自行编写的代码采用 MIT 许可证。第三方组件和来源材料仍受各自条款约束。"
+
+[LicensesOriginal]
+other = "许可证文本及版权声明保留原文，不作翻译。"
+
+[LicensesModelIntro]
+other = "这些信息介绍了为 MunichBrief 审查过的模型许可条款，并非当前正在使用的模型清单。每篇报道仍保留各自的 AI 处理来源信息。模型许可证不会自动适用于生成的摘要。"
+
+[LicensesIconChanges]
+other = "AI 图标：© 欧盟。MunichBrief 为浅色版本添加了灰色背景和边框；深色版本保留原始图形。使用这些图标并不表示获得欧盟认可或支持。"
+
+[LicensesDataChanges]
+other = "地理数据经过筛选，仅保留慕尼黑及周边地区的数据，并统一地名格式以便匹配地点。原始数据集可通过所列提供方的链接获取。警方通报属于独立的来源材料，不适用 MunichBrief 的 MIT 许可证。"
+
+[PagePosition]
+other = "第 {{.Page}} 页，共 {{.TotalPages}} 页"
+
+[ModelVariant]
+other = "模型变体"
+

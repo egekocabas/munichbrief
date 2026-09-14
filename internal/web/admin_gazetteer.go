@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/egekocabas/munichbrief/internal/gazetteer"
@@ -144,4 +145,19 @@ func (s *Server) adminGazetteerDetails(response http.ResponseWriter, request *ht
 	if err := s.adminGazetteerTemplate.ExecuteTemplate(response, templateName, details); err != nil {
 		s.logger.ErrorContext(request.Context(), "render gazetteer refresh details", "error", err)
 	}
+}
+
+func gazetteerDiagnosticHint(run gazetteer.RefreshRunStatus) string {
+	if run.Status == "interrupted" {
+		return "The refresh has no final result. This can happen when the application stops or restarts; it does not indicate invalid source data."
+	}
+	if run.FailureStage == "http_status" {
+		if strings.HasSuffix(run.ErrorMessage, "HTTP 429") {
+			return "The source rate-limited the request. Automatic retries use a backoff."
+		}
+		if strings.HasSuffix(run.ErrorMessage, "HTTP 504") {
+			return "The source gateway could not serve the request. Overpass may return this when shared resources are busy."
+		}
+	}
+	return ""
 }

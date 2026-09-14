@@ -704,12 +704,15 @@ func TestAutomaticProcessingDisableFinishesCurrentPostProcessingOnly(t *testing.
 		worker.processAvailable(ctx)
 		close(done)
 	}()
+	// Canonical completion also maintains the reader index. Under the race
+	// detector SQLite work can exceed two seconds; this is a deadlock guard,
+	// not a timing assertion about the worker.
 	select {
 	case <-started:
 	case <-done:
 		status, statusErr := worker.Status(ctx)
 		t.Fatalf("worker completed before claiming English translation: %#v/%v", status.Queue.PostProcessing, statusErr)
-	case <-time.After(2 * time.Second):
+	case <-time.After(10 * time.Second):
 		t.Fatal("worker did not reach English translation")
 	}
 	if err := worker.SetAutomaticProcessing(ctx, false); err != nil {
@@ -718,7 +721,7 @@ func TestAutomaticProcessingDisableFinishesCurrentPostProcessingOnly(t *testing.
 	close(release)
 	select {
 	case <-done:
-	case <-time.After(2 * time.Second):
+	case <-time.After(10 * time.Second):
 		t.Fatal("post-processing worker did not stop after current request")
 	}
 	if provider.callCount(EnglishTranslationStep) != 1 {

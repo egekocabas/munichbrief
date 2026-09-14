@@ -79,6 +79,11 @@ jobs:
       - name: Verify module metadata
         run: go mod tidy -diff
 
+      - name: Verify third-party licences and exact dependency coverage
+        run: |
+          node scripts/licenses.mjs --check
+          node --test scripts/licenses.test.mjs
+
       - name: Run static analysis
         run: |
           go vet ./...
@@ -103,6 +108,7 @@ jobs:
 
       - name: Validate Helm chart
         run: |
+          bash scripts/check-contact-chart.sh
           helm lint --strict charts/munichbrief
           helm lint --strict charts/munichbrief --values deploy/example-values.yaml
           if helm template munichbrief charts/munichbrief --namespace munichbrief --set admin.enabled=true --set ingress.lan.enabled=true >/dev/null 2>&1; then
@@ -143,3 +149,22 @@ jobs:
           ./scripts/check-chart.sh /tmp/munichbrief-rendered.yaml
           helm template munichbrief charts/munichbrief --namespace munichbrief --values deploy/example-values.yaml --set 'ingress.public.languageCodes={de,en,pt-br}' > /tmp/munichbrief-multilingual.yaml
           grep -F -- 'path: /pt-br' /tmp/munichbrief-multilingual.yaml
+
+  license-image:
+    name: Release licence bundle (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build release image without publishing
+        run: docker build --platform linux/${{ matrix.arch }} -t munichbrief-licence-check .
+      - name: Inspect binary and container notices
+        run: python3 scripts/check-license-image.py munichbrief-licence-check --arch ${{ matrix.arch }}

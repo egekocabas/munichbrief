@@ -11,6 +11,12 @@ nameOverride: ""
 fullnameOverride: ""
 
 application:
+  # Legacy opt-in prerequisite check; false does not override saved admin controls.
+  # Configure protected admin and CONTACT_SECRET to manage contact in admin.
+  contactEnabled: false
+  contactDailyLimit: 20
+  contactMonthlyLimit: 300
+  contactTrustedProxies: []
   # Used for host-aware public presentation and path restrictions.
   publicHosts: []
   # Required when publicHosts is non-empty; must name one of those HTTPS hosts.
