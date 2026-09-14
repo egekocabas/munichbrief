@@ -167,3 +167,15 @@ MunichBrief is available under the [MIT License](LICENSE).
 Contact form, private inbox and legal-page setup are documented in
 [contact operations](docs/contact-and-legal.md). The form is disabled by default;
 activation needs protected admin access, provider checks and server-side secrets.
+
+## Credits and licences
+
+MunichBrief code uses [MIT](LICENSE). Third-party software, fonts, datasets and
+models retain their own terms; see [the generated notices](THIRD_PARTY_NOTICES.md)
+and [licence review and maintenance guide](docs/licensing-review.md).
+
+The localized `/en/licenses` page provides public credits and original licence
+texts. `munichbrief licenses` prints embedded notices without configuration,
+a database or network access. Release images also include a readable bundle in
+`/usr/share/munichbrief/`. The protected `/admin/licenses` overview compares cached
+model digests with checked-in reviews and warns without changing processing.

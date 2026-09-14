@@ -171,6 +171,7 @@ var gitCommitPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
 
 // Server owns MunichBrief's HTTP route tree and parsed embedded templates.
 type Server struct {
+	licensesTemplate               *template.Template
 	licensesAdminTemplate          *template.Template
 	contactStore                   *store.Store
 	contactMu                      sync.Mutex
@@ -320,6 +321,10 @@ func newWithLanguages(database incidentStore, logger *slog.Logger, options Optio
 	if err != nil {
 		return nil, err
 	}
+	credits, err := template.New("layout").Funcs(functions).Parse(layoutTemplate + licensesTemplate)
+	if err != nil {
+		return nil, err
+	}
 	licenseAdmin, err := template.New("licenses_admin").Funcs(functions).Parse(adminSharedTemplate + licensesAdminTemplate)
 	if err != nil {
 		return nil, err
@@ -341,7 +346,7 @@ func newWithLanguages(database incidentStore, logger *slog.Logger, options Optio
 	if err != nil {
 		return nil, fmt.Errorf("initialize social card renderer: %w", err)
 	}
-	return &Server{licensesAdminTemplate: licenseAdmin, contactStore: contactDatabase, contactLimits: make(map[string]contactRate), legalTemplate: legal, contactAdminTemplate: inbox, store: database, logger: logger, options: options, location: location, languages: definitions, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, contactTemplate: contact, adminTemplate: admin, adminHistoryTemplate: adminHistory, adminRSSHistoryTemplate: adminRSSHistory, adminGazetteerTemplate: adminGazetteer, adminTranslationsTemplate: adminTranslations, adminVerificationsTemplate: adminVerifications, socialCards: socialCards}, nil
+	return &Server{licensesTemplate: credits, licensesAdminTemplate: licenseAdmin, contactStore: contactDatabase, contactLimits: make(map[string]contactRate), legalTemplate: legal, contactAdminTemplate: inbox, store: database, logger: logger, options: options, location: location, languages: definitions, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, contactTemplate: contact, adminTemplate: admin, adminHistoryTemplate: adminHistory, adminRSSHistoryTemplate: adminRSSHistory, adminGazetteerTemplate: adminGazetteer, adminTranslationsTemplate: adminTranslations, adminVerificationsTemplate: adminVerifications, socialCards: socialCards}, nil
 }
 
 // Handler returns the complete public and optional review route tree.
@@ -362,6 +367,8 @@ func (s *Server) Handler() http.Handler {
 		mux.HandleFunc("POST /"+language.Code+"/contact", s.submitContact)
 		mux.HandleFunc("GET /"+language.Code+"/impressum", s.legal)
 		mux.HandleFunc("GET /"+language.Code+"/privacy", s.legal)
+		mux.HandleFunc("GET /"+language.Code+"/licenses", s.licenses)
+		mux.HandleFunc("GET /"+language.Code+"/licenses/text/{notice}", s.licenseText)
 		mux.HandleFunc("GET /"+language.Code+"/incidents/{id}", s.detail)
 		mux.HandleFunc("GET /"+language.Code+"/about", s.about)
 	}

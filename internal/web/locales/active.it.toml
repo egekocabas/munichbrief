@@ -399,3 +399,57 @@ other = "Richieste relative a un resoconto"
 
 [ImpressumRequestsCopy]
 other = "Se un resoconto ti riguarda, puoi contattare il responsabile indicato sopra per chiedere una correzione, la rimozione o la pubblicazione di una replica. Indica il link alla pagina e il passaggio interessato. Quando la legge richiede una richiesta scritta e firmata, usa l’indirizzo postale: il solo modulo di contatto non soddisfa tale requisito."
+
+[LicensesTitle]
+other = "Riconoscimenti e licenze"
+
+[LicensesDescription]
+other = "Software, caratteri, modelli e dati utilizzati da MunichBrief."
+
+[LicensesProject]
+other = "Codice di MunichBrief"
+
+[LicensesSoftware]
+other = "Software"
+
+[LicensesFonts]
+other = "Caratteri"
+
+[LicensesAssets]
+other = "Immagini e icone"
+
+[LicensesData]
+other = "Fonti dei dati"
+
+[LicensesModels]
+other = "Riferimenti ai modelli"
+
+[LicensesService]
+other = "Software per eseguire i modelli"
+
+[LicensesLicense]
+other = "Licenza"
+
+[LicensesSource]
+other = "Fonte originale"
+
+[LicensesRead]
+other = "Leggi licenza e avvisi"
+
+[LicensesDownload]
+other = "Scarica il testo completo"
+
+[LicensesIntro]
+other = "Il codice originale di MunichBrief è disponibile con licenza MIT. I componenti di terzi e i materiali delle fonti mantengono le proprie condizioni."
+
+[LicensesOriginal]
+other = "I testi delle licenze e gli avvisi di copyright sono riportati nella lingua originale."
+
+[LicensesModelIntro]
+other = "Questi riferimenti spiegano le condizioni dei modelli esaminati per MunichBrief. Non sono un elenco aggiornato dei modelli in uso; ogni notizia conserva le informazioni sulla propria elaborazione con IA. Le licenze dei modelli non si applicano automaticamente ai riassunti generati."
+
+[LicensesIconChanges]
+other = "Icone IA: © Unione europea. MunichBrief ha aggiunto uno sfondo grigio e un bordo alla variante chiara. La variante scura mantiene la grafica originale. L’uso delle icone non implica il sostegno dell’UE."
+
+[LicensesDataChanges]
+other = "I dati geografici sono limitati all’area di Monaco e i nomi dei luoghi sono uniformati per riconoscere le località. I dati originali sono disponibili presso i fornitori indicati nei link. I comunicati della polizia sono materiale distinto e non rientrano nella licenza MIT di MunichBrief."

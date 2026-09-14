@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/egekocabas/munichbrief/internal/licensing"
 	"github.com/egekocabas/munichbrief/internal/store"
 )
 
@@ -253,6 +254,7 @@ func (s *Server) sitemap(response http.ResponseWriter, request *http.Request) {
 			sitemapURL{Location: origin + "/" + definition.Code},
 			sitemapURL{Location: origin + "/" + definition.Code + "/about"},
 			sitemapURL{Location: origin + "/" + definition.Code + "/contact"},
+			sitemapURL{Location: origin + "/" + definition.Code + "/licenses", LastMod: licensing.CreditsUpdatedAt()},
 			sitemapURL{Location: origin + "/" + definition.Code + "/privacy", LastMod: legalPageUpdatedAt("privacy").Format(time.DateOnly)},
 			sitemapURL{Location: origin + "/" + definition.Code + "/impressum", LastMod: legalPageUpdatedAt("impressum").Format(time.DateOnly)},
 		)
@@ -297,6 +299,9 @@ func writeMarkdownFrontMatter(builder *strings.Builder, title string, page baseP
 	fmt.Fprintf(builder, "---\ntitle: %s\ndescription: %s\nlanguage: %s\ncanonical: %s\nai_generated: %t\nai_generated_state: %s\n",
 		yamlQuoted(title+" · MunichBrief"), yamlQuoted(pageDescription(page)), yamlQuoted(page.LanguageTag), yamlQuoted(page.CanonicalURL),
 		page.AIGeneratedState != "false", yamlQuoted(page.AIGeneratedState))
+	if page.DocumentModifiedDate != "" {
+		fmt.Fprintf(builder, "date_modified: %s\n", yamlQuoted(page.DocumentModifiedDate))
+	}
 	if page.AIGeneratedState != "false" {
 		fmt.Fprintf(builder, "digital_source_type: %s\n", yamlQuoted(iptcTrainedAlgorithmicMedia))
 	}

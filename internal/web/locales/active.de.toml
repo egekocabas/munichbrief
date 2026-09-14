@@ -832,3 +832,57 @@ other = "Anliegen zu einer Meldung"
 
 [ImpressumRequestsCopy]
 other = "Wenn Sie von einer Meldung betroffen sind, können Sie sich wegen einer Berichtigung, Entfernung oder Gegendarstellung an den oben genannten Betreiber wenden. Bitte nennen Sie den Seitenlink und die betreffende Textstelle. Soweit das Gesetz ein schriftliches, unterzeichnetes Verlangen voraussetzt, nutzen Sie bitte die Postanschrift; das Kontaktformular allein erfüllt diese Formvorgabe nicht."
+
+[LicensesTitle]
+other = "Danksagungen und Lizenzen"
+
+[LicensesDescription]
+other = "Software, Schriften, Modelle und Daten, die MunichBrief ermöglichen."
+
+[LicensesProject]
+other = "MunichBrief-Quellcode"
+
+[LicensesSoftware]
+other = "Software"
+
+[LicensesFonts]
+other = "Schriftarten"
+
+[LicensesAssets]
+other = "Bilder und Symbole"
+
+[LicensesData]
+other = "Datenquellen"
+
+[LicensesModels]
+other = "Modellverweise"
+
+[LicensesService]
+other = "Software für die KI-Verarbeitung"
+
+[LicensesLicense]
+other = "Lizenz"
+
+[LicensesSource]
+other = "Originalquelle"
+
+[LicensesRead]
+other = "Lizenz und Hinweise lesen"
+
+[LicensesDownload]
+other = "Vollständigen Text herunterladen"
+
+[LicensesIntro]
+other = "Der eigene Quellcode von MunichBrief steht unter der MIT-Lizenz. Für Komponenten Dritter und Quellenmaterial gelten die jeweiligen eigenen Bedingungen."
+
+[LicensesOriginal]
+other = "Lizenztexte und Urheberrechtshinweise werden in ihrer Originalsprache wiedergegeben."
+
+[LicensesModelIntro]
+other = "Diese Verweise erläutern die Bedingungen der für MunichBrief geprüften Modelle. Sie sind keine aktuelle Liste der eingesetzten Modelle; die einzelnen Berichte enthalten weiterhin Angaben zu ihrer KI-Verarbeitung. Modelllizenzen gelten nicht automatisch für erzeugte Zusammenfassungen."
+
+[LicensesIconChanges]
+other = "KI-Symbole: © Europäische Union. MunichBrief hat die helle Variante um einen grauen Hintergrund und eine Umrandung ergänzt. Die dunkle Variante verwendet die Originalgrafik. Die Verwendung bedeutet keine Unterstützung durch die EU."
+
+[LicensesDataChanges]
+other = "Geodaten werden auf den Raum München eingegrenzt; Ortsnamen werden für den Abgleich vereinheitlicht. Die Originaldatensätze sind bei den verlinkten Anbietern verfügbar. Polizeimeldungen sind eigenständiges Quellenmaterial und fallen nicht unter die MIT-Lizenz von MunichBrief."

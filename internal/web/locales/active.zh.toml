@@ -399,3 +399,57 @@ other = "针对报道提出请求"
 
 [ImpressumRequestsCopy]
 other = "如果某篇报道涉及您，您可以通过上述联系方式向网站运营者提出更正、删除或刊登回应的请求。请附上页面链接，并指出相关段落。如法律要求提交经签署的书面请求，请使用邮寄地址；仅提交联系表单不符合这一要求。"
+
+[LicensesTitle]
+other = "致谢与许可"
+
+[LicensesDescription]
+other = "了解 MunichBrief 所使用的软件、字体、模型和数据来源。"
+
+[LicensesProject]
+other = "MunichBrief 代码"
+
+[LicensesSoftware]
+other = "软件"
+
+[LicensesFonts]
+other = "字体"
+
+[LicensesAssets]
+other = "图片与图标"
+
+[LicensesData]
+other = "数据来源"
+
+[LicensesModels]
+other = "模型参考信息"
+
+[LicensesService]
+other = "模型运行软件"
+
+[LicensesLicense]
+other = "许可证"
+
+[LicensesSource]
+other = "原始来源"
+
+[LicensesRead]
+other = "查看许可与声明"
+
+[LicensesDownload]
+other = "下载完整文本"
+
+[LicensesIntro]
+other = "MunichBrief 自行编写的代码采用 MIT 许可证。第三方组件和来源材料仍受各自条款约束。"
+
+[LicensesOriginal]
+other = "许可证文本及版权声明保留原文，不作翻译。"
+
+[LicensesModelIntro]
+other = "这些信息介绍了为 MunichBrief 审查过的模型许可条款，并非当前正在使用的模型清单。每篇报道仍保留各自的 AI 处理来源信息。模型许可证不会自动适用于生成的摘要。"
+
+[LicensesIconChanges]
+other = "AI 图标：© 欧盟。MunichBrief 为浅色版本添加了灰色背景和边框；深色版本保留原始图形。使用这些图标并不表示获得欧盟认可或支持。"
+
+[LicensesDataChanges]
+other = "地理数据经过筛选，仅保留慕尼黑及周边地区的数据，并统一地名格式以便匹配地点。原始数据集可通过所列提供方的链接获取。警方通报属于独立的来源材料，不适用 MunichBrief 的 MIT 许可证。"

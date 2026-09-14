@@ -1,5 +1,8 @@
 # Contact, legal pages and private inbox
 
+When resuming this conversation, start with the
+[current handoff and open-item summary](continuation-notes.md).
+
 ## Decision record — September 2026
 
 This records the operator's decisions in the PR #67 discussion. Privacy and
@@ -108,20 +111,47 @@ existing protected LAN admin ingress and an application Secret reference. Keep
 as with the existing SQLite deployment. Rotating the signing key expires open
 forms and resets rate pseudonyms; it does not delete accepted messages.
 
+Postal-service status update: the operator has purchased the Bayern service but
+is awaiting identity approval and activation. The operator reports sending a
+request for the complete AVV and its acceptance process. Confirm active postal
+receipt before relying on this address in deployed legal pages; see the
+[document review and correspondence record](legal-follow-up-2026-09.md).
+
+SMTP2GO agreement update: the operator supplied DPA version 1.4 and dashboard text
+recording acceptance on 27 August 2026 at 19:45 UTC. The agreement was reviewed.
+The operator subsequently confirmed **Hosted in the EU** and Apple Mail's
+`mail-eu.smtp2go.com` host (the provider's EU/UK SMTP service); key settings were
+not shown in the export. The operator supplied Rick's support reply dated
+13 September 2026, 22:52 UTC: SMTP2GO permits the described contact-form and
+correspondence use under its normal terms, with no additional special-category
+DPA or approval process. The requested clarification is resolved. Full-message
+notifications remain as agreed; shorter alerts are optional, not a requirement
+arising from this wording. See the linked correspondence record; do not request
+the same clarification again. Other providers and account settings remain separate.
+
+The [14 September mailbox and Cloudflare review](mail-provider-review-2026-09.md)
+documents Cloudflare's incorporated DPA and Google's subscription agreements.
+Provider roles must be assessed for each processing operation; a missing
+standalone mailbox DPA is not by itself a finding of unlawful use. Mailbox
+alternatives are proposals only. The Gmail/Apple Mail setup and full-message
+notifications remain unchanged.
+
 Before production activation, the operator must verify and record:
 
-1. Applicable provider processing agreements, recipient/transfer arrangements and
+1. Applicable provider roles and agreements, recipient/transfer arrangements and
    account-specific retention/location settings for Cloudflare, SMTP2GO, Gmail
    and the postal scanning service. Do not assume a personal Gmail account has
    Google Workspace contractual terms. COCENTER offers a processing agreement on
-   request. These agreements and account settings have **not** been verified by
-   this implementation. The public copy states known operations and attributes
-   provider policies; it contains no invented account facts or placeholders.
+   request. SMTP2GO's supplied acceptance evidence is recorded above; remaining
+   agreements and account settings must be checked individually. The public copy
+   states known operations and attributes provider policies; it contains no
+   invented account facts or placeholders.
 2. A verified `contact@munichbrief.de` sender, a dedicated SMTP2GO key restricted
    to `/email/send`, **300/month provider-side key cap**, and open tracking, click
    tracking and optional archiving disabled for this key. The client uses
-   `https://eu-api.smtp2go.com/v3/email/send`; verify the account's actual region
-   separately. An EU endpoint is not an EU-only guarantee for the email chain.
+   `https://eu-api.smtp2go.com/v3/email/send`; the operator has confirmed the
+   account's EU hosting indicator. An EU endpoint is not an EU-only guarantee
+   for the email chain, and the reported Apple Mail SMTP host also covers the UK.
 3. A working protected admin route, correct public-host allowlist, trusted proxy
    chain, secret injection and regular independent inbox/monitoring checks.
    A form needs an effective response process; keeping receipt enabled is not a

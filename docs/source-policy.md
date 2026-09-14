@@ -114,6 +114,13 @@ German Copyright Act section 5 requires a case-specific assessment for
 qualifying official works and does not establish that every police release may
 be reused without restriction.
 
+Separately, the [Bavarian Police usage terms](https://www.polizei.bayern.de/wir-ueber-uns/impressum/index.html),
+checked on 13 September 2026, expressly permit reprinting and analysis of press
+releases with source attribution. This supports the project's attributed
+press-release reuse; it does not settle personal-information rights, unrelated
+third-party material, source retention or automated-access restrictions. See the
+[editorial and provider follow-up](legal-follow-up-2026-09.md).
+
 ## Repository data policy
 
 Do not commit real source article copies, generated presentations, production

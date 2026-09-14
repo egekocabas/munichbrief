@@ -399,3 +399,57 @@ other = "Demandes concernant un compte rendu"
 
 [ImpressumRequestsCopy]
 other = "Si un compte rendu vous concerne, vous pouvez contacter le responsable indiqué ci-dessus pour demander une correction, un retrait ou la publication d’un droit de réponse. Joignez le lien de la page et indiquez le passage concerné. Lorsque la loi exige une demande écrite et signée, utilisez l’adresse postale ; le formulaire de contact seul ne satisfait pas à cette exigence."
+
+[LicensesTitle]
+other = "Crédits et licences"
+
+[LicensesDescription]
+other = "Les logiciels, polices, modèles et données utilisés par MunichBrief."
+
+[LicensesProject]
+other = "Code de MunichBrief"
+
+[LicensesSoftware]
+other = "Logiciels"
+
+[LicensesFonts]
+other = "Polices de caractères"
+
+[LicensesAssets]
+other = "Images et icônes"
+
+[LicensesData]
+other = "Sources de données"
+
+[LicensesModels]
+other = "Références des modèles"
+
+[LicensesService]
+other = "Logiciels d’exécution des modèles"
+
+[LicensesLicense]
+other = "Licence"
+
+[LicensesSource]
+other = "Source originale"
+
+[LicensesRead]
+other = "Lire la licence et les mentions"
+
+[LicensesDownload]
+other = "Télécharger le texte intégral"
+
+[LicensesIntro]
+other = "Le code propre à MunichBrief est disponible sous licence MIT. Les composants tiers et les documents sources conservent leurs conditions respectives."
+
+[LicensesOriginal]
+other = "Les textes des licences et les mentions de droits d’auteur sont reproduits dans leur langue d’origine."
+
+[LicensesModelIntro]
+other = "Ces références présentent les conditions des modèles examinés pour MunichBrief. Elles ne constituent pas une liste à jour des modèles utilisés ; chaque article conserve les informations sur son traitement par IA. Les licences des modèles ne s’appliquent pas automatiquement aux résumés générés."
+
+[LicensesIconChanges]
+other = "Icônes IA : © Union européenne. MunichBrief a ajouté un fond gris et un contour à la variante claire. La variante sombre conserve le dessin d’origine. L’utilisation de ces icônes n’implique aucun soutien de l’UE."
+
+[LicensesDataChanges]
+other = "Les données géographiques sont limitées à la région de Munich et les noms de lieux sont normalisés pour faciliter leur identification. Les jeux de données d’origine sont accessibles auprès des fournisseurs cités en lien. Les communiqués de police constituent des sources distinctes et ne sont pas couverts par la licence MIT de MunichBrief."

@@ -832,3 +832,57 @@ other = "Requests concerning a report"
 
 [ImpressumRequestsCopy]
 other = "If a report affects you, you can contact the operator above to request a correction, removal or right of reply. Please include the page link and identify the passage concerned. Where a signed written request is legally required, use the postal address; the contact form alone does not meet that requirement."
+
+[LicensesTitle]
+other = "Credits and licences"
+
+[LicensesDescription]
+other = "The software, fonts, models and data behind MunichBrief."
+
+[LicensesProject]
+other = "MunichBrief code"
+
+[LicensesSoftware]
+other = "Software"
+
+[LicensesFonts]
+other = "Fonts"
+
+[LicensesAssets]
+other = "Images and icons"
+
+[LicensesData]
+other = "Data sources"
+
+[LicensesModels]
+other = "Model references"
+
+[LicensesService]
+other = "Inference software"
+
+[LicensesLicense]
+other = "Licence"
+
+[LicensesSource]
+other = "Original source"
+
+[LicensesRead]
+other = "Read licence and notices"
+
+[LicensesDownload]
+other = "Download full text"
+
+[LicensesIntro]
+other = "MunichBrief’s own code is available under the MIT licence. Third-party components and source material retain their own terms."
+
+[LicensesOriginal]
+other = "Licence texts and copyright notices are reproduced in their original language."
+
+[LicensesModelIntro]
+other = "These references explain the terms of models reviewed for MunichBrief. They are not a live list of models in use; individual reports retain their own AI provenance. Model licences do not automatically apply to generated summaries."
+
+[LicensesIconChanges]
+other = "AI icons: © European Union. MunichBrief adapted the light variant with a grey background and outline. The dark variant retains the original artwork. Use of the icons does not imply endorsement."
+
+[LicensesDataChanges]
+other = "Geographic data is filtered for the Munich area and names are normalized for location matching. The original datasets remain available from the linked providers. Police reports are separate source material; MunichBrief’s MIT licence does not cover them."

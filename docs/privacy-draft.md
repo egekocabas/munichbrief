@@ -3,9 +3,11 @@
 This file replaces the original unpublished draft; `/de/privacy` and the other
 13 language routes are public, with shared operator details. The confirmed
 [processing inventory and decisions](contact-and-legal.md) supersede the earlier
-unknown-identity and unknown-hosting statements. Account agreements and settings
-still need operator verification before activation; no placeholder appears in
-public pages and no contract acceptance is inferred from this implementation.
+unknown-identity and unknown-hosting statements. Outstanding account agreements
+and settings still need verification before activation. The subsequent
+[provider review](legal-follow-up-2026-09.md) records supplied evidence of SMTP2GO
+DPA acceptance; no acceptance is inferred from implementation alone and no
+placeholder appears in public pages.
 
 ## Ordinary website and correspondence processing
 
@@ -39,8 +41,11 @@ purpose. Article 85 GDPR, §23 MStV and applicable Bavarian press provisions may
 provide a relevant framework, but whether this operator and each particular
 processing activity qualify requires a service-specific assessment. Any privilege
 is purpose-bound; it cannot simply be carried over to contact forms, infrastructure
-logs, analytics or unrelated reuse. Document the scope and rationale with qualified
-advice before claiming an exemption; this implementation makes no such claim.
+logs, analytics or unrelated reuse. Document the scope and rationale before claiming
+an exemption; this implementation makes no such claim. The
+[editorial and provider follow-up](legal-follow-up-2026-09.md) records the requested
+research and applied working assessment without requiring a paid opinion as the
+next research step.
 
 Raw German sources and RSS snapshots currently have no automatic expiry. They
 support local extraction, checking source changes and restricted review; public
@@ -61,6 +66,16 @@ Article 46 safeguards, relevant adequacy coverage and ways to obtain details;
 do not assert a provider/account certification without checking it. Personal Gmail
 must not be described as a verified Workspace DPA arrangement. SMTP2GO's EU API
 endpoint does not make Cloudflare routing, Gmail or other mail processing EU-only.
+The operator has confirmed SMTP2GO's **Hosted in the EU** account indicator and
+Apple Mail's `mail-eu.smtp2go.com` host; the provider documents that SMTP host as
+EU/UK. Record these confirmed details separately from outstanding key settings.
+
+The [14 September mailbox review](mail-provider-review-2026-09.md) records
+Cloudflare DPA version 6.4 and the now-retrieved Google DPA version 10. Google
+subscription routes remain proposals, not the current account arrangement.
+Apply Article 28 where the service actually processes on the operator's behalf;
+do not infer either illegality or suitability of a mailbox solely from the
+absence of a standalone AVV. No provider migration occurred.
 
 Cloudflare's supplied RUM setting excludes EU visitors. A page load without a
 beacon cannot establish globally disabled analytics. Preserve and inspect the
@@ -119,7 +134,12 @@ MIT licence, source rights require individual assessment, and About already
 explains accuracy limits and independence. The supplied imprint's TMG reference
 is not used; the current provider-information statute is the DDG.
 
-Account-specific processing agreements and transfer safeguards remain unverified.
+Account-specific verification remains incomplete; SMTP2GO's subsequently supplied
+DPA and acceptance record are reviewed in the linked provider follow-up.
+The subsequently supplied Rick/SMTP2GO response dated 13 September 2026, 22:52 UTC
+permits the described form/correspondence use under normal terms and confirms that
+no extra special-category DPA or approval process is required. This closes that
+provider-scope question; it does not verify account settings or the Gmail setup.
 Provider-policy links are not a substitute for verifying the applicable arrangement
 and completing the Article 13/14 transfer information before activation. This
 copy update neither records that verification as done nor changes provider settings.

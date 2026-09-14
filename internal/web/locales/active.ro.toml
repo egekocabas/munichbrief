@@ -675,3 +675,57 @@ other = "Solicitări privind o relatare"
 
 [ImpressumRequestsCopy]
 other = "Dacă o relatare te privește, poți contacta operatorul indicat mai sus pentru a solicita o corectare, eliminarea sau publicarea unui drept la replică. Include linkul paginii și indică pasajul vizat. Când legea cere o solicitare scrisă și semnată, folosește adresa poștală; formularul de contact singur nu îndeplinește această cerință."
+
+[LicensesTitle]
+other = "Contribuții și licențe"
+
+[LicensesDescription]
+other = "Programele, fonturile, modelele și datele folosite de MunichBrief."
+
+[LicensesProject]
+other = "Codul MunichBrief"
+
+[LicensesSoftware]
+other = "Programe"
+
+[LicensesFonts]
+other = "Fonturi"
+
+[LicensesAssets]
+other = "Imagini și pictograme"
+
+[LicensesData]
+other = "Surse de date"
+
+[LicensesModels]
+other = "Informații despre modele"
+
+[LicensesService]
+other = "Programe pentru rularea modelelor"
+
+[LicensesLicense]
+other = "Licență"
+
+[LicensesSource]
+other = "Sursa originală"
+
+[LicensesRead]
+other = "Citește licența și mențiunile"
+
+[LicensesDownload]
+other = "Descarcă textul integral"
+
+[LicensesIntro]
+other = "Codul propriu MunichBrief este disponibil sub licența MIT. Componentele terților și materialele-sursă își păstrează propriile condiții de utilizare."
+
+[LicensesOriginal]
+other = "Textele licențelor și mențiunile privind drepturile de autor sunt reproduse în limba originală."
+
+[LicensesModelIntro]
+other = "Aceste informații explică termenii modelelor analizate pentru MunichBrief. Nu reprezintă o listă actualizată a modelelor folosite; fiecare știre păstrează informațiile despre propria prelucrare cu IA. Licențele modelelor nu se aplică automat rezumatelor generate."
+
+[LicensesIconChanges]
+other = "Pictograme IA: © Uniunea Europeană. MunichBrief a adăugat un fundal gri și un contur variantei deschise. Varianta închisă păstrează grafica originală. Utilizarea pictogramelor nu implică susținerea proiectului de către UE."
+
+[LicensesDataChanges]
+other = "Datele geografice sunt limitate la zona München, iar denumirile sunt uniformizate pentru identificarea locurilor. Seturile originale de date sunt disponibile la furnizorii indicați prin linkuri. Comunicatele poliției sunt materiale-sursă distincte și nu sunt acoperite de licența MIT a MunichBrief."

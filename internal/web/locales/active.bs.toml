@@ -399,3 +399,57 @@ other = "Zahtjevi u vezi s izvještajem"
 
 [ImpressumRequestsCopy]
 other = "Ako se izvještaj odnosi na vas, možete se obratiti gore navedenoj osobi odgovornoj za stranicu sa zahtjevom za ispravku, uklanjanje ili objavu odgovora. Navedite link stranice i sporni dio teksta. Kada zakon zahtijeva potpisani pisani zahtjev, koristite poštansku adresu; samo slanje kontakt obrasca ne ispunjava taj uslov."
+
+[LicensesTitle]
+other = "Zahvale i licence"
+
+[LicensesDescription]
+other = "Softver, fontovi, modeli i podaci koje koristi MunichBrief."
+
+[LicensesProject]
+other = "Izvorni kod MunichBriefa"
+
+[LicensesSoftware]
+other = "Softver"
+
+[LicensesFonts]
+other = "Fontovi"
+
+[LicensesAssets]
+other = "Slike i ikone"
+
+[LicensesData]
+other = "Izvori podataka"
+
+[LicensesModels]
+other = "Informacije o modelima"
+
+[LicensesService]
+other = "Softver za pokretanje modela"
+
+[LicensesLicense]
+other = "Licenca"
+
+[LicensesSource]
+other = "Izvorna stranica"
+
+[LicensesRead]
+other = "Pročitajte licencu i napomene"
+
+[LicensesDownload]
+other = "Preuzmite puni tekst"
+
+[LicensesIntro]
+other = "Vlastiti izvorni kod MunichBriefa dostupan je pod licencom MIT. Komponente trećih strana i izvorni materijali zadržavaju svoje uslove korištenja."
+
+[LicensesOriginal]
+other = "Tekstovi licenci i obavijesti o autorskim pravima navedeni su na izvornom jeziku."
+
+[LicensesModelIntro]
+other = "Ove informacije objašnjavaju uslove modela čije su licence pregledane za MunichBrief. Nisu trenutni spisak modela u upotrebi; svaki izvještaj zadržava vlastite podatke o obradi umjetnom inteligencijom. Licence modela ne primjenjuju se automatski na generisane sažetke."
+
+[LicensesIconChanges]
+other = "Ikone umjetne inteligencije: © Evropska unija. MunichBrief je svijetloj verziji dodao sivu pozadinu i okvir. Tamna verzija koristi izvornu grafiku. Korištenje ikona ne znači da EU podržava projekat."
+
+[LicensesDataChanges]
+other = "Geografski podaci ograničeni su na područje Minhena, a nazivi mjesta ujednačeni radi prepoznavanja lokacija. Izvorni skupovi podataka dostupni su kod navedenih pružalaca putem poveznica. Policijska saopćenja zaseban su izvorni materijal i nisu obuhvaćena MIT licencom projekta MunichBrief."

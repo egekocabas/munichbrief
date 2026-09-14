@@ -18,6 +18,11 @@ sources, no visitor accounts, subscriptions, advertising, public comments or sho
 and the existing contact/email/postal chain. It is not an audit of provider accounts,
 all stored reports or every publication decision. No provider settings were changed.
 
+The subsequent [editorial and provider follow-up](legal-follow-up-2026-09.md)
+records the requested direct research, an applied working assessment, source reuse
+permission, concrete provider-agreement routes and proposed operational safeguards.
+It narrows the open questions below without claiming an official classification.
+
 ## Bavarian publisher comparison
 
 Publisher pages are examples of what those publishers disclose, not authoritative

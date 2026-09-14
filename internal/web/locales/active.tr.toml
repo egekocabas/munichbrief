@@ -399,3 +399,57 @@ other = "Bir haberle ilgili talepler"
 
 [ImpressumRequestsCopy]
 other = "Bir haber sizi ilgilendiriyorsa düzeltme, kaldırma veya cevap hakkı talebinizi yukarıdaki iletişim bilgileri üzerinden site sorumlusuna iletebilirsiniz. Lütfen sayfanın bağlantısını ve ilgili bölümü belirtin. Yasanın imzalı ve yazılı başvuru gerektirdiği durumlarda posta adresini kullanın; yalnızca iletişim formunu göndermek bu koşulu karşılamaz."
+
+[LicensesTitle]
+other = "Katkılar ve lisanslar"
+
+[LicensesDescription]
+other = "MunichBrief’te kullanılan yazılımlar, yazı tipleri, modeller ve veri kaynakları."
+
+[LicensesProject]
+other = "MunichBrief kaynak kodu"
+
+[LicensesSoftware]
+other = "Yazılımlar"
+
+[LicensesFonts]
+other = "Yazı tipleri"
+
+[LicensesAssets]
+other = "Görseller ve simgeler"
+
+[LicensesData]
+other = "Veri kaynakları"
+
+[LicensesModels]
+other = "Model bilgileri"
+
+[LicensesService]
+other = "Yapay zekâ çalıştırma yazılımı"
+
+[LicensesLicense]
+other = "Lisans"
+
+[LicensesSource]
+other = "Orijinal kaynak"
+
+[LicensesRead]
+other = "Lisansı ve bildirimleri oku"
+
+[LicensesDownload]
+other = "Tam metni indir"
+
+[LicensesIntro]
+other = "MunichBrief’in kendi kaynak kodu MIT lisansıyla sunulur. Üçüncü taraf bileşenler ve kaynak içerikler kendi kullanım koşullarına tabidir."
+
+[LicensesOriginal]
+other = "Lisans metinleri ve telif hakkı bildirimleri orijinal dillerinde yer alır."
+
+[LicensesModelIntro]
+other = "Bu bilgiler, MunichBrief için incelenen modellerin koşullarını açıklar; şu anda kullanılan modellerin listesi değildir. Her haberin yapay zekâ işlem bilgileri ayrıca korunur. Model lisansları, oluşturulan özetlere kendiliğinden uygulanmaz."
+
+[LicensesIconChanges]
+other = "Yapay zekâ simgeleri: © Avrupa Birliği. MunichBrief, açık tema sürümüne gri arka plan ve çerçeve eklemiştir. Koyu tema sürümünde orijinal çizim kullanılır. Simgelerin kullanılması AB’nin projeyi desteklediği anlamına gelmez."
+
+[LicensesDataChanges]
+other = "Coğrafi veriler Münih ve çevresiyle sınırlandırılır; yer adları eşleştirme için standartlaştırılır. Özgün veri kümelerine bağlantılardaki sağlayıcılardan ulaşabilirsiniz. Polis bültenleri ayrı kaynaklardır ve MunichBrief’in MIT lisansı kapsamında değildir."

@@ -399,3 +399,57 @@ other = "Wnioski dotyczące relacji"
 
 [ImpressumRequestsCopy]
 other = "Jeśli relacja Cię dotyczy, możesz zwrócić się do wskazanego wyżej operatora o sprostowanie, usunięcie lub publikację odpowiedzi. Podaj link do strony i wskaż fragment, którego dotyczy wniosek. Gdy prawo wymaga podpisanego wniosku na piśmie, skorzystaj z adresu pocztowego; sam formularz kontaktowy nie spełnia tego wymogu."
+
+[LicensesTitle]
+other = "Podziękowania i licencje"
+
+[LicensesDescription]
+other = "Oprogramowanie, kroje pisma, modele i dane wykorzystywane przez MunichBrief."
+
+[LicensesProject]
+other = "Kod MunichBrief"
+
+[LicensesSoftware]
+other = "Oprogramowanie"
+
+[LicensesFonts]
+other = "Kroje pisma"
+
+[LicensesAssets]
+other = "Obrazy i ikony"
+
+[LicensesData]
+other = "Źródła danych"
+
+[LicensesModels]
+other = "Informacje o modelach"
+
+[LicensesService]
+other = "Oprogramowanie do uruchamiania modeli"
+
+[LicensesLicense]
+other = "Licencja"
+
+[LicensesSource]
+other = "Źródło oryginalne"
+
+[LicensesRead]
+other = "Przeczytaj licencję i informacje"
+
+[LicensesDownload]
+other = "Pobierz pełny tekst"
+
+[LicensesIntro]
+other = "Własny kod MunichBrief jest dostępny na licencji MIT. Komponenty innych autorów i materiały źródłowe zachowują swoje warunki użytkowania."
+
+[LicensesOriginal]
+other = "Teksty licencji i informacje o prawach autorskich podajemy w języku oryginalnym."
+
+[LicensesModelIntro]
+other = "Te informacje wyjaśniają warunki modeli sprawdzonych dla MunichBrief. Nie są aktualną listą używanych modeli; każda wiadomość zachowuje własne informacje o przetwarzaniu przez AI. Licencje modeli nie obejmują automatycznie wygenerowanych podsumowań."
+
+[LicensesIconChanges]
+other = "Ikony AI: © Unia Europejska. MunichBrief dodał szare tło i obramowanie do jasnej wersji. Ciemna wersja zachowuje oryginalną grafikę. Użycie ikon nie oznacza poparcia projektu przez UE."
+
+[LicensesDataChanges]
+other = "Dane geograficzne są ograniczane do Monachium i okolic, a nazwy miejsc ujednolicane w celu dopasowania lokalizacji. Oryginalne zbiory danych są dostępne u dostawców wskazanych w odnośnikach. Komunikaty policji stanowią odrębne materiały źródłowe i nie są objęte licencją MIT projektu MunichBrief."
