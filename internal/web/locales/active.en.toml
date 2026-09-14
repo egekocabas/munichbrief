@@ -741,10 +741,10 @@ other = "Police reports and source material"
 other = "Your rights and complaints"
 
 [PrivacyControllerCopy]
-other = "Ege Kocabaş operates MunichBrief personally from Bavaria. The address above is the correspondence address. You can contact the controller there or by email about the processing of your personal data."
+other = "Ege Kocabaş operates MunichBrief personally from Bavaria, Germany. The address above is the correspondence address. You can contact the controller there or by email about the processing of your personal data."
 
 [PrivacyHostingCopy]
-other = "The website, database and all AI processing run on the operator’s own hardware in Germany. German summaries, translations and subsequent checks are processed locally; source material is not sent to an external AI provider."
+other = "The website, database and all AI processing run on the operator’s own hardware in Germany. Source material is not sent to an external AI provider."
 
 [PrivacyCloudflareCopy]
 other = "Cloudflare delivers and protects the site, processing connection information including IP addresses. It can produce traffic statistics at its network edge. Cloudflare Web Analytics is configured to exclude EU visitors and automatically insert a performance-measurement script elsewhere. Browser security restrictions may prevent that script from running. This is separate from Cloudflare’s delivery and security processing. Zaraz consent management and Google Tag Gateway are inactive. Delivery and protection serve our legitimate interest in operating a secure website (Article 6(1)(f) GDPR). Provider policies linked below explain their processing and international transfers."

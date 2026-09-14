@@ -741,10 +741,10 @@ other = "Polizeiberichte und Quellenmaterial"
 other = "Ihre Rechte und Beschwerden"
 
 [PrivacyControllerCopy]
-other = "Ege Kocabaş betreibt MunichBrief als Privatperson von Bayern aus. Die oben genannte Anschrift dient der Korrespondenz. Fragen zur Verarbeitung Ihrer personenbezogenen Daten können Sie dorthin oder an die angegebene E-Mail-Adresse richten."
+other = "Ege Kocabaş betreibt MunichBrief als Privatperson in Bayern, Deutschland. Die oben genannte Anschrift dient der Korrespondenz. Fragen zur Verarbeitung Ihrer personenbezogenen Daten können Sie dorthin oder an die angegebene E-Mail-Adresse richten."
 
 [PrivacyHostingCopy]
-other = "Website, Datenbank und sämtliche KI-Verarbeitung laufen auf eigener Hardware des Betreibers in Deutschland. Zusammenfassungen, Übersetzungen und nachträgliche Prüfungen erfolgen lokal. Quellenmaterial wird nicht an externe KI-Anbieter übermittelt."
+other = "Website, Datenbank und sämtliche KI-Verarbeitung laufen auf eigener Hardware des Betreibers in Deutschland. Quellenmaterial wird nicht an externe KI-Anbieter übermittelt."
 
 [PrivacyCloudflareCopy]
 other = "Cloudflare stellt die Website bereit und schützt sie. Dabei werden Verbindungsdaten einschließlich IP-Adressen verarbeitet; auch netzwerkseitige Zugriffsstatistiken sind möglich. Web Analytics ist so eingestellt, dass Besucher aus der EU ausgeschlossen werden und das Messskript andernorts automatisch eingefügt wird. Sicherheitsvorgaben des Browsers können seine Ausführung verhindern. Davon unabhängig verarbeitet Cloudflare Daten zur Bereitstellung und Sicherheit. Zaraz Consent Management und Google Tag Gateway sind inaktiv. Grundlage für Bereitstellung und Schutz ist unser berechtigtes Interesse am sicheren Betrieb (Art. 6 Abs. 1 lit. f DSGVO). Die unten verlinkten Anbieterinformationen erläutern auch internationale Übermittlungen."

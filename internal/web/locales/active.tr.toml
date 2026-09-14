@@ -312,10 +312,10 @@ other = "Polis bültenleri ve kaynak metinler"
 other = "Haklarınız ve şikâyetler"
 
 [PrivacyControllerCopy]
-other = "MunichBrief’i Bavyera’da yaşayan Ege Kocabaş bireysel olarak işletir. Yukarıdaki adres yazışma adresidir. Kişisel verilerinizle ilgili sorularınızı bu adrese veya belirtilen e-posta adresine iletebilirsiniz."
+other = "MunichBrief’i Almanya’nın Bavyera eyaletinde yaşayan Ege Kocabaş bireysel olarak işletir. Yukarıdaki adres yazışma adresidir. Kişisel verilerinizle ilgili sorularınızı bu adrese veya belirtilen e-posta adresine iletebilirsiniz."
 
 [PrivacyHostingCopy]
-other = "Web sitesi, veritabanı ve tüm yapay zekâ işlemleri, işletmecinin Almanya’daki kendi donanımında çalışır. Özetler, çeviriler ve sonraki kontroller yerel olarak yapılır; kaynak metinler harici bir yapay zekâ sağlayıcısına gönderilmez."
+other = "Web sitesi, veritabanı ve tüm yapay zekâ işlemleri, işletmecinin Almanya’daki kendi donanımında çalışır. Kaynak metinler harici bir yapay zekâ sağlayıcısına gönderilmez."
 
 [PrivacyCloudflareCopy]
 other = "Cloudflare, siteyi ziyaretçilere sunmak ve korumak için IP adresleri dâhil bağlantı verilerini işler. Kendi ağı üzerinden ziyaret istatistikleri de oluşturabilir. Web Analytics ayarında AB’deki ziyaretçiler kapsam dışıdır; diğer bölgelerde performans ölçüm kodu otomatik eklenir. Tarayıcının güvenlik kuralları bu kodun çalışmasını engelleyebilir. Cloudflare’ın sitenin sunumu ve güvenliği için yaptığı işlemler bundan ayrıdır. Zaraz onay yönetimi ve Google Tag Gateway etkin değildir. Sunum ve koruma işlemleri, sitenin güvenli çalışmasına yönelik meşru menfaate dayanır (GDPR madde 6(1)(f)). Aşağıdaki sağlayıcı açıklamaları yurt dışına veri aktarımını da ele alır."

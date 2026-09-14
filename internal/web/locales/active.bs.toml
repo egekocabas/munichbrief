@@ -312,10 +312,10 @@ other = "Policijska saopćenja i izvorni materijal"
 other = "Vaša prava i pritužbe"
 
 [PrivacyControllerCopy]
-other = "Ege Kocabaş lično vodi MunichBrief iz Bavarske. Gornja adresa služi za prepisku. Pitanja o obradi ličnih podataka možete poslati poštom ili na navedenu e-mail adresu."
+other = "Ege Kocabaş lično vodi MunichBrief iz Bavarske u Njemačkoj. Gornja adresa služi za prepisku. Pitanja o obradi ličnih podataka možete poslati poštom ili na navedenu e-mail adresu."
 
 [PrivacyHostingCopy]
-other = "Web-stranica, baza podataka i svi postupci vještačke inteligencije rade na vlastitoj opremi operatera u Njemačkoj. Sažeci, prijevodi i naknadne provjere obrađuju se lokalno; izvorni tekstovi ne šalju se vanjskom pružaocu usluga vještačke inteligencije."
+other = "Web-stranica, baza podataka i svi postupci vještačke inteligencije rade na vlastitoj opremi operatera u Njemačkoj. Izvorni tekstovi ne šalju se vanjskom pružaocu usluga vještačke inteligencije."
 
 [PrivacyCloudflareCopy]
 other = "Cloudflare omogućava pristup stranici i štiti je, obrađujući podatke o vezi, uključujući IP adrese. Može praviti i statistike na svojoj mreži. Web Analytics isključuje posjetioce iz EU-a, a drugdje automatski ubacuje skriptu za mjerenje; sigurnosna pravila preglednika mogu spriječiti njeno izvršavanje. Obrada za isporuku i sigurnost je odvojena. Zaraz Consent Management i Google Tag Gateway nisu aktivni. Isporuka i zaštita zasnivaju se na legitimnom interesu za siguran rad (član 6(1)(f) GDPR-a). Politike pružalaca objašnjavaju međunarodne prijenose."

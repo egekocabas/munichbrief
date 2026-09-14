@@ -36,7 +36,7 @@ type legalPage struct {
 func legalPageUpdatedAt(page string) time.Time {
 	switch page {
 	case "privacy":
-		return time.Date(2026, time.September, 14, 0, 0, 0, 0, time.UTC)
+		return time.Date(2026, time.September, 15, 0, 0, 0, 0, time.UTC)
 	case "impressum":
 		return time.Date(2026, time.September, 13, 0, 0, 0, 0, time.UTC)
 	default:

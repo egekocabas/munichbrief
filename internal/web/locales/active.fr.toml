@@ -312,10 +312,10 @@ other = "Communiqués de police et sources"
 other = "Vos droits et réclamations"
 
 [PrivacyControllerCopy]
-other = "Ege Kocabaş exploite MunichBrief à titre individuel depuis la Bavière. L’adresse ci-dessus sert à la correspondance. Vous pouvez y écrire, ou utiliser l’e-mail indiqué, pour toute question sur vos données personnelles."
+other = "Ege Kocabaş exploite MunichBrief à titre individuel depuis la Bavière, en Allemagne. L’adresse ci-dessus sert à la correspondance. Vous pouvez y écrire, ou utiliser l’e-mail indiqué, pour toute question sur vos données personnelles."
 
 [PrivacyHostingCopy]
-other = "Le site, la base de données et tous les traitements d’IA fonctionnent sur le matériel de l’exploitant en Allemagne. Résumés, traductions et vérifications sont traités localement, sans transmettre les sources à un fournisseur d’IA externe."
+other = "Le site, la base de données et tous les traitements d’IA fonctionnent sur le matériel de l’exploitant en Allemagne. Les sources ne sont pas transmises à un fournisseur d’IA externe."
 
 [PrivacyCloudflareCopy]
 other = "Cloudflare assure la diffusion et la protection du site et traite notamment les adresses IP. Il peut produire des statistiques sur son réseau. Web Analytics est configuré pour exclure les visiteurs de l’UE et insérer automatiquement un script de mesure ailleurs; les règles de sécurité du navigateur peuvent en empêcher l’exécution. Le traitement lié à la diffusion et à la sécurité reste distinct. Zaraz Consent Management et Google Tag Gateway sont inactifs. La diffusion et la protection répondent à notre intérêt légitime à sécuriser le site (art. 6(1)(f) RGPD). Les politiques des fournisseurs précisent les transferts internationaux."

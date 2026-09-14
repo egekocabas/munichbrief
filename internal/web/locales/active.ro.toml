@@ -586,10 +586,10 @@ other = "Comunicate ale poliției și surse"
 other = "Drepturile tale și reclamații"
 
 [PrivacyControllerCopy]
-other = "Ege Kocabaş administrează MunichBrief în nume propriu, din Bavaria. Adresa de mai sus este pentru corespondență. Poți scrie acolo sau la adresa de e-mail indicată pentru întrebări despre datele tale personale."
+other = "Ege Kocabaş administrează MunichBrief în nume propriu, din Bavaria, Germania. Adresa de mai sus este pentru corespondență. Poți scrie acolo sau la adresa de e-mail indicată pentru întrebări despre datele tale personale."
 
 [PrivacyHostingCopy]
-other = "Site-ul, baza de date și toate procesele de IA rulează pe echipamentele proprii ale operatorului, în Germania. Rezumatele, traducerile și verificările ulterioare sunt procesate local; sursele nu sunt trimise unui furnizor extern de IA."
+other = "Site-ul, baza de date și toate procesele de IA rulează pe echipamentele proprii ale operatorului, în Germania. Sursele nu sunt trimise unui furnizor extern de IA."
 
 [PrivacyCloudflareCopy]
 other = "Cloudflare livrează și protejează site-ul, prelucrează date de conexiune, inclusiv adrese IP, și poate genera statistici în propria rețea. Web Analytics exclude vizitatorii din UE și inserează automat un script de măsurare în alte regiuni; restricțiile de securitate ale browserului pot împiedica rularea lui. Livrarea și securitatea sunt prelucrări distincte. Zaraz Consent Management și Google Tag Gateway sunt inactive. Livrarea și protecția se bazează pe interesul legitim de a opera un site sigur (art. 6(1)(f) GDPR). Politicile furnizorilor explică transferurile internaționale."
