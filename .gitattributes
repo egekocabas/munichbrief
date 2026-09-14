@@ -1,0 +1,2 @@
+# Preserve upstream licence bytes, including intentional whitespace.
+LICENSES/** -text -whitespace

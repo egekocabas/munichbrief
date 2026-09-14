@@ -1,0 +1,1643 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-09-14",
+  "components": [
+    {
+      "id": "munichbrief",
+      "name": "MunichBrief",
+      "version": "project source",
+      "source": "https://github.com/egekocabas/munichbrief",
+      "license": "MIT",
+      "notices": [
+        "munichbrief-mit"
+      ],
+      "kind": "project",
+      "locations": [
+        "repository",
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "files": [
+        "internal/web/static/theme.js",
+        "internal/web/static/navigation.js",
+        "internal/web/static/admin.js",
+        "internal/web/static/favicon.svg"
+      ]
+    },
+    {
+      "id": "go-0",
+      "name": "github.com/BurntSushi/toml",
+      "version": "v1.6.0",
+      "source": "https://github.com/BurntSushi/toml",
+      "license": "MIT",
+      "notices": [
+        "go-0-0"
+      ],
+      "kind": "software",
+      "locations": [
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "module": "github.com/BurntSushi/toml",
+      "files": []
+    },
+    {
+      "id": "go-1",
+      "name": "github.com/go-text/typesetting",
+      "version": "v0.3.4",
+      "source": "https://github.com/go-text/typesetting",
+      "license": "(Unlicense OR BSD-3-Clause) AND MIT",
+      "notices": [
+        "go-1-0",
+        "go-1-1"
+      ],
+      "kind": "software",
+      "locations": [
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "module": "github.com/go-text/typesetting",
+      "files": []
+    },
+    {
+      "id": "go-2",
+      "name": "github.com/nicksnyder/go-i18n/v2",
+      "version": "v2.6.1",
+      "source": "https://github.com/nicksnyder/go-i18n/v2",
+      "license": "MIT",
+      "notices": [
+        "go-2-0"
+      ],
+      "kind": "software",
+      "locations": [
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "module": "github.com/nicksnyder/go-i18n/v2",
+      "files": []
+    },
+    {
+      "id": "go-3",
+      "name": "github.com/pgavlin/aho-corasick",
+      "version": "v0.5.1",
+      "source": "https://github.com/pgavlin/aho-corasick",
+      "license": "MIT",
+      "notices": [
+        "go-3-0"
+      ],
+      "kind": "software",
+      "locations": [
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "module": "github.com/pgavlin/aho-corasick",
+      "files": []
+    },
+    {
+      "id": "go-4",
+      "name": "golang.org/x/image",
+      "version": "v0.45.0",
+      "source": "https://golang.org/x/image",
+      "license": "BSD-3-Clause",
+      "notices": [
+        "go-4-0",
+        "go-patents"
+      ],
+      "kind": "software",
+      "locations": [
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "module": "golang.org/x/image",
+      "files": []
+    },
+    {
+      "id": "go-5",
+      "name": "golang.org/x/net",
+      "version": "v0.58.0",
+      "source": "https://golang.org/x/net",
+      "license": "BSD-3-Clause",
+      "notices": [
+        "go-4-0",
+        "go-patents"
+      ],
+      "kind": "software",
+      "locations": [
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "module": "golang.org/x/net",
+      "files": []
+    },
+    {
+      "id": "go-6",
+      "name": "golang.org/x/text",
+      "version": "v0.41.0",
+      "source": "https://golang.org/x/text",
+      "license": "BSD-3-Clause",
+      "notices": [
+        "go-4-0",
+        "go-patents"
+      ],
+      "kind": "software",
+      "locations": [
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "module": "golang.org/x/text",
+      "files": []
+    },
+    {
+      "id": "go-7",
+      "name": "modernc.org/sqlite",
+      "version": "v1.58.0",
+      "source": "https://modernc.org/sqlite",
+      "license": "BSD-3-Clause AND blessing AND MIT",
+      "notices": [
+        "go-7-0",
+        "go-7-1",
+        "go-7-2"
+      ],
+      "kind": "software",
+      "locations": [
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "module": "modernc.org/sqlite",
+      "files": []
+    },
+    {
+      "id": "go-8",
+      "name": "github.com/dustin/go-humanize",
+      "version": "v1.0.1",
+      "source": "https://github.com/dustin/go-humanize",
+      "license": "MIT",
+      "notices": [
+        "go-8-0"
+      ],
+      "kind": "software",
+      "locations": [
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "module": "github.com/dustin/go-humanize",
+      "files": []
+    },
+    {
+      "id": "go-9",
+      "name": "github.com/google/uuid",
+      "version": "v1.6.0",
+      "source": "https://github.com/google/uuid",
+      "license": "BSD-3-Clause",
+      "notices": [
+        "go-9-0"
+      ],
+      "kind": "software",
+      "locations": [
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "module": "github.com/google/uuid",
+      "files": []
+    },
+    {
+      "id": "go-10",
+      "name": "github.com/mattn/go-isatty",
+      "version": "v0.0.24",
+      "source": "https://github.com/mattn/go-isatty",
+      "license": "MIT",
+      "notices": [
+        "go-10-0"
+      ],
+      "kind": "software",
+      "locations": [
+        "development"
+      ],
+      "public": false,
+      "conditions": "Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "module": "github.com/mattn/go-isatty",
+      "files": []
+    },
+    {
+      "id": "go-11",
+      "name": "github.com/ncruces/go-strftime",
+      "version": "v1.0.0",
+      "source": "https://github.com/ncruces/go-strftime",
+      "license": "MIT",
+      "notices": [
+        "go-11-0"
+      ],
+      "kind": "software",
+      "locations": [
+        "development"
+      ],
+      "public": false,
+      "conditions": "Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "module": "github.com/ncruces/go-strftime",
+      "files": []
+    },
+    {
+      "id": "go-12",
+      "name": "github.com/remyoudompheng/bigfft",
+      "version": "v0.0.0-20230129092748-24d4a6f8daec",
+      "source": "https://github.com/remyoudompheng/bigfft",
+      "license": "BSD-3-Clause",
+      "notices": [
+        "go-12-0"
+      ],
+      "kind": "software",
+      "locations": [
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "module": "github.com/remyoudompheng/bigfft",
+      "files": []
+    },
+    {
+      "id": "go-13",
+      "name": "golang.org/x/sys",
+      "version": "v0.47.0",
+      "source": "https://golang.org/x/sys",
+      "license": "BSD-3-Clause",
+      "notices": [
+        "go-4-0",
+        "go-patents"
+      ],
+      "kind": "software",
+      "locations": [
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "module": "golang.org/x/sys",
+      "files": []
+    },
+    {
+      "id": "go-14",
+      "name": "modernc.org/libc",
+      "version": "v1.75.6",
+      "source": "https://modernc.org/libc",
+      "license": "BSD-3-Clause AND LicenseRef-libc-third-party",
+      "notices": [
+        "go-14-0",
+        "go-14-1"
+      ],
+      "kind": "software",
+      "locations": [
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "module": "modernc.org/libc",
+      "files": []
+    },
+    {
+      "id": "go-15",
+      "name": "modernc.org/mathutil",
+      "version": "v1.7.1",
+      "source": "https://modernc.org/mathutil",
+      "license": "BSD-3-Clause",
+      "notices": [
+        "go-15-0"
+      ],
+      "kind": "software",
+      "locations": [
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "module": "modernc.org/mathutil",
+      "files": []
+    },
+    {
+      "id": "go-16",
+      "name": "modernc.org/memory",
+      "version": "v1.12.1",
+      "source": "https://modernc.org/memory",
+      "license": "BSD-3-Clause AND BSD-2-Clause",
+      "notices": [
+        "go-16-0",
+        "go-16-1",
+        "go-16-2"
+      ],
+      "kind": "software",
+      "locations": [
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "module": "modernc.org/memory",
+      "files": []
+    },
+    {
+      "id": "go-runtime",
+      "name": "Go runtime and standard library",
+      "version": "go1.26.6 / container go1.27.1",
+      "source": "https://go.dev",
+      "license": "BSD-3-Clause",
+      "notices": [
+        "go-4-0",
+        "go-patents"
+      ],
+      "kind": "software",
+      "locations": [
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "Runtime notices are included for compiled Go code. Build verification checks the actual container toolchain licence. Includes the standard library’s vendored golang.org/x packages under the Go BSD licence and patent grant. Compiler-only dependencies and optional BoringCrypto are not linked into the supported CGO-disabled builds.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "files": []
+    },
+    {
+      "id": "htmx-org",
+      "name": "htmx.org",
+      "version": "2.0.10",
+      "source": "https://www.npmjs.com/package/htmx.org",
+      "license": "0BSD",
+      "notices": [
+        "htmx-org"
+      ],
+      "kind": "software",
+      "locations": [
+        "browser",
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "npm": "htmx.org",
+      "files": [
+        "internal/web/static/htmx.min.js"
+      ]
+    },
+    {
+      "id": "tailwindcss",
+      "name": "tailwindcss",
+      "version": "4.3.3",
+      "source": "https://www.npmjs.com/package/tailwindcss",
+      "license": "MIT",
+      "notices": [
+        "tailwindcss"
+      ],
+      "kind": "software",
+      "locations": [
+        "browser",
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "npm": "tailwindcss",
+      "files": [
+        "internal/web/static/app.css"
+      ]
+    },
+    {
+      "id": "tailwindcss-cli",
+      "name": "@tailwindcss/cli",
+      "version": "4.3.3",
+      "source": "https://www.npmjs.com/package/@tailwindcss/cli",
+      "license": "MIT",
+      "notices": [
+        "tailwindcss"
+      ],
+      "kind": "software",
+      "locations": [
+        "development"
+      ],
+      "public": false,
+      "conditions": "",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "npm": "@tailwindcss/cli",
+      "files": []
+    },
+    {
+      "id": "noto-sc",
+      "name": "Noto Sans SC",
+      "version": "sha256:a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+      "source": "https://github.com/google/fonts",
+      "license": "OFL-1.1",
+      "notices": [
+        "noto-ofl"
+      ],
+      "kind": "font",
+      "locations": [
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "Unmodified embedded fonts used to render social cards. Font licences do not automatically apply to the rendered images.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "files": [
+        "internal/web/fonts/NotoSansSC-VF.ttf"
+      ]
+    },
+    {
+      "id": "noto-devanagari",
+      "name": "Noto Sans Devanagari",
+      "version": "sha256:9ce7b04f60e363d8870e5997744cf85cf69d38a4d7d129d364d92a3b14b461d7",
+      "source": "https://github.com/google/fonts",
+      "license": "OFL-1.1",
+      "notices": [
+        "noto-ofl"
+      ],
+      "kind": "font",
+      "locations": [
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "Unmodified embedded fonts used to render social cards. Font licences do not automatically apply to the rendered images.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "files": [
+        "internal/web/fonts/NotoSansDevanagari-VF.ttf"
+      ]
+    },
+    {
+      "id": "go-fonts",
+      "name": "Go fonts",
+      "version": "v0.45.0",
+      "source": "https://go.dev/blog/go-fonts",
+      "license": "BSD-3-Clause",
+      "notices": [
+        "go-4-0"
+      ],
+      "kind": "font",
+      "locations": [
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "Fonts designed by Bigelow & Holmes; Copyright 2016 The Go Authors. Used in server-rendered social images.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "files": []
+    },
+    {
+      "id": "model-0",
+      "name": "MADLAD400 7B",
+      "version": "Q4_K_M",
+      "source": "https://huggingface.co/google/madlad400-7b-mt",
+      "license": "Apache-2.0",
+      "notices": [
+        "apache-2-0"
+      ],
+      "kind": "model",
+      "locations": [
+        "separate-inference-server"
+      ],
+      "public": true,
+      "conditions": "Apache 2.0: internal inference is permitted. If weights or derivatives are redistributed, provide the licence, preserve applicable notices and identify modifications. No model weights are included in MunichBrief releases. Academic citations are separate from licence conditions.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "model_tag": "hf.co/enacimie/madlad400-7b-mt-Q4_K_M-GGUF:Q4_K_M",
+      "digest": "ce653ea2ea76e7a8ac5084307c0609bc99682bb6f22926b8e2df7b33bf8aa1c6",
+      "upstream_revision": "1ff63ce7ddd571a69d45cad9672c553428419671",
+      "artifact_source": "https://huggingface.co/enacimie/madlad400-7b-mt-Q4_K_M-GGUF",
+      "artifact_revision": "4e2c4a5fe3c509eb3d260d9dce49ce28e96a71d5",
+      "quantization": "Q4_K_M (artefact label; Ollama does not report quantization)",
+      "files": []
+    },
+    {
+      "id": "model-1",
+      "name": "Gemma 4 E4B",
+      "version": "Q4_K_M",
+      "source": "https://huggingface.co/google/gemma-4-E4B-it",
+      "license": "Apache-2.0",
+      "notices": [
+        "apache-2-0"
+      ],
+      "kind": "model",
+      "locations": [
+        "separate-inference-server"
+      ],
+      "public": true,
+      "conditions": "Apache 2.0: internal inference is permitted. If weights or derivatives are redistributed, provide the licence, preserve applicable notices and identify modifications. No model weights are included in MunichBrief releases. Academic citations are separate from licence conditions.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "model_tag": "hf.co/unsloth/gemma-4-E4B-it-GGUF:Q4_K_M",
+      "digest": "487eacf5e94be5463704e0069adf2f8e6da0d952e43e4232d519918efc6e384f",
+      "upstream_revision": "ee0ef6023621cff504d758262d4e04895a5af4a2",
+      "artifact_source": "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF",
+      "artifact_revision": "bfc15c382204943c3a8fff0c750b94ae2364d7a3",
+      "quantization": "Q4_K_M (artefact label; Ollama does not report quantization)",
+      "files": []
+    },
+    {
+      "id": "model-2",
+      "name": "Gemma 4 E4B",
+      "version": "UD-Q4_K_XL",
+      "source": "https://huggingface.co/google/gemma-4-E4B-it",
+      "license": "Apache-2.0",
+      "notices": [
+        "apache-2-0"
+      ],
+      "kind": "model",
+      "locations": [
+        "separate-inference-server"
+      ],
+      "public": true,
+      "conditions": "Apache 2.0: internal inference is permitted. If weights or derivatives are redistributed, provide the licence, preserve applicable notices and identify modifications. No model weights are included in MunichBrief releases. Academic citations are separate from licence conditions.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "model_tag": "hf.co/unsloth/gemma-4-E4B-it-GGUF:UD-Q4_K_XL",
+      "digest": "cbde5d1332104255d5ff4861fcb4fa15864cdc504dfc9f688003e503e16c9946",
+      "upstream_revision": "ee0ef6023621cff504d758262d4e04895a5af4a2",
+      "artifact_source": "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF",
+      "artifact_revision": "bfc15c382204943c3a8fff0c750b94ae2364d7a3",
+      "quantization": "UD-Q4_K_XL (artefact label; Ollama does not report quantization)",
+      "files": []
+    },
+    {
+      "id": "model-3",
+      "name": "Tower-Plus 9B",
+      "version": "Q3_K_S",
+      "source": "https://huggingface.co/Unbabel/Tower-Plus-9B",
+      "license": "LicenseRef-Tower-conflict AND LicenseRef-Gemma",
+      "notices": [
+        "cc-by-nc-sa-4-0",
+        "cc-by-nc-4-0",
+        "gemma-terms"
+      ],
+      "kind": "model",
+      "locations": [
+        "separate-inference-server"
+      ],
+      "public": false,
+      "conditions": "Upstream metadata says CC BY-NC-SA 4.0 while the model-card body says CC BY-NC 4.0. Gemma 2 base terms also apply. Both declarations restrict commercial use; ShareAlike obligations may apply to adapted weights. Do not treat this conflict as permission. Exact applicable terms and noncommercial eligibility need review.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "review_needed",
+      "model_tag": "hf.co/mradermacher/Tower-Plus-9B-GGUF:Q3_K_S",
+      "digest": "a181e09f743bfdf426cf3d91c1710df79e953c3e66ec9d7f5fab38e37fb5cc7c",
+      "upstream_revision": "c59d17c5bbf5eb6d9f0f8ba67e0ee76b4b106ecc",
+      "artifact_source": "https://huggingface.co/mradermacher/Tower-Plus-9B-GGUF",
+      "artifact_revision": "79d27e5fb80c9feb4eb7b29c2469cdcb49b01b0c",
+      "quantization": "Q3_K_S (artefact label; Ollama does not report quantization)",
+      "files": []
+    },
+    {
+      "id": "model-4",
+      "name": "Tower-Plus 9B",
+      "version": "Q3_K_M",
+      "source": "https://huggingface.co/Unbabel/Tower-Plus-9B",
+      "license": "LicenseRef-Tower-conflict AND LicenseRef-Gemma",
+      "notices": [
+        "cc-by-nc-sa-4-0",
+        "cc-by-nc-4-0",
+        "gemma-terms"
+      ],
+      "kind": "model",
+      "locations": [
+        "separate-inference-server"
+      ],
+      "public": false,
+      "conditions": "Upstream metadata says CC BY-NC-SA 4.0 while the model-card body says CC BY-NC 4.0. Gemma 2 base terms also apply. Both declarations restrict commercial use; ShareAlike obligations may apply to adapted weights. Do not treat this conflict as permission. Exact applicable terms and noncommercial eligibility need review.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "review_needed",
+      "model_tag": "hf.co/mradermacher/Tower-Plus-9B-GGUF:Q3_K_M",
+      "digest": "02a89d5b17a3c1a03b28ebc59f8972f29ae23374048724b0b2f76625db1a2e08",
+      "upstream_revision": "c59d17c5bbf5eb6d9f0f8ba67e0ee76b4b106ecc",
+      "artifact_source": "https://huggingface.co/mradermacher/Tower-Plus-9B-GGUF",
+      "artifact_revision": "79d27e5fb80c9feb4eb7b29c2469cdcb49b01b0c",
+      "quantization": "Q3_K_M (artefact label; Ollama does not report quantization)",
+      "files": []
+    },
+    {
+      "id": "model-5",
+      "name": "LLaMAX3 8B Alpaca",
+      "version": "Q4_K_M",
+      "source": "https://huggingface.co/LLaMAX/LLaMAX3-8B-Alpaca",
+      "license": "MIT AND LicenseRef-Llama-3",
+      "notices": [
+        "llama-3"
+      ],
+      "kind": "model",
+      "locations": [
+        "separate-inference-server"
+      ],
+      "public": true,
+      "conditions": "The upstream MIT badge does not replace inherited Meta Llama 3 terms. For a service using this model prominently display “Built with Meta Llama 3”; retain the licence/NOTICE on weight redistribution and comply with the acceptable-use policy. Do not use outputs to improve a different LLM except permitted Llama derivatives. Verify the complete derivation before deployment.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "conditions",
+      "model_tag": "hf.co/mradermacher/LLaMAX3-8B-Alpaca-GGUF:Q4_K_M",
+      "digest": "e6019b2cc8a5170223e32fad8fa78a2f41fd4744ff06d60aba2460cd80445ecf",
+      "upstream_revision": "111f2fa166ff8bd3413757cbda9900374ce38f9e",
+      "artifact_source": "https://huggingface.co/mradermacher/LLaMAX3-8B-Alpaca-GGUF",
+      "artifact_revision": "6206d242d28b7c66026af66bc0e9215d1fdb2b46",
+      "quantization": "Q4_K_M",
+      "files": []
+    },
+    {
+      "id": "model-6",
+      "name": "TowerInstruct 7B v0.2",
+      "version": "Q5_K_M",
+      "source": "https://huggingface.co/Unbabel/TowerInstruct-7B-v0.2",
+      "license": "CC-BY-NC-4.0 AND LicenseRef-Llama-2",
+      "notices": [
+        "cc-by-nc-4-0",
+        "llama-2"
+      ],
+      "kind": "model",
+      "locations": [
+        "separate-inference-server"
+      ],
+      "public": false,
+      "conditions": "CC BY-NC 4.0 plus inherited Llama 2 terms. Noncommercial eligibility has not been established for this deployment; absence of advertising alone is not sufficient. Preserve attribution and changes; comply with Llama 2 use restrictions and redistribution notices. Review needed before production selection.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "review_needed",
+      "model_tag": "hf.co/mradermacher/TowerInstruct-7B-v0.2-GGUF:Q5_K_M",
+      "digest": "3b60af28797769d1d99061b96c1a866488145389b0db037c8fc182f9b55b516e",
+      "upstream_revision": "a240dfd3a0990c859ecfd4671e0ba9b923c04a43",
+      "artifact_source": "https://huggingface.co/mradermacher/TowerInstruct-7B-v0.2-GGUF",
+      "artifact_revision": "5c2366236ae5bde80de8a7d6b6272af6aceed7b0",
+      "quantization": "Q5_K_M",
+      "files": []
+    },
+    {
+      "id": "model-7",
+      "name": "TowerInstruct 7B v0.2",
+      "version": "Q6_K",
+      "source": "https://huggingface.co/Unbabel/TowerInstruct-7B-v0.2",
+      "license": "CC-BY-NC-4.0 AND LicenseRef-Llama-2",
+      "notices": [
+        "cc-by-nc-4-0",
+        "llama-2"
+      ],
+      "kind": "model",
+      "locations": [
+        "separate-inference-server"
+      ],
+      "public": false,
+      "conditions": "CC BY-NC 4.0 plus inherited Llama 2 terms. Noncommercial eligibility has not been established for this deployment; absence of advertising alone is not sufficient. Preserve attribution and changes; comply with Llama 2 use restrictions and redistribution notices. Review needed before production selection.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "review_needed",
+      "model_tag": "hf.co/mradermacher/TowerInstruct-7B-v0.2-GGUF:Q6_K",
+      "digest": "5e471d96948b38ea7147291b0349c9e9e91cab339a87cd60489a0378c0b62a04",
+      "upstream_revision": "a240dfd3a0990c859ecfd4671e0ba9b923c04a43",
+      "artifact_source": "https://huggingface.co/mradermacher/TowerInstruct-7B-v0.2-GGUF",
+      "artifact_revision": "5c2366236ae5bde80de8a7d6b6272af6aceed7b0",
+      "quantization": "Q6_K",
+      "files": []
+    },
+    {
+      "id": "model-8",
+      "name": "SalamandraTA 7B",
+      "version": "salamandrata-7b-instruct-q4_k_m-imat.gguf",
+      "source": "https://huggingface.co/BSC-LT/salamandraTA-7b-instruct",
+      "license": "GPL-3.0 (upstream declaration; excluded)",
+      "notices": [],
+      "kind": "model",
+      "locations": [
+        "separate-inference-server"
+      ],
+      "public": false,
+      "conditions": "Not intended for MunichBrief use, by operator decision. Installed only; no review approval. Do not list in public credits. No changes to the separate Hugging Face uploads are part of this PR.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "excluded",
+      "model_tag": "hf.co/egekocabas/salamandraTA-7b-instruct-Q4_K_M-GGUF:salamandrata-7b-instruct-q4_k_m-imat.gguf",
+      "digest": "dfe3b227275e4d24b0d60285d1084fcf78d869b10464fed6c5deb83a0db5104b",
+      "upstream_revision": "67e0f70c3a058b0f18381d421084d06fc7edbc3e",
+      "artifact_source": "https://huggingface.co/egekocabas/salamandraTA-7b-instruct-Q4_K_M-GGUF",
+      "artifact_revision": "ada2f4d52faf0d651aaf264a2067cba1d5cc4af0",
+      "quantization": "Q4_K_M (artefact label; Ollama does not report quantization)",
+      "files": []
+    },
+    {
+      "id": "model-9",
+      "name": "SalamandraTA 7B",
+      "version": "salamandrata-7b-instruct-q5_k_m-imat.gguf",
+      "source": "https://huggingface.co/BSC-LT/salamandraTA-7b-instruct",
+      "license": "GPL-3.0 (upstream declaration; excluded)",
+      "notices": [],
+      "kind": "model",
+      "locations": [
+        "separate-inference-server"
+      ],
+      "public": false,
+      "conditions": "Not intended for MunichBrief use, by operator decision. Installed only; no review approval. Do not list in public credits. No changes to the separate Hugging Face uploads are part of this PR.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "excluded",
+      "model_tag": "hf.co/egekocabas/salamandraTA-7b-instruct-Q5_K_M-GGUF:salamandrata-7b-instruct-q5_k_m-imat.gguf",
+      "digest": "0d8b6cf1535a59787994c74f82fb335e92bfaa0fc5054998bb8c0c716f6e8894",
+      "upstream_revision": "67e0f70c3a058b0f18381d421084d06fc7edbc3e",
+      "artifact_source": "https://huggingface.co/egekocabas/salamandraTA-7b-instruct-Q5_K_M-GGUF",
+      "artifact_revision": "bb64ef37c5e8d90ab591eb3bc70a7509f0e37e04",
+      "quantization": "Q5_K_M (artefact label; Ollama does not report quantization)",
+      "files": []
+    },
+    {
+      "id": "model-10",
+      "name": "EuroLLM 9B Instruct 2512",
+      "version": "Q4_K_M",
+      "source": "https://huggingface.co/utter-project/EuroLLM-9B-Instruct-2512",
+      "license": "Apache-2.0",
+      "notices": [
+        "apache-2-0"
+      ],
+      "kind": "model",
+      "locations": [
+        "separate-inference-server"
+      ],
+      "public": true,
+      "conditions": "Apache 2.0: internal inference is permitted. If weights or derivatives are redistributed, provide the licence, preserve applicable notices and identify modifications. No model weights are included in MunichBrief releases. Academic citations are separate from licence conditions.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "model_tag": "hf.co/mradermacher/EuroLLM-9B-Instruct-2512-GGUF:Q4_K_M",
+      "digest": "6c3989a047a7f46a0b5c241e4b6a8c7ce1f3381390f7ce9b91afb40ebd40d3d2",
+      "upstream_revision": "def82454026b0353f12e48a0de081a9ed380d91e",
+      "artifact_source": "https://huggingface.co/mradermacher/EuroLLM-9B-Instruct-2512-GGUF",
+      "artifact_revision": "5138603fccb9dc1f35c25cfd1a4981a78617e9ff",
+      "quantization": "Q4_K_M (artefact label; Ollama does not report quantization)",
+      "files": []
+    },
+    {
+      "id": "model-11",
+      "name": "Hy-MT2 7B",
+      "version": "Q5_K_M",
+      "source": "https://huggingface.co/tencent/Hy-MT2-7B",
+      "license": "Apache-2.0",
+      "notices": [
+        "apache-2-0"
+      ],
+      "kind": "model",
+      "locations": [
+        "separate-inference-server"
+      ],
+      "public": true,
+      "conditions": "Apache 2.0: internal inference is permitted. If weights or derivatives are redistributed, provide the licence, preserve applicable notices and identify modifications. No model weights are included in MunichBrief releases. Academic citations are separate from licence conditions.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "model_tag": "hf.co/mradermacher/Hy-MT2-7B-GGUF:Q5_K_M",
+      "digest": "24acc0f002f8c874f34e8b3e22da236405f7c3a47ae9d62d3744cf3c5b4bd693",
+      "upstream_revision": "9b0eb4e8f001def3e5ff6469a0ac96fdb39ec223",
+      "artifact_source": "https://huggingface.co/mradermacher/Hy-MT2-7B-GGUF",
+      "artifact_revision": "9825e696e37ee79d00f5c41dbdae8098ed35ef3d",
+      "quantization": "Q5_K_M (artefact label; Ollama does not report quantization)",
+      "files": []
+    },
+    {
+      "id": "model-12",
+      "name": "TranslateGemma 4B",
+      "version": "4b-it-q8_0",
+      "source": "https://huggingface.co/google/translategemma-4b-it",
+      "license": "LicenseRef-Gemma",
+      "notices": [
+        "gemma-terms"
+      ],
+      "kind": "model",
+      "locations": [
+        "separate-inference-server"
+      ],
+      "public": true,
+      "conditions": "Gemma terms and prohibited-use policy apply to internal use. Hosted model access and weight redistribution have additional terms; this website publishes stored translations, not an inference endpoint. Outputs are not model derivatives under these terms. Preserve required notices if distributing weights.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "conditions",
+      "model_tag": "translategemma:4b-it-q8_0",
+      "digest": "69729cbbfd3587b37aa4cc2b14cb0cca36b1edcc12add30fc43a3f9bc4be18ec",
+      "upstream_revision": "10042cb0e6e7fdce748996a71dc3dc432a4e0c89",
+      "artifact_source": "https://ollama.com/library/translategemma:4b-it-q8_0",
+      "artifact_revision": "69729cbbfd3587b37aa4cc2b14cb0cca36b1edcc12add30fc43a3f9bc4be18ec",
+      "quantization": "Q8_0",
+      "files": []
+    },
+    {
+      "id": "model-13",
+      "name": "Qwen3.5 9B",
+      "version": "Q3_K_M",
+      "source": "https://huggingface.co/Qwen/Qwen3.5-9B",
+      "license": "Apache-2.0",
+      "notices": [
+        "apache-2-0"
+      ],
+      "kind": "model",
+      "locations": [
+        "separate-inference-server"
+      ],
+      "public": true,
+      "conditions": "Apache 2.0: internal inference is permitted. If weights or derivatives are redistributed, provide the licence, preserve applicable notices and identify modifications. No model weights are included in MunichBrief releases. Academic citations are separate from licence conditions.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "model_tag": "hf.co/bartowski/Qwen_Qwen3.5-9B-GGUF:Q3_K_M",
+      "digest": "14349d99100f6a9ea1082670dc15fddc65cabe888161ad35cf59d6c83d89fcf9",
+      "upstream_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+      "artifact_source": "https://huggingface.co/bartowski/Qwen_Qwen3.5-9B-GGUF",
+      "artifact_revision": "182be2fd6c7bc44887d88a91cb03ff009cc9f549",
+      "quantization": "Q3_K_M (artefact label; Ollama does not report quantization)",
+      "files": []
+    },
+    {
+      "id": "model-14",
+      "name": "Qwen3.5 4B",
+      "version": "4b-q8_0",
+      "source": "https://huggingface.co/Qwen/Qwen3.5-4B",
+      "license": "Apache-2.0",
+      "notices": [
+        "apache-2-0"
+      ],
+      "kind": "model",
+      "locations": [
+        "separate-inference-server"
+      ],
+      "public": true,
+      "conditions": "Apache 2.0: internal inference is permitted. If weights or derivatives are redistributed, provide the licence, preserve applicable notices and identify modifications. No model weights are included in MunichBrief releases. Academic citations are separate from licence conditions.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "model_tag": "qwen3.5:4b-q8_0",
+      "digest": "8722f47c2791e6554c3244d2444b433c6241eed92d2093b53ef105626a6dcb36",
+      "upstream_revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+      "artifact_source": "https://ollama.com/library/qwen3.5:4b-q8_0",
+      "artifact_revision": "8722f47c2791e6554c3244d2444b433c6241eed92d2093b53ef105626a6dcb36",
+      "quantization": "Q8_0",
+      "files": []
+    },
+    {
+      "id": "model-15",
+      "name": "Granite 4.1 3B",
+      "version": "3b-q5_K_M",
+      "source": "https://huggingface.co/ibm-granite/granite-4.1-3b",
+      "license": "Apache-2.0",
+      "notices": [
+        "apache-2-0"
+      ],
+      "kind": "model",
+      "locations": [
+        "separate-inference-server"
+      ],
+      "public": true,
+      "conditions": "Apache 2.0: internal inference is permitted. If weights or derivatives are redistributed, provide the licence, preserve applicable notices and identify modifications. No model weights are included in MunichBrief releases. Academic citations are separate from licence conditions.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "model_tag": "granite4.1:3b-q5_K_M",
+      "digest": "5f9ff57bab32907c8e7d98f07279039950a9fda19e5d5a979f4316cc24353fc3",
+      "upstream_revision": "c0650403e44e78ec0262dab1c90914c65b196c4e",
+      "artifact_source": "https://ollama.com/library/granite4.1:3b-q5_K_M",
+      "artifact_revision": "5f9ff57bab32907c8e7d98f07279039950a9fda19e5d5a979f4316cc24353fc3",
+      "quantization": "Q5_K_M",
+      "files": []
+    },
+    {
+      "id": "model-16",
+      "name": "Qwen3.5 4B",
+      "version": "4b",
+      "source": "https://huggingface.co/Qwen/Qwen3.5-4B",
+      "license": "Apache-2.0",
+      "notices": [
+        "apache-2-0"
+      ],
+      "kind": "model",
+      "locations": [
+        "separate-inference-server"
+      ],
+      "public": true,
+      "conditions": "Apache 2.0: internal inference is permitted. If weights or derivatives are redistributed, provide the licence, preserve applicable notices and identify modifications. No model weights are included in MunichBrief releases. Academic citations are separate from licence conditions.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "model_tag": "qwen3.5:4b",
+      "digest": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd",
+      "upstream_revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+      "artifact_source": "https://ollama.com/library/qwen3.5:4b",
+      "artifact_revision": "2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd",
+      "quantization": "Q4_K_M",
+      "files": []
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama",
+      "version": "0.33.3",
+      "source": "https://github.com/ollama/ollama/tree/v0.33.3",
+      "license": "MIT",
+      "notices": [
+        "ollama-mit"
+      ],
+      "kind": "service",
+      "locations": [
+        "separate-inference-server"
+      ],
+      "public": true,
+      "conditions": "Separately installed inference software, not bundled in the MunichBrief image. Model weights have their own licences.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "files": []
+    },
+    {
+      "id": "htmx-head-support",
+      "name": "HTMX head support",
+      "version": "2.0.5",
+      "source": "https://github.com/bigskysoftware/htmx-extensions",
+      "license": "0BSD",
+      "notices": [
+        "htmx-head-support"
+      ],
+      "kind": "software",
+      "locations": [
+        "browser",
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "npm": "htmx-ext-head-support",
+      "files": [
+        "internal/web/static/head-support.js"
+      ]
+    },
+    {
+      "id": "eu-ai-icons",
+      "name": "European Commission AI icons",
+      "version": "downloaded artwork; light variant adapted by MunichBrief",
+      "source": "https://digital-strategy.ec.europa.eu/en/policies/eu-icons-labelling-ai-generated-content",
+      "license": "LicenseRef-EU-AI-icons",
+      "notices": [
+        "eu-ai-icon-permission"
+      ],
+      "kind": "asset",
+      "locations": [
+        "browser",
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "The icon-specific permission allows free use without attribution. It supersedes the generic website reuse assumption. Preserve the distinction between official artwork and the modified light variant; no endorsement or Code signatory claim.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "files": [
+        "internal/web/static/eu-ai-generated-white.svg",
+        "internal/web/static/eu-ai-generated-white-50.png",
+        "internal/web/static/munichbrief-ai-generated-light.svg",
+        "internal/web/static/eu-ai-generated-white-50.svg",
+        "internal/web/static/eu-ai-generated-black.svg",
+        "internal/web/static/eu-ai-generated-black-50.svg",
+        "internal/web/static/eu-ai-generated-black.png"
+      ]
+    },
+    {
+      "id": "olympiapark",
+      "name": "MunichBrief Olympiapark illustration",
+      "version": "sha256:23c86e90902d61f358bbdc5b0d47caddd7f86d72a07f51fae033ef4b91c020e4",
+      "source": "https://github.com/egekocabas/munichbrief",
+      "license": "MIT",
+      "notices": [
+        "munichbrief-mit"
+      ],
+      "kind": "asset",
+      "locations": [
+        "binary",
+        "container"
+      ],
+      "public": true,
+      "conditions": "AI-generated project illustration used in social images. It is not a third-party stock photograph; retain existing generated-image provenance.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "files": [
+        "internal/web/static/olympiapark-background.png"
+      ]
+    },
+    {
+      "id": "munich-data",
+      "name": "Landeshauptstadt München – GeodatenService",
+      "version": "street and district WFS; live source",
+      "source": "https://geoportal.muenchen.de/geoserver/gsm_wfs/ows?service=WFS&version=1.0.0&request=GetCapabilities",
+      "license": "dl-de/by-2-0",
+      "notices": [
+        "dl-de-by-2-0"
+      ],
+      "kind": "data",
+      "locations": [
+        "separate-gazetteer"
+      ],
+      "public": true,
+      "conditions": "Place names extracted from street-name and Stadtbezirke WFS, filtered and normalized for an internal lookup. The original geometries and complete source datasets are not redistributed.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "files": []
+    },
+    {
+      "id": "geonames",
+      "name": "GeoNames",
+      "version": "DE.zip; live source",
+      "source": "https://download.geonames.org/export/dump/DE.zip",
+      "license": "CC-BY-4.0",
+      "notices": [
+        "cc-by-4-0"
+      ],
+      "kind": "data",
+      "locations": [
+        "separate-gazetteer"
+      ],
+      "public": true,
+      "conditions": "© GeoNames contributors. Germany place names filtered to the Munich area and normalized for the internal lookup.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "files": []
+    },
+    {
+      "id": "openstreetmap",
+      "name": "© OpenStreetMap contributors",
+      "version": "Overpass name extracts; live source",
+      "source": "https://www.openstreetmap.org/copyright",
+      "license": "ODbL-1.0",
+      "notices": [
+        "odbl-1-0"
+      ],
+      "kind": "data",
+      "locations": [
+        "separate-gazetteer"
+      ],
+      "public": true,
+      "conditions": "Names are filtered and normalized for an internal lookup. No derived database is offered for download. Review ODbL database/Produced Work obligations before exporting or exposing the lookup; preserved source spellings are restored into summaries.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "files": []
+    },
+    {
+      "id": "debian-base-files",
+      "name": "Debian base-files",
+      "version": "12.4+deb12u15",
+      "source": "https://sources.debian.org/src/base-files/12.4+deb12u15/",
+      "license": "GPL-2.0-or-later",
+      "notices": [
+        "debian-base-files",
+        "apache-2-0",
+        "debian-artistic",
+        "debian-bsd",
+        "debian-cc0-1-0",
+        "debian-gfdl-1-2",
+        "debian-gfdl-1-3",
+        "debian-gpl-1",
+        "debian-gpl-2",
+        "debian-gpl-3",
+        "debian-lgpl-2",
+        "debian-lgpl-2-1",
+        "debian-lgpl-3",
+        "debian-mpl-1-1",
+        "debian-mpl-2-0"
+      ],
+      "kind": "container",
+      "locations": [
+        "container"
+      ],
+      "public": false,
+      "conditions": "Preserved from the pinned distroless image. Original package copyright and common licence files remain at /usr/share/doc and /usr/share/common-licenses. See packaged source archives for copyleft components.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "files": []
+    },
+    {
+      "id": "debian-ca-certificates",
+      "name": "Debian ca-certificates",
+      "version": "20250419~deb12u1",
+      "source": "https://sources.debian.org/src/ca-certificates/20250419~deb12u1/",
+      "license": "MPL-2.0 AND GPL-2.0-or-later",
+      "notices": [
+        "debian-ca-certificates"
+      ],
+      "kind": "container",
+      "locations": [
+        "container"
+      ],
+      "public": false,
+      "conditions": "Preserved from the pinned distroless image. Original package copyright and common licence files remain at /usr/share/doc and /usr/share/common-licenses. See packaged source archives for copyleft components.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "files": []
+    },
+    {
+      "id": "debian-media-types",
+      "name": "Debian media-types",
+      "version": "10.0.0",
+      "source": "https://sources.debian.org/src/media-types/10.0.0/",
+      "license": "LicenseRef-public-domain",
+      "notices": [
+        "debian-media-types"
+      ],
+      "kind": "container",
+      "locations": [
+        "container"
+      ],
+      "public": false,
+      "conditions": "Preserved from the pinned distroless image. Original package copyright and common licence files remain at /usr/share/doc and /usr/share/common-licenses. See packaged source archives for copyleft components.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "files": []
+    },
+    {
+      "id": "debian-netbase",
+      "name": "Debian netbase",
+      "version": "6.4",
+      "source": "https://sources.debian.org/src/netbase/6.4/",
+      "license": "GPL-2.0-only",
+      "notices": [
+        "debian-netbase"
+      ],
+      "kind": "container",
+      "locations": [
+        "container"
+      ],
+      "public": false,
+      "conditions": "Preserved from the pinned distroless image. Original package copyright and common licence files remain at /usr/share/doc and /usr/share/common-licenses. See packaged source archives for copyleft components.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "files": []
+    },
+    {
+      "id": "debian-tzdata",
+      "name": "Debian tzdata",
+      "version": "2026b-0+deb12u1",
+      "source": "https://sources.debian.org/src/tzdata/2026b-0+deb12u1/",
+      "license": "LicenseRef-public-domain",
+      "notices": [
+        "debian-tzdata"
+      ],
+      "kind": "container",
+      "locations": [
+        "container"
+      ],
+      "public": false,
+      "conditions": "Preserved from the pinned distroless image. Original package copyright and common licence files remain at /usr/share/doc and /usr/share/common-licenses. See packaged source archives for copyleft components.",
+      "reviewed_at": "2026-09-14",
+      "review_status": "reviewed",
+      "files": []
+    }
+  ],
+  "notices": [
+    {
+      "id": "munichbrief-mit",
+      "file": "LICENSES/munichbrief-mit.txt",
+      "sha256": "ff01c1c270a6924fcd28aeddef170c7e8054876348bab5a43753954cd3c6de16",
+      "source": "https://github.com/egekocabas/munichbrief/blob/main/LICENSE"
+    },
+    {
+      "id": "go-0-0",
+      "file": "LICENSES/go-0-0.txt",
+      "sha256": "d21cb1c60785d6d3a84a7059323ccafc45c645b1bbda281c76a62d66ad2d7dc3",
+      "source": "https://pkg.go.dev/github.com/BurntSushi/toml@v1.6.0?tab=licenses"
+    },
+    {
+      "id": "go-1-0",
+      "file": "LICENSES/go-1-0.txt",
+      "sha256": "6b1bf94c77d7faa0ce94f8745595bfaf4c404f8b3873f5c2ce55ca15f8e44eca",
+      "source": "https://pkg.go.dev/github.com/go-text/typesetting@v0.3.4?tab=licenses"
+    },
+    {
+      "id": "go-1-1",
+      "file": "LICENSES/go-1-1.txt",
+      "sha256": "e45d96558ba3d406f95dffed6f22c3be07093475ef617bcfddf88444d6b66788",
+      "source": "https://pkg.go.dev/github.com/go-text/typesetting@v0.3.4?tab=licenses"
+    },
+    {
+      "id": "go-2-0",
+      "file": "LICENSES/go-2-0.txt",
+      "sha256": "8fb3aead091abd1579670cd4d805c7923b66ee97b771148f4ef928a65c259328",
+      "source": "https://pkg.go.dev/github.com/nicksnyder/go-i18n/v2@v2.6.1?tab=licenses"
+    },
+    {
+      "id": "go-3-0",
+      "file": "LICENSES/go-3-0.txt",
+      "sha256": "74966845d68faf110f9b5142c1610392e668d981f500eabe34702aafa86b6825",
+      "source": "https://pkg.go.dev/github.com/pgavlin/aho-corasick@v0.5.1?tab=licenses"
+    },
+    {
+      "id": "go-4-0",
+      "file": "LICENSES/go-4-0.txt",
+      "sha256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+      "source": "https://pkg.go.dev/golang.org/x/image@v0.45.0?tab=licenses"
+    },
+    {
+      "id": "go-7-0",
+      "file": "LICENSES/go-7-0.txt",
+      "sha256": "c6fe05491a60ae13bcd223088d2705e36dede24e5587226231d2459ada5c4822",
+      "source": "https://pkg.go.dev/modernc.org/sqlite@v1.58.0?tab=licenses"
+    },
+    {
+      "id": "go-7-1",
+      "file": "LICENSES/go-7-1.txt",
+      "sha256": "8438c9c89b849131ead81d5435cb97fcf052df5b0b286dda8a2d4c29e6cb3fd0",
+      "source": "https://pkg.go.dev/modernc.org/sqlite@v1.58.0?tab=licenses"
+    },
+    {
+      "id": "go-7-2",
+      "file": "LICENSES/go-7-2.txt",
+      "sha256": "6ce72bbe12d975bd5286e5ab0a064c069693300c47bccbc57bec18485f1621ea",
+      "source": "https://pkg.go.dev/modernc.org/sqlite@v1.58.0?tab=licenses"
+    },
+    {
+      "id": "go-8-0",
+      "file": "LICENSES/go-8-0.txt",
+      "sha256": "a973b4498c13eb74baa2a8e5c351426a6826f2fcdd909916dbe53ee2e755fd71",
+      "source": "https://pkg.go.dev/github.com/dustin/go-humanize@v1.0.1?tab=licenses"
+    },
+    {
+      "id": "go-9-0",
+      "file": "LICENSES/go-9-0.txt",
+      "sha256": "0a8d61ed3cbfd5312326e8126c31ce9c627a283adc99131b56896d29ada04b2d",
+      "source": "https://pkg.go.dev/github.com/google/uuid@v1.6.0?tab=licenses"
+    },
+    {
+      "id": "go-10-0",
+      "file": "LICENSES/go-10-0.txt",
+      "sha256": "08eab1118c80885fa1fa6a6dd7303f65a379fcb3733e063d20d1bbc2c76e6fa1",
+      "source": "https://pkg.go.dev/github.com/mattn/go-isatty@v0.0.24?tab=licenses"
+    },
+    {
+      "id": "go-11-0",
+      "file": "LICENSES/go-11-0.txt",
+      "sha256": "38ae43959daf953a393a585b2988672cb65a5a541aca0d0be5e72595a0a16883",
+      "source": "https://pkg.go.dev/github.com/ncruces/go-strftime@v1.0.0?tab=licenses"
+    },
+    {
+      "id": "go-12-0",
+      "file": "LICENSES/go-12-0.txt",
+      "sha256": "dd26a7abddd02e2d0aba97805b31f248ef7835d9e10da289b22e3b8ab78b324d",
+      "source": "https://pkg.go.dev/github.com/remyoudompheng/bigfft@v0.0.0-20230129092748-24d4a6f8daec?tab=licenses"
+    },
+    {
+      "id": "go-14-0",
+      "file": "LICENSES/go-14-0.txt",
+      "sha256": "95ff867eb55a56935fa7492406cfa953fb7c13ca73f4c0a86ae05756b4605600",
+      "source": "https://pkg.go.dev/modernc.org/libc@v1.75.6?tab=licenses"
+    },
+    {
+      "id": "go-14-1",
+      "file": "LICENSES/go-14-1.txt",
+      "sha256": "f597097efe3d97021f89170746bd3a0fb9a8b6fb26b82043ed68a4e0283bee6c",
+      "source": "https://pkg.go.dev/modernc.org/libc@v1.75.6?tab=licenses"
+    },
+    {
+      "id": "go-15-0",
+      "file": "LICENSES/go-15-0.txt",
+      "sha256": "bfa9bf72a72ca009fd62a8f84fca3dca67e51d93af96352723646599898b6cf5",
+      "source": "https://pkg.go.dev/modernc.org/mathutil@v1.7.1?tab=licenses"
+    },
+    {
+      "id": "go-16-0",
+      "file": "LICENSES/go-16-0.txt",
+      "sha256": "59895e669f48f168b6b858358f6005779cdf40a265f7828813061b56af67b496",
+      "source": "https://pkg.go.dev/modernc.org/memory@v1.12.1?tab=licenses"
+    },
+    {
+      "id": "go-16-1",
+      "file": "LICENSES/go-16-1.txt",
+      "sha256": "2d36597f7117c38b006835ae7f537487207d8ec407aa9d9980794b2030cbc067",
+      "source": "https://pkg.go.dev/modernc.org/memory@v1.12.1?tab=licenses"
+    },
+    {
+      "id": "go-16-2",
+      "file": "LICENSES/go-16-2.txt",
+      "sha256": "c2eba69f20d05414538c3a5df7694dde392e065ff70882e1625e90f5d6659fff",
+      "source": "https://pkg.go.dev/modernc.org/memory@v1.12.1?tab=licenses"
+    },
+    {
+      "id": "htmx-org",
+      "file": "LICENSES/htmx-org.txt",
+      "sha256": "d3d2456f76414f2456104660ebd65aff1c04cd7966b942bdabd63f3cdb316a38",
+      "source": "https://www.npmjs.com/package/htmx.org/v/2.0.10"
+    },
+    {
+      "id": "tailwindcss",
+      "file": "LICENSES/tailwindcss.txt",
+      "sha256": "60e0b68c0f35c078eef3a5d29419d0b03ff84ec1df9c3f9d6e39a519a5ae7985",
+      "source": "https://www.npmjs.com/package/tailwindcss/v/4.3.3"
+    },
+    {
+      "id": "apache-2-0",
+      "file": "LICENSES/apache-2-0.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "source": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    },
+    {
+      "id": "llama-3",
+      "file": "LICENSES/llama-3.txt",
+      "sha256": "4fa551d4f938f68b8c1e6afa9d28befb70e3f33f75d0753248d530364aeea40f",
+      "source": "https://raw.githubusercontent.com/meta-llama/llama3/main/LICENSE"
+    },
+    {
+      "id": "llama-2",
+      "file": "LICENSES/llama-2.txt",
+      "sha256": "f28d05612fee8ef09283d4e755c468080b13d1cd92c9ae1aa52c84b075799e23",
+      "source": "https://raw.githubusercontent.com/meta-llama/llama/main/LICENSE"
+    },
+    {
+      "id": "cc-by-4-0",
+      "file": "LICENSES/cc-by-4-0.txt",
+      "sha256": "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411",
+      "source": "https://creativecommons.org/licenses/by/4.0/legalcode.txt"
+    },
+    {
+      "id": "cc-by-nc-4-0",
+      "file": "LICENSES/cc-by-nc-4-0.txt",
+      "sha256": "41003d4a74749c0220e33dd415042164b5a1093ed401f36277234f772d22d3d0",
+      "source": "https://creativecommons.org/licenses/by-nc/4.0/legalcode.txt"
+    },
+    {
+      "id": "cc-by-nc-sa-4-0",
+      "file": "LICENSES/cc-by-nc-sa-4-0.txt",
+      "sha256": "e66c269d4819aaab34b49ef5220c4ddab6756f21bb5180761a4eb8561f2b7bbd",
+      "source": "https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.txt"
+    },
+    {
+      "id": "ollama-mit",
+      "file": "LICENSES/ollama-mit.txt",
+      "sha256": "5934ed2ce0d15154bcdb9c85203210abac0da4314af34081e36df4599f90b226",
+      "source": "https://raw.githubusercontent.com/ollama/ollama/v0.33.3/LICENSE"
+    },
+    {
+      "id": "noto-ofl",
+      "file": "LICENSES/noto-ofl.txt",
+      "sha256": "d818eb48f072cc724dae53af004fe891cc7806fa6dbf15f3d34cdc5bb488bbd7",
+      "source": "https://github.com/google/fonts"
+    },
+    {
+      "id": "gemma-terms",
+      "file": "LICENSES/gemma-terms.txt",
+      "sha256": "3e2c24001f9ef57bf7ec959a3658fbb49cdad113cdf394c264da9d16f9bdd132",
+      "source": "https://ai.google.dev/gemma/terms"
+    },
+    {
+      "id": "htmx-head-support",
+      "file": "LICENSES/htmx-head-support.txt",
+      "source": "https://www.npmjs.com/package/htmx-ext-head-support/v/2.0.5",
+      "sha256": "b1de744f98871bbf6f0a806c1e83185c80782e65ee4c3d8ad8d0e222bd9f4b65"
+    },
+    {
+      "id": "eu-ai-icon-permission",
+      "file": "LICENSES/eu-ai-icon-permission.txt",
+      "source": "https://digital-strategy.ec.europa.eu/en/policies/eu-icons-labelling-ai-generated-content",
+      "sha256": "15f024fe1af79edf4419841319089fd24a14c73f18f8b16d4218e10330a919f7"
+    },
+    {
+      "id": "dl-de-by-2-0",
+      "file": "LICENSES/dl-de-by-2-0.txt",
+      "source": "https://www.govdata.de/dl-de/by-2-0",
+      "sha256": "f2fb4084c57191c29356a012584dddf77ba1720122b8b601465c58c07cbd55da"
+    },
+    {
+      "id": "odbl-1-0",
+      "file": "LICENSES/odbl-1-0.txt",
+      "source": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "sha256": "77d2692c3d64efdd4db18dce2407699baf62930e2b50d6e5ed90b48acf16b7c1"
+    },
+    {
+      "id": "debian-artistic",
+      "file": "LICENSES/debian-artistic.txt",
+      "source": "https://www.debian.org/legal/licenses/",
+      "sha256": "b7fd9b73ea99602016a326e0b62e6646060d18febdd065ceca8bb482208c3d88"
+    },
+    {
+      "id": "debian-bsd",
+      "file": "LICENSES/debian-bsd.txt",
+      "source": "https://www.debian.org/legal/licenses/",
+      "sha256": "5d588eb3b157d52112afea935c88a7ff9efddc1e2d95a42c25d3b96ad9055008"
+    },
+    {
+      "id": "debian-cc0-1-0",
+      "file": "LICENSES/debian-cc0-1-0.txt",
+      "source": "https://www.debian.org/legal/licenses/",
+      "sha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499"
+    },
+    {
+      "id": "debian-gfdl-1-2",
+      "file": "LICENSES/debian-gfdl-1-2.txt",
+      "source": "https://www.debian.org/legal/licenses/",
+      "sha256": "d8e94ae5fdb5433fcae2961aeb1a8cf17174d6f4a0465d24bf37dd8a038bd439"
+    },
+    {
+      "id": "debian-gfdl-1-3",
+      "file": "LICENSES/debian-gfdl-1-3.txt",
+      "source": "https://www.debian.org/legal/licenses/",
+      "sha256": "110535522396708cea37c72a802c5e7e81391139f5f7985631c93ef242b206a4"
+    },
+    {
+      "id": "debian-gpl-1",
+      "file": "LICENSES/debian-gpl-1.txt",
+      "source": "https://www.debian.org/legal/licenses/",
+      "sha256": "d77d235e41d54594865151f4751e835c5a82322b0e87ace266567c3391a4b912"
+    },
+    {
+      "id": "debian-gpl-2",
+      "file": "LICENSES/debian-gpl-2.txt",
+      "source": "https://www.debian.org/legal/licenses/",
+      "sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643"
+    },
+    {
+      "id": "debian-gpl-3",
+      "file": "LICENSES/debian-gpl-3.txt",
+      "source": "https://www.debian.org/legal/licenses/",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+    },
+    {
+      "id": "debian-lgpl-2",
+      "file": "LICENSES/debian-lgpl-2.txt",
+      "source": "https://www.debian.org/legal/licenses/",
+      "sha256": "681e386e44a19d7d0674b4320272c90e66b6610b741e7e6305f8219c42e85366"
+    },
+    {
+      "id": "debian-lgpl-2-1",
+      "file": "LICENSES/debian-lgpl-2-1.txt",
+      "source": "https://www.debian.org/legal/licenses/",
+      "sha256": "dc626520dcd53a22f727af3ee42c770e56c97a64fe3adb063799d8ab032fe551"
+    },
+    {
+      "id": "debian-lgpl-3",
+      "file": "LICENSES/debian-lgpl-3.txt",
+      "source": "https://www.debian.org/legal/licenses/",
+      "sha256": "e3a994d82e644b03a792a930f574002658412f62407f5fee083f2555c5f23118"
+    },
+    {
+      "id": "debian-mpl-1-1",
+      "file": "LICENSES/debian-mpl-1-1.txt",
+      "source": "https://www.debian.org/legal/licenses/",
+      "sha256": "f849fc26a7a99981611a3a370e83078deb617d12a45776d6c4cada4d338be469"
+    },
+    {
+      "id": "debian-mpl-2-0",
+      "file": "LICENSES/debian-mpl-2-0.txt",
+      "source": "https://www.debian.org/legal/licenses/",
+      "sha256": "fab3dd6bdab226f1c08630b1dd917e11fcb4ec5e1e020e2c16f83a0a13863e85"
+    },
+    {
+      "id": "debian-base-files",
+      "file": "LICENSES/debian-base-files.txt",
+      "source": "https://sources.debian.org/src/base-files/12.4+deb12u15/",
+      "sha256": "fd7e4aae7e7b05f217bcf2d02322825c360e66c52c4c2f1b28d784d6297a1c23"
+    },
+    {
+      "id": "debian-ca-certificates",
+      "file": "LICENSES/debian-ca-certificates.txt",
+      "source": "https://sources.debian.org/src/ca-certificates/20250419~deb12u1/",
+      "sha256": "e85e1bcad3a915dc7e6f41412bc5bdeba275cadd817896ea0451f2140a93967c"
+    },
+    {
+      "id": "debian-media-types",
+      "file": "LICENSES/debian-media-types.txt",
+      "source": "https://sources.debian.org/src/media-types/10.0.0/",
+      "sha256": "5ded7c53199b6a1d089b0b7e231d77e5c84081c7156b372b3f11ad9c1c2c5cc7"
+    },
+    {
+      "id": "debian-netbase",
+      "file": "LICENSES/debian-netbase.txt",
+      "source": "https://sources.debian.org/src/netbase/6.4/",
+      "sha256": "795b66147ea5ad692991caa7008ece551fb0fa88b9c53656223bd1518dc58ab2"
+    },
+    {
+      "id": "debian-tzdata",
+      "file": "LICENSES/debian-tzdata.txt",
+      "source": "https://sources.debian.org/src/tzdata/2026b-0+deb12u1/",
+      "sha256": "cb61132bc0fc7b26ef5a82ee18b2fb644a1362f4f286ed980ff22e408471f59a"
+    },
+    {
+      "id": "go-patents",
+      "file": "LICENSES/go-patents.txt",
+      "sha256": "96f408bfae65bf137fc2525d3ecb030271c50c1e90799f87abf8846d8dd505cc",
+      "source": "https://go.googlesource.com/text/+/refs/tags/v0.41.0/PATENTS"
+    }
+  ],
+  "source_archives": [
+    {
+      "component": "debian-base-files",
+      "file": "LICENSES/sources/base-files_12.4+deb12u15.tar.xz",
+      "sha256": "9fb369194365fe9da74621da247ea70884fc3d1d9c063db310764ef0e43c02c5",
+      "source": "https://deb.debian.org/debian/pool/main/b/base-files/base-files_12.4+deb12u15.tar.xz"
+    },
+    {
+      "component": "debian-base-files",
+      "file": "LICENSES/sources/base-files_12.4+deb12u15.dsc",
+      "sha256": "e531274d0c3916dacfe55bbd27148d775b004e1836bc2fbb01549f142d524e8c",
+      "source": "https://deb.debian.org/debian/pool/main/b/base-files/base-files_12.4+deb12u15.dsc"
+    },
+    {
+      "component": "debian-netbase",
+      "file": "LICENSES/sources/netbase_6.4.tar.xz",
+      "sha256": "fa6621826ff1150e581bd90bc3c8a4ecafe5df90404f207db6dcdf2c75f26ad7",
+      "source": "https://deb.debian.org/debian/pool/main/n/netbase/netbase_6.4.tar.xz"
+    },
+    {
+      "component": "debian-netbase",
+      "file": "LICENSES/sources/netbase_6.4.dsc",
+      "sha256": "dc26cfcaa49fd874cc27c65216b2f8b6d3ad62845b78da4bdf0aea55592af756",
+      "source": "https://deb.debian.org/debian/pool/main/n/netbase/netbase_6.4.dsc"
+    },
+    {
+      "component": "debian-ca-certificates",
+      "file": "LICENSES/sources/ca-certificates_20250419~deb12u1.dsc",
+      "sha256": "72339e810ef8237a4c346540b52baf49607172cc849c2680328a608ce0f6a34b",
+      "source": "https://deb.debian.org/debian-security/pool/updates/main/c/ca-certificates/ca-certificates_20250419~deb12u1.dsc"
+    },
+    {
+      "component": "debian-ca-certificates",
+      "file": "LICENSES/sources/ca-certificates_20250419~deb12u1.tar.xz",
+      "sha256": "b2a431cbab9a0ece921cffacbe238dc27a3e382ad4a1806dc8968c5eff30471d",
+      "source": "https://deb.debian.org/debian-security/pool/updates/main/c/ca-certificates/ca-certificates_20250419~deb12u1.tar.xz"
+    }
+  ],
+  "container_base": {
+    "reference": "gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab",
+    "platforms": {
+      "amd64": "sha256:52dcfbabb7457ea47c82f6e13af8c8a4a1d9f7b0145142b3ecab20f2b888411d",
+      "arm64": "sha256:06c3c14b7fa252d9f4285242d2d665ce3b51f74b02d3c529464f220f2912aecb"
+    }
+  },
+  "container_builder": "golang:1.27.1-bookworm@sha256:648f440f42a0958804efb24df176f806f9d353b41f1c0627f666428e40310f6b",
+  "source_hashes": {
+    "Dockerfile": "72a32693a1d95affaceacf02902041283c8184ce0bc5ad931474bd488eeb9e2e",
+    "LICENSE": "ff01c1c270a6924fcd28aeddef170c7e8054876348bab5a43753954cd3c6de16",
+    "go.mod": "7fa1d2f3cc5ec20b01223f385b2cf039a705276373d1f06efca0601c37119411",
+    "go.sum": "34af999b1b85250c412a028731621f22ba58d49a9767ef6367e136ff05d8e454",
+    "internal/web/fonts/NotoSansDevanagari-VF.ttf": "9ce7b04f60e363d8870e5997744cf85cf69d38a4d7d129d364d92a3b14b461d7",
+    "internal/web/fonts/NotoSansSC-VF.ttf": "a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+    "internal/web/fonts/OFL.txt": "d818eb48f072cc724dae53af004fe891cc7806fa6dbf15f3d34cdc5bb488bbd7",
+    "internal/web/static/admin.js": "6716f09dd3023b41599c5adc7453e6ca2e2f097ed43650e7b3ab892ca0895244",
+    "internal/web/static/app.css": "c5475f87c9108f3fa990e864b982ad23d77ef9d1c634a0a978f57f6d4d8ea5be",
+    "internal/web/static/eu-ai-generated-black-50.svg": "2221b25d14de4040903265f59a637487644f388e5bc1b7b23eea1173e2ec45ee",
+    "internal/web/static/eu-ai-generated-black.png": "b1022b39381862f4803d55e1c2e0998805e9dc0a2f75db2911bbaa7daf37233e",
+    "internal/web/static/eu-ai-generated-black.svg": "37ae30c96051a7e3c7b2366213359078b3900a021fad702ac17f7802c0ef4ccb",
+    "internal/web/static/eu-ai-generated-white-50.png": "d2d6c9036bba323e74fd9cd66752e4f175fdd439a45791a9868062f4eb995e89",
+    "internal/web/static/eu-ai-generated-white-50.svg": "584f059a15f3ce7fc7c1b11b7f74c12e7a4050aff45e1c48025dbcde248da15b",
+    "internal/web/static/eu-ai-generated-white.svg": "c60221bbfea40a29aee090c0daa18166f4617053702c164fa419e5228a4057dc",
+    "internal/web/static/favicon.svg": "90d4933558c62c65fa2d6b3438decc7262a8da7f0bca4bcdc1a5afe236194706",
+    "internal/web/static/head-support.js": "207f449ba70ad0d384b1734288ddae8493d26737bd74d8510829c0be5b737568",
+    "internal/web/static/htmx.min.js": "71ea67185bfa8c98c39d31717c6fce5d852370fcdfd129db4543774d3145c0de",
+    "internal/web/static/munichbrief-ai-generated-light.svg": "3a2c3b049829b029c8ac9799b1f56fa1451d71d6812fa414493178cc627054f0",
+    "internal/web/static/navigation.js": "f5d6fcbcecf23317e40ea91cf8db8bf55cf30dc238df7f61c3e3e49957f7e106",
+    "internal/web/static/olympiapark-background.png": "23c86e90902d61f358bbdc5b0d47caddd7f86d72a07f51fae033ef4b91c020e4",
+    "internal/web/static/theme.js": "d67879f8af292d69e13930f2049305c6334775498fdd9819bff6a6f561731500",
+    "package-lock.json": "63c3a72d433b402eca4d9d438423fa1f7165b251ce7ab45646e9f9a6c8d70cca",
+    "package.json": "e79507a81da3fb0a22ffe9a9ccad571d08ca898c1497a7f83a01630ec7f9e398"
+  },
+  "container_zoneinfo_sha256": "602843bacd2b0d8b3bc135e0f2cbb7b9c25e4a6d31c53aae3ad35aea558478a7",
+  "credits_updated_at": "2026-09-14"
+}

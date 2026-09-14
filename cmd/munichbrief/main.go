@@ -19,6 +19,7 @@ import (
 	"github.com/egekocabas/munichbrief/internal/contact"
 	"github.com/egekocabas/munichbrief/internal/gazetteer"
 	"github.com/egekocabas/munichbrief/internal/ingest"
+	"github.com/egekocabas/munichbrief/internal/licensing"
 	"github.com/egekocabas/munichbrief/internal/observability"
 	"github.com/egekocabas/munichbrief/internal/processing"
 	"github.com/egekocabas/munichbrief/internal/source"
@@ -50,6 +51,12 @@ func main() {
 }
 
 func run(ctx context.Context, logger *slog.Logger, arguments []string) error {
+	if len(arguments) > 0 && arguments[0] == "licenses" {
+		if len(arguments) != 1 {
+			return fmt.Errorf("usage: munichbrief licenses")
+		}
+		return licensing.WriteNotices(os.Stdout)
+	}
 	cfg, err := config.Load()
 	if err != nil {
 		return err
@@ -619,6 +626,7 @@ func liveSyncRetryDelay(failedAttempts int) time.Duration {
 
 func printUsage(writer io.Writer) {
 	fmt.Fprintln(writer, "MunichBrief commands:")
+	fmt.Fprintln(writer, "  munichbrief licenses              Print bundled licences without configuration or network access")
 	fmt.Fprintln(writer, "  munichbrief serve                 Run the reader and scheduler (default)")
 	fmt.Fprintln(writer, "  munichbrief migrate               Apply and verify database migrations")
 	fmt.Fprintln(writer, "  munichbrief sync                  Run one live synchronization")
