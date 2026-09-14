@@ -10,7 +10,7 @@ for the separate provider/legal correspondence.
 The single reviewed source is [manifest.json](../internal/licensing/manifest.json).
 It records exact dependency versions, asset hashes, original notice files, review
 dates, distribution locations and model provenance. It currently covers 54
-components and 55 distinct notice texts. Original copyright statements remain in
+components and 56 distinct notice texts. Original copyright statements remain in
 the full texts; identical permission texts are deduplicated without merging the
 component attributions.
 
@@ -183,3 +183,37 @@ images passed binary/text/source/package/timezone inspection. Browser checks
 found no overflow across 112 public and eight synthetic admin combinations at
 320, 390, 768 and 1440 pixels in both themes. Native disclosures, visible 2px focus,
 HTMX navigation/history metadata and native notice downloads were checked.
+
+## Dependency refresh from PR #68 — 14 September 2026
+
+Merged main at `9663f34`. Reviewed the downloaded module archives for:
+
+| Module | Previous | Updated |
+| --- | --- | --- |
+| github.com/go-text/typesetting | v0.3.4 | v0.3.5 |
+| golang.org/x/image | v0.45.0 | v0.46.0 |
+| golang.org/x/net | v0.58.0 | v0.59.0 |
+| golang.org/x/text | v0.41.0 | v0.42.0 |
+| golang.org/x/sys (indirect) | v0.47.0 | v0.48.0 |
+
+The module LICENSE/PATENTS files and HarfBuzz LICENSE are byte-identical to
+the previous versions and match our retained texts. Updated exact versions,
+source links and input hashes, then regenerated the public/embedded notices.
+The Go fonts attribution also tracks x/image v0.46.0; the font bytes are unchanged.
+Changes to dependencies always need this review; unchanged permission text does
+not mean the versioned inventory can remain stale. Test-only dependencies are
+not automatically treated as shipped application components.
+
+Typesetting v0.3.5 adds a linked bidi package whose core and bracket files cite
+the [Unicode Java reference implementation](https://www.unicode.org/Public/PROGRAMS/BidiReferenceJava/).
+Preserved reference copyright attribution and the related Go attribution in
+[unicode-bidi.txt](../LICENSES/unicode-bidi.txt), alongside the Go BSD text.
+Unicode's [terms](https://www.unicode.org/copyright.html) identify its reference
+software as covered by [Unicode License v3](https://www.unicode.org/license.txt);
+that permission text is bundled too. Existing top-level module permissions have
+not changed. No additional runtime module or model selection was introduced.
+
+The x/text update fixes normalization behavior. Reader index contract v3 forces
+a one-time transactional backfill on upgrade so persisted search text is
+normalized by the same implementation as new queries. Source and report text
+remain unchanged; no new schema migration is needed.

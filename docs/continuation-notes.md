@@ -284,3 +284,20 @@ delete source data, claim human review, or treat contact retention as source pol
   Go vet, frontend generation, documentation and licence checks. The generated CSS
   fingerprint was reviewed and refreshed; no new dependency. Synthetic screenshots
   are in docs/previews/pagination-*.png. No preview listener was started.
+
+## Sync with Dependabot PR #68 — 14 September 2026
+
+- Merged origin/main at 9663f34 into codex/reader-discovery without conflicts.
+  Kept PR #67's features and commit history; no force push or deployment.
+- Reviewed all five changed linked module versions (four direct plus x/sys).
+  Existing licence/patent files are unchanged. Refreshed inventory, source links,
+  fingerprints and generated notices; added Unicode bidi reference attribution
+  for the new typesetting implementation. Inventory now has 56 notice texts.
+- Bumped reader index contract to v3 for x/text normalization fixes: existing
+  derived search text is rebuilt transactionally once on application upgrade.
+  See licensing-review.md for review evidence and exact module versions.
+- Validation passed: full repository race suite (processing 138.834s, store
+  108.217s, web 259.889s), final licence race tests, offline notice/inventory
+  regression checks, Go vet/staticcheck, vulnerability scan with no findings,
+  module metadata consistency, unchanged frontend generation, documentation,
+  native CLI notice inspection and Linux amd64/arm64 application builds.

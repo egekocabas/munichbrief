@@ -98,7 +98,8 @@ func init() {
 
 // Bump the contract comment when registered SQL function semantics change.
 // The complete SQL definitions also capture pipeline/language/selection changes.
-const readerIndexContract = "reader-index-v2"
+// v3 rebuilds normalized text after the x/text v0.42.0 normalization fixes.
+const readerIndexContract = "reader-index-v3"
 const readerIndexColumns = "incident_id,language,run_id,title,summary,area,category,assistance,event_date,event_time,day_part,published_at,published_date,position,number,time_group,search_text"
 
 type readerIndexDefinition struct{ name, kind, sql string }

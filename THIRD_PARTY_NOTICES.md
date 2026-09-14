@@ -22,16 +22,18 @@ MunichBrief project code uses MIT. Third-party software, fonts, models and data 
 
 Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.
 
-## github.com/go-text/typesetting — v0.3.4
+## github.com/go-text/typesetting — v0.3.5
 
 - Source: [upstream](https://github.com/go-text/typesetting)
-- Licence: (Unlicense OR BSD-3-Clause) AND MIT
+- Licence: (Unlicense OR BSD-3-Clause) AND MIT AND Unicode-3.0
 - Included in: binary, container
 - Reviewed: 2026-09-14
 - [go-1-0](LICENSES/go-1-0.txt)
 - [go-1-1](LICENSES/go-1-1.txt)
+- [go-4-0](LICENSES/go-4-0.txt)
+- [unicode-bidi](LICENSES/unicode-bidi.txt)
 
-Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.
+Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms. Includes bidirectional reference-code ports; associated Go and Unicode reference-code attribution is bundled.
 
 ## github.com/nicksnyder/go-i18n/v2 — v2.6.1
 
@@ -53,7 +55,7 @@ Preserve bundled copyright, licence and third-party notices when redistributing.
 
 Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.
 
-## golang.org/x/image — v0.45.0
+## golang.org/x/image — v0.46.0
 
 - Source: [upstream](https://golang.org/x/image)
 - Licence: BSD-3-Clause
@@ -64,7 +66,7 @@ Preserve bundled copyright, licence and third-party notices when redistributing.
 
 Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.
 
-## golang.org/x/net — v0.58.0
+## golang.org/x/net — v0.59.0
 
 - Source: [upstream](https://golang.org/x/net)
 - Licence: BSD-3-Clause
@@ -75,7 +77,7 @@ Preserve bundled copyright, licence and third-party notices when redistributing.
 
 Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.
 
-## golang.org/x/text — v0.41.0
+## golang.org/x/text — v0.42.0
 
 - Source: [upstream](https://golang.org/x/text)
 - Licence: BSD-3-Clause
@@ -148,7 +150,7 @@ Preserve bundled copyright, licence and third-party notices when redistributing.
 
 Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.
 
-## golang.org/x/sys — v0.47.0
+## golang.org/x/sys — v0.48.0
 
 - Source: [upstream](https://golang.org/x/sys)
 - Licence: BSD-3-Clause
@@ -247,7 +249,7 @@ Unmodified embedded fonts used to render social cards. Font licences do not auto
 
 Unmodified embedded fonts used to render social cards. Font licences do not automatically apply to the rendered images.
 
-## Go fonts — v0.45.0
+## Go fonts — v0.46.0
 
 - Source: [upstream](https://go.dev/blog/go-fonts)
 - Licence: BSD-3-Clause

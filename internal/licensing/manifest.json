@@ -52,12 +52,14 @@
     {
       "id": "go-1",
       "name": "github.com/go-text/typesetting",
-      "version": "v0.3.4",
+      "version": "v0.3.5",
       "source": "https://github.com/go-text/typesetting",
-      "license": "(Unlicense OR BSD-3-Clause) AND MIT",
+      "license": "(Unlicense OR BSD-3-Clause) AND MIT AND Unicode-3.0",
       "notices": [
         "go-1-0",
-        "go-1-1"
+        "go-1-1",
+        "go-4-0",
+        "unicode-bidi"
       ],
       "kind": "software",
       "locations": [
@@ -65,7 +67,7 @@
         "container"
       ],
       "public": true,
-      "conditions": "Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.",
+      "conditions": "Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms. Includes bidirectional reference-code ports; associated Go and Unicode reference-code attribution is bundled.",
       "reviewed_at": "2026-09-14",
       "review_status": "reviewed",
       "module": "github.com/go-text/typesetting",
@@ -116,7 +118,7 @@
     {
       "id": "go-4",
       "name": "golang.org/x/image",
-      "version": "v0.45.0",
+      "version": "v0.46.0",
       "source": "https://golang.org/x/image",
       "license": "BSD-3-Clause",
       "notices": [
@@ -138,7 +140,7 @@
     {
       "id": "go-5",
       "name": "golang.org/x/net",
-      "version": "v0.58.0",
+      "version": "v0.59.0",
       "source": "https://golang.org/x/net",
       "license": "BSD-3-Clause",
       "notices": [
@@ -160,7 +162,7 @@
     {
       "id": "go-6",
       "name": "golang.org/x/text",
-      "version": "v0.41.0",
+      "version": "v0.42.0",
       "source": "https://golang.org/x/text",
       "license": "BSD-3-Clause",
       "notices": [
@@ -308,7 +310,7 @@
     {
       "id": "go-13",
       "name": "golang.org/x/sys",
-      "version": "v0.47.0",
+      "version": "v0.48.0",
       "source": "https://golang.org/x/sys",
       "license": "BSD-3-Clause",
       "notices": [
@@ -529,7 +531,7 @@
     {
       "id": "go-fonts",
       "name": "Go fonts",
-      "version": "v0.45.0",
+      "version": "v0.46.0",
       "source": "https://go.dev/blog/go-fonts",
       "license": "BSD-3-Clause",
       "notices": [
@@ -1251,13 +1253,13 @@
       "id": "go-1-0",
       "file": "LICENSES/go-1-0.txt",
       "sha256": "6b1bf94c77d7faa0ce94f8745595bfaf4c404f8b3873f5c2ce55ca15f8e44eca",
-      "source": "https://pkg.go.dev/github.com/go-text/typesetting@v0.3.4?tab=licenses"
+      "source": "https://pkg.go.dev/github.com/go-text/typesetting@v0.3.5?tab=licenses"
     },
     {
       "id": "go-1-1",
       "file": "LICENSES/go-1-1.txt",
       "sha256": "e45d96558ba3d406f95dffed6f22c3be07093475ef617bcfddf88444d6b66788",
-      "source": "https://pkg.go.dev/github.com/go-text/typesetting@v0.3.4?tab=licenses"
+      "source": "https://pkg.go.dev/github.com/go-text/typesetting@v0.3.5?tab=licenses"
     },
     {
       "id": "go-2-0",
@@ -1275,7 +1277,7 @@
       "id": "go-4-0",
       "file": "LICENSES/go-4-0.txt",
       "sha256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
-      "source": "https://pkg.go.dev/golang.org/x/image@v0.45.0?tab=licenses"
+      "source": "https://pkg.go.dev/golang.org/x/image@v0.46.0?tab=licenses"
     },
     {
       "id": "go-7-0",
@@ -1563,7 +1565,13 @@
       "id": "go-patents",
       "file": "LICENSES/go-patents.txt",
       "sha256": "96f408bfae65bf137fc2525d3ecb030271c50c1e90799f87abf8846d8dd505cc",
-      "source": "https://go.googlesource.com/text/+/refs/tags/v0.41.0/PATENTS"
+      "source": "https://go.googlesource.com/text/+/refs/tags/v0.42.0/PATENTS"
+    },
+    {
+      "id": "unicode-bidi",
+      "file": "LICENSES/unicode-bidi.txt",
+      "sha256": "8c993d844859ad3a79bbe47d6831322ac1c9e84ceb3a63db566723a884bff87f",
+      "source": "https://www.unicode.org/Public/PROGRAMS/BidiReferenceJava/"
     }
   ],
   "source_archives": [
@@ -1615,8 +1623,8 @@
   "source_hashes": {
     "Dockerfile": "72a32693a1d95affaceacf02902041283c8184ce0bc5ad931474bd488eeb9e2e",
     "LICENSE": "ff01c1c270a6924fcd28aeddef170c7e8054876348bab5a43753954cd3c6de16",
-    "go.mod": "7fa1d2f3cc5ec20b01223f385b2cf039a705276373d1f06efca0601c37119411",
-    "go.sum": "34af999b1b85250c412a028731621f22ba58d49a9767ef6367e136ff05d8e454",
+    "go.mod": "b287bca888a9a91855099cceb29c3ce4936bb950740efd7a13c52b97677dd150",
+    "go.sum": "ef7df7f81440d2162525203b8552e58cbf09d9690463705522fceb0a7759be73",
     "internal/web/fonts/NotoSansDevanagari-VF.ttf": "9ce7b04f60e363d8870e5997744cf85cf69d38a4d7d129d364d92a3b14b461d7",
     "internal/web/fonts/NotoSansSC-VF.ttf": "a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
     "internal/web/fonts/OFL.txt": "d818eb48f072cc724dae53af004fe891cc7806fa6dbf15f3d34cdc5bb488bbd7",
