@@ -91,7 +91,17 @@ selection, and validates Unicode letter, number, and combining-mark boundaries
 in MunichBrief rather than the matcher's byte-oriented whole-word option.
 Official sources outrank GeoNames, which outranks OSM. The highly ambiguous
 fire noun `Brand` is excluded, while `Haar` requires preceding location
-context. Two-letter names such as `Au` also require location context by rule.
+context. A municipality entry named `Haar` also matches the final location in a
+headline ending with `– Haar` (or a spaced `- Haar` / `— Haar`). Horizontal
+Unicode spaces, including nonbreaking spaces, are accepted around the separator.
+The rule is title-only, case-sensitive and requires the name to end the title;
+it does not treat arbitrary prose, compounds or other ambiguous names as places.
+Only `Haar` is tokenized and restored, preserving the source spelling and dash;
+`Haar (bei München)` is explanatory, not a replacement string. The active
+catalogue must still contain Haar as a municipality. Existing stored translations
+are unchanged; the rule applies when translation runs again. The admin override
+row explains this context exception without changing its `context` action.
+Two-letter names such as `Au` also require location context by rule.
 `U-Bahn` and `S-Bahn` are always present as static protected entries.
 
 Each unique normalized spelling receives a stable typed token such as

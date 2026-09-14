@@ -198,3 +198,20 @@ delete source data, claim human review, or treat contact retention as source pol
   tests, frontend build and licence checks passed. Only generated CSS changed
   among inventoried assets; its reviewed fingerprint was refreshed. No server
   was started and the operator's preview was untouched.
+
+## Haar headline disambiguation — 14 September 2026
+
+- User requested recognizing the final “– Haar” location in headlines as Haar
+  near Munich while retaining the common-noun ambiguity restriction.
+- The matcher accepts that title suffix only for an existing municipality entry
+  named Haar. Spaced en/em dashes and ASCII hyphens are accepted, including
+  horizontal Unicode spaces. Body text, longer names, compounds and unmatched
+  catalogue entries do not gain this exception. Existing preposition-based
+  context remains available.
+- The placeholder restores the exact name Haar and preserves the dash; it does
+  not insert “(bei München)” into stored or translated reports. The admin Haar
+  override row explains the rule. No database migration or bulk retranslation
+  is performed; the updated rule applies to future translation processing.
+- Full gazetteer race tests and focused matcher/admin race checks cover matching,
+  negative cases, typed placeholders and round-trip restoration. Frontend,
+  licence and documentation checks cover the admin wording update.
