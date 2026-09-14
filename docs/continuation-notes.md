@@ -184,3 +184,17 @@ delete source data, claim human review, or treat contact retention as source pol
 - These are copy changes only; operational controls and internal legal/source
   assessments remain unchanged. Privacy's existing 14 September update date
   already covers this revision.
+
+## Translation coverage layout — 14 September 2026
+
+- The translations overview uses the viewport width with 16px side margins rather
+  than the shared 72rem page cap. Its header and content remain aligned.
+- Coverage retains an independently scrollable, keyboard-focusable table region.
+  Positioning that region also contains absolutely positioned screen-reader
+  labels, preventing them from extending the document's horizontal scroll area.
+- Browser checks with synthetic model routes passed at 320, 390, 768, 1440, 1920
+  and 2560 pixels in both themes: no document overflow, table scrolling on small
+  screens and all columns fitting from 1440px in the fixture. Admin translation
+  tests, frontend build and licence checks passed. Only generated CSS changed
+  among inventoried assets; its reviewed fingerprint was refreshed. No server
+  was started and the operator's preview was untouched.

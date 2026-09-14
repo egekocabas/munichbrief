@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="{{assetURL "app.css"}}">
   <script defer src="{{assetURL "admin.js"}}"></script>
 </head>
-<body class="min-h-screen text-ink antialiased">
+<body class="admin-translations min-h-screen text-ink antialiased">
   {{template "admin-header" "translations"}}
 <div class="page-shell pt-4 text-sm"><a class="text-civic underline" href="/admin/licenses">Review model licences and artefact warnings</a></div>
   <main class="page-shell py-8">
@@ -44,7 +44,7 @@
 
       <section class="mt-8" aria-labelledby="language-coverage-heading">
         <div class="flex flex-wrap items-end justify-between gap-3"><div><p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Coverage</p><h2 id="language-coverage-heading" class="mt-1 font-serif text-2xl font-bold">Registered translation languages</h2></div><p class="text-sm text-muted">Attention can overlap published.</p></div>
-        <div class="mt-4 overflow-x-auto rounded-lg border border-rule bg-paper">
+        <div class="relative mt-4 overflow-x-auto rounded-lg border border-rule bg-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-civic" role="region" aria-labelledby="language-coverage-heading" tabindex="0">
           <table class="w-full border-collapse text-left text-sm">
             <thead class="border-b border-rule bg-newsprint/70 text-xs uppercase tracking-wider text-muted"><tr><th class="px-4 py-3">Language</th><th class="px-4 py-3">Automatic</th><th class="px-4 py-3">Preferred route</th><th class="px-4 py-3">Published</th><th class="px-4 py-3">Unpublished</th><th class="px-4 py-3">Coverage</th><th class="px-4 py-3">Active</th><th class="px-4 py-3">Attention</th><th class="px-4 py-3">Never queued</th><th class="px-4 py-3"><span class="sr-only">Action</span></th></tr></thead>
             <tbody class="divide-y divide-rule/70">

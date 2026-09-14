@@ -112,6 +112,10 @@
     margin-inline: auto;
   }
 
+  .admin-translations .page-shell {
+    width: calc(100% - 2rem);
+  }
+
   .admin-history-shell {
     width: min(96rem, calc(100% - 2rem));
     margin-inline: auto;
