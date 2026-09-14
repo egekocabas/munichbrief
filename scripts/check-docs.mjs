@@ -54,7 +54,7 @@ console.log(`Checked local links in ${markdownFiles.length} Markdown files.`);
 function findMarkdownFiles(directory) {
   const files = [];
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
-    if (entry.isDirectory() && [".git", "node_modules"].includes(entry.name)) {
+    if (entry.isDirectory() && [".git", ".local", ".data", "node_modules"].includes(entry.name)) {
       continue;
     }
     const path = join(directory, entry.name);

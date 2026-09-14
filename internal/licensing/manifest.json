@@ -766,7 +766,7 @@
         "separate-inference-server"
       ],
       "public": false,
-      "conditions": "Not intended for MunichBrief use, by operator decision. Installed only; no review approval. Do not list in public credits. No changes to the separate Hugging Face uploads are part of this PR.",
+      "conditions": "Outside intended use; not approved for processing or public model credits. Retained only to flag accidental selection.",
       "reviewed_at": "2026-09-14",
       "review_status": "excluded",
       "model_tag": "hf.co/egekocabas/salamandraTA-7b-instruct-Q4_K_M-GGUF:salamandrata-7b-instruct-q4_k_m-imat.gguf",
@@ -789,7 +789,7 @@
         "separate-inference-server"
       ],
       "public": false,
-      "conditions": "Not intended for MunichBrief use, by operator decision. Installed only; no review approval. Do not list in public credits. No changes to the separate Hugging Face uploads are part of this PR.",
+      "conditions": "Outside intended use; not approved for processing or public model credits. Retained only to flag accidental selection.",
       "reviewed_at": "2026-09-14",
       "review_status": "excluded",
       "model_tag": "hf.co/egekocabas/salamandraTA-7b-instruct-Q5_K_M-GGUF:salamandrata-7b-instruct-q5_k_m-imat.gguf",

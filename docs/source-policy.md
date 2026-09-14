@@ -118,8 +118,7 @@ Separately, the [Bavarian Police usage terms](https://www.polizei.bayern.de/wir-
 checked on 13 September 2026, expressly permit reprinting and analysis of press
 releases with source attribution. This supports the project's attributed
 press-release reuse; it does not settle personal-information rights, unrelated
-third-party material, source retention or automated-access restrictions. See the
-[editorial and provider follow-up](legal-follow-up-2026-09.md).
+third-party material, source retention or automated-access restrictions.
 
 ## Repository data policy
 

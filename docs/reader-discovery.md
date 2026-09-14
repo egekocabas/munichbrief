@@ -90,19 +90,12 @@ to reproduce the synthetic check.
 
 ## Visual review
 
-These screenshots use synthetic local reports, not production records:
-
-- [Desktop, light theme](previews/reader-desktop-light.png)
-- [Desktop, dark theme](previews/reader-desktop-dark.png)
-- [Turkish mobile, light theme](previews/reader-mobile-light.png)
-- [Turkish mobile, dark theme](previews/reader-mobile-dark.png)
-
 Browser checks covered 320, 390 and 768 pixel layouts and desktop, both themes,
 visible keyboard focus, expanded search, page-size changes, language switching,
 native forms with JavaScript disabled, enhanced navigation, browser back/forward,
 and returning from a report to the list's scroll position. All 14 localized
 homepages and About/Contact pages were checked for horizontal overflow at 320px.
-Locale validation checks all 264 keys and their interpolation placeholders.
+Locale validation checks all public keys and their interpolation placeholders.
 
 The processing worker test's two-second deadlock guards were increased to ten
 seconds to accommodate SQLite index maintenance under Go's race detector. Its

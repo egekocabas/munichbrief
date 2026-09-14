@@ -1,9 +1,8 @@
 # Licences, credits and model review
 
-Last checked: **14 September 2026**. This implements the licence additions to
-[PR #67](https://github.com/egekocabas/munichbrief/pull/67). It does not select,
-qualify, download, remove or deploy models. See [the continuation notes](continuation-notes.md)
-for the separate provider/legal correspondence.
+The checked-in inventory covers distributed application components and separately
+reviewed processing models. Installation does not establish production selection
+or translation quality. Model warnings never change processing controls.
 
 ## Inventory and distributed material
 
@@ -166,7 +165,7 @@ structured modified dates, Markdown parity and sitemap entries.
 
 ## Validation
 
-Fresh results and screenshot links are recorded in the PR description. Tests cover
+Tests cover
 missing/changed digests, catalogue isolation, conflicting tag records, unchanged
 processing availability, public/admin escaping, hostname restrictions, notice
 allowlisting, multilingual SSR/Markdown, HTMX metadata and offline CLI behaviour.
@@ -175,16 +174,7 @@ unreviewed components, missing compiled modules and stale generated notices.
 No deployment, live mail, inference or model-account changes are part of validation.
 
 
-Local results for this update: the full `go test -race ./...` suite passed
-(processing 386 s, web 538 s); final focused licence tests were repeated after
-metadata/download refinements. Frontend audit and govulncheck reported no
-vulnerabilities. Inventory failure tests passed all eight cases. Both architecture
-images passed binary/text/source/package/timezone inspection. Browser checks
-found no overflow across 112 public and eight synthetic admin combinations at
-320, 390, 768 and 1440 pixels in both themes. Native disclosures, visible 2px focus,
-HTMX navigation/history metadata and native notice downloads were checked.
-
-## Dependency refresh from PR #68 — 14 September 2026
+## Dependency review — 14 September 2026
 
 Merged main at `9663f34`. Reviewed the downloaded module archives for:
 

@@ -352,7 +352,7 @@ CC BY-NC 4.0 plus inherited Llama 2 terms. Noncommercial eligibility has not bee
 - Included in: separate-inference-server
 - Reviewed: 2026-09-14
 
-Not intended for MunichBrief use, by operator decision. Installed only; no review approval. Do not list in public credits. No changes to the separate Hugging Face uploads are part of this PR.
+Outside intended use; not approved for processing or public model credits. Retained only to flag accidental selection.
 
 ## SalamandraTA 7B — salamandrata-7b-instruct-q5_k_m-imat.gguf
 
@@ -361,7 +361,7 @@ Not intended for MunichBrief use, by operator decision. Installed only; no revie
 - Included in: separate-inference-server
 - Reviewed: 2026-09-14
 
-Not intended for MunichBrief use, by operator decision. Installed only; no review approval. Do not list in public credits. No changes to the separate Hugging Face uploads are part of this PR.
+Outside intended use; not approved for processing or public model credits. Retained only to flag accidental selection.
 
 ## EuroLLM 9B Instruct 2512 — Q4_K_M
 

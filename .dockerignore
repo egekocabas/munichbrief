@@ -7,3 +7,6 @@ docs
 coverage.out
 munichbrief
 README.md
+
+.local
+node_modules
