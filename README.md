@@ -158,9 +158,9 @@ controls, operational review points, and legal-status limitations, read
 
 ## Contributing
 
-Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md), follow
-the [Code of Conduct](CODE_OF_CONDUCT.md), and use Conventional Commits for
-commit messages and pull-request titles.
+External code contributions and pull requests are not accepted. Bug reports and
+private security reports are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md)
+and the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 MunichBrief is available under the [MIT License](LICENSE).
 

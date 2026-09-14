@@ -1,5 +1,19 @@
 {
   "name": "munichbrief-frontend",
+  "description": "Frontend build tooling for MunichBrief, an independent multilingual reader for Munich Police press releases.",
+  "author": {
+    "name": "Ege Kocabas",
+    "url": "https://github.com/egekocabas"
+  },
+  "license": "MIT",
+  "homepage": "https://munichbrief.de",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/egekocabas/munichbrief.git"
+  },
+  "bugs": {
+    "url": "https://github.com/egekocabas/munichbrief/issues"
+  },
   "private": true,
   "engines": {
     "node": ">=24"

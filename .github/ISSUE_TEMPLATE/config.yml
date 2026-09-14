@@ -3,3 +3,6 @@ contact_links:
   - name: Report a security vulnerability
     url: https://github.com/egekocabas/munichbrief/security/advisories/new
     about: Report vulnerabilities privately instead of opening a public issue.
+  - name: Operational incidents and content corrections
+    url: https://munichbrief.de/en/contact
+    about: Contact the operator about operational incidents or generated/source-content corrections.

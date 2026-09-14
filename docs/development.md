@@ -327,3 +327,46 @@ Routine unit tests remain offline. A contribution that requires network access
 in the default suite is not acceptable. See [the internal package map](../internal/README.md)
 and [repository check notes](../scripts/README.md) when deciding where new tests
 or validations belong.
+
+## Repository safeguards
+
+Pull requests must pass these additional CI checks:
+
+- `Conventional PR title`: validates the title and maintains an explanatory
+  comment until the title is valid.
+- `Sensitive file check`: rejects ignored files in the index and incoming
+  commits, including files subsequently deleted in the same PR.
+- `Secret scan`: runs pinned Gitleaks against the full fetched Git history with
+  findings redacted.
+
+The PR title workflow uses `pull_request_target` and never checks out or
+executes PR code. The repository safety workflow uses `pull_request` with a
+read-only token and no persisted checkout credentials. Neither workflow changes
+branch protection.
+
+A maintainer must add the three check names above to the required status checks
+for `main`, alongside the existing repository and release-image checks. The
+`pull_request_target` workflow becomes active after it reaches the default
+branch; verify its runs before marking the new checks required. Keep all
+checks free of path filters so required checks report on every PR.
+
+Run the local file guard and its regression tests with:
+
+```bash
+node scripts/check-tracked-files.mjs
+node --test scripts/check-tracked-files.test.mjs
+REPOSITORY_SAFETY_BASE=$(git merge-base origin/main HEAD) node scripts/check-tracked-files.mjs
+go run github.com/zricethezav/gitleaks/v8@v8.30.1 git --log-opts=--all --redact --no-banner .
+```
+
+Keep local credentials, databases, logs, and backups in ignored paths. Only
+`.env.example` and `.env.sample` are permitted environment templates; use dummy
+values. Git ignore rules also block common runtime/credential file extensions,
+and Docker ignores keep them out of the build context. The file check catches
+forced additions; Gitleaks checks content even under ordinary filenames. These
+checks do not detect every kind of sensitive source text, so review the diff
+before committing. If a secret is committed, rotate it and remove it from the
+incoming history before pushing again.
+
+The npm manifest describes internal frontend build tooling. `private: true`
+prevents accidental npm publication and is independent of GitHub visibility.

@@ -1,0 +1,49 @@
+name: Pull request title
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - edited
+      - synchronize
+
+permissions:
+  pull-requests: write
+
+concurrency:
+  group: pr-title-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Conventional PR title
+    runs-on: ubuntu-latest
+    steps:
+      # Only inspect event metadata; never check out or execute PR code here.
+      - name: Validate pull request title
+        id: lint
+        uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6.1.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Explain invalid title
+        if: always() && steps.lint.outputs.error_message != ''
+        uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
+        with:
+          header: conventional-pr-title
+          message: |
+            ### Pull request title needs an update
+
+            Please use the [Conventional Commits](https://www.conventionalcommits.org/) format, for example: `fix(parser): handle standalone release headings`.
+
+            ${{ steps.lint.outputs.error_message }}
+
+            This comment will be removed automatically when the title is valid.
+
+      - name: Remove resolved title comment
+        if: always() && steps.lint.outcome == 'success'
+        uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
+        with:
+          header: conventional-pr-title
+          delete: true

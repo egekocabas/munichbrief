@@ -10,3 +10,24 @@ README.md
 
 .local
 node_modules
+
+# Never send local credentials, runtime data, or backups to the builder.
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.db
+**/*.db-*
+**/*.db.*
+**/*.sqlite
+**/*.sqlite-*
+**/*.sqlite.*
+**/*.sqlite3
+**/*.sqlite3-*
+**/*.sqlite3.*
+**/backups
+**/*.log
+deploy/private-*.yaml
+deploy/private-*.yml

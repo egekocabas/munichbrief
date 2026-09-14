@@ -4,3 +4,30 @@
 /coverage.out
 /node_modules/
 .idea
+
+# Environment files and private credentials. Examples must contain dummy values.
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Runtime data, SQLite sidecars, backups, and logs outside .data/.
+*.db
+*.db-*
+*.db.*
+*.sqlite
+*.sqlite-*
+*.sqlite.*
+*.sqlite3
+*.sqlite3-*
+*.sqlite3.*
+backups/
+*.log
+
+# Personal deployment values belong outside the repository.
+deploy/private-*.yaml
+deploy/private-*.yml
