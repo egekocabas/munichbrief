@@ -279,7 +279,7 @@ other = "Obrazac trenutno nije dostupan. Koristite navedenu e-mail adresu."
 other = "Informacije pružalaca usluga i pritužbe"
 
 [ImpressumResponsible]
-other = "Odgovornost za web-stranicu"
+other = "Odgovorna osoba za urednički sadržaj"
 
 [PrivacyController]
 other = "Ko je odgovoran"
@@ -348,7 +348,7 @@ other = "Podaci o operateru i mogućnosti kontakta s MunichBriefom."
 other = "Kako MunichBrief obrađuje podatke stranice, prepisku i javne izvore."
 
 [ImpressumResponsibleCopy]
-other = "Navedeni operater odgovoran je i za urednički sadržaj prema §18(2) MStV-a. MunichBrief je nezavisan od policije."
+other = "Adresa je navedena iznad. MunichBrief je nezavisan od policije."
 
 [ImpressumContactCopy]
 other = "Za upite posjetite našu kontakt stranicu."

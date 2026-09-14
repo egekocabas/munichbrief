@@ -708,7 +708,7 @@ other = "Das Formular ist derzeit nicht verfügbar. Bitte nutzen Sie die oben an
 other = "Informationen der Anbieter und Beschwerden"
 
 [ImpressumResponsible]
-other = "Verantwortlich für diese Website"
+other = "Verantwortlich für redaktionelle Inhalte"
 
 [PrivacyController]
 other = "Verantwortlicher"
@@ -777,7 +777,7 @@ other = "Angaben zum Betreiber und Kontaktmöglichkeiten für MunichBrief."
 other = "Wie MunichBrief Website-Daten, Korrespondenz und öffentliche Quellen verarbeitet."
 
 [ImpressumResponsibleCopy]
-other = "Der oben genannte Betreiber ist auch für redaktionelle Inhalte nach §18 Abs. 2 MStV verantwortlich. MunichBrief ist von der Polizei unabhängig."
+other = "Anschrift wie oben. MunichBrief ist von der Polizei unabhängig."
 
 [ImpressumContactCopy]
 other = "Für Anfragen besuchen Sie bitte unsere Kontaktseite."

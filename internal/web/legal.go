@@ -97,6 +97,9 @@ func writeMarkdownFrontMatterBuilder(w http.ResponseWriter, data legalPage, s *S
 		if section.Copy == "ImpressumRequestsCopy" {
 			fmt.Fprintf(&b, "[%s](/%s/contact)\n\n", markdownText(s.localization.Text(data.Lang, "ImpressumContactCopy")), data.Lang)
 		}
+		if section.Copy == "ImpressumResponsibleCopy" {
+			fmt.Fprintf(&b, "%s — ", o.Name)
+		}
 		fmt.Fprintf(&b, "%s\n\n", s.localization.Text(data.Lang, section.Copy))
 	}
 	fmt.Fprintf(&b, "[%s](/%s/contact#contact-form)\n\n", s.localization.Text(data.Lang, "ContactForm"), data.Lang)

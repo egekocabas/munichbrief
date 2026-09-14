@@ -279,7 +279,7 @@ other = "Formularz jest obecnie niedostępny. Skorzystaj z adresu e-mail podaneg
 other = "Informacje dostawców i skargi"
 
 [ImpressumResponsible]
-other = "Osoba odpowiedzialna za stronę"
+other = "Osoba odpowiedzialna za treści redakcyjne"
 
 [PrivacyController]
 other = "Administrator danych"
@@ -348,7 +348,7 @@ other = "Dane operatora i sposoby kontaktu z MunichBrief."
 other = "Jak MunichBrief przetwarza dane strony, korespondencję i źródła publiczne."
 
 [ImpressumResponsibleCopy]
-other = "Wskazany operator odpowiada również za treści redakcyjne zgodnie z §18(2) MStV. MunichBrief jest niezależny od policji."
+other = "Adres podano powyżej. MunichBrief jest niezależny od policji."
 
 [ImpressumContactCopy]
 other = "W razie pytań odwiedź naszą stronę kontaktową."
