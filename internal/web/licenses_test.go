@@ -61,7 +61,7 @@ func TestLicenceDownloadsAndHTMXMetadata(t *testing.T) {
 		}
 		w = httptest.NewRecorder()
 		s.Handler().ServeHTTP(w, r)
-		for _, text := range []string{`<html lang="de-DE"`, `https://munichbrief.de/de/licenses`, `"dateModified":"` + licensing.ReviewedAt() + `"`} {
+		for _, text := range []string{`<html lang="de-DE"`, `https://munichbrief.de/de/licenses`, `"dateModified":"` + licensing.CreditsUpdatedAt() + `"`} {
 			if !strings.Contains(w.Body.String(), text) {
 				t.Errorf("history=%v: missing %s", history, text)
 			}
