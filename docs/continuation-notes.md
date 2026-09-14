@@ -236,3 +236,34 @@ delete source data, claim human review, or treat contact retention as source pol
   final focused schedule/admin race checks, Go vet/build, frontend generation,
   offline licence inventory checks, formatting/diff checks and documentation
   checks. Eight synthetic browser width/theme combinations passed.
+
+## Test and reader-index performance — 14 September 2026
+
+- Simplified the derived reader projection to select the current presentation and
+  completed verification/translation jobs once per relevant row. The public
+  readiness predicates and transactional maintenance triggers remain active.
+- Startup compares complete stored SQL definitions, reusing unchanged schema.
+  Missing, changed or obsolete derived objects cause transactional repair and
+  backfill. Existing installations receive a one-time projection rebuild; no new
+  migration or configuration is required. Bump `readerIndexContract` when reader
+  SQL function semantics change without a corresponding SQL definition change.
+- Standard embedded locale catalogues are validated and loaded once per process;
+  custom registries still receive independent validation. No mutable test
+  databases are shared and race detection has not been weakened.
+- On the same local machine, uncached precompiled race suites were run in pairs
+  (web and processing concurrently), before and after. Processing: 363.24s →
+  188.10s (48% shorter); web: 522.00s → 281.04s (46% shorter). CPU time also fell:
+  processing 275.17s → 141.37s; web 934.05s → 529.59s. Baseline execution
+  overlapped some development checks, so these are local observations rather
+  than a guaranteed CI speedup. Both complete suites passed. A sequential isolated
+  run of `TestPipelineWorkerGroupsModelsFreezesTargetsAndStartsNextCycle` improved
+  from 34.97s to 20.62s (41% shorter), with no competing validation processes.
+- Regression coverage compares indexed data against the original projection,
+  including incomplete post-processing results and invalidation; verifies legacy
+  projection upgrades and missing/obsolete schema repair; and exercises concurrent
+  catalogue reuse and custom-registry failures.
+- Final whole-repository `go test -race ./...` passed (processing 218.292s,
+  store 173.300s, web 314.043s with other packages/checks running concurrently).
+  Go vet, staticcheck, application build, module metadata, frontend regeneration,
+  offline licence inventory and regression tests, documentation and formatting
+  checks passed. No preview listener or live external processing was started.
