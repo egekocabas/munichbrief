@@ -33,10 +33,13 @@ an approximate expression such as “around 09:30” to 09:30.
 ## SQLite migration and recovery
 
 Migration 023 adds a derived reader table, composite indexes and an external-content
-FTS5 trigram index. Store startup rebuilds the SQL projection and transactional
-maintenance triggers from the current language registry and public-readiness
-rules, then backfills the index before returning ready. It runs no AI jobs and
-changes no source or generated report text.
+FTS5 trigram index. Store startup compares the actual SQL projection and
+transactional maintenance triggers against the current definitions. Changed,
+missing or obsolete definitions cause a transactional rebuild and backfill before
+returning ready; unchanged definitions are reused. Definitions incorporate the
+language registry and public-readiness rules. Bump `readerIndexContract` when
+registered reader SQL functions change semantics. This runs no AI jobs and changes
+no source or generated report text.
 
 Triggers refresh affected incidents when source/presentation/translation/verification
 records change. Deletion removes corresponding search records. Reader queries
@@ -45,7 +48,8 @@ presentation titles and summaries enter the index, never raw source bodies.
 Counts and pages use one database snapshot, with filtering before LIMIT/OFFSET.
 
 Use the existing database backup procedure before upgrading. The index is derived
-and can be rebuilt by reopening the store. SQLite migration 023 is additive;
+and is rebuilt on reopen when its projection or maintenance triggers are missing
+or changed. Reopening unchanged schema does not force a backfill. SQLite migration 023 is additive;
 roll back using a pre-upgrade backup rather than modifying migration history.
 Do not use generic SQLite clients to mutate this derived schema: its projection
 uses the application's registered Unicode/date functions.

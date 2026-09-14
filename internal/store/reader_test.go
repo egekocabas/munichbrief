@@ -51,6 +51,15 @@ func TestReaderSearchOrderingAndTransactionalInvalidation(t *testing.T) {
 		}
 		runs = append(runs, insertCompletedPresentationRun(t, ctx, db, item.id, item.hash, PipelineVersion, now, values))
 	}
+	assertReaderProjectionParity(t, db)
+	// An existing v1 projection is detected and rebuilt transactionally on upgrade.
+	if _, err := db.db.ExecContext(ctx, "DROP VIEW reader_projection; CREATE VIEW reader_projection AS "+originalReaderProjection()); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.installReaderIndex(ctx); err != nil {
+		t.Fatal(err)
+	}
+	assertReaderProjectionParity(t, db)
 	q := ReaderQuery{Language: "de", SourceMode: "fixture", View: "incident", Limit: 20}
 	result, err := db.ListReaderEntries(ctx, q)
 	if err != nil {
@@ -135,6 +144,7 @@ func TestReaderSearchOrderingAndTransactionalInvalidation(t *testing.T) {
 	if e != nil || r.Total != 3 {
 		t.Fatalf("invalidated translation=%d/%v", r.Total, e)
 	}
+	assertReaderProjectionParity(t, db)
 	// Rebuilding is idempotent and preserves selection, rather than old content.
 	if e = db.installReaderIndex(ctx); e != nil {
 		t.Fatal(e)
@@ -150,6 +160,7 @@ func TestReaderSearchOrderingAndTransactionalInvalidation(t *testing.T) {
 	if e != nil || r.Total != 2 {
 		t.Fatalf("delete=%d/%v", r.Total, e)
 	}
+	assertReaderProjectionParity(t, db)
 }
 
 func TestReaderFiltersRejectInvalidInput(t *testing.T) {
@@ -204,5 +215,60 @@ func BenchmarkReaderIndex10000(b *testing.B) {
 				}
 			}
 		})
+	}
+}
+
+func TestReaderIndexReusesSchemaAndRepairsDrift(t *testing.T) {
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "reader-schema.db")
+	db, err := Open(ctx, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var initial int
+	if err = db.db.QueryRowContext(ctx, "PRAGMA schema_version").Scan(&initial); err != nil {
+		t.Fatal(err)
+	}
+	if err = db.installReaderIndex(ctx); err != nil {
+		t.Fatal(err)
+	}
+	var unchanged int
+	if err = db.db.QueryRowContext(ctx, "PRAGMA schema_version").Scan(&unchanged); err != nil || unchanged != initial {
+		t.Fatalf("unchanged schema recreated: %d -> %d (%v)", initial, unchanged, err)
+	}
+	if err = db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	db, err = Open(ctx, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if err = db.db.QueryRowContext(ctx, "PRAGMA schema_version").Scan(&unchanged); err != nil || unchanged != initial {
+		t.Fatalf("reopen recreated schema: %d -> %d (%v)", initial, unchanged, err)
+	}
+	// Repair a missing trigger and an obsolete trigger from a previous definition.
+	if _, err = db.db.ExecContext(ctx, `DROP TRIGGER reader_refresh_incidents_insert; CREATE TRIGGER reader_refresh_obsolete AFTER INSERT ON incidents BEGIN SELECT 1; END`); err != nil {
+		t.Fatal(err)
+	}
+	if err = db.installReaderIndex(ctx); err != nil {
+		t.Fatal(err)
+	}
+	var count int
+	if err = db.db.QueryRowContext(ctx, `SELECT count(*) FROM sqlite_schema WHERE type='trigger' AND name='reader_refresh_incidents_insert'`).Scan(&count); err != nil || count != 1 {
+		t.Fatalf("trigger not repaired: %d %v", count, err)
+	}
+	if err = db.db.QueryRowContext(ctx, `SELECT count(*) FROM sqlite_schema WHERE name='reader_refresh_obsolete'`).Scan(&count); err != nil || count != 0 {
+		t.Fatalf("obsolete trigger remains: %d %v", count, err)
+	}
+	// A changed stored view forces a rebuild even if its object name still exists.
+	if _, err = db.db.ExecContext(ctx, `DROP VIEW reader_projection; CREATE VIEW reader_projection AS SELECT 1 AS obsolete`); err != nil {
+		t.Fatal(err)
+	}
+	if err = db.installReaderIndex(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.db.ExecContext(ctx, `SELECT language FROM reader_projection LIMIT 1`); err != nil {
+		t.Fatalf("view not repaired: %v", err)
 	}
 }

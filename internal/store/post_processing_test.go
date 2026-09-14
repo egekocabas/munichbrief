@@ -231,6 +231,8 @@ func TestPostProcessingReadersRequireCompleteSuccessesAcrossProcessors(t *testin
 	insertSuccess("translation", "fr", "translation-incomplete:4b", now.Add(5*time.Minute),
 		PipelineValue{Kind: "title", Value: "Titre partiel"})
 
+	assertReaderProjectionParity(t, database)
+
 	record, err := database.GetPresentationIncident(ctx, incidentID, PresentationScope{Language: "en", TranslationLanguage: "en", PublicOnly: true})
 	if err != nil || record.AICategory != "other" || record.AICategoryVerificationModel != "category-complete:4b" || record.AITranslatedTitle != "Complete title" || record.AITranslatedSummary != "Complete summary." || record.AITranslationModel != "translation-complete:4b" {
 		t.Fatalf("complete reader selection = %#v/%v", record, err)
