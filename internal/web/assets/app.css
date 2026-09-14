@@ -636,8 +636,8 @@ html[data-theme="dark"]:has(.reader) {
   .ai-disclosure-heading h2 { font-size: 0.8125rem; font-weight: 600; }
   .ai-disclosure-icon { display: flex; align-items: center; height: 1.25rem; }
   .ai-disclosure-icon img { width: auto; height: 2rem; }
-  .ai-disclosure-copy { margin-top: 0.5rem; font-size: 0.8125rem; line-height: 1.75; color: var(--color-muted); }
-  .ai-disclosure-preference { margin-top: 0.5rem; color: var(--color-muted); font-size: 0.75rem; line-height: 1.75; }
+  .ai-disclosure-copy { margin-top: 0.5rem; font-size: 0.8125rem; line-height: 1.75; color: var(--color-ink); }
+  .ai-disclosure-preference { margin-top: 0.5rem; color: var(--color-ink); font-size: 0.75rem; line-height: 1.75; }
   .ai-disclosure-preference a { color: var(--color-civic); text-decoration: underline; text-underline-offset: 0.2em; }
 
   .reader-button {

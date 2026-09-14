@@ -358,3 +358,14 @@ delete source data, claim human review, or treat contact retention as source pol
   remain visible. Full identities/revisions remain in title attributes; stored
   records and machine-readable provenance are unchanged. Regenerated CSS and
   refreshed its inventory fingerprint.
+
+## AI-label PageSpeed accessibility fixes — 14 September 2026
+
+- Added width/height attributes to both images in the shared AI-label template,
+  preserving existing CSS display sizes. Both SVG variants share the same canvas
+  ratio. Browser checks confirmed stable dimensions before/after image loading.
+- Disclosure copy/preference text now uses the strong reader text colour. The
+  previous light contrast was 4.49:1. Computed ratios are now 10.87:1 light and
+  13.58:1 dark, above 4.5:1. Checked 320/390/768/1440px with no overflow.
+- Regenerated CSS and reviewed its licence fingerprint. Focused disclosure/label
+  checks passed. These are local checks, not a rerun of the hosted PageSpeed audit.
