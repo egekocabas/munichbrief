@@ -16,6 +16,36 @@ import (
 const searchCookieName = "munichbrief_search"
 const searchLifetime = 30 * 24 * time.Hour
 
+const timelineCookieName = "munichbrief_timeline"
+
+// A saved default never overrides an explicit listing URL (including the
+// publication view's canonical URL without a view parameter).
+func readTimelineView(r *http.Request) string {
+	c, err := r.Cookie(timelineCookieName)
+	if err != nil || len(c.Value) > 64 {
+		return "published"
+	}
+	parts := strings.Split(c.Value, ".")
+	if len(parts) != 3 || parts[0] != "v1" || parts[1] != "incident" {
+		return "published"
+	}
+	expires, err := strconv.ParseInt(parts[2], 10, 64)
+	now := time.Now()
+	if err != nil || expires <= now.Unix() || expires > now.Add(searchLifetime+time.Minute).Unix() {
+		return "published"
+	}
+	return "incident"
+}
+
+func (s *Server) writeTimelineView(w http.ResponseWriter, view string) {
+	expires := time.Now().Add(searchLifetime)
+	http.SetCookie(w, &http.Cookie{Name: timelineCookieName, Value: "v1." + view + "." + strconv.FormatInt(expires.Unix(), 10), Path: "/", MaxAge: int(searchLifetime.Seconds()), Expires: expires, HttpOnly: true, Secure: s.options.SecureCookies, SameSite: http.SameSiteLaxMode})
+}
+
+func (s *Server) readerHomeURL(r *http.Request, language string) string {
+	return listingURL(language, readSearch(r).Active(), readTimelineView(r), s.options.PageSize, 1)
+}
+
 type savedSearch struct {
 	Version int                 `json:"v"`
 	Expires int64               `json:"expires"`
@@ -224,6 +254,7 @@ func (s *Server) groupByIncident(incidents []store.IncidentRecord, language stri
 	return groups
 }
 func (s *Server) decorateReader(data *timelinePage, language string, search bool, view string, size int, f store.ReaderFilters) {
+	data.HomeURL = listingURL(language, search, view, size, 1)
 	data.View = view
 	data.PageSize = size
 	data.Search = search

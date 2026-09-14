@@ -149,3 +149,21 @@ delete source data, claim human review, or treat contact retention as source pol
 - [Legal-page comparison](legal-review-2026-09.md),
   [Privacy assessment](privacy-draft.md), [Impressum notes](impressum-draft.md),
   [source policy](source-policy.md): public-copy scope and assessment limits.
+
+## Remembered timeline navigation — 14 September 2026
+
+- User approved retaining `?view=incident`, `/search` and pagination URLs for
+  predictable SEO, bookmarks and browser history. Do not remove these routes.
+- A bounded, versioned first-party cookie remembers timeline order for 30 days.
+  Home links and the bare root address restore the preference and active search;
+  explicit localized listing URLs remain authoritative. `/en` selects publication
+  order even when the previous preference was incident order.
+- Native report-return links retain view/search; the existing enhanced return
+  restores the originating page, size and scroll position. Home resets page one.
+- About and Privacy disclose the preference in all 14 locales. Only Privacy's
+  independent content-update date advances to 14 September 2026.
+- Validation: full web tests, focused race tests, vet, frontend generation,
+  offline licence checks and documentation checks; browser flows with and without
+  JavaScript include search, clearing, Home/root, explicit URLs and report return.
+- The user's own localhost:8080 preview must not be stopped. This follow-up uses
+  temporary ports 18082/19092 and stops only its own preview before delivery.

@@ -39,6 +39,12 @@ func (s *Server) redirectRoot(response http.ResponseWriter, request *http.Reques
 	if page, err := requestedPage(request); err == nil {
 		canonicalTarget = timelineURL(language, page)
 	}
+	if request.URL.RawQuery == "" && s.scope(request).PublicOnly {
+		preferred, _ := url.Parse(s.readerHomeURL(request, language))
+		target = preferred
+		canonicalTarget = target.RequestURI()
+	}
+	response.Header().Set("Cache-Control", "private, no-store")
 	s.prepareRedirectDiscovery(response, request, canonicalTarget)
 	http.Redirect(response, request, target.RequestURI(), http.StatusFound)
 }
@@ -67,7 +73,7 @@ func (s *Server) base(request *http.Request, language, canonicalRelativeURL stri
 	canonicalOrigin := s.canonicalOrigin(request)
 	languageDefinition, _ := s.languageByCode(language)
 	page := basePage{
-		Lang: language, LanguageTag: languageDefinition.Tag.String(), CanonicalLanguageCode: s.canonicalLanguage().Code, HomeURL: "/" + language, AboutURL: "/" + language + "/about",
+		Lang: language, LanguageTag: languageDefinition.Tag.String(), CanonicalLanguageCode: s.canonicalLanguage().Code, HomeURL: s.readerHomeURL(request, language), AboutURL: "/" + language + "/about",
 		CurrentURL:      request.URL.RequestURI(),
 		Description:     s.localization.Text(language, "SiteDescription"),
 		CanonicalOrigin: canonicalOrigin, CanonicalURL: canonicalOrigin + canonicalRelativeURL,
@@ -160,6 +166,8 @@ func (s *Server) timeline(response http.ResponseWriter, request *http.Request) {
 	filters := readSearch(request)
 	if scope.PublicOnly && search != filters.Active() {
 		response.Header().Set("Cache-Control", "private, no-store")
+		addVary(response.Header(), "Cookie")
+		s.writeTimelineView(response, view)
 		http.Redirect(response, request, listingURL(language, filters.Active(), view, size, 1), http.StatusFound)
 		return
 	}
@@ -180,6 +188,9 @@ func (s *Server) timeline(response http.ResponseWriter, request *http.Request) {
 	if page > totalPages {
 		http.NotFound(response, request)
 		return
+	}
+	if scope.PublicOnly {
+		s.writeTimelineView(response, view)
 	}
 	base := s.base(request, language, listingURL(language, search, view, size, page))
 	if search || view != "published" || size != 20 {
@@ -300,7 +311,7 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 	}
 	base.ModifiedTime = modifiedAt.Format(time.RFC3339)
 	base.StructuredData = structuredArticleData(base, view)
-	data := detailPage{basePage: base, Incident: view, BackURL: timelineURL(base.Lang, page), ShowOriginalSection: base.Review && view.Record.HasAI}
+	data := detailPage{basePage: base, Incident: view, BackURL: listingURL(base.Lang, readSearch(request).Active(), readTimelineView(request), s.options.PageSize, page), ShowOriginalSection: base.Review && view.Record.HasAI}
 	if scope.PublicOnly && wantsMarkdown(request.Header.Get("Accept")) {
 		s.prepareMarkdown(response, base)
 		s.renderDetailMarkdown(response, data)

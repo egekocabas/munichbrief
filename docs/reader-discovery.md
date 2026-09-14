@@ -91,3 +91,35 @@ Locale validation checks all 264 keys and their interpolation placeholders.
 The processing worker test's two-second deadlock guards were increased to ten
 seconds to accommodate SQLite index maintenance under Go's race detector. Its
 assertions about finishing only the current post-processing request are unchanged.
+
+## Remembered timeline order — September 2026 follow-up
+
+The last successfully visited public listing order is remembered for 30 days in
+`munichbrief_timeline`, a versioned, bounded HttpOnly first-party cookie with
+SameSite=Lax and Secure in production. Invalid, expired or unsupported values
+fall back to publication order. Failed/invalid listing requests do not update it.
+About and Privacy explain this preference in all 14 languages.
+
+Home links preserve the selected view and active search; within a listing they
+also retain its page size while returning to page 1. Information pages and a
+bare visit to `/` restore the saved view, in the preferred/current language.
+A direct localized listing URL remains authoritative: `/en` means publication
+order, `/en?view=incident` means incident order. Explicit URLs, bookmarks,
+pagination and browser history are not silently reinterpreted by the cookie.
+Selecting publication order therefore also updates the remembered default.
+
+Search stays at `/{language}/search`, with criteria in the existing cookie and
+visible removal/Clear all controls. Article Back links have a server-rendered
+saved-view/search fallback; existing per-tab return state restores the precise
+originating page, page size and scroll position with JavaScript. Incident URLs
+and canonicals do not acquire preference parameters. Personalized responses and
+root redirects use private/no-store and Vary: Cookie; standard publication pages
+remain indexable and alternative lists/search retain noindex.
+
+Verification: full `internal/web` tests, focused reader/legal/navigation race
+checks, Go vet, frontend generation, offline licence validation and documentation
+checks passed. Browser checks with JavaScript enabled and disabled covered Home,
+root redirection, search/clear, explicit publication URLs and native article
+return. Enhanced article return restored the originating second page, page size
+and scroll position. The 390px flow had no horizontal overflow. Both information
+page disclosures were checked in all 14 locales.
