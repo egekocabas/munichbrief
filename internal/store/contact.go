@@ -6,10 +6,17 @@ import (
 	"errors"
 	"fmt"
 	"net/mail"
+	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
 )
+
+// ContactEmailPattern is shared with the native HTML form. Public contact
+// addresses require DNS-style labels and at least one dot; no DNS lookup occurs.
+const ContactEmailPattern = `[^@\s]+@[A-Za-z0-9](?:[A-Za-z0-9\-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9\-]{0,61}[A-Za-z0-9])?)+`
+
+var contactEmailPattern = regexp.MustCompile("^" + ContactEmailPattern + "$")
 
 const ContactRetention = 90 * 24 * time.Hour
 
@@ -28,7 +35,7 @@ type ContactMessage struct {
 
 func (m ContactMessage) Validate() error {
 	a, err := mail.ParseAddress(m.Email)
-	if err != nil || a.Address != m.Email || len(m.Email) > 254 || strings.ContainsAny(m.Email, "\r\n") {
+	if err != nil || a.Address != m.Email || !contactEmailPattern.MatchString(m.Email) || len(m.Email) > 254 || strings.ContainsAny(m.Email, "\r\n") {
 		return errors.New("email")
 	}
 	if m.Topic != "general" && m.Topic != "privacy" && m.Topic != "correction" {

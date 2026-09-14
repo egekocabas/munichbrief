@@ -72,7 +72,7 @@ func TestContactValidationAndAbuse(t *testing.T) {
 	for _, tc := range []struct {
 		name, field, value string
 		status             int
-	}{{"email", "email", "x\r\nBcc: victim@example.org", 400}, {"topic", "topic", "unknown", 400}, {"large unicode", "message", strings.Repeat("好", 5001), 400}, {"honeypot", "website", "spam", 403}, {"token", "token", "forged", 403}} {
+	}{{"email", "email", "x\r\nBcc: victim@example.org", 400}, {"single-label email", "email", "asdasd@asdasda", 400}, {"invalid domain label", "email", "reader@-example.org", 400}, {"topic", "topic", "unknown", 400}, {"large unicode", "message", strings.Repeat("好", 5001), 400}, {"honeypot", "website", "spam", 403}, {"token", "token", "forged", 403}} {
 		t.Run(tc.name, func(t *testing.T) {
 			s, db := newContactServer(t)
 			c := findContactCookie(t, contactRequest(s, "GET", "/en/contact", nil))

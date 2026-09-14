@@ -340,3 +340,13 @@ delete source data, claim human review, or treat contact retention as source pol
   readable wrapping and the existing localized message. Retained role=status and
   added aria-atomic. Generated CSS and refreshed its inventory fingerprint.
 - User explicitly requested skipping checks; no tests or verification were run.
+
+## Contact email domain validation — 14 September 2026
+
+- Added one shared email-domain pattern consumed by backend validation and the
+  native type=email form. Requires a dot and valid ASCII DNS-style labels of at
+  most 63 characters; retains mail parsing, length and injection checks.
+- Single-label addresses such as asdasd@asdasda are rejected before storage.
+  Subdomains, plus addressing and punycode domains remain accepted. This does
+  not verify DNS, mailbox existence or ownership; no network lookup added.
+- Focused store/HTTP validation tests and native browser validity checks passed.

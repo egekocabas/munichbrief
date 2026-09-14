@@ -251,3 +251,20 @@ func TestContactReadAndResolveAgain(t *testing.T) {
 		t.Fatal("new resolution deadline lost", e)
 	}
 }
+
+func TestContactPublicEmailDomain(t *testing.T) {
+	for _, email := range []string{"asdasd@asdasda", "a@example..org", "a@-example.org", "a@example-.org", "a@exam_ple.org", "a@[127.0.0.1]", "a@" + strings.Repeat("a", 64) + ".org"} {
+		m := contactFixture(1, time.Now())
+		m.Email = email
+		if err := m.Validate(); err == nil || err.Error() != "email" {
+			t.Errorf("accepted %q: %v", email, err)
+		}
+	}
+	for _, email := range []string{"reader@example.org", "reader+correction@sub.example.co.uk", "a@xn--bcher-kva.de", "a@EXAMPLE.ORG", "a@" + strings.Repeat("a", 63) + ".org"} {
+		m := contactFixture(1, time.Now())
+		m.Email = email
+		if err := m.Validate(); err != nil {
+			t.Errorf("rejected %q: %v", email, err)
+		}
+	}
+}

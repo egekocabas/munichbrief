@@ -250,6 +250,7 @@ func newWithLanguages(database incidentStore, logger *slog.Logger, options Optio
 		return nil, fmt.Errorf("initialize localization: %w", err)
 	}
 	functions := template.FuncMap{
+		"contactEmailPattern":      func() string { return store.ContactEmailPattern },
 		"gazetteerDiagnosticHint":  gazetteerDiagnosticHint,
 		"gazetteerDuration":        func(d time.Duration) string { return d.Round(time.Millisecond).String() },
 		"modelLicenseWarning":      modelLicenseWarning,
