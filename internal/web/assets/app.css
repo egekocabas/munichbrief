@@ -877,3 +877,9 @@ html[data-theme="dark"]:has(.reader) {
  .processing-technical dd { margin-top:.2rem; overflow-wrap:anywhere; }
  @media(min-width:640px) { .processing-steps { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 }
+
+@layer components {
+ .contact-confirmation { display:flex; align-items:flex-start; gap:.75rem; margin-top:1.25rem; padding:1rem; border:1px solid color-mix(in srgb,var(--color-success) 35%,var(--color-paper)); border-radius:.6rem; background:color-mix(in srgb,var(--color-success) 9%,var(--color-paper)); color:var(--color-success); font-weight:600; line-height:1.6; }
+ .contact-confirmation svg { width:1.5rem; height:1.5rem; flex:none; margin-top:.05rem; }
+ .contact-confirmation span { min-width:0; overflow-wrap:anywhere; }
+}

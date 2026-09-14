@@ -333,3 +333,10 @@ delete source data, claim human review, or treat contact retention as source pol
   tests passed in the full run. Go vet/build, frontend generation, documentation
   and offline licence checks passed; CSS/favicon fingerprints were refreshed.
   The local env file is ignored and owner-readable only.
+
+## Contact success confirmation — 14 September 2026
+
+- Styled successful receipt as a soft green, theme-aware panel with a checkmark,
+  readable wrapping and the existing localized message. Retained role=status and
+  added aria-atomic. Generated CSS and refreshed its inventory fingerprint.
+- User explicitly requested skipping checks; no tests or verification were run.

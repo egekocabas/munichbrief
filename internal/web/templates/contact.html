@@ -11,7 +11,10 @@
 <section id="contact-form" class="border-t border-rule py-8" hx-history="false">
  <h2 class="text-2xl font-semibold">{{t .Lang "ContactForm"}}</h2>
  <p class="mt-3 leading-7 text-muted">{{t .Lang "ContactStorage"}} <a class="font-bold text-civic underline" href="/{{.Lang}}/privacy">{{t .Lang "PrivacyTitle"}}</a></p>
- {{if .Received}}<p role="status" class="mt-5 rounded-lg border border-rule p-4 font-semibold">{{t .Lang "ContactReceived"}}</p>{{end}}
+ {{if .Received}}<div role="status" aria-atomic="true" class="contact-confirmation">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <span>{{t .Lang "ContactReceived"}}</span>
+ </div>{{end}}
  {{if .Error}}<div role="alert" class="mt-5 border-l-4 border-alert p-4 text-alert"><p>{{t .Lang .Error}}</p>{{range $field,$key:=.Errors}}<p><a class="underline" href="#contact-{{$field}}">{{t $.Lang $key}}</a></p>{{end}}</div>{{end}}
  {{if .Enabled}}<form method="post" action="/{{.Lang}}/contact#contact-form" class="contact-form mt-6 grid gap-5" hx-boost="false">
  <input type="hidden" name="token" value="{{.Token}}">
