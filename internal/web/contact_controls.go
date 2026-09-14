@@ -1,7 +1,6 @@
 package web
 
 import (
-	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -45,9 +44,7 @@ func (s *Server) validContactAdminPost(w http.ResponseWriter, r *http.Request) b
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return false
 	}
-	cookie, err := r.Cookie(contactCookie)
-	token := r.PostForm.Get("token")
-	if err != nil || !hmac.Equal([]byte(cookie.Value), []byte(token)) || !s.validContactToken(token, time.Now()) {
+	if !s.validContactForm(r, r.PostForm.Get("token"), "admin", time.Now()) {
 		http.Error(w, "Expired form; reload and try again", http.StatusForbidden)
 		return false
 	}

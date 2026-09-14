@@ -26,9 +26,9 @@ func contactAdminRequest(s *Server, method, path string, form url.Values, cookie
 func TestContactClosingStaleFormKeepsDraftAndAcceptedRetry(t *testing.T) {
 	s, db := newContactServer(t)
 	ctx := context.Background()
-	first := findContactCookie(t, contactRequest(s, "GET", "/en/contact", nil))
-	stale := findContactCookie(t, contactRequest(s, "GET", "/en/contact", nil))
-	form := url.Values{"token": {first.Value}, "email": {"reader@example.org"}, "topic": {"general"}, "message": {"Hello <script>bad()</script>"}}
+	first, firstToken := findContactForm(t, contactRequest(s, "GET", "/en/contact", nil))
+	stale, staleToken := findContactForm(t, contactRequest(s, "GET", "/en/contact", nil))
+	form := url.Values{"token": {firstToken}, "email": {"reader@example.org"}, "topic": {"general"}, "message": {"Hello <script>bad()</script>"}}
 	if w := contactRequest(s, "POST", "/en/contact", form, first); w.Code != 303 {
 		t.Fatal(w.Code)
 	}
@@ -38,7 +38,7 @@ func TestContactClosingStaleFormKeepsDraftAndAcceptedRetry(t *testing.T) {
 	if w := contactRequest(s, "POST", "/en/contact", form, first); w.Code != 303 {
 		t.Fatal("accepted retry rejected", w.Code)
 	}
-	form.Set("token", stale.Value)
+	form.Set("token", staleToken)
 	w := contactRequest(s, "POST", "/en/contact", form, stale)
 	if w.Code != 503 || !strings.Contains(w.Body.String(), "Your message was not sent") || !strings.Contains(w.Body.String(), "Hello &lt;script&gt;") || strings.Contains(w.Body.String(), "type=\"submit\"") {
 		t.Fatal(w.Code, w.Body.String())
@@ -77,22 +77,22 @@ func TestContactAdminControlsQuotasTestAndGuards(t *testing.T) {
 	if strings.Index(get.Body.String(), ">Messages</a>") > strings.Index(get.Body.String(), ">Open reader</a>") {
 		t.Fatal("nav order")
 	}
-	c := findContactCookie(t, get)
-	form := url.Values{"token": {c.Value}, "control": {"notifications"}, "enabled": {"false"}}
+	c, token := findContactForm(t, get)
+	form := url.Values{"token": {token}, "control": {"notifications"}, "enabled": {"false"}}
 	if w := contactAdminRequest(s, "POST", "/admin/contact/settings", form, c); w.Code != 303 {
 		t.Fatal(w.Code, w.Body.String())
 	}
-	if w := contactAdminRequest(s, "POST", "/admin/contact/test", url.Values{"token": {c.Value}}, c); w.Code != 409 {
+	if w := contactAdminRequest(s, "POST", "/admin/contact/test", url.Values{"token": {token}}, c); w.Code != 409 {
 		t.Fatal("disabled test", w.Code)
 	}
-	// Error pages refresh the cookie; obtain a fresh form before continuing.
-	c = findContactCookie(t, contactAdminRequest(s, "GET", "/admin/contact", nil))
-	form.Set("token", c.Value)
+	// Obtain a new form nonce for the next action.
+	c, token = findContactForm(t, contactAdminRequest(s, "GET", "/admin/contact", nil))
+	form.Set("token", token)
 	form.Set("enabled", "true")
 	if w := contactAdminRequest(s, "POST", "/admin/contact/settings", form, c); w.Code != 303 {
 		t.Fatal(w.Code)
 	}
-	testForm := url.Values{"token": {c.Value}}
+	testForm := url.Values{"token": {token}}
 	var target string
 	for range 2 {
 		w := contactAdminRequest(s, "POST", "/admin/contact/test", testForm, c)
@@ -168,8 +168,8 @@ func TestContactInboxOnlyReceiptAndLocaleParity(t *testing.T) {
 	if err := db.SetContactControl(context.Background(), "notifications", false); err != nil {
 		t.Fatal(err)
 	}
-	c := findContactCookie(t, contactRequest(s, "GET", "/en/contact", nil))
-	form := url.Values{"token": {c.Value}, "email": {"reader@example.org"}, "topic": {"general"}, "message": {"Inbox-only enquiry"}}
+	c, token := findContactForm(t, contactRequest(s, "GET", "/en/contact", nil))
+	form := url.Values{"token": {token}, "email": {"reader@example.org"}, "topic": {"general"}, "message": {"Inbox-only enquiry"}}
 	if w := contactRequest(s, "POST", "/en/contact", form, c); w.Code != 303 {
 		t.Fatal(w.Code)
 	}
@@ -216,14 +216,14 @@ func TestContactAdminOverridesLegacyEnvironmentGate(t *testing.T) {
 		t.Fatal("fresh form must stay closed")
 	}
 	for _, control := range []string{"form", "notifications"} {
-		c := findContactCookie(t, contactAdminRequest(s, "GET", "/admin/contact", nil))
-		w := contactAdminRequest(s, "POST", "/admin/contact/settings", url.Values{"token": {c.Value}, "control": {control}, "enabled": {"true"}}, c)
+		c, token := findContactForm(t, contactAdminRequest(s, "GET", "/admin/contact", nil))
+		w := contactAdminRequest(s, "POST", "/admin/contact/settings", url.Values{"token": {token}, "control": {control}, "enabled": {"true"}}, c)
 		if w.Code != http.StatusSeeOther {
 			t.Fatalf("admin could not enable %s with legacy flag false: %d", control, w.Code)
 		}
 	}
-	c := findContactCookie(t, contactRequest(s, "GET", "/en/contact", nil))
-	form := url.Values{"token": {c.Value}, "email": {"reader@example.org"}, "topic": {"general"}, "message": {"Synthetic admin-enabled enquiry"}}
+	c, token := findContactForm(t, contactRequest(s, "GET", "/en/contact", nil))
+	form := url.Values{"token": {token}, "email": {"reader@example.org"}, "topic": {"general"}, "message": {"Synthetic admin-enabled enquiry"}}
 	if w := contactRequest(s, "POST", "/en/contact", form, c); w.Code != http.StatusSeeOther {
 		t.Fatalf("receipt still gated: %d", w.Code)
 	}
@@ -239,8 +239,8 @@ func TestContactAdminOverridesLegacyEnvironmentGate(t *testing.T) {
 		t.Fatal("restart overrode saved choice")
 	}
 	for _, control := range []string{"form", "notifications"} {
-		c := findContactCookie(t, contactAdminRequest(s, "GET", "/admin/contact", nil))
-		w := contactAdminRequest(s, "POST", "/admin/contact/settings", url.Values{"token": {c.Value}, "control": {control}, "enabled": {"false"}}, c)
+		c, token := findContactForm(t, contactAdminRequest(s, "GET", "/admin/contact", nil))
+		w := contactAdminRequest(s, "POST", "/admin/contact/settings", url.Values{"token": {token}, "control": {control}, "enabled": {"false"}}, c)
 		if w.Code != http.StatusSeeOther {
 			t.Fatalf("disable %s: %d", control, w.Code)
 		}

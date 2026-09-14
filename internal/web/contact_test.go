@@ -51,17 +51,30 @@ func findContactCookie(t *testing.T, w *httptest.ResponseRecorder) *http.Cookie 
 	t.Fatal("missing contact cookie")
 	return nil
 }
+func findContactForm(t *testing.T, w *httptest.ResponseRecorder) (*http.Cookie, string) {
+	t.Helper()
+	cookie := findContactCookie(t, w)
+	_, rest, ok := strings.Cut(w.Body.String(), `name="token" value="`)
+	if !ok {
+		t.Fatal("missing form token")
+	}
+	token, _, ok := strings.Cut(rest, `"`)
+	if !ok || token == "" {
+		t.Fatal("empty form token")
+	}
+	return cookie, html.UnescapeString(token)
+}
 func TestContactSSRReceiptDuplicateAndPrivacy(t *testing.T) {
 	s, db := newContactServer(t)
 	get := contactRequest(s, "GET", "/tr/contact", nil)
 	if get.Code != 200 || !strings.Contains(get.Body.String(), "İngilizce") {
 		t.Fatal(get.Code)
 	}
-	c := findContactCookie(t, get)
+	c, token := findContactForm(t, get)
 	if !c.HttpOnly || !c.Secure || c.MaxAge != 3600 {
 		t.Fatal(c)
 	}
-	f := url.Values{"token": {c.Value}, "email": {"reader@example.org"}, "topic": {"correction"}, "message": {"请更正 İstanbul <script>bad()</script>"}}
+	f := url.Values{"token": {token}, "email": {"reader@example.org"}, "topic": {"correction"}, "message": {"请更正 İstanbul <script>bad()</script>"}}
 	for range 2 {
 		w := contactRequest(s, "POST", "/tr/contact", f, c)
 		if w.Code != 303 || w.Header().Get("Location") != "/tr/contact#contact-form" {
@@ -80,8 +93,8 @@ func TestContactValidationAndAbuse(t *testing.T) {
 	}{{"email", "email", "x\r\nBcc: victim@example.org", 400}, {"single-label email", "email", "asdasd@asdasda", 400}, {"invalid domain label", "email", "reader@-example.org", 400}, {"topic", "topic", "unknown", 400}, {"large unicode", "message", strings.Repeat("好", 5001), 400}, {"honeypot", "website", "spam", 403}, {"token", "token", "forged", 403}} {
 		t.Run(tc.name, func(t *testing.T) {
 			s, db := newContactServer(t)
-			c := findContactCookie(t, contactRequest(s, "GET", "/en/contact", nil))
-			f := url.Values{"token": {c.Value}, "email": {"reader@example.org"}, "topic": {"general"}, "message": {"Hello"}}
+			c, token := findContactForm(t, contactRequest(s, "GET", "/en/contact", nil))
+			f := url.Values{"token": {token}, "email": {"reader@example.org"}, "topic": {"general"}, "message": {"Hello"}}
 			f.Set(tc.field, tc.value)
 			w := contactRequest(s, "POST", "/en/contact", f, c)
 			if w.Code != tc.status {
@@ -94,12 +107,17 @@ func TestContactValidationAndAbuse(t *testing.T) {
 		})
 	}
 	s, db := newContactServer(t)
-	c := findContactCookie(t, contactRequest(s, "GET", "/en/contact", nil))
-	f := url.Values{"token": {c.Value}, "email": {"reader@example.org"}, "topic": {"general"}, "message": {"Hi"}}
+	c, token := findContactForm(t, contactRequest(s, "GET", "/en/contact", nil))
+	f := url.Values{"token": {token}, "email": {"reader@example.org"}, "topic": {"general"}, "message": {"Hi"}}
 	for i := 0; i < 4; i++ {
 		w := contactRequest(s, "POST", "/en/contact", f, c)
-		if i == 3 && w.Code != 429 {
-			t.Fatal("not rate limited", w.Code)
+		if i == 3 {
+			if w.Code != 429 {
+				t.Fatal("not rate limited", w.Code)
+			}
+			if !strings.Contains(w.Body.String(), `name="token" value="`+token+`"`) || !strings.Contains(w.Body.String(), `>Hi</textarea>`) {
+				t.Fatal("rate limit discarded the draft or original idempotency key")
+			}
 		}
 	}
 	r := httptest.NewRequest("POST", "https://munichbrief.de/en/contact", strings.NewReader(f.Encode()))
@@ -152,8 +170,8 @@ func TestContactAdminBoundaryEscapingAndRetentionActions(t *testing.T) {
 	if !strings.Contains(w.Header().Get("X-Robots-Tag"), "noindex") {
 		t.Fatal("indexable inbox")
 	}
-	c := findContactCookie(t, w)
-	f := url.Values{"token": {c.Value}, "action": {"resolve"}}
+	c, token := findContactForm(t, w)
+	f := url.Values{"token": {token}, "action": {"resolve"}}
 	if w = admin("POST", "/admin/contact/1", f, c); w.Code != 303 {
 		t.Fatal(w.Code)
 	}

@@ -63,7 +63,11 @@ public-style domain, not mailbox existence. Submitted text never enters URLs,
 metadata, logs or metric labels. HTML output escapes correspondence.
 
 Requests use bounded bodies, same-origin checks, signed one-hour tokens, a hidden
-spam trap and three attempts per IP per 15-minute window. IP-derived keyed hashes
+spam trap and three attempts per IP per 15-minute window. A stable browser
+binding expires after its original hour; each form has a separate signed nonce
+for CSRF and submission deduplication. Opening another tab does not invalidate
+existing forms. Recoverable expiry and rate-limit responses preserve escaped
+drafts; rate-limited retries retain their original submission nonce. IP-derived keyed hashes
 remain in a bounded in-memory map; expiry is enforced at 15 minutes and entries
 are removed at the next contact attempt or restart. No raw IP is stored with a
 message. Visitors sharing an IP share the allowance. Metrics contain totals only.
@@ -101,7 +105,10 @@ without relying on email to report its own outage.
 
 Disabling notifications pauses existing queued messages. New enquiries are saved
 as inbox-only and are not automatically emailed later. Re-enabling resumes the
-previous queue. A send already claimed may finish. Disabling either control
+previous queue. The admin switch displays the saved choice separately from
+configuration availability. If credentials are missing, an enabled saved choice
+can still be switched off, preventing automatic resumption when credentials
+return. A send already claimed may finish. Disabling either control
 cancels queued tests; a synthetic test uses the same worker, recipient and budget.
 
 ## Inbox and retention

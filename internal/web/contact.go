@@ -32,12 +32,15 @@ type contactPage struct {
 }
 
 func (s *Server) contactToken(now time.Time) string {
+	return s.boundContactToken(now, "")
+}
+func (s *Server) boundContactToken(now time.Time, binding string) string {
 	var nonce [32]byte
 	if _, err := rand.Read(nonce[:]); err != nil {
 		return ""
 	}
 	payload := strconv.FormatInt(now.Add(time.Hour).Unix(), 10) + "." + hex.EncodeToString(nonce[:])
-	return payload + "." + s.contactMAC(payload)
+	return payload + "." + s.contactMAC(binding+payload)
 }
 func (s *Server) contactMAC(v string) string {
 	mac := hmac.New(sha256.New, []byte(s.options.ContactSecret))
@@ -45,6 +48,9 @@ func (s *Server) contactMAC(v string) string {
 	return hex.EncodeToString(mac.Sum(nil))
 }
 func (s *Server) validContactToken(v string, now time.Time) bool {
+	return s.validBoundContactToken(v, now, "")
+}
+func (s *Server) validBoundContactToken(v string, now time.Time, binding string) bool {
 	parts := strings.Split(v, ".")
 	if len(parts) != 3 || len(v) > 180 {
 		return false
@@ -53,10 +59,31 @@ func (s *Server) validContactToken(v string, now time.Time) bool {
 	if err != nil || expires <= now.Unix() || expires > now.Add(time.Hour).Unix() {
 		return false
 	}
-	return hmac.Equal([]byte(parts[2]), []byte(s.contactMAC(parts[0]+"."+parts[1])))
+	return hmac.Equal([]byte(parts[2]), []byte(s.contactMAC(binding+parts[0]+"."+parts[1])))
 }
 func (s *Server) setContactCookie(w http.ResponseWriter, value string, age int) {
 	http.SetCookie(w, &http.Cookie{Name: contactCookie, Value: value, Path: "/", MaxAge: age, HttpOnly: true, Secure: s.options.SecureCookies, SameSite: http.SameSiteLaxMode})
+}
+
+// Keep a browser binding stable for its original one-hour lifetime. Each form
+// gets its own signed nonce, so tabs coexist without sharing an idempotency key.
+func (s *Server) contactFormToken(w http.ResponseWriter, r *http.Request, kind string) string {
+	now := time.Now()
+	cookie, err := r.Cookie(contactCookie)
+	if err != nil || !s.validContactToken(cookie.Value, now) {
+		cookie = &http.Cookie{Value: s.contactToken(now)}
+	}
+	if cookie.Value == "" {
+		return ""
+	}
+	expires, _ := strconv.ParseInt(strings.Split(cookie.Value, ".")[0], 10, 64)
+	s.setContactCookie(w, cookie.Value, int(expires-now.Unix()))
+	return s.boundContactToken(now, "form:"+kind+":"+cookie.Value+":")
+}
+func (s *Server) validContactForm(r *http.Request, token, kind string, now time.Time) bool {
+	cookie, err := r.Cookie(contactCookie)
+	return err == nil && s.validContactToken(cookie.Value, now) &&
+		s.validBoundContactToken(token, now, "form:"+kind+":"+cookie.Value+":")
 }
 
 func (s *Server) contactClientIP(r *http.Request) string {
@@ -153,8 +180,7 @@ func (s *Server) renderContact(w http.ResponseWriter, r *http.Request, data cont
 		data.Errors = map[string]string{}
 	}
 	if data.Token == "" && data.Enabled {
-		data.Token = s.contactToken(time.Now())
-		s.setContactCookie(w, data.Token, 3600)
+		data.Token = s.contactFormToken(w, r, "public")
 	}
 	if wantsMarkdown(r.Header.Get("Accept")) {
 		s.prepareMarkdown(w, base)
@@ -189,26 +215,31 @@ func (s *Server) submitContact(w http.ResponseWriter, r *http.Request) {
 		invalid(http.StatusForbidden, "ContactInvalid")
 		return
 	}
-	if !s.allowContact(r, time.Now()) {
-		w.Header().Set("Retry-After", "900")
-		invalid(http.StatusTooManyRequests, "ContactRateLimit")
-		return
-	}
+	allowed := s.allowContact(r, time.Now())
 	r.Body = http.MaxBytesReader(w, r.Body, 32768)
 	if err := r.ParseForm(); err != nil {
 		invalid(http.StatusBadRequest, "ContactInvalid")
 		return
 	}
-	token := r.PostForm.Get("token")
-	cookie, err := r.Cookie(contactCookie)
-	if err != nil || !hmac.Equal([]byte(cookie.Value), []byte(token)) || !s.validContactToken(token, time.Now()) || r.PostForm.Get("website") != "" {
-		invalid(http.StatusForbidden, "ContactInvalid")
-		return
-	}
-	data.Token = token
+	// Preserve bounded, escaped draft fields when an expired form or rate limit
+	// requires another attempt. Nothing is stored until all checks pass.
 	data.Email = strings.TrimSpace(r.PostForm.Get("email"))
 	data.Topic = r.PostForm.Get("topic")
 	data.Message = strings.TrimSpace(r.PostForm.Get("message"))
+	token := r.PostForm.Get("token")
+	validToken := s.validContactForm(r, token, "public", time.Now())
+	if validToken {
+		data.Token = token // Keep the original idempotency key on a rate-limited retry.
+	}
+	if !allowed {
+		w.Header().Set("Retry-After", "900")
+		invalid(http.StatusTooManyRequests, "ContactRateLimit")
+		return
+	}
+	if !validToken || r.PostForm.Get("website") != "" {
+		invalid(http.StatusForbidden, "ContactInvalid")
+		return
+	}
 	if !s.contactAvailable {
 		invalid(http.StatusServiceUnavailable, "ContactClosed")
 		return
@@ -236,8 +267,7 @@ func (s *Server) submitContact(w http.ResponseWriter, r *http.Request) {
 	if created {
 		s.options.ContactMetrics.Received.Add(1)
 	}
-	// Keep the original token for a short time so browser retries remain idempotent.
-	s.setContactCookie(w, token, 3600)
+	// Retain the browser binding: retries use the original form nonce.
 	http.SetCookie(w, &http.Cookie{Name: "munichbrief_contact_received", Value: s.contactToken(time.Now()), Path: "/", MaxAge: 300, HttpOnly: true, Secure: s.options.SecureCookies, SameSite: http.SameSiteLaxMode})
 	w.Header().Set("Cache-Control", "private, no-store")
 	http.Redirect(w, r, "/"+language+"/contact#contact-form", http.StatusSeeOther)
@@ -268,8 +298,7 @@ func (s *Server) renderContactAdmin(w http.ResponseWriter, r *http.Request, erro
 		http.NotFound(w, r)
 		return
 	}
-	page := contactAdminPage{Token: s.contactToken(time.Now()), Filter: r.URL.Query().Get("filter"), Error: errorText, Now: time.Now().Unix()}
-	s.setContactCookie(w, page.Token, 3600)
+	page := contactAdminPage{Token: s.contactFormToken(w, r, "admin"), Filter: r.URL.Query().Get("filter"), Error: errorText, Now: time.Now().Unix()}
 	page.ContactConfigured = s.contactAvailable
 	page.NotificationsConfigured = s.options.ContactNotificationsConfigured && s.contactAvailable
 	page.Rate = s.contactRateStats(time.Now())
