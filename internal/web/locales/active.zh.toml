@@ -279,7 +279,7 @@ other = "表单暂时无法使用，请通过上方的电子邮箱联系。"
 other = "服务商信息与投诉"
 
 [ImpressumResponsible]
-other = "编辑内容负责人"
+other = "网站负责人"
 
 [PrivacyController]
 other = "数据负责人"
@@ -348,7 +348,7 @@ other = "MunichBrief 运营者信息及联系方式。"
 other = "MunichBrief 如何处理网站数据、来信和公开资料。"
 
 [ImpressumResponsibleCopy]
-other = "地址见上文。MunichBrief 独立于警方。"
+other = "负责本网站。地址见上文。MunichBrief 独立于警方。"
 
 [ImpressumContactCopy]
 other = "如需咨询，请访问联系页面。"

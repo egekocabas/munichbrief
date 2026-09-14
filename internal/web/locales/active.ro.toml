@@ -553,7 +553,7 @@ other = "Formularul nu este disponibil momentan. Folosește adresa de e-mail de 
 other = "Informații despre furnizori și reclamații"
 
 [ImpressumResponsible]
-other = "Responsabil pentru conținutul editorial"
+other = "Responsabilul site-ului"
 
 [PrivacyController]
 other = "Cine răspunde de date"
@@ -622,7 +622,7 @@ other = "Datele responsabilului și modalități de contact pentru MunichBrief."
 other = "Cum gestionează MunichBrief datele site-ului, corespondența și sursele publice."
 
 [ImpressumResponsibleCopy]
-other = "Adresa este indicată mai sus. MunichBrief este independent de poliție."
+other = "este responsabil pentru acest site. Adresa este indicată mai sus. MunichBrief este independent de poliție."
 
 [ImpressumContactCopy]
 other = "Pentru întrebări, vizitează pagina noastră de contact."

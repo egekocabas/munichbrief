@@ -279,7 +279,7 @@ other = "Form şu anda kullanılamıyor. Lütfen yukarıdaki e-posta adresini ku
 other = "Hizmet sağlayıcılar ve şikâyetler"
 
 [ImpressumResponsible]
-other = "Editoryal içerikten sorumlu kişi"
+other = "Web sitesinden sorumlu kişi"
 
 [PrivacyController]
 other = "Verilerinizden kim sorumlu?"
@@ -348,7 +348,7 @@ other = "MunichBrief’in işletmecisi ve iletişim bilgileri."
 other = "MunichBrief’in site verilerini, yazışmaları ve kamuya açık kaynakları nasıl işlediği."
 
 [ImpressumResponsibleCopy]
-other = "Adres yukarıda belirtilmiştir. MunichBrief, polisten bağımsızdır."
+other = "web sitesinden sorumludur. Adres yukarıda belirtilmiştir. MunichBrief, polisten bağımsızdır."
 
 [ImpressumContactCopy]
 other = "Sorularınız için iletişim sayfamızı ziyaret edebilirsiniz."

@@ -708,7 +708,7 @@ other = "The form is not currently available. Please use the email address above
 other = "Provider information and complaints"
 
 [ImpressumResponsible]
-other = "Responsible for editorial content"
+other = "Responsible for this website"
 
 [PrivacyController]
 other = "Who is responsible"
@@ -777,7 +777,7 @@ other = "Operator details and ways to contact MunichBrief."
 other = "How MunichBrief handles website data, correspondence and public sources."
 
 [ImpressumResponsibleCopy]
-other = "Address as above. MunichBrief is independent of the police."
+other = "is responsible for the website. Address as above. MunichBrief is independent of the police."
 
 [ImpressumContactCopy]
 other = "For enquiries, visit our Contact page."

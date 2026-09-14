@@ -279,7 +279,7 @@ other = "Le formulaire est indisponible pour le moment. Utilisez l’adresse e-m
 other = "Informations des prestataires et réclamations"
 
 [ImpressumResponsible]
-other = "Responsable du contenu éditorial"
+other = "Responsable du site"
 
 [PrivacyController]
 other = "Responsable du traitement"
@@ -348,7 +348,7 @@ other = "Identité du responsable de MunichBrief et coordonnées."
 other = "Le traitement des données du site, du courrier et des sources publiques par MunichBrief."
 
 [ImpressumResponsibleCopy]
-other = "Adresse indiquée ci-dessus. MunichBrief est indépendant de la police."
+other = "est responsable du site. Adresse indiquée ci-dessus. MunichBrief est indépendant de la police."
 
 [ImpressumContactCopy]
 other = "Pour toute demande, consultez notre page Contact."
