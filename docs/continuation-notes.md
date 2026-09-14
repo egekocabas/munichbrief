@@ -167,3 +167,20 @@ delete source data, claim human review, or treat contact retention as source pol
   JavaScript include search, clearing, Home/root, explicit URLs and report return.
 - The user's own localhost:8080 preview must not be stopped. This follow-up uses
   temporary ports 18082/19092 and stops only its own preview before delivery.
+
+## Privacy wording follow-up — 14 September 2026
+
+- User approved simplifying correspondence, retention and source-data sections in
+  all 14 languages. Remove public explanations of EU API endpoint limitations,
+  notification toggles/backlog behaviour and redundant website-versus-mailbox
+  deletion wording. Preserve overseas-processing/provider information and the
+  separate review/deletion of Gmail copies and sent replies.
+- Source retention now says there is currently no fixed deletion period for those
+  records. This is disclosure of the current position, not approval of indefinite
+  retention or a promise of an unimplemented review/deletion process.
+- Replace the generic editorial-law reminder with a reader-facing explanation
+  that reports can identify people without names and an invitation to report
+  personally relevant content or errors. Individual assessment remains stated.
+- These are copy changes only; operational controls and internal legal/source
+  assessments remain unchanged. Privacy's existing 14 September update date
+  already covers this revision.
