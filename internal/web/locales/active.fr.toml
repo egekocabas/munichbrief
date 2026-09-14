@@ -450,3 +450,6 @@ other = "Icônes IA : © Union européenne. MunichBrief a ajouté un fond gris e
 
 [LicensesDataChanges]
 other = "Les données géographiques sont limitées à la région de Munich et les noms de lieux sont normalisés pour faciliter leur identification. Les jeux de données d’origine sont accessibles auprès des fournisseurs cités en lien. Les communiqués de police constituent des sources distinctes et ne sont pas couverts par la licence MIT de MunichBrief."
+
+[PagePosition]
+other = "Page {{.Page}} sur {{.TotalPages}}"

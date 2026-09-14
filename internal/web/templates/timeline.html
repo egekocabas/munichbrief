@@ -95,15 +95,22 @@
   </div>
   {{end}}
   <div class="reader-pagination-panel">
-    <nav class="reader-numbered-pages" aria-label="{{t .Lang "Pagination"}}">{{range .Pages}}{{if .Gap}}<span aria-hidden="true">…</span>{{else}}<a href="{{.URL}}" {{if .Current}}aria-current="page"{{end}} aria-label="{{t $.Lang "Page"}} {{.Number}}">{{.Number}}</a>{{end}}{{end}}</nav>
-    {{template "reader-prev-next" .}}
-    <div class="reader-page-settings">
+    <div class="reader-pagination-layout reader-page-settings">
       <form action="{{if .Search}}/{{.Lang}}/search{{else}}/{{.Lang}}{{end}}#timeline-heading" method="get" class="page-size-form">
         <input type="hidden" name="view" value="{{.View}}"><label>{{t .Lang "PerPage"}} <select name="page_size" data-auto-submit>{{range .PageSizes}}<option value="{{.}}" {{if eq $.PageSize .}}selected{{end}}>{{.}}</option>{{end}}</select></label><button type="submit" class="reader-native-submit">{{t .Lang "ApplySearch"}}</button>
       </form>
-      <form action="{{if .Search}}/{{.Lang}}/search{{else}}/{{.Lang}}{{end}}#timeline-heading" method="get" class="page-jump-form">
-        <input type="hidden" name="view" value="{{.View}}"><input type="hidden" name="page_size" value="{{.PageSize}}"><label>{{t .Lang "Page"}} <input type="number" name="page" min="1" max="{{.TotalPages}}" value="{{.Page}}" aria-label="{{t .Lang "GoToPage"}}"></label><span>{{t .Lang "Of"}} {{.TotalPages}}</span><button type="submit">{{t .Lang "GoToPage"}}</button>
-      </form>
+      {{if gt .TotalPages 1}}
+      <nav class="reader-bottom-navigation" aria-label="{{t .Lang "Pagination"}}">
+        {{if .HasPrevious}}<a class="reader-page-direction" href="{{.PreviousURL}}" rel="prev">{{t .Lang "PreviousPage"}}</a>{{else}}<span class="reader-page-direction" aria-disabled="true">{{t .Lang "PreviousPage"}}</span>{{end}}
+        <div class="reader-numbered-pages">{{range .Pages}}{{if .Gap}}<span aria-hidden="true">…</span>{{else}}<a href="{{.URL}}" {{if .Current}}aria-current="page"{{end}} aria-label="{{t $.Lang "Page"}} {{.Number}}">{{.Number}}</a>{{end}}{{end}}</div>
+        <span class="reader-compact-page" aria-current="page">{{message .Lang "PagePosition" .}}</span>
+        {{if .HasNext}}<a class="reader-page-direction" href="{{.NextURL}}" rel="next">{{t .Lang "NextPage"}}</a>{{else}}<span class="reader-page-direction" aria-disabled="true">{{t .Lang "NextPage"}}</span>{{end}}
+      </nav>
+      <div class="reader-page-jump">
+        <div class="reader-desktop-jump">{{template "reader-jump-form" .}}</div>
+        <details class="reader-mobile-jump"><summary>{{t .Lang "GoToPage"}}</summary>{{template "reader-jump-form" .}}</details>
+      </div>
+      {{else}}<p class="reader-single-page">{{message .Lang "PagePosition" .}}</p>{{end}}
     </div>
   </div>
 </section>
@@ -113,4 +120,12 @@
  {{if .HasPrevious}}<a href="{{.PreviousURL}}" rel="prev">{{t .Lang "PreviousPage"}}</a>{{else}}<span aria-disabled="true">{{t .Lang "PreviousPage"}}</span>{{end}}
  {{if .HasNext}}<a href="{{.NextURL}}" rel="next">{{t .Lang "NextPage"}}</a>{{else}}<span aria-disabled="true">{{t .Lang "NextPage"}}</span>{{end}}
 </nav>
+{{end}}
+
+{{define "reader-jump-form"}}
+<form action="{{if .Search}}/{{.Lang}}/search{{else}}/{{.Lang}}{{end}}#timeline-heading" method="get" class="page-jump-form">
+  <input type="hidden" name="view" value="{{.View}}"><input type="hidden" name="page_size" value="{{.PageSize}}">
+  <label>{{t .Lang "Page"}} <input type="number" inputmode="numeric" name="page" min="1" max="{{.TotalPages}}" value="{{.Page}}" required></label>
+  <button type="submit">{{t .Lang "GoToPage"}}</button>
+</form>
 {{end}}

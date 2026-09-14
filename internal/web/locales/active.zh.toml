@@ -450,3 +450,6 @@ other = "AI 图标：© 欧盟。MunichBrief 为浅色版本添加了灰色背�
 
 [LicensesDataChanges]
 other = "地理数据经过筛选，仅保留慕尼黑及周边地区的数据，并统一地名格式以便匹配地点。原始数据集可通过所列提供方的链接获取。警方通报属于独立的来源材料，不适用 MunichBrief 的 MIT 许可证。"
+
+[PagePosition]
+other = "第 {{.Page}} 页，共 {{.TotalPages}} 页"

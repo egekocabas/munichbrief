@@ -450,3 +450,6 @@ other = "Icone IA: © Unione europea. MunichBrief ha aggiunto uno sfondo grigio 
 
 [LicensesDataChanges]
 other = "I dati geografici sono limitati all’area di Monaco e i nomi dei luoghi sono uniformati per riconoscere le località. I dati originali sono disponibili presso i fornitori indicati nei link. I comunicati della polizia sono materiale distinto e non rientrano nella licenza MIT di MunichBrief."
+
+[PagePosition]
+other = "Pagina {{.Page}} di {{.TotalPages}}"

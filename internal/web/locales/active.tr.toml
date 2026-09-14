@@ -450,3 +450,6 @@ other = "Yapay zekâ simgeleri: © Avrupa Birliği. MunichBrief, açık tema sü
 
 [LicensesDataChanges]
 other = "Coğrafi veriler Münih ve çevresiyle sınırlandırılır; yer adları eşleştirme için standartlaştırılır. Özgün veri kümelerine bağlantılardaki sağlayıcılardan ulaşabilirsiniz. Polis bültenleri ayrı kaynaklardır ve MunichBrief’in MIT lisansı kapsamında değildir."
+
+[PagePosition]
+other = "Sayfa {{.Page}} / {{.TotalPages}}"

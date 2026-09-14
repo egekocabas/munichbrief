@@ -450,3 +450,6 @@ other = "Ikony AI: © Unia Europejska. MunichBrief dodał szare tło i obramowan
 
 [LicensesDataChanges]
 other = "Dane geograficzne są ograniczane do Monachium i okolic, a nazwy miejsc ujednolicane w celu dopasowania lokalizacji. Oryginalne zbiory danych są dostępne u dostawców wskazanych w odnośnikach. Komunikaty policji stanowią odrębne materiały źródłowe i nie są objęte licencją MIT projektu MunichBrief."
+
+[PagePosition]
+other = "Strona {{.Page}} z {{.TotalPages}}"

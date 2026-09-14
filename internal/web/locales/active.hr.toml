@@ -450,3 +450,6 @@ other = "Ikone umjetne inteligencije: © Europska unija. MunichBrief je svijetlo
 
 [LicensesDataChanges]
 other = "Geografski podaci ograničeni su na područje Münchena, a nazivi mjesta ujednačeni radi prepoznavanja lokacija. Izvorni skupovi podataka dostupni su kod povezanih pružatelja. Policijska priopćenja zaseban su izvorni materijal i nisu obuhvaćena MIT licencom projekta MunichBrief."
+
+[PagePosition]
+other = "Stranica {{.Page}} od {{.TotalPages}}"

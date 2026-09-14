@@ -267,3 +267,20 @@ delete source data, claim human review, or treat contact retention as source pol
   Go vet, staticcheck, application build, module metadata, frontend regeneration,
   offline licence inventory and regression tests, documentation and formatting
   checks passed. No preview listener or live external processing was started.
+
+## Responsive homepage pagination — 14 September 2026
+
+- User approved centered bottom page navigation, left page-size selection and
+  right page jump, with a calmer mobile layout. Implemented container-based
+  three-column / two-row / compact layouts without changing URLs or SEO policy.
+- Reused native GET forms and existing progressive enhancement. Mobile jump uses
+  native details; hidden desktop/mobile forms are excluded from layout and focus.
+  Added idiomatic compact page-position text in all 14 locales.
+- Browser checks passed 224 combinations: all 14 languages, both themes and
+  widths 320/390/640/768/960/1024/1440/1920. No document or pagination overflow;
+  mobile disclosure also fits at 320px. Keyboard focus, native and enhanced page
+  jumps, page-size reset, retained view and first/last-page states passed.
+- Focused reader/navigation/localization/SEO race checks passed (28.226s), alongside
+  Go vet, frontend generation, documentation and licence checks. The generated CSS
+  fingerprint was reviewed and refreshed; no new dependency. Synthetic screenshots
+  are in docs/previews/pagination-*.png. No preview listener was started.

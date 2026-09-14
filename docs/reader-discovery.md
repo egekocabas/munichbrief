@@ -5,6 +5,18 @@ forms or links. Default published lists use 20 reports per page; readers can
 choose 10, 20, 30 or 50. Page, view and size are navigation URL parameters. Search
 criteria only travel in POST bodies and the bounded first-party search cookie.
 
+## Responsive pagination
+
+The bottom bar centers Previous/Next around the numbered links, with page size
+on the left and page jump on the right when the content area is at least 58rem.
+Narrower layouts place settings beneath navigation. Below 42rem of available
+content width, a localized current-page indicator replaces the numbers and a
+native disclosure reveals the jump form. These container breakpoints account for
+the reader column width rather than assuming the viewport is fully available.
+Controls wrap translated labels and retain 44px minimum target heights. Single-page
+results omit unnecessary navigation and jump controls. SSR URLs, top navigation,
+search/view persistence and page-size reset behavior are unchanged.
+
 ## Search and chronology
 
 `GET /{language}/search` restores the last criteria. `POST` applies them and

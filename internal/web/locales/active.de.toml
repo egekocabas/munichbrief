@@ -883,3 +883,6 @@ other = "KI-Symbole: © Europäische Union. MunichBrief hat die helle Variante u
 
 [LicensesDataChanges]
 other = "Geodaten werden auf den Raum München eingegrenzt; Ortsnamen werden für den Abgleich vereinheitlicht. Die Originaldatensätze sind bei den verlinkten Anbietern verfügbar. Polizeimeldungen sind eigenständiges Quellenmaterial und fallen nicht unter die MIT-Lizenz von MunichBrief."
+
+[PagePosition]
+other = "Seite {{.Page}} von {{.TotalPages}}"

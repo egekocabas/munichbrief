@@ -726,3 +726,6 @@ other = "Pictograme IA: © Uniunea Europeană. MunichBrief a adăugat un fundal 
 
 [LicensesDataChanges]
 other = "Datele geografice sunt limitate la zona München, iar denumirile sunt uniformizate pentru identificarea locurilor. Seturile originale de date sunt disponibile la furnizorii indicați prin linkuri. Comunicatele poliției sunt materiale-sursă distincte și nu sunt acoperite de licența MIT a MunichBrief."
+
+[PagePosition]
+other = "Pagina {{.Page}} din {{.TotalPages}}"

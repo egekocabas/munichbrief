@@ -883,3 +883,6 @@ other = "AI icons: © European Union. MunichBrief adapted the light variant with
 
 [LicensesDataChanges]
 other = "Geographic data is filtered for the Munich area and names are normalized for location matching. The original datasets remain available from the linked providers. Police reports are separate source material; MunichBrief’s MIT licence does not cover them."
+
+[PagePosition]
+other = "Page {{.Page}} of {{.TotalPages}}"
