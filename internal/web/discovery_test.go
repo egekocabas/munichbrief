@@ -101,9 +101,9 @@ func TestSitemapContainsOnlyCanonicalPublicDocuments(t *testing.T) {
 			continue
 		}
 		wantLocations[entry.Location] = true
-		for _, page := range []string{"privacy", "impressum"} {
-			if strings.HasSuffix(entry.Location, "/"+page) && entry.LastMod != legalPageUpdatedAt(page).Format(time.DateOnly) {
-				t.Errorf("%s: lastmod differs from published legal revision", entry.Location)
+		for _, page := range []string{"about", "contact", "privacy", "impressum"} {
+			if strings.HasSuffix(entry.Location, "/"+page) && entry.LastMod != informationPageUpdatedAt(page).Format(time.DateOnly) {
+				t.Errorf("%s: lastmod differs from published page revision", entry.Location)
 			}
 		}
 		if strings.Contains(entry.Location, "?") || strings.Contains(entry.Location, "health") || strings.Contains(entry.Location, "admin") {

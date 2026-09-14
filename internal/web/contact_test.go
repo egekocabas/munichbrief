@@ -235,7 +235,7 @@ func TestLegalPagesEveryLanguageHTMLAndMarkdown(t *testing.T) {
 				}
 			}
 			if path != "contact" {
-				date := legalPageUpdatedAt(path)
+				date := informationPageUpdatedAt(path)
 				iso := date.Format(time.DateOnly)
 				label := s.formatIncidentDate(lang.Code, date)
 				if !strings.Contains(w.Body.String(), `<time datetime="`+iso+`">`+html.EscapeString(label)+`</time>`) || !strings.Contains(mw.Body.String(), s.localization.Text(lang.Code, "LegalLastUpdated")+": "+label) {

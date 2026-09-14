@@ -252,11 +252,11 @@ func (s *Server) sitemap(response http.ResponseWriter, request *http.Request) {
 		}
 		urls = append(urls,
 			sitemapURL{Location: origin + "/" + definition.Code},
-			sitemapURL{Location: origin + "/" + definition.Code + "/about"},
-			sitemapURL{Location: origin + "/" + definition.Code + "/contact"},
+			sitemapURL{Location: origin + "/" + definition.Code + "/about", LastMod: informationPageUpdatedAt("about").Format(time.DateOnly)},
+			sitemapURL{Location: origin + "/" + definition.Code + "/contact", LastMod: informationPageUpdatedAt("contact").Format(time.DateOnly)},
 			sitemapURL{Location: origin + "/" + definition.Code + "/licenses", LastMod: licensing.CreditsUpdatedAt()},
-			sitemapURL{Location: origin + "/" + definition.Code + "/privacy", LastMod: legalPageUpdatedAt("privacy").Format(time.DateOnly)},
-			sitemapURL{Location: origin + "/" + definition.Code + "/impressum", LastMod: legalPageUpdatedAt("impressum").Format(time.DateOnly)},
+			sitemapURL{Location: origin + "/" + definition.Code + "/privacy", LastMod: informationPageUpdatedAt("privacy").Format(time.DateOnly)},
+			sitemapURL{Location: origin + "/" + definition.Code + "/impressum", LastMod: informationPageUpdatedAt("impressum").Format(time.DateOnly)},
 		)
 		for _, link := range links {
 			urls = append(urls, sitemapURL{
@@ -427,6 +427,7 @@ func (s *Server) renderAboutMarkdown(response http.ResponseWriter, data aboutPag
 	var builder strings.Builder
 	writeMarkdownFrontMatter(&builder, s.localization.Text(data.Lang, "About"), data.basePage)
 	fmt.Fprintf(&builder, "# %s\n\n%s\n", markdownText(s.localization.Text(data.Lang, "AboutTitle")), markdownText(s.localization.Text(data.Lang, "AboutIntro")))
+	fmt.Fprintf(&builder, "\n%s: %s\n", s.localization.Text(data.Lang, "LegalLastUpdated"), data.UpdatedLabel)
 	fmt.Fprintf(&builder, "\n## %s\n", markdownText(s.localization.Text(data.Lang, "FromReleaseToIncident")))
 	steps := []struct {
 		title string

@@ -20,7 +20,7 @@ func TestCreditsAllLocalesAndMarkdown(t *testing.T) {
 				t.Fatalf("%s %s: %d", lang.Code, accept, w.Code)
 			}
 			body := w.Body.String()
-			for _, text := range []string{s.localization.Text(lang.Code, "LicensesTitle"), s.localization.Text(lang.Code, "LicensesOriginal"), s.localization.Text(lang.Code, "LicensesModelIntro"), "Noto Sans", licensing.ReviewedAt(), "https://munichbrief.de/" + lang.Code + "/licenses"} {
+			for _, text := range []string{s.localization.Text(lang.Code, "LicensesTitle"), s.localization.Text(lang.Code, "LicensesOriginal"), s.localization.Text(lang.Code, "LicensesModelIntro"), "Noto Sans", licensing.CreditsUpdatedAt(), "https://munichbrief.de/" + lang.Code + "/licenses"} {
 				if !strings.Contains(body, text) {
 					t.Errorf("%s %s missing %q", lang.Code, accept, text)
 				}

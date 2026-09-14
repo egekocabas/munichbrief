@@ -362,14 +362,16 @@ func (s *Server) about(response http.ResponseWriter, request *http.Request) {
 	if strings.HasPrefix(base.SocialImageURL, "https://") {
 		base.SocialImageSecureURL = base.SocialImageURL
 	}
+	base.DocumentModifiedDate = informationPageUpdatedAt("about").Format(time.DateOnly)
 	base.StructuredData = structuredPageData(base, "AboutPage")
+	data := aboutPage{basePage: base, UpdatedLabel: s.formatIncidentDate(language, informationPageUpdatedAt("about"))}
 	if s.scope(request).PublicOnly && wantsMarkdown(request.Header.Get("Accept")) {
 		s.prepareMarkdown(response, base)
-		s.renderAboutMarkdown(response, aboutPage{basePage: base})
+		s.renderAboutMarkdown(response, data)
 		return
 	}
 	s.prepareHTML(response, request, base)
-	if err := s.aboutTemplate.ExecuteTemplate(response, "layout", aboutPage{basePage: base}); err != nil {
+	if err := s.aboutTemplate.ExecuteTemplate(response, "layout", data); err != nil {
 		s.logger.ErrorContext(request.Context(), "render about page", "error", err)
 	}
 }
@@ -744,7 +746,10 @@ type detailPage struct {
 	ShowOriginalSection bool
 }
 
-type aboutPage struct{ basePage }
+type aboutPage struct {
+	basePage
+	UpdatedLabel string
+}
 
 func (s *Server) preferredLanguage(request *http.Request) string {
 	if cookie, err := request.Cookie("munichbrief_language"); err == nil {

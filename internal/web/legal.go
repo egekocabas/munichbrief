@@ -33,8 +33,12 @@ type legalPage struct {
 
 // Update each page independently when its published information is revised.
 // These are content dates, never the request time or application build date.
-func legalPageUpdatedAt(page string) time.Time {
+func informationPageUpdatedAt(page string) time.Time {
 	switch page {
+	case "about":
+		return time.Date(2026, time.September, 15, 0, 0, 0, 0, time.UTC)
+	case "contact":
+		return time.Date(2026, time.September, 15, 0, 0, 0, 0, time.UTC)
 	case "privacy":
 		return time.Date(2026, time.September, 15, 0, 0, 0, 0, time.UTC)
 	case "impressum":
@@ -61,9 +65,9 @@ func (s *Server) legal(w http.ResponseWriter, r *http.Request) {
 	base.ShowReviewNotice = false
 	base.SocialTitle = s.localization.Text(lang, title) + " · MunichBrief"
 	base.Description = s.localization.Text(lang, title+"Description")
-	updated := legalPageUpdatedAt("impressum")
+	updated := informationPageUpdatedAt("impressum")
 	if privacy {
-		updated = legalPageUpdatedAt("privacy")
+		updated = informationPageUpdatedAt("privacy")
 	}
 	base.DocumentModifiedDate = updated.Format(time.DateOnly)
 	base.StructuredData = structuredPageData(base, "WebPage")

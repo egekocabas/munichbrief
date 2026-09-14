@@ -26,6 +26,7 @@ type contactRate struct {
 }
 type contactPage struct {
 	basePage
+	UpdatedLabel                        string
 	Enabled, Received, Draft            bool
 	Token, Email, Topic, Message, Error string
 	Errors                              map[string]string
@@ -159,7 +160,9 @@ func (s *Server) renderContact(w http.ResponseWriter, r *http.Request, data cont
 	if data.Received || status != http.StatusOK {
 		base.Robots = "noindex,follow"
 	}
+	base.DocumentModifiedDate = informationPageUpdatedAt("contact").Format(time.DateOnly)
 	base.StructuredData = structuredPageData(base, "ContactPage")
+	data.UpdatedLabel = s.formatIncidentDate(language, informationPageUpdatedAt("contact"))
 	data.basePage = base
 	data.Enabled = s.contactAvailable
 	if data.Enabled {
@@ -186,7 +189,7 @@ func (s *Server) renderContact(w http.ResponseWriter, r *http.Request, data cont
 		s.prepareMarkdown(w, base)
 		w.Header().Set("Cache-Control", "private, no-store")
 		w.WriteHeader(status)
-		fmt.Fprintf(w, "# %s\n\n%s\n\ncontact@munichbrief.de\n\n", s.localization.Text(language, "ContactHeading"), base.Description)
+		fmt.Fprintf(w, "# %s\n\n%s\n\n%s: %s\n\ncontact@munichbrief.de\n\n", s.localization.Text(language, "ContactHeading"), base.Description, s.localization.Text(language, "LegalLastUpdated"), data.UpdatedLabel)
 		for _, key := range []string{"ContactCorrectionCopy", "ContactPrivacyCopy", "ContactTechnicalCopy", "ContactPoliceCopy", "ContactStorage"} {
 			if key == "ContactPoliceCopy" {
 				fmt.Fprintf(w, "%s [%s](https://kontakte.polizei.bayern.de/)\n\n", markdownText(s.localization.Text(language, key)), markdownText(s.localization.Text(language, "ContactPoliceLink")))

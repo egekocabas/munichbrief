@@ -2,6 +2,7 @@
 {{define "content"}}
 <article class="reader-about reader-contact">
  <header><h1>{{t .Lang "ContactHeading"}}</h1><p class="reader-intro-copy">{{t .Lang "ContactIntro"}}</p>
+ <p class="mt-4 text-sm text-muted">{{t .Lang "LegalLastUpdated"}}: <time datetime="{{.DocumentModifiedDate}}">{{.UpdatedLabel}}</time></p>
  </header>
  <a class="contact-email" href="mailto:contact@munichbrief.de">contact@munichbrief.de</a>
  <section><h2>{{t .Lang "ContactCorrections"}}</h2><p>{{t .Lang "ContactCorrectionCopy"}}</p></section>
