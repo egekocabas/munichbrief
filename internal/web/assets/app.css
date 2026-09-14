@@ -620,6 +620,7 @@ html[data-theme="dark"]:has(.reader) {
   .reader-footer-links { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 1rem; margin-top: 0.5rem; }
   .reader-footer-links a { display: inline-flex; min-height: 2.75rem; align-items: center; color: var(--color-muted); text-decoration: none; }
   .reader-footer-links a:hover { color: var(--color-civic); }
+  .reader-footer .reader-icon-button { background: transparent; }
 
   .ai-disclosure { margin-bottom: 1.5rem; }
   .ai-disclosure-panel {
