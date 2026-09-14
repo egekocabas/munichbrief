@@ -29,7 +29,10 @@ established requirement to upgrade to Google Workspace.
 
 Retain the current technical design. SMTP2GO's requested scope clarification has
 been received and supports the described use under its normal terms; the BayLDA
-and anschrift.net enquiries remain pending. If a separate project mailbox is wanted, IONOS Mail Basic is a
+and anschrift.net AVV enquiries remain pending. The postal service's identity
+verification and activation were confirmed in the subsequently supplied order
+update of 14 September, recorded in the correspondence notes. If a separate
+project mailbox is wanted, IONOS Mail Basic is a
 concrete low-cost candidate with an express AVV route and Apple Mail support.
 This recommendation concerns documented fit, not an audit of its systems or the
 operator's future contract. Subscription and migration remain an operator decision.
@@ -140,8 +143,9 @@ forwarding address.
    with no additional special-category DPA or approval process. The
    [correspondence record](legal-follow-up-2026-09.md) contains the assessment.
    Keep full-message notifications; no duplicate support enquiry is needed.
-2. Review the complete anschrift.net AVV and annexes when received, together with
-   identity approval and active postal receipt. Do not resend the support enquiry.
+2. Review the complete anschrift.net AVV, annexes and conclusion process when
+   received. Identity verification and activation are now confirmed; this does
+   not resolve the separate AVV request. Do not resend the support enquiry.
 3. Review BayLDA's response to the submitted consumer-Gmail enquiry when supplied.
    This assessment is separate from the other providers' replies. If the
    operator chooses a mailbox subscription or migration, record its actual

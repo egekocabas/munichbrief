@@ -237,17 +237,18 @@ the app's 90-day correspondence rule does not automatically delete postal scans.
 
 ### Operator update and sent provider request
 
-The operator clarified that the Bayern address service has been purchased and
-paid for, but identity verification and activation are still pending. Purchase
-must not be recorded as confirmation that postal receipt is active. Confirm
-activation before deploying pages that rely on this correspondence address.
+At the time of the request below, the operator had purchased and paid for the
+Bayern address service but was awaiting identity verification and activation.
+That earlier status is superseded by the 14 September confirmation recorded
+below. The sent enquiry is preserved unchanged as correspondence history.
 
 The operator then confirmed sending the following request to
 `support@anschrift.net`, which is listed on the provider's
 [contact page](https://anschrift.net/kontakt/). The download location was the AVV
 section of [Vertragsunterlagen](https://anschrift.net/vertragsunterlagen/), which
-requires login. Sending is operator-reported; receipt or a response has not been
-independently verified. No agreement was signed or accepted by the assistant.
+requires login. Sending is operator-reported; a reply addressing the requested
+AVV documents has not been supplied. No agreement was signed or accepted by the
+assistant.
 
 This sent version requests completeness and the agreement process. It does not
 ask the earlier draft's additional scope questions; review the returned documents
@@ -285,6 +286,39 @@ for those points before deciding whether another message is necessary.
 >
 > Mit freundlichen Grüßen
 > Ege Kocabaş
+
+### Identity verification and activation confirmed: 14 September 2026
+
+The operator supplied a provider order update dated **14 September 2026, 20:19**
+(no timezone stated). It confirms completed identity verification after receipt
+of an official document, marks the order completed and shows the monthly Bayern
+subscription as active. This resolves the earlier identity/activation waiting
+item. Evidence is the operator-supplied notification, not an independent account
+login or a test of postal delivery.
+
+The address and usage instructions match the existing public implementation:
+
+- Keep **Ege Kocabaş** as the real name of the operator and person responsible
+  for content. The order's alternative ASCII spelling does not replace it.
+- Publish **c/o COCENTER, Koppoldstr. 1, 86551 Aichach**, with the localized country
+  name and existing public contact email. This is a correspondence address,
+  not the operator's residence or the server location.
+- The provider's library address and deposit instructions concern print
+  publications and are excluded from MunichBrief's public legal pages.
+- Keep the original notification, private billing/contact data, order and invoice
+  details and account/action links out of Git. Retain the evidence privately.
+
+The shared operator structure supplies the address in all localized HTML and
+Markdown legal pages. No reader-facing address or privacy copy needs to change
+on this evidence, so their content-revision dates remain unchanged. Keep the
+subscription active while using the address; the existing termination guidance
+above still applies.
+
+**The AVV request remains open.** This notification contains neither the missing
+security/subprocessor annexes nor an answer about how the agreement is concluded
+for the account. Do not treat completed identity verification as proof of AVV
+acceptance, and do not resend the existing support request. BayLDA's separate
+consumer-Gmail enquiry also remains pending.
 
 ## Subsequently supplied SMTP2GO DPA
 
@@ -404,8 +438,9 @@ this reviewed use case into a general email-forwarding service through SMTP2GO.
 Cloudflare handles the separate incoming-email forwarding path.
 
 The remaining external replies are **BayLDA on consumer Gmail** and
-**anschrift.net on its complete AVV and service activation**. SMTP2GO key limits,
-tracking/archiving and retention are ordinary account-configuration checks below,
+**anschrift.net on its complete AVV and conclusion process**. Postal-service
+identity verification and activation are now confirmed as recorded above.
+SMTP2GO key limits, tracking/archiving and retention are ordinary account-configuration checks below,
 not a still-pending special-category approval process. No deployment was performed.
 
 ### Remaining account evidence

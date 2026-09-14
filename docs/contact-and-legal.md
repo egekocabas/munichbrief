@@ -112,10 +112,13 @@ existing protected LAN admin ingress and an application Secret reference. Keep
 as with the existing SQLite deployment. Rotating the signing key expires open
 forms and resets rate pseudonyms; it does not delete accepted messages.
 
-Postal-service status update: the operator has purchased the Bayern service but
-is awaiting identity approval and activation. The operator reports sending a
-request for the complete AVV and its acceptance process. Confirm active postal
-receipt before relying on this address in deployed legal pages; see the
+Postal-service status update, 14 September 2026: the operator supplied the
+provider's order update dated 20:19, confirming completed identity verification,
+a completed order and an active Bayern subscription. This resolves the pending
+identity/activation confirmation. The correspondence address already matches the
+shared public operator details; keep the original evidence privately and maintain
+the service while publishing the address. The separate request for the complete
+AVV, missing annexes and its conclusion process remains unanswered; see the
 [document review and correspondence record](legal-follow-up-2026-09.md).
 
 SMTP2GO agreement update: the operator supplied DPA version 1.4 and dashboard text

@@ -35,3 +35,10 @@ See the reference-page comparison in `docs/privacy-draft.md`.
 The subsequent [Bavarian publisher and current-law review](legal-review-2026-09.md)
 records editorial-duty scope, the July 2026 CJEU development, unresolved operational
 assessments and the independent public legal-page revision dates.
+
+On 14 September 2026, the operator supplied the address provider's confirmation
+of completed identity verification, completed order and active Bayern subscription.
+The confirmed address matches the shared public operator structure, including
+the real-name spelling **Ege Kocabaş**. No public content revision is needed.
+The separate complete-AVV request remains open; see the
+[confirmation and remaining items](legal-follow-up-2026-09.md#identity-verification-and-activation-confirmed-14-september-2026).
