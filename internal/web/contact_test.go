@@ -229,6 +229,11 @@ func TestLegalPagesEveryLanguageHTMLAndMarkdown(t *testing.T) {
 			if mw.Code != 200 || strings.Contains(mw.Body.String(), "[ContactEmergencyCopy]") {
 				t.Fatal("markdown", lang.Code)
 			}
+			if path == "contact" {
+				if !strings.Contains(w.Body.String(), `href="https://kontakte.polizei.bayern.de/"`) || !strings.Contains(mw.Body.String(), "](https://kontakte.polizei.bayern.de/)") {
+					t.Errorf("%s: missing official police contact link in HTML or Markdown", lang.Code)
+				}
+			}
 			if path != "contact" {
 				date := legalPageUpdatedAt(path)
 				iso := date.Format(time.DateOnly)

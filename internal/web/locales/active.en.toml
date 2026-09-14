@@ -508,15 +508,6 @@ other = "MunichBrief is an independent project. It is not affiliated with the Ba
 [ContactHeading]
 other = "Contact"
 
-[ContactPublicLead]
-other = "Found an error or have a suggestion?"
-
-[ContactIssueLink]
-other = "Open an issue on GitHub"
-
-[ContactPrivateLead]
-other = "For privacy-related concerns or anything that should not be shared publicly, email"
-
 [ViewOrder]
 other = "Timeline order"
 
@@ -638,7 +629,10 @@ other = "Technical issues"
 other = "You can report display problems and suggest improvements on GitHub. Please leave personal information out of public issues."
 
 [ContactPoliceCopy]
-other = "MunichBrief is independent of the police and cannot accept police or emergency reports. For police matters, use the contact details on the official police website."
+other = "MunichBrief is independent of the police and cannot accept police or emergency reports."
+
+[ContactPoliceLink]
+other = "For police matters, use the contact details on the official police website."
 
 
 [MonitoringCopy]

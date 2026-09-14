@@ -154,9 +154,6 @@ DataHandlingCopy = { other = "Les textes sources en allemand sont conservés pou
 AboutIndependence = { other = "Indépendance" }
 AboutIndependenceCopy = { other = "MunichBrief est un projet indépendant. Il n’est affilié ni à la police bavaroise ni à aucune autre autorité publique et ne s’exprime pas en leur nom." }
 ContactHeading = { other = "Contact" }
-ContactPublicLead = { other = "Vous avez trouvé une erreur ou avez une suggestion ?" }
-ContactIssueLink = { other = "Ouvrir un ticket sur GitHub" }
-ContactPrivateLead = { other = "Pour toute question relative à la confidentialité ou tout sujet qui ne doit pas être partagé publiquement, écrivez à" }
 SwitchToRomanian = { other = "Passer à la version roumaine" }
 SwitchToPolish = { other = "Passer à la version polonaise" }
 SwitchToRussian = { other = "Passer à la version russe" }
@@ -208,7 +205,8 @@ ContactPrivacy = { other = "Demandes relatives à la vie privée" }
 ContactPrivacyCopy = { other = "Pour vos demandes concernant les données personnelles, utilisez le formulaire privé ou l’e-mail. Partagez seulement le nécessaire, sans publier de données personnelles sur GitHub." }
 ContactTechnical = { other = "Problèmes techniques" }
 ContactTechnicalCopy = { other = "Vous pouvez signaler les problèmes d’affichage et proposer des améliorations sur GitHub. N’incluez aucune donnée personnelle dans les tickets publics." }
-ContactPoliceCopy = { other = "MunichBrief est indépendant de la police et ne reçoit ni plaintes ni demandes d’intervention urgente. Pour contacter la police, consultez les coordonnées sur son site officiel." }
+ContactPoliceCopy = { other = "MunichBrief est indépendant de la police et ne reçoit ni plaintes ni demandes d’intervention urgente." }
+ContactPoliceLink = { other = "Pour contacter la police, consultez les coordonnées sur son site officiel." }
 OpenOfficialPoliceRelease = { other = "Communiqué officiel" }
 SiteDescription = { other = "Les communiqués de la préfecture de police de Munich (Polizeipräsidium München), résumés en français." }
 MonitoringCopy = { other = "Nous utilisons Cloudflare pour diffuser et protéger le site. Cloudflare traite des données de connexion, notamment les adresses IP, et peut produire des statistiques de trafic. Pour assurer le bon fonctionnement du site, nous conservons nos propres journaux techniques de requêtes et indicateurs de performance agrégés pendant 30 jours." }

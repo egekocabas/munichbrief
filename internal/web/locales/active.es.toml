@@ -154,9 +154,6 @@ DataHandlingCopy = { other = "Los textos originales en alemán se conservan para
 AboutIndependence = { other = "Independencia" }
 AboutIndependenceCopy = { other = "MunichBrief es un proyecto independiente. No está vinculado a la policía de Baviera ni a ninguna otra autoridad pública y no habla en su nombre." }
 ContactHeading = { other = "Contacto" }
-ContactPublicLead = { other = "¿Has encontrado un error o tienes una sugerencia?" }
-ContactIssueLink = { other = "Abrir una incidencia en GitHub" }
-ContactPrivateLead = { other = "Para cuestiones de privacidad o cualquier asunto que no deba compartirse públicamente, escribe a" }
 SwitchToRomanian = { other = "Cambiar a la versión rumana" }
 SwitchToPolish = { other = "Cambiar a la versión polaca" }
 SwitchToRussian = { other = "Cambiar a la versión rusa" }
@@ -208,7 +205,8 @@ ContactPrivacy = { other = "Solicitudes de privacidad" }
 ContactPrivacyCopy = { other = "Para solicitudes sobre datos personales, usa el formulario privado o el correo. Comparte solo lo necesario y no publiques datos personales en GitHub." }
 ContactTechnical = { other = "Problemas técnicos" }
 ContactTechnicalCopy = { other = "Puedes informar de problemas de visualización y proponer mejoras en GitHub. No incluyas datos personales en las incidencias públicas." }
-ContactPoliceCopy = { other = "MunichBrief es independiente de la policía y no recibe denuncias ni atiende emergencias. Para asuntos policiales, utiliza los datos de contacto de la web oficial de la policía." }
+ContactPoliceCopy = { other = "MunichBrief es independiente de la policía y no recibe denuncias ni atiende emergencias." }
+ContactPoliceLink = { other = "Para asuntos policiales, utiliza los datos de contacto de la web oficial de la policía." }
 OpenOfficialPoliceRelease = { other = "Comunicado oficial" }
 SiteDescription = { other = "Los comunicados de la Jefatura de Policía de Múnich (Polizeipräsidium München), resumidos en español." }
 MonitoringCopy = { other = "Usamos Cloudflare para servir y proteger el sitio. Cloudflare trata datos de conexión, incluidas las direcciones IP, y puede generar estadísticas de tráfico. Para mantener el sitio en buen funcionamiento, conservamos nuestros registros técnicos de solicitudes y datos agregados de rendimiento durante 30 días." }

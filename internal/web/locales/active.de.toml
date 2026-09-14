@@ -508,15 +508,6 @@ other = "MunichBrief ist ein unabhängiges Projekt. Es gehört weder zur Bayeris
 [ContactHeading]
 other = "Kontakt"
 
-[ContactPublicLead]
-other = "Einen Fehler gefunden oder einen Vorschlag?"
-
-[ContactIssueLink]
-other = "Auf GitHub melden"
-
-[ContactPrivateLead]
-other = "Bei Anliegen zum Datenschutz oder anderen Themen, die nicht öffentlich geteilt werden sollten, schreiben Sie an"
-
 [ViewOrder]
 other = "Reihenfolge"
 
@@ -638,7 +629,10 @@ other = "Technische Probleme"
 other = "Darstellungsfehler und Verbesserungsvorschläge kannst du auf GitHub melden. Bitte veröffentliche dort keine persönlichen Informationen."
 
 [ContactPoliceCopy]
-other = "MunichBrief ist von der Polizei unabhängig. Hier können Sie weder eine Anzeige erstatten noch einen Notruf absetzen. Für polizeiliche Anliegen nutzen Sie bitte die Kontaktdaten auf der offiziellen Polizeiseite."
+other = "MunichBrief ist von der Polizei unabhängig. Hier können Sie weder eine Anzeige erstatten noch einen Notruf absetzen."
+
+[ContactPoliceLink]
+other = "Für polizeiliche Anliegen nutzen Sie bitte die Kontaktdaten auf der offiziellen Polizeiseite."
 
 
 [MonitoringCopy]

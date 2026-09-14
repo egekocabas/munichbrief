@@ -353,13 +353,6 @@ other = "MunichBrief este un proiect independent. Nu este afiliat Poliției Bava
 [ContactHeading]
 other = "Contact"
 
-[ContactPublicLead]
-other = "Ați găsit o eroare sau aveți o sugestie?"
-[ContactIssueLink]
-other = "Deschideți o sesizare pe GitHub"
-[ContactPrivateLead]
-other = "Pentru preocupări legate de confidențialitate sau orice nu ar trebui distribuit public, trimiteți un e-mail la"
-
 [ViewOrder]
 other = "Ordinea afișării"
 
@@ -481,7 +474,10 @@ other = "Probleme tehnice"
 other = "Poți semnala probleme de afișare și propune îmbunătățiri pe GitHub. Nu include date personale în sesizările publice."
 
 [ContactPoliceCopy]
-other = "MunichBrief este independent de poliție și nu primește plângeri penale sau solicitări de ajutor în caz de urgență. Pentru probleme care țin de poliție, folosește datele de contact de pe site-ul oficial al acesteia."
+other = "MunichBrief este independent de poliție și nu primește plângeri penale sau solicitări de ajutor în caz de urgență."
+
+[ContactPoliceLink]
+other = "Pentru probleme care țin de poliție, folosește datele de contact de pe site-ul oficial al acesteia."
 
 
 [MonitoringCopy]

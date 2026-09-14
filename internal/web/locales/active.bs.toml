@@ -154,9 +154,6 @@ DataHandlingCopy = { other = "Njemački izvorni tekstovi čuvaju se za obradu i 
 AboutIndependence = { other = "Nezavisnost" }
 AboutIndependenceCopy = { other = "MunichBrief je nezavisan projekt. Nije povezan s bavarskom policijom ni s drugim javnim institucijama i ne govori u njihovo ime." }
 ContactHeading = { other = "Kontakt" }
-ContactPublicLead = { other = "Pronašli ste pogrešku ili imate prijedlog?" }
-ContactIssueLink = { other = "Otvorite prijavu na GitHubu" }
-ContactPrivateLead = { other = "Za pitanja privatnosti ili sadržaj koji se ne smije javno dijeliti pošaljite e-poštu na" }
 SwitchToRomanian = { other = "Pređi na rumunsku verziju" }
 SwitchToPolish = { other = "Pređi na poljsku verziju" }
 SwitchToRussian = { other = "Pređi na rusku verziju" }
@@ -208,7 +205,8 @@ ContactPrivacy = { other = "Zahtjevi u vezi s privatnošću" }
 ContactPrivacyCopy = { other = "Za zahtjeve o ličnim podacima koristite privatni obrazac ili e-mail. Navedite samo potrebno i ne objavljujte lične podatke na GitHubu." }
 ContactTechnical = { other = "Tehnički problemi" }
 ContactTechnicalCopy = { other = "Probleme s prikazom i prijedloge za poboljšanja možete prijaviti na GitHubu. U javne prijave nemojte unositi lične podatke." }
-ContactPoliceCopy = { other = "MunichBrief je neovisan o policiji i ne prima prijave policiji ni hitne dojave. Za policijska pitanja koristite kontakte na službenoj stranici policije." }
+ContactPoliceCopy = { other = "MunichBrief je neovisan o policiji i ne prima prijave policiji ni hitne dojave." }
+ContactPoliceLink = { other = "Za policijska pitanja koristite kontakte na službenoj stranici policije." }
 OpenOfficialPoliceRelease = { other = "Službeno saopćenje" }
 SiteDescription = { other = "Sažeci saopćenja Policijske uprave München (Polizeipräsidium München) na bosanskom jeziku." }
 MonitoringCopy = { other = "Cloudflare koristimo za isporuku i zaštitu stranice. Cloudflare obrađuje podatke o vezi, uključujući IP adrese, te može praviti statistiku posjeta. Da bi stranica pouzdano radila, vlastite tehničke zapise zahtjeva i zbirne pokazatelje rada čuvamo 30 dana." }

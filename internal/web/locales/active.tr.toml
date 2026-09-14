@@ -154,9 +154,6 @@ DataHandlingCopy = { other = "Almanca kaynak metinler, işleme ve erişimi kıs�
 AboutIndependence = { other = "Bağımsızlık" }
 AboutIndependenceCopy = { other = "MunichBrief bağımsız bir projedir. Bavyera Polisi veya başka bir kamu kurumuyla bağlantısı yoktur ve bu kurumlar adına açıklama yapmaz." }
 ContactHeading = { other = "İletişim" }
-ContactPublicLead = { other = "Bir hata mı buldunuz veya öneriniz mi var?" }
-ContactIssueLink = { other = "GitHub’da konu aç" }
-ContactPrivateLead = { other = "Gizlilikle ilgili endişeler veya herkese açık paylaşılmaması gereken konular için e-posta gönderin:" }
 SwitchToRomanian = { other = "Rumence sürüme geç" }
 SwitchToPolish = { other = "Lehçe sürüme geç" }
 SwitchToRussian = { other = "Rusça sürüme geç" }
@@ -208,7 +205,8 @@ ContactPrivacy = { other = "Gizlilik talepleri" }
 ContactPrivacyCopy = { other = "Kişisel verilerle ilgili taleplerinizi form veya e-postayla iletin. Yalnızca gerekli bilgileri paylaşın; kişisel bilgileri herkese açık GitHub kayıtlarına yazmayın." }
 ContactTechnical = { other = "Teknik sorunlar" }
 ContactTechnicalCopy = { other = "Görünüm sorunlarını ve geliştirme önerilerinizi GitHub üzerinden bildirebilirsiniz. Herkese açık kayıtlarda kişisel bilgi paylaşmayın." }
-ContactPoliceCopy = { other = "MunichBrief, polisten bağımsız bir projedir. Buradan polise ihbarda bulunamaz veya acil yardım isteyemezsiniz. Polisle ilgili konularda resmî polis sitesindeki iletişim bilgilerini kullanın." }
+ContactPoliceCopy = { other = "MunichBrief, polisten bağımsız bir projedir. Buradan polise ihbarda bulunamaz veya acil yardım isteyemezsiniz." }
+ContactPoliceLink = { other = "Polisle ilgili konularda resmî polis sitesindeki iletişim bilgilerini kullanın." }
 OpenOfficialPoliceRelease = { other = "Resmî bülten" }
 SiteDescription = { other = "Münih Emniyet Müdürlüğünün (Polizeipräsidium München) yayımladığı bültenlerin Türkçe özetleri." }
 MonitoringCopy = { other = "Siteyi sunmak ve korumak için Cloudflare kullanıyoruz. Cloudflare, IP adresleri dâhil bağlantı verilerini işler ve ziyaret istatistikleri oluşturabilir. Sitenin sorunsuz çalışmasını sağlamak için tuttuğumuz teknik istek kayıtlarını ve toplu performans ölçümlerini 30 gün saklıyoruz." }

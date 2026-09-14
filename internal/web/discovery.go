@@ -461,8 +461,5 @@ func (s *Server) renderAboutMarkdown(response http.ResponseWriter, data aboutPag
 			builder.WriteString("- [Landeshauptstadt München – GeodatenService](https://opendata.muenchen.de/) (dl-de/by-2.0)\n- [GeoNames](https://www.geonames.org/) (CC BY 4.0)\n- [© OpenStreetMap contributors](https://www.openstreetmap.org/copyright) (ODbL 1.0)\n")
 		}
 	}
-	fmt.Fprintf(&builder, "\n## %s\n", markdownText(s.localization.Text(data.Lang, "ContactHeading")))
-	fmt.Fprintf(&builder, "\n%s [%s](https://github.com/egekocabas/munichbrief/issues).\n", markdownText(s.localization.Text(data.Lang, "ContactPublicLead")), markdownText(s.localization.Text(data.Lang, "ContactIssueLink")))
-	fmt.Fprintf(&builder, "\n%s [contact@munichbrief.de](mailto:contact@munichbrief.de).\n", markdownText(s.localization.Text(data.Lang, "ContactPrivateLead")))
 	_, _ = io.WriteString(response, builder.String())
 }

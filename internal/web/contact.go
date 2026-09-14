@@ -188,7 +188,11 @@ func (s *Server) renderContact(w http.ResponseWriter, r *http.Request, data cont
 		w.WriteHeader(status)
 		fmt.Fprintf(w, "# %s\n\n%s\n\ncontact@munichbrief.de\n\n", s.localization.Text(language, "ContactHeading"), base.Description)
 		for _, key := range []string{"ContactCorrectionCopy", "ContactPrivacyCopy", "ContactTechnicalCopy", "ContactPoliceCopy", "ContactStorage"} {
-			fmt.Fprintf(w, "%s\n\n", s.localization.Text(language, key))
+			if key == "ContactPoliceCopy" {
+				fmt.Fprintf(w, "%s [%s](https://kontakte.polizei.bayern.de/)\n\n", markdownText(s.localization.Text(language, key)), markdownText(s.localization.Text(language, "ContactPoliceLink")))
+			} else {
+				fmt.Fprintf(w, "%s\n\n", s.localization.Text(language, key))
+			}
 		}
 		if data.Error != "" {
 			fmt.Fprintf(w, "%s\n\n", s.localization.Text(language, data.Error))

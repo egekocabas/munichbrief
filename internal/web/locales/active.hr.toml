@@ -154,9 +154,6 @@ DataHandlingCopy = { other = "Njemački izvorni tekstovi čuvaju se za obradu i 
 AboutIndependence = { other = "Neovisnost" }
 AboutIndependenceCopy = { other = "MunichBrief je neovisan projekt. Nije povezan s bavarskom policijom ni s drugim javnim tijelima i ne govori u njihovo ime." }
 ContactHeading = { other = "Kontakt" }
-ContactPublicLead = { other = "Pronašli ste pogrešku ili imate prijedlog?" }
-ContactIssueLink = { other = "Otvorite prijavu na GitHubu" }
-ContactPrivateLead = { other = "Za pitanja privatnosti ili sadržaj koji se ne smije javno dijeliti pošaljite e-poštu na" }
 SwitchToRomanian = { other = "Prijeđi na rumunjsku verziju" }
 SwitchToPolish = { other = "Prijeđi na poljsku verziju" }
 SwitchToRussian = { other = "Prijeđi na rusku verziju" }
@@ -208,7 +205,8 @@ ContactPrivacy = { other = "Zahtjevi vezani uz privatnost" }
 ContactPrivacyCopy = { other = "Za zahtjeve o osobnim podacima koristite privatni obrazac ili e-poštu. Navedite samo potrebno i ne objavljujte osobne podatke na GitHubu." }
 ContactTechnical = { other = "Tehničke poteškoće" }
 ContactTechnicalCopy = { other = "Probleme s prikazom i prijedloge za poboljšanja možete prijaviti na GitHubu. U javne prijave nemojte unositi osobne podatke." }
-ContactPoliceCopy = { other = "MunichBrief je neovisan o policiji i ne prima prijave policiji ni hitne dojave. Za policijska pitanja koristite kontakte na službenoj stranici policije." }
+ContactPoliceCopy = { other = "MunichBrief je neovisan o policiji i ne prima prijave policiji ni hitne dojave." }
+ContactPoliceLink = { other = "Za policijska pitanja koristite kontakte na službenoj stranici policije." }
 OpenOfficialPoliceRelease = { other = "Službeno priopćenje" }
 SiteDescription = { other = "Sažeci priopćenja Policijske uprave München (Polizeipräsidium München) na hrvatskom jeziku." }
 MonitoringCopy = { other = "Cloudflare koristimo za isporuku i zaštitu stranice. Cloudflare obrađuje podatke o vezi, uključujući IP adrese, te može izrađivati statistiku posjeta. Kako bi stranica pouzdano radila, vlastite tehničke zapise zahtjeva i zbirne pokazatelje rada čuvamo 30 dana." }

@@ -154,9 +154,6 @@ DataHandlingCopy = { other = "I testi originali in tedesco vengono conservati pe
 AboutIndependence = { other = "Indipendenza" }
 AboutIndependenceCopy = { other = "MunichBrief è un progetto indipendente. Non è affiliato alla polizia bavarese né ad altre autorità pubbliche e non parla a loro nome." }
 ContactHeading = { other = "Contatti" }
-ContactPublicLead = { other = "Hai trovato un errore o hai un suggerimento?" }
-ContactIssueLink = { other = "Apri una segnalazione su GitHub" }
-ContactPrivateLead = { other = "Per questioni di privacy o contenuti che non devono essere condivisi pubblicamente, scrivi a" }
 SwitchToRomanian = { other = "Passa alla versione rumena" }
 SwitchToPolish = { other = "Passa alla versione polacca" }
 SwitchToRussian = { other = "Passa alla versione russa" }
@@ -208,7 +205,8 @@ ContactPrivacy = { other = "Richieste sulla privacy" }
 ContactPrivacyCopy = { other = "Per richieste sui dati personali usa il modulo privato o l’email. Condividi solo il necessario, senza pubblicare dati personali su GitHub." }
 ContactTechnical = { other = "Problemi tecnici" }
 ContactTechnicalCopy = { other = "Puoi segnalare problemi di visualizzazione e proporre miglioramenti su GitHub. Non inserire dati personali nelle segnalazioni pubbliche." }
-ContactPoliceCopy = { other = "MunichBrief è indipendente dalla polizia e non riceve denunce né richieste di soccorso. Per questioni di polizia, usa i contatti sul sito ufficiale della polizia." }
+ContactPoliceCopy = { other = "MunichBrief è indipendente dalla polizia e non riceve denunce né richieste di soccorso." }
+ContactPoliceLink = { other = "Per questioni di polizia, usa i contatti sul sito ufficiale della polizia." }
 OpenOfficialPoliceRelease = { other = "Comunicato ufficiale" }
 SiteDescription = { other = "I comunicati della Questura di Monaco (Polizeipräsidium München), riassunti in italiano." }
 MonitoringCopy = { other = "Usiamo Cloudflare per distribuire e proteggere il sito. Cloudflare tratta dati di connessione, compresi gli indirizzi IP, e può produrre statistiche sul traffico. Per mantenere il sito affidabile, conserviamo i nostri registri tecnici delle richieste e i dati aggregati sulle prestazioni per 30 giorni." }

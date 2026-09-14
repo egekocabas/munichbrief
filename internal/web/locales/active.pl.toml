@@ -160,9 +160,6 @@ DataHandlingCopy = { other = "Niemieckie teksty źródłowe są przechowywane do
 AboutIndependence = { other = "Niezależność" }
 AboutIndependenceCopy = { other = "MunichBrief jest niezależnym projektem. Nie jest powiązany z bawarską policją ani z innymi organami publicznymi i nie wypowiada się w ich imieniu." }
 ContactHeading = { other = "Kontakt" }
-ContactPublicLead = { other = "Znalazłeś błąd lub masz sugestię?" }
-ContactIssueLink = { other = "Otwórz zgłoszenie w serwisie GitHub" }
-ContactPrivateLead = { other = "W sprawach dotyczących prywatności lub treści, których nie należy udostępniać publicznie, napisz na adres" }
 ViewOrder = { other = "Kolejność wyświetlania" }
 ByPublication = { other = "Według daty publikacji" }
 ByIncident = { other = "Według daty zdarzenia" }
@@ -208,7 +205,8 @@ ContactPrivacy = { other = "Wnioski dotyczące prywatności" }
 ContactPrivacyCopy = { other = "Wnioski dotyczące danych osobowych przesyłaj prywatnym formularzem lub e-mailem. Podawaj tylko niezbędne informacje i nie publikuj danych osobowych w zgłoszeniach GitHub." }
 ContactTechnical = { other = "Problemy techniczne" }
 ContactTechnicalCopy = { other = "Problemy z wyświetlaniem i propozycje ulepszeń możesz zgłaszać na GitHubie. Nie podawaj danych osobowych w publicznych zgłoszeniach." }
-ContactPoliceCopy = { other = "MunichBrief jest niezależny od policji i nie przyjmuje zgłoszeń przestępstw ani wezwań o pomoc w nagłych sytuacjach. W sprawach policyjnych skorzystaj z danych kontaktowych na oficjalnej stronie policji." }
+ContactPoliceCopy = { other = "MunichBrief jest niezależny od policji i nie przyjmuje zgłoszeń przestępstw ani wezwań o pomoc w nagłych sytuacjach." }
+ContactPoliceLink = { other = "W sprawach policyjnych skorzystaj z danych kontaktowych na oficjalnej stronie policji." }
 OpenOfficialPoliceRelease = { other = "Oficjalny komunikat" }
 SiteDescription = { other = "Komunikaty Komendy Policji w Monachium (Polizeipräsidium München) w skrócie po polsku." }
 MonitoringCopy = { other = "Korzystamy z Cloudflare, aby udostępniać i chronić witrynę. Cloudflare przetwarza dane połączeń, w tym adresy IP, i może tworzyć statystyki ruchu. Aby zapewnić sprawne działanie strony, przechowujemy własne techniczne dzienniki żądań i zbiorcze dane o wydajności przez 30 dni." }

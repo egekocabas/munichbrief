@@ -154,9 +154,6 @@ DataHandlingCopy = { other = "德语原文会保留用于处理和内部受限�
 AboutIndependence = { other = "独立性" }
 AboutIndependenceCopy = { other = "MunichBrief 是一个独立项目，与巴伐利亚警方及其他政府机构无隶属或关联关系，也不代表这些机构发声。" }
 ContactHeading = { other = "联系我们" }
-ContactPublicLead = { other = "发现错误或有建议？" }
-ContactIssueLink = { other = "在 GitHub 上提交问题" }
-ContactPrivateLead = { other = "如有隐私相关问题或任何不宜公开分享的事项，请发送电子邮件至" }
 SwitchToRomanian = { other = "切换到罗马尼亚语版本" }
 SwitchToPolish = { other = "切换到波兰语版本" }
 SwitchToRussian = { other = "切换到俄语版本" }
@@ -208,7 +205,8 @@ ContactPrivacy = { other = "隐私相关请求" }
 ContactPrivacyCopy = { other = "个人数据相关请求请通过私人表单或电子邮件发送。只提供必要信息，不要在公开的 GitHub 问题中发布个人数据。" }
 ContactTechnical = { other = "技术问题" }
 ContactTechnicalCopy = { other = "你可以在 GitHub 上反馈显示问题或提出改进建议。请勿在公开的问题中填写个人信息。" }
-ContactPoliceCopy = { other = "MunichBrief 独立于警方，不受理报案或紧急求助。涉及警方事务，请使用警方官方网站提供的联系方式。" }
+ContactPoliceCopy = { other = "MunichBrief 独立于警方，不受理报案或紧急求助。" }
+ContactPoliceLink = { other = "涉及警方事务，请使用警方官方网站提供的联系方式。" }
 OpenOfficialPoliceRelease = { other = "官方通报" }
 SiteDescription = { other = "慕尼黑警察总部（Polizeipräsidium München）官方通报的中文摘要。" }
 MonitoringCopy = { other = "我们使用 Cloudflare 提供网站访问和安全防护。Cloudflare 会处理包括 IP 地址在内的连接数据，并可生成流量统计。为保障网站稳定运行，我们将自己的技术请求日志和汇总性能数据保留30天。" }
