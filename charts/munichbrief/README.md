@@ -54,8 +54,11 @@ presentations, the reader can legitimately be empty.
 ## Ollama and administration
 
 Enable AI only after configuring a reachable protected Ollama endpoint and the
-matching NetworkPolicy egress. The legacy chart key `networkPolicy.pi8` is kept
-for compatibility; it controls the explicit Ollama CIDR and port allowlist.
+matching NetworkPolicy egress through `networkPolicy.ollama`: set `enabled`,
+`cidr`, and `port` for that server. Replace the documentation-only example CIDR.
+
+When upgrading from chart 0.2.x, move existing inference egress values under
+`networkPolicy.ollama`. Unknown network-policy keys are rejected.
 
 Fresh databases have no preferred models. Enable the protected admin view,
 select one installed model for every canonical pipeline step, and select an

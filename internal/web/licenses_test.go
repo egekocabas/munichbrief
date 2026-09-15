@@ -25,7 +25,7 @@ func TestCreditsAllLocalesAndMarkdown(t *testing.T) {
 					t.Errorf("%s %s missing %q", lang.Code, accept, text)
 				}
 			}
-			for _, private := range []string{"salamandraTA", "Tower-Plus", "192.168.178.102", "Noncommercial eligibility has not been established"} {
+			for _, private := range []string{"salamandraTA", "Tower-Plus", "192.0.2.10", "Noncommercial eligibility has not been established"} {
 				if strings.Contains(body, private) {
 					t.Errorf("public %s contains internal review %q", lang.Code, private)
 				}

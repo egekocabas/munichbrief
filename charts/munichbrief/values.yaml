@@ -124,9 +124,10 @@ networkPolicy:
   metricsNamespaceNames:
     - observability
   allowPublicHTTPS: true
-  pi8:
+  ollama:
     enabled: false
-    cidr: 192.168.1.100/32
+    # Documentation-only address; replace with your Ollama server CIDR.
+    cidr: 192.0.2.10/32
     port: 11434
 
 serviceMonitor:

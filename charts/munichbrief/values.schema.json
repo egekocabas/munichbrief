@@ -80,6 +80,26 @@
       },
       "additionalProperties": false
     },
+    "networkPolicy": {
+      "type": "object",
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "ingressNamespaceNames": {"type": "array", "items": {"type": "string"}},
+        "metricsNamespaceNames": {"type": "array", "items": {"type": "string"}},
+        "allowPublicHTTPS": {"type": "boolean"},
+        "ollama": {
+          "type": "object",
+          "required": ["enabled", "cidr", "port"],
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "cidr": {"type": "string", "minLength": 1},
+            "port": {"type": "integer", "minimum": 1, "maximum": 65535}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
     "persistence": {
       "type": "object",
       "required": ["enabled", "accessMode", "size"],

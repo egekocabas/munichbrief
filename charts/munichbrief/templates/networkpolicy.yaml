@@ -64,12 +64,12 @@ spec:
         - port: 443
           protocol: TCP
     {{- end }}
-    {{- if .Values.networkPolicy.pi8.enabled }}
+    {{- if .Values.networkPolicy.ollama.enabled }}
     - to:
         - ipBlock:
-            cidr: {{ .Values.networkPolicy.pi8.cidr }}
+            cidr: {{ .Values.networkPolicy.ollama.cidr }}
       ports:
-        - port: {{ .Values.networkPolicy.pi8.port }}
+        - port: {{ .Values.networkPolicy.ollama.port }}
           protocol: TCP
     {{- end }}
 {{- end }}

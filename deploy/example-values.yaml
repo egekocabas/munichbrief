@@ -47,7 +47,7 @@ admin:
 
 networkPolicy:
   enabled: true
-  pi8:
+  ollama:
     enabled: false
 
 serviceMonitor:

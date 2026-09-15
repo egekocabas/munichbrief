@@ -30,8 +30,6 @@ not guarantee that every generated statement is correct.
 
 Reader pages identify AI-generated text and link to the source. HTML metadata,
 Markdown, and share images carry corresponding disclosure or provenance.
-These controls explain how content was made; they are not a certification of
-accuracy or legal compliance.
 
 Canonical processing and public-assistance verification send original source
 text to the configured Ollama endpoint. Translation and category verification
@@ -49,9 +47,3 @@ not retained in those snapshots.
 
 Use the [contact page](https://munichbrief.de/en/contact) for operational issues
 or content corrections, and [SECURITY.md](../SECURITY.md) for vulnerabilities.
-
-The optional contact form stores messages before attempting email delivery.
-Receipt and notifications have separate admin controls. Resolved messages are
-normally deleted after 90 days; holds, unresolved messages, and external mail
-copies require separate handling. The deployed privacy notice describes the
-operator and providers; see the [contact implementation](../internal/contact/worker.go).

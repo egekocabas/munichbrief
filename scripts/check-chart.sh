@@ -60,8 +60,6 @@ for pattern in "${required_patterns[@]}"; do
 done
 
 for forbidden_pattern in \
-  '192.168.178.' \
-  'egekocabas.com' \
   'path: /admin' \
   'path: /api/admin' \
   'port: 11434'; do
@@ -70,6 +68,16 @@ for forbidden_pattern in \
     exit 1
   fi
 done
+
+# Example renders must not include private network destinations or custom hosts.
+if grep -E -- 'cidr:[[:space:]]*"?(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)' "$rendered_chart" >/dev/null; then
+  printf 'Rendered example contains a private network destination\n' >&2
+  exit 1
+fi
+awk '$1 == "host:" && $2 != "\"brief.example.com\"" { exit 1 }' "$rendered_chart" || {
+  printf 'Rendered example contains an unexpected ingress hostname\n' >&2
+  exit 1
+}
 
 public_root_count="$(awk 'NF >= 2 && $(NF - 1) == "path:" && $NF == "/" { getline; if ($1 == "pathType:" && $2 == "Exact") count++ } END { print count + 0 }' "$rendered_chart")"
 [[ "$public_root_count" -ge 1 ]] || {

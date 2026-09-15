@@ -679,7 +679,7 @@ func TestPublicHostUsesFailClosedPresentationAndRejectsAdmin(t *testing.T) {
 		TitleEN: "Safe title", SummaryEN: "Safe summary.",
 	}
 	job := seedV2Presentation(t, database, presentation, time.Now())
-	publicHosts := []string{"munichbrief.egekocabas.com", "munichbrief.de"}
+	publicHosts := []string{"brief.example.com", "munichbrief.de"}
 	server := adminTestServer(t, database, publicHosts)
 	handler := server.Handler()
 	path := "/en/incidents/" + formatID(job.IncidentID)
