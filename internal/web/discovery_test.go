@@ -23,7 +23,7 @@ func publicDiscoveryServer(t *testing.T, database *store.Store, presentation tes
 	server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), Options{
 		PageSize: 20, SourceMode: "fixture", PresentationMode: "public",
 		SecureCookies:   true,
-		PublicHosts:     []string{"munichbrief.egekocabas.com", "munichbrief.de"},
+		PublicHosts:     []string{"brief.example.com", "munichbrief.de"},
 		CanonicalOrigin: "https://munichbrief.de",
 	})
 	if err != nil {
@@ -34,7 +34,7 @@ func publicDiscoveryServer(t *testing.T, database *store.Store, presentation tes
 
 func publicDiscoveryRequest(method, target string) *http.Request {
 	request := englishRequest(method, target, nil)
-	request.Host = "munichbrief.egekocabas.com"
+	request.Host = "brief.example.com"
 	return request
 }
 
@@ -120,7 +120,7 @@ func TestSitemapContainsOnlyCanonicalPublicDocuments(t *testing.T) {
 			t.Errorf("sitemap does not contain %q", location)
 		}
 	}
-	if strings.Contains(response.Body.String(), "munichbrief.egekocabas.com") {
+	if strings.Contains(response.Body.String(), "brief.example.com") {
 		t.Fatal("sitemap used the alternate hostname")
 	}
 }
@@ -327,7 +327,7 @@ func decodeStructuredData(t *testing.T, document string) map[string]any {
 
 func TestTimelinePaginationPublishesPrevAndNextLinks(t *testing.T) {
 	t.Parallel()
-	server := adminTestServer(t, fixtureStore(t), []string{"munichbrief.egekocabas.com", "munichbrief.de"})
+	server := adminTestServer(t, fixtureStore(t), []string{"brief.example.com", "munichbrief.de"})
 	request := englishRequest(http.MethodGet, "/en?page=2", nil)
 	request.Host = "munichbrief.internal.example"
 	response := httptest.NewRecorder()

@@ -19,13 +19,13 @@ File ownership is intentionally narrow:
 - `localization.go`: embedded message lookup and pluralization
 - `templates/`, `assets/`, and `static/`: embedded UI sources and generated files
 
-Reader routes and discovery metadata consume the shared compile-time language
-registry. Follow [Adding a reader language](../../docs/adding-a-language.md) so
+Public routes and discovery metadata consume the shared compile-time language
+registry. Follow [Language support](../../docs/translation.md#languages) so
 catalog, processing, SEO, and ingress contracts remain synchronized.
 
 Timeline article links use canonical incident URLs without pagination queries.
 `static/navigation.js` remembers the originating timeline and scroll position in
-tab-local session storage, including HTMX navigation. Direct visits and readers
+tab-local session storage, including HTMX navigation. Direct visits and browsers
 without JavaScript retain an ordinary Back link to the language homepage. Existing
 incident URLs with `?page=` still preserve their server-rendered Back destination.
 
@@ -34,12 +34,11 @@ directly to templates without applying the presentation rules. Template output
 must remain escaped; client-side code must not insert incident content as raw
 HTML.
 
-AI-generated reader output uses the centrally selected dark- and light-theme
+AI-generated summaries and translations use the centrally selected dark- and light-theme
 labels returned by `selectedAIGeneratedAssetURL` and
 `selectedAILightThemeAssetURL`. Do not choose label variants independently in
-a template. The disclosure scope, legal caveats, and machine-readable
-provenance map are documented in
-[EU AI transparency and compliance posture](../../docs/eu-ai-transparency.md).
+a template. AI disclosure and provenance are summarized in
+[AI disclosure](../../docs/source-policy.md#ai-disclosure).
 
 After changing templates or frontend sources, run `npm run build` and commit the
 generated files under `static/`. Add boundary tests for public-host routing,

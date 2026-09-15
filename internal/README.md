@@ -12,7 +12,7 @@ units:
 | `parser` | Conversion of source HTML into domain values |
 | `ingest` | Synchronization orchestration and refresh policy |
 | `gazetteer` | Rebuildable Munich place-name sources, generations, matching, and typed placeholder restoration |
-| `languages` | Immutable reader language identities, validation, negotiation, and date formatting |
+| `languages` | Immutable language identities, validation, negotiation, and date formatting |
 | `processing` | Staged AI processing, validation, scheduling, and model access |
 | `store` | SQLite schema, transactions, queries, and pipeline persistence |
 | `web` | Public/review HTTP presentation and access boundaries |

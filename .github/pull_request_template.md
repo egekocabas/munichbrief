@@ -1,3 +1,5 @@
+<!-- Maintainer and automated Dependabot PRs only; see CONTRIBUTING.md. -->
+
 ## Summary
 
 - What changed and why?

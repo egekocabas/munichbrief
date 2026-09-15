@@ -115,7 +115,7 @@ func TestLoadRejectsInvalidAISchedule(t *testing.T) {
 }
 
 func TestLoadRejectsInvalidOllamaConfiguration(t *testing.T) {
-	for _, baseURL := range []string{"192.0.2.10:11434", "ftp://ollama.internal/model", "http://user:password@ollama.internal:11434"} {
+	for _, baseURL := range []string{"192.0.2.10:11434", "ftp://ollama.internal.example/model", "http://user:password@ollama.internal.example:11434"} {
 		t.Run(baseURL, func(t *testing.T) {
 			t.Setenv("MUNICHBRIEF_OLLAMA_BASE_URL", baseURL)
 			if _, err := Load(); err == nil {
@@ -189,13 +189,13 @@ func TestLoadAcceptsExplicitReviewAndSecureCookies(t *testing.T) {
 
 func TestLoadAcceptsAdminAndPublicHosts(t *testing.T) {
 	t.Setenv("MUNICHBRIEF_ADMIN_ENABLED", "true")
-	t.Setenv("MUNICHBRIEF_PUBLIC_HOSTS", " MUNICHBRIEF.EGEKOCABAS.COM,munichbrief.de,munichbrief.de ")
+	t.Setenv("MUNICHBRIEF_PUBLIC_HOSTS", " BRIEF.EXAMPLE.COM,munichbrief.de,munichbrief.de ")
 	t.Setenv("MUNICHBRIEF_CANONICAL_ORIGIN", "https://MUNICHBRIEF.DE/")
 	cfg, err := Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantHosts := []string{"munichbrief.egekocabas.com", "munichbrief.de"}
+	wantHosts := []string{"brief.example.com", "munichbrief.de"}
 	if !cfg.AdminEnabled || len(cfg.PublicHosts) != len(wantHosts) || cfg.PublicHosts[0] != wantHosts[0] || cfg.PublicHosts[1] != wantHosts[1] {
 		t.Fatalf("admin config = enabled:%t public-hosts:%q", cfg.AdminEnabled, cfg.PublicHosts)
 	}
@@ -229,10 +229,10 @@ func TestLoadRejectsInvalidAdminConfiguration(t *testing.T) {
 		name, enabled, host string
 	}{
 		{name: "enabled", enabled: "sometimes"},
-		{name: "scheme", host: "https://munichbrief.egekocabas.com"},
-		{name: "port", host: "munichbrief.egekocabas.com:443"},
-		{name: "path", host: "munichbrief.egekocabas.com/admin"},
-		{name: "empty entry", host: "munichbrief.egekocabas.com,"},
+		{name: "scheme", host: "https://brief.example.com"},
+		{name: "port", host: "brief.example.com:443"},
+		{name: "path", host: "brief.example.com/admin"},
+		{name: "empty entry", host: "brief.example.com,"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Setenv("MUNICHBRIEF_ADMIN_ENABLED", test.enabled)

@@ -1,318 +1,57 @@
-# Architecture
+# From release to published report
 
-MunichBrief is one Go process with one connection per SQLite database. The main
-database holds incidents and processing state; a separate rebuildable database
-holds place-name generations. The process combines source discovery, bounded
-article fetching, deterministic parsing, asynchronous AI processing, and
-server-rendered delivery without sharing either database between replicas.
+One Go process serves the website and runs the background workers. SQLite keeps
+incidents, processing jobs, and their history; a second database holds place names.
 
-## Components
+```mermaid
+flowchart LR
+    Source[Official RSS feed] --> Parser[Fetch and split reports]
+    Parser --> Store[(SQLite)]
+    Store --> Metadata[Extract metadata]
+    Metadata --> German[Generate German summary]
+    German --> Translate[Translate independently]
+    German --> Category[Verify category]
+    Store -->|Original report| Assistance[Verify public assistance]
+    German --> Website[MunichBrief website]
+    Translate --> Website
+    Category --> Website
+    Assistance --> Website
+```
 
-- `cmd/munichbrief` wires configuration, storage, HTTP servers, synchronization,
-  processing, lifecycle, and operational commands.
-- `internal/source` loads synthetic fixtures or the official RSS feed and
-  same-origin articles with strict URL, redirect, timeout, type, and size
-  controls.
-- `internal/parser` converts one source document into one or more incident
-  records and hashes the retained source representation.
-- `internal/ingest` coordinates conditional synchronization, refresh policy,
-  retries, persistence, and source metrics.
-- `internal/gazetteer` conditionally downloads official Munich, GeoNames, and
-  OpenStreetMap place data; activates validated generations in a separate
-  SQLite database; and exposes an immutable Unicode-aware matcher.
-- `internal/store` owns migrations, SQLite transactions, presentation queries,
-  processing cycles, and consistent backups.
-- `internal/processing` defines the staged prompt registry, Ollama clients,
-  privacy validation, scheduling, retries, circuit breaking, and sequential
-  worker.
-- `internal/web` serves localized reader, discovery, static, health, and
-  optional protected administration routes.
-- `internal/observability` exposes Prometheus-format application metrics on a
-  separate listener.
+## The journey
 
-## Source and incident model
+1. **Discover.** Read the official Munich Police RSS feed. Fetch only linked
+   articles within the seven-day discovery window, with bounded requests.
+2. **Split.** Separate a combined release into incidents. Keep source URLs,
+   publication times, and content hashes so changes can be detected.
+3. **Summarize.** Extract structured metadata, then generate a shorter German
+   title and summary. Validate the result before making it public.
+4. **Check and translate.** Independent jobs verify categories and appeals for
+   public assistance, or translate the accepted German text. One failed
+   translation does not stop German or other languages from publishing.
+5. **Serve.** Select only complete, current results. A source change makes old
+   generated results ineligible until the updated report has been processed.
 
-An RSS entry represents a source document, not necessarily one incident. A
-combined daily release is split into numbered incidents that retain the same
-official source URL. A standalone release becomes one incident; its report
-number remains empty when the official source does not publish one. Releases
-are never merged solely because they share a publication date.
+## The website
 
-The canonical police article URL and numeric article ID form the external
-document identity because the feed does not reliably include a GUID. Source
-documents retain request validators and fetch state. Incidents retain the
-parsed German source fields and content hash used to invalidate derived output
-when the source changes.
+- Go templates render HTML; HTMX updates parts of the page without a full reload.
+- Search and filters query SQLite. Timelines can use publication or incident date.
+- Language URLs are explicit, such as `/de` and `/en`.
+- Canonical links, language alternatives, sitemaps, and share images describe
+  the same published reports. `Accept: text/markdown` requests Markdown.
+- Original text and processing controls belong to protected administration.
 
-The current conditional-request state remains a single row per source, while
-each RSS check has its own durable operational history row. The history records
-its seven-day window, safe aggregate outcomes, duration, and sanitized failure
-detail without retaining another copy of feed or article content. Starting an
-attempt is committed before the source request, so a process interruption
-remains visible to operators instead of disappearing. The next attempt marks
-any abandoned running row as a failed interruption before inserting its own
-running record.
+## Find the code
 
-## Processing pipeline
+| Area | Package |
+| --- | --- |
+| Startup, configuration, commands | [cmd/munichbrief](../cmd/munichbrief/main.go) |
+| Feed and article access | [source](../internal/source/source.go) |
+| Incident splitting | [parser](../internal/parser/police.go) |
+| Synchronization | [ingest](../internal/ingest/syncer.go) |
+| Jobs, model adapters, validation | [processing](../internal/processing/README.md) |
+| SQLite and migrations | [store](../internal/store/README.md) |
+| Routes, templates, localization | [web](../internal/web/README.md) |
 
-Canonical AI work is persisted as a frozen cycle with ordered steps. The
-current pipeline is `incident-pipeline-v2` and performs two narrowly scoped
-operations:
-
-1. `incident_metadata` receives the privacy-minimised German source plus the
-   release timestamp, its localized weekday, `Europe/Berlin`, and direct lookup
-   maps for recent relative days and weekdays. It extracts category, broad area,
-   one primary incident date with an optional clock time or day part, report
-   kind, and any explicit public-assistance request. The application does not
-   parse changing German time phrases itself.
-2. `german_presentation` receives only the minimized source and validated
-   metadata. It creates the canonical privacy-safe German title and summary.
-
-When stage 2 succeeds, that presentation run becomes complete immediately.
-Independent LLM work uses one registry-driven post-processing subsystem. Each
-processor registration declares metadata, ordering, model setting, scopes,
-inputs, named outputs, validation, automatic/manual capabilities, and bounded
-aggregate counters. The generic worker and store provide queueing, claims,
-retries, recovery, history, status, and metrics without processor branches.
-Claims materialize only the input kinds declared for the selected processor
-scope; source-backed inputs are never added to another processor's claimed job.
-The claim contract includes the prompt version, so jobs left behind by a prompt
-upgrade are claimed without newly declared inputs and handled by the worker's
-configuration-failure path instead of blocking the queue.
-The same contract carries the complete output-kind set. Persistence rejects
-missing, duplicate, or undeclared outputs and a changed input hash before any
-value is committed. Reader, admin, readiness, and modification-time queries
-also select only complete successes for every verifier and translation scope,
-which preserves atomic fallback even for legacy or manually corrupted rows.
-Correction-style admin readers share one value-pair selection path for latest
-complete success, original-value fallback, and latest-attempt state, so another
-verifier does not require a new persistence algorithm.
-
-The public-assistance verifier receives the immutable, parser-extracted German
-police title and body plus the original metadata status and types. This is an
-intentional exception to the minimized post-processing boundary: the configured
-Ollama endpoint sees the unredacted German source so the verifier can check the
-actual request for public help. Its German prompt returns only a strict verdict,
-corrected status, and corrected type codes. The newest successful status/types
-pair becomes effective atomically without rewriting the original metadata. A
-pending, exhausted, unavailable, malformed, or failed replacement leaves the
-previous successful pair effective, or falls back to the original pair when
-none has succeeded.
-
-The category verifier receives only the accepted German title, summary, and the
-immutable metadata category represented by its German display name. The model
-sees and returns only German category names; application-owned mappings convert
-those names to stable internal codes before validation and persistence. It
-returns a constrained verdict and category;
-the newest successful result for that exact presentation run becomes effective
-without rewriting the original value. Verification failure never blocks German
-publication and is not interpreted as a verdict. A pending, exhausted, or
-failed recheck leaves the previous successful result effective, or falls back
-to the immutable original metadata category when no verification has succeeded.
-
-Translation scopes are generated from registered languages. Each language owns
-an immutable prompt version, schema, validator, generator, and enablement
-cutover. A durable per-language route selects an exact installed model and one
-of the adapters supported for that target: structured chat, TranslateGemma's
-native contract, or HY-MT2's native contract. Title and summary remain separate
-requests for native adapters. The model, adapter, and prompt are frozen into
-each job and remain visible in audit history; changing a preference affects
-only future work. English, Turkish,
-Croatian, Italian, Ukrainian, Bosnian, Simplified Chinese, Hindi, Spanish,
-French, Romanian, Polish, and Russian each receive only the accepted
-German title and summary.
-
-Before a translation request, the active gazetteer matcher replaces exact
-Munich-area streets, districts, neighbourhoods, municipalities, transit names,
-parks, squares, and landmarks with opaque tokens. It uses leftmost-longest
-Aho–Corasick matching plus Unicode word boundaries; ambiguous common nouns
-require location context. Each unique spelling receives one stable token, which
-may occur repeatedly across the title and summary. The model must preserve the
-exact token occurrence count in each field; target-language word order and an
-apostrophe-delimited grammatical suffix are allowed while the token itself
-remains intact. The application rejects missing, duplicated, moved, modified,
-or invented tokens and restores the exact NFC-normalized German spelling before
-ordinary validation and persistence. If no valid generation is loaded,
-translation job claims pause while German processing, existing publications,
-and readiness continue.
-
-The gazetteer database records immutable generations and source provenance.
-Refreshes require every fixed HTTPS source to pass size, schema, and count
-checks before activation. Conditional validators are bound to the source URL
-and a versioned parser contract, so source or parsing changes force a complete
-download. Any source or matcher failure leaves the last successful generation
-active. The database is rebuildable and is not part of the incident database
-backup.
-
-The protected `/admin/gazetteer` page exposes bounded source health, the active
-entry count, refresh timing, source contracts and hashes, retained generations,
-and deterministic overrides. It deliberately does not load or render the full
-name set or downloaded payloads.
-
-Application code localizes metadata labels. Each step declares its ordered
-input kinds; the worker passes only those values and hashes the actual inputs
-with prompt version and model identity. A metadata change therefore invalidates
-the German-stage input without exposing source text to any translation stage. Each
-job stores its prompt version, model identity, input hash, timestamps, status,
-and safe failure category. Reader pages label extracted timing neutrally as a
-time stated in the report.
-
-The worker:
-
-1. Activates one eligible cycle and freezes its target incidents and models.
-2. Processes every job for the current step sequentially.
-3. Validates schemas, temporal consistency and relative-date resolution,
-   source-grounded areas and assistance requests, and privacy before storage.
-4. Advances only when the step has no unfinished jobs.
-5. Publishes each German presentation as soon as its stage-2 job succeeds and
-   enqueues public-assistance verification, category verification, and
-   translations for that exact run.
-
-At every job boundary the worker prioritizes canonical work, then registered
-post-processors by priority: public-assistance verification, category
-verification, then translation. The independent processors have separate model
-settings and circuit breakers, so a missing model or failed response does not
-pause another processor.
-
-When a newer canonical run queues a language, pending translations for older
-runs of the same incident and source revision are superseded. Running attempts
-finish safely, while completed translations remain available for audit. A
-replacement attempt for the current run leaves that run's prior success visible
-until the replacement succeeds.
-
-Scheduled work starts inside the configured Europe/Berlin window. A frozen
-cycle may finish after the window closes. Explicit admin or CLI requests persist
-manual priority but retain validation, circuit breaking, and retry delays.
-If a scheduled cycle publishes its final German result after the window closes,
-automatic post-processing discovery waits for the next open window; the German
-publication itself remains complete and available. A continuation retains its
-automatic provenance at this handoff and never gains a manual window or switch
-bypass merely because the original scheduled cycle yielded its lease.
-When an automatic scheduled or continuation cycle is waiting on a retry or open
-circuit, it releases the running-cycle lease to a queued manual cycle and later
-resumes with the same frozen progress.
-
-The protected admin runtime control is a durable gate above the schedule. When
-automatic processing is disabled, no new scheduled canonical or post-processing
-request starts even inside the window; explicit admin and CLI work remains
-eligible. The deployment-level `MUNICHBRIEF_AI_ENABLED` setting remains the
-absolute gate for both interfaces; the CLI bypasses only the durable runtime
-switch and schedule. An automatic request already in flight finishes, then its
-frozen cycle is suspended without losing accepted results or its window
-authorization.
-The same boundary suspension applies when that request ends in a retryable
-provider or configuration failure, so a disabled cycle never retains the
-running-cycle lease while it waits.
-Re-enabling wakes the worker and lets an authorized cycle resume even after the
-window closes.
-
-The cancel-all control atomically disables automatic work and supersedes every
-unfinished canonical and post-processing job with the safe `operator_canceled`
-reason. It then cancels the one in-flight Ollama request. Completion transactions
-accept output only for a still-running job, so a late response cannot publish
-after cancellation. Completed presentations and successful post-processing
-values are never removed. Canceled work remains auditable and can be discovered
-again under the normal cutover and window rules after automatic processing is
-re-enabled.
-Operator queue submissions, runtime-switch changes, and cancellation are
-serialized at their database mutation boundary, so a concurrent manual request
-is deterministically either included in the cancellation or accepted afterward.
-
-Every registered post-processor also has a durable processor-wide automatic
-gate, followed by its per-scope gate. Automatic translation therefore requires
-the global runtime switch, the translation processor switch, and the target
-language switch. Processor gates start enabled; verification scopes and English
-translation start enabled, while other translation languages start disabled.
-Scheduled enqueueing and the final claim check enforce all applicable gates
-transactionally. Disabling the processor skips its pending and retrying jobs
-with `processor_disabled`; disabling one scope uses `scope_disabled`. A job
-already running and all manual work remain eligible. Re-enabling either narrow
-gate does not wake the worker or move a scope cutover, so the next ordinary
-discovery pass finds work accumulated while it was disabled.
-
-The v2 migration records an automatic-scheduling cutover. Each registered
-processor scope also has a persisted automatic cutover. The public-assistance
-scope begins automatic work only for presentations completed after its first
-deployment-time registration; operators use the admin “process all” action for
-older presentations, with no automatic historical backfill or operator-run
-data migration.
-Existing translation and category-verification attempts are migrated into
-unified jobs and named values for audit, including imported and superseded
-records, but only complete current
-`incident-pipeline-v2` runs are eligible for new work or reader selection. The
-paginated admin history retains those imported attempts while excluding source
-text, model output, and internal error text.
-
-## Presentation boundary
-
-`review` mode exposes retained German source text and processing state for
-local or access-controlled quality review. `public` mode fails closed and lists
-only incidents with a complete, privacy-safe presentation for the active source
-hash and prompt lifecycle.
-
-`MUNICHBRIEF_PUBLIC_HOSTS` applies that public scope and a route allowlist by
-request hostname even when another listener uses review mode. A canonical HTTPS
-origin is mandatory when public hosts are configured. Public HTML also exposes
-canonical and language-alternate links, a sitemap, crawler policy, and a
-privacy-safe Markdown representation.
-
-Reader-facing language behavior is declared in one compile-time registry. The
-server derives routes, locale catalogs, date formatting, navigation, alternate
-links, and sitemap entries from it, and startup verifies that every translated
-reader registration matches a processing translation definition.
-The same registry supplies exact BCP-47 document tags and stable route/scope
-codes; target-specific prompts feed a generic translation-step factory. See
-[Adding a reader language](adding-a-language.md) for the cross-repository
-extension and rollout contract.
-
-Social previews use embedded OFL-licensed fonts. The default Go font covers the
-Latin and Cyrillic readers; Noto Sans SC covers Simplified Chinese, and Noto
-Sans Devanagari is rendered through a pure-Go OpenType shaping engine so Hindi
-vowel marks and conjuncts retain their proper glyph order. Font bytes are part
-of the renderer cache identity.
-
-Reader queries choose content and metadata from one presentation run. The
-effective category is the newest successful verification for that run, or its
-immutable original category when no verification succeeded. A category result
-from another run is never mixed into German or translated fallback content.
-
-German selection uses the newest complete current v2 run. A target-language
-page uses the newest successful translation for that same v2 run; a pending or
-failed replacement leaves the previous successful value for that run visible.
-V1, imported, and legacy presentations remain auditable but are never reader or
-admin-selection fallbacks. An incident without a complete current v2
-presentation is unprocessed and omitted publicly. Metadata always comes from
-the selected canonical run. Timeline grouping and pagination remain based on
-publication time; incident timing is display metadata.
-
-The optional admin routes contain retained originals and processing controls.
-`/admin/translations` derives canonical coverage, registry-ordered language
-coverage, and bounded incident drill-downs from current v2 runs. Effective
-publication is selected independently from the newest attempt so a failed
-replacement cannot hide a retained successful reader value.
-The application does not authenticate them; the ingress must protect both
-`/admin*` and `/api/admin*`, and public ingress rules must omit them.
-
-## Storage and lifecycle
-
-Migrations are embedded and applied transactionally when the store opens.
-SQLite uses one application process and one Kubernetes replica. Persistent
-storage uses `ReadWriteOnce`, but that access mode does not by itself prevent
-two pods on the same node, so the chart enforces one replica and a `Recreate`
-strategy.
-
-The `backup` command uses SQLite `VACUUM INTO` to produce a transactionally
-consistent standalone database. Restore remains an explicit, offline operator
-procedure documented in [Operations](operations.md).
-
-## Trust boundaries
-
-- Police feed and article HTML are untrusted network input.
-- Source text is untrusted prompt input and is never treated as model
-  instructions.
-- Ollama output is untrusted until schema, length, language, and privacy checks
-  pass.
-- Public requests are host-scoped and cannot reach review or administration
-  paths.
-- Metrics bind separately so they need not be exposed through reader ingress.
-- Logs exclude source bodies, prompts, generated text, and raw model responses.
+See [translation](translation.md) for language handling and
+[privacy and sources](source-policy.md) for the publication boundary.

@@ -13,9 +13,8 @@ Do not open a public issue for an unpatched vulnerability or include sensitive
 deployment details in an issue.
 
 Include the affected version, reproduction steps, impact, and any suggested
-mitigation. You can expect an acknowledgement within seven days. Fix and
-disclosure timing will be coordinated according to severity and exploitability.
+mitigation.
 
 Operational incidents, incorrect generated summaries, and source-content
-corrections are not software vulnerabilities; use a regular issue unless the
-report would expose private information.
+corrections should be sent through the
+[contact page](https://munichbrief.de/en/contact).
