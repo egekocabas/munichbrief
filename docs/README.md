@@ -1,10 +1,10 @@
 # Inside MunichBrief
 
-A short tour of the system behind the [reader](https://munichbrief.de).
+A short tour of the system behind [MunichBrief](https://munichbrief.de).
 
 | Guide | What it covers |
 | --- | --- |
-| [Architecture](architecture.md) | From a police release to a reader page |
+| [Architecture](architecture.md) | From a police release to a published report |
 | [Translation](translation.md) | Independent languages and protected place names |
 | [Privacy and sources](source-policy.md) | What is published, retained, and disclosed |
 | [Running MunichBrief](operations.md) | Local preview, deployment, and storage |

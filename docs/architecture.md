@@ -1,6 +1,6 @@
-# From release to reader
+# From release to published report
 
-One Go process serves the reader and runs the background workers. SQLite keeps
+One Go process serves the website and runs the background workers. SQLite keeps
 incidents, processing jobs, and their history; a second database holds place names.
 
 ```mermaid
@@ -12,10 +12,10 @@ flowchart LR
     German --> Translate[Translate independently]
     German --> Category[Verify category]
     Store -->|Original report| Assistance[Verify public assistance]
-    German --> Reader[Public reader]
-    Translate --> Reader
-    Category --> Reader
-    Assistance --> Reader
+    German --> Website[MunichBrief website]
+    Translate --> Website
+    Category --> Website
+    Assistance --> Website
 ```
 
 ## The journey
@@ -32,7 +32,7 @@ flowchart LR
 5. **Serve.** Select only complete, current results. A source change makes old
    generated results ineligible until the updated report has been processed.
 
-## The reader
+## The website
 
 - Go templates render HTML; HTMX updates parts of the page without a full reload.
 - Search and filters query SQLite. Timelines can use publication or incident date.

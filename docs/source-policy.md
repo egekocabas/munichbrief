@@ -1,8 +1,10 @@
 # Privacy and sources
 
-MunichBrief is independent and unofficial. The original police release is the
-authoritative source; reports describe an investigation at publication time,
-and the presumption of innocence applies.
+MunichBrief is an independent project. It is not affiliated with the Bavarian
+Police or any other public authority and does not speak on their behalf.
+
+The original police release is the authoritative source. Reports describe an
+investigation at publication time, and the presumption of innocence applies.
 
 ## Source access
 
@@ -15,7 +17,7 @@ and the presumption of innocence applies.
 
 ## Public and protected data
 
-| Public reader | Protected operational storage |
+| Published on MunichBrief | Protected operational storage |
 | --- | --- |
 | Accepted German summaries and successful translations | Extracted original German text |
 | Broad categories and available incident timing | Processing attempts and provenance |
@@ -28,7 +30,7 @@ not guarantee that every generated statement is correct.
 
 ## AI disclosure
 
-Reader pages identify AI-generated text and link to the source. HTML metadata,
+Website pages identify AI-generated text and link to the source. HTML metadata,
 Markdown, and share images carry corresponding disclosure or provenance.
 
 Canonical processing and public-assistance verification send original source

@@ -26,7 +26,7 @@ cause the result to be rejected.
 
 A separate SQLite database stores validated generations. A failed refresh
 keeps the last valid generation. Without a valid matcher, new translations
-pause while German processing and the reader remain available.
+pause while German processing and the website remain available.
 
 ## Languages
 

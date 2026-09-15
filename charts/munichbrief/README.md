@@ -21,7 +21,7 @@ helm install munichbrief ./charts/munichbrief \
 - Non-root execution, dropped capabilities, runtime-default seccomp, and a
   read-only root filesystem.
 - Only `/data` and `/tmp` are writable.
-- Reader and metrics use separate service ports.
+- The application and metrics endpoint use separate service ports.
 - Both LAN and public ingresses are disabled.
 - Ollama processing and its dedicated egress rule are disabled.
 - Gazetteer refresh follows the source mode by default: disabled for fixtures
@@ -45,11 +45,11 @@ Public ingress requires:
 - `application.gazetteerEnabled=true` before enabling translation processing;
 - every public ingress hostname in `application.publicHosts`;
 - an HTTPS `application.canonicalOrigin` using one of those hosts; and
-- `ingress.public.languageCodes` matching the compiled reader registry; and
+- `ingress.public.languageCodes` matching the compiled language registry; and
 - TLS and external ingress configuration appropriate to the cluster.
 
 Public mode fails closed. With AI disabled or no current privacy-safe
-presentations, the reader can legitimately be empty.
+presentations, the website may show no incidents.
 
 ## Ollama and administration
 
@@ -62,7 +62,7 @@ When upgrading from chart 0.2.x, move existing inference egress values under
 
 Fresh databases have no preferred models. Enable the protected admin view,
 select one installed model for every canonical pipeline step, and select an
-installed model plus supported adapter for every reader language on
+installed model plus supported adapter for each translation language on
 `/admin/translations` before allowing scheduled or manual cycles.
 
 Administration requires the LAN ingress plus exactly one of

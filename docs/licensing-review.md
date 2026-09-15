@@ -13,7 +13,7 @@ and separately installed models retain their own terms.
 
 Model weights and Ollama run separately and are not included in the application
 image. Police releases are not covered by the project's MIT licence. Geographic
-attribution appears on the reader's About page.
+attribution appears on the website's About page.
 
 ## Visible in the product
 

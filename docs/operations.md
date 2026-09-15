@@ -45,7 +45,7 @@ Git. Read [privacy and sources](source-policy.md) before enabling live ingestion
   `/data` and `/tmp` mounts.
 - Admin authentication is provided by the ingress. Protect both `/admin` and
   `/api/admin`; do not expose the application port directly to untrusted clients.
-- Reader health endpoints are `/healthz` and `/readyz`. Metrics use a separate
+- Application health endpoints are `/healthz` and `/readyz`. Metrics use a separate
   listener, defaulting to `127.0.0.1:9090`.
 - Readiness checks storage availability; it does not mean every model or
   translation is ready.
