@@ -27,9 +27,9 @@ type TranslationBatchStatus struct {
 	NextSwitchModel string `json:"next_switch_model"`
 }
 
-func (w *PipelineWorker) translationBatchStatusLocked(ctx context.Context, allowScheduled, catalogAvailable bool) (TranslationBatchStatus, error) {
+func (w *PipelineWorker) translationBatchStatusLocked(ctx context.Context, allowScheduled bool, catalog ModelCatalogSnapshot) (TranslationBatchStatus, error) {
 	status := TranslationBatchStatus{Model: w.translationBatch.model, Attempts: w.translationBatch.attempts, Limit: translationModelBatchLimit}
-	if !catalogAvailable || !w.postProcessors.Ready(TranslationModelStep) {
+	if !catalog.Available() || !w.postProcessors.Ready(TranslationModelStep) {
 		return status, nil
 	}
 	definition, found := w.postProcessors.Definition(TranslationModelStep)
@@ -43,7 +43,24 @@ func (w *PipelineWorker) translationBatchStatusLocked(ctx context.Context, allow
 	now := w.clock()
 	options := store.PostProcessingClaimOptions{AllowScheduled: allowScheduled, BlockedModels: w.blockedModels(TranslationModelStep, now)}
 	options.PreferredModel, options.YieldModel = w.translationBatch.modelHints(w.lastInvokedModel)
-	next, found, err := w.repository.PeekPostProcessingJob(ctx, TranslationModelStep, contracts, options, now)
+	// A queued model may have been removed since the job was created. The
+	// worker will defer that attempt without invoking it; preview the next
+	// installed model instead, without modifying the queue or its circuits.
+	peek := func(simulateClaims bool) (store.PostProcessingJob, bool, error) {
+		for {
+			job, found, err := w.repository.PeekPostProcessingJob(ctx, TranslationModelStep, contracts, options, now)
+			if err != nil || !found || catalog.Has(job.ModelIdentity) {
+				return job, found, err
+			}
+			options.BlockedModels = append(options.BlockedModels, job.ModelIdentity)
+			if simulateClaims && job.ModelIdentity != status.Model {
+				// Even a deferred claim starts a new model's attempt budget.
+				// Once that model is blocked, selection falls back to FIFO.
+				options.PreferredModel, options.YieldModel = job.ModelIdentity, ""
+			}
+		}
+	}
+	next, found, err := peek(true)
 	if err != nil {
 		return status, err
 	}
@@ -52,7 +69,7 @@ func (w *PipelineWorker) translationBatchStatusLocked(ctx context.Context, allow
 	}
 	if status.Model != "" {
 		options.PreferredModel, options.YieldModel = "", status.Model
-		next, found, err = w.repository.PeekPostProcessingJob(ctx, TranslationModelStep, contracts, options, now)
+		next, found, err = peek(false)
 		if err != nil {
 			return status, err
 		}

@@ -597,7 +597,7 @@ func (w *PipelineWorker) Status(ctx context.Context) (PipelineRuntimeStatus, err
 	available := w.available
 	w.mu.RUnlock()
 	window := w.schedule.Allows(w.clock())
-	batch, err := w.translationBatchStatusLocked(ctx, control.AutomaticProcessingEnabled && window, models.CatalogAvailable)
+	batch, err := w.translationBatchStatusLocked(ctx, control.AutomaticProcessingEnabled && window, w.catalog.Snapshot())
 	if err != nil {
 		return PipelineRuntimeStatus{}, err
 	}

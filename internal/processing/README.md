@@ -37,7 +37,9 @@ attempt count; provider call logs show the resulting sequence.
 The admin homepage and translations page show the current batch model and attempt
 count (including the in-flight attempt), the next queued translation, and the next
 model switch. These read-only previews use the claim ordering and eligibility
-rules without reserving jobs. New requests and higher-priority work can change
+rules without reserving jobs. Uninstalled models are omitted from the preview;
+the next-translation preview accounts for the batch reset when their queued
+attempts are deferred. New requests and higher-priority work can change
 the order. Live operations highlights the claimed canonical stage, verification
 scope, or translation language; detailed counts and history are expandable.
 

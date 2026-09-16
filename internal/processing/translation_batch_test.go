@@ -307,3 +307,28 @@ func TestTranslationBatchStatusPreviewsRunningAndNextModels(t *testing.T) {
 		})
 	}
 }
+
+func TestTranslationBatchPreviewSkipsRemovedModels(t *testing.T) {
+	worker, _, provider, now := newTranslationBatchFixture(t, 1)
+	queueBatchLanguage(t, worker, "en", "A", 1)
+	queueBatchLanguage(t, worker, "tr", "B", 1)
+	queueBatchLanguage(t, worker, "it", "C", 1)
+	worker.translationBatch = translationModelBatch{model: "A", attempts: 50}
+	// B was installed when queued, but has since been removed.
+	worker.catalog = testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"A", "C", "base"}, CheckedAt: *now}}
+	before := worker.translationBatch
+	status, err := worker.Status(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status.TranslationBatch.NextModel != "A" || status.TranslationBatch.NextSwitchModel != "C" {
+		t.Fatalf("preview includes removed model: %#v", status.TranslationBatch)
+	}
+	if worker.translationBatch != before || len(worker.blockedModels(TranslationModelStep, *now)) != 0 {
+		t.Fatal("preview changed batch or circuit state")
+	}
+	worker.processAvailable(context.Background())
+	if got := batchModels(provider); !slices.Equal(got, []string{"A", "C"}) {
+		t.Fatalf("model invocations = %v, want A,C", got)
+	}
+}

@@ -58,6 +58,15 @@ func TestAdminLiveBatchAndRunningHighlights(t *testing.T) {
 					for _, a := range n.Attr {
 						attrs[a.Key] = a.Val
 					}
+					// A grouped description list must contain only terms and
+					// descriptions, with batch details inside the description.
+					if n.Type == html.ElementNode && n.Data == "div" && n.Parent != nil && n.Parent.Data == "dl" {
+						for child := n.FirstChild; child != nil; child = child.NextSibling {
+							if child.Type == html.ElementNode && child.Data != "dt" && child.Data != "dd" {
+								t.Errorf("%s invalid description-list child: %s", path, child.Data)
+							}
+						}
+					}
 					if attrs["data-execution-key"] != "" && attrs["data-running"] == "true" {
 						active = append(active, attrs["data-execution-key"])
 					}

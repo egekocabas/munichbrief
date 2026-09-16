@@ -127,7 +127,12 @@ func TestPostProcessingClaimContinuesPastMissingInput(t *testing.T) {
 		{ProcessorKey: "translation", ScopeKey: "en", PromptVersion: "test-v1", Model: "A", InputKinds: []string{"summary_de"}},
 		{ProcessorKey: "translation", ScopeKey: "tr", PromptVersion: "test-v1", Model: "B", InputKinds: []string{"title_de"}},
 	}
-	if count, err := database.QueuePostProcessingForRun(ctx, runID, plans, "manual", false, now); err != nil || count != 2 {
+	// A backlog of unusable preferred jobs must be scanned once, without an
+	// ever-growing exclusion query or any writes during status polling.
+	for index := range 200 {
+		plans = append(plans, PostProcessingPlan{ProcessorKey: "translation", ScopeKey: fmt.Sprintf("missing_%d", index), PromptVersion: "test-v1", Model: "A", InputKinds: []string{"summary_de"}})
+	}
+	if count, err := database.QueuePostProcessingForRun(ctx, runID, plans, "manual", false, now); err != nil || count != len(plans) {
 		t.Fatalf("queue=%d/%v", count, err)
 	}
 	if _, err := database.db.ExecContext(ctx, `DELETE FROM presentation_values WHERE presentation_run_id=? AND kind='summary_de'`, runID); err != nil {
@@ -142,7 +147,7 @@ func TestPostProcessingClaimContinuesPastMissingInput(t *testing.T) {
 		t.Fatalf("preview missing inputs = %#v/%t/%v", preview, previewFound, previewErr)
 	}
 	var pending int
-	if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM post_processing_jobs WHERE status='pending'`).Scan(&pending); err != nil || pending != 2 {
+	if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM post_processing_jobs WHERE status='pending'`).Scan(&pending); err != nil || pending != len(plans) {
 		t.Fatalf("preview changed statuses = %d/%v", pending, err)
 	}
 	job, found, err := database.ClaimPostProcessingJob(ctx, "translation", contracts, PostProcessingClaimOptions{PreferredModel: "A"}, now)
