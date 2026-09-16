@@ -34,6 +34,13 @@ Existing model identities, adapters, prompts, and Ollama's ten-minute keep-alive
 remain unchanged. Batch-start logs record the model, selection reason, and prior
 attempt count; provider call logs show the resulting sequence.
 
+The admin homepage and translations page show the current batch model and attempt
+count (including the in-flight attempt), the next queued translation, and the next
+model switch. These read-only previews use the claim ordering and eligibility
+rules without reserving jobs. New requests and higher-priority work can change
+the order. Live operations highlights the claimed canonical stage, verification
+scope, or translation language; detailed counts and history are expandable.
+
 ## Key rules
 
 - SQLite atomically claims jobs; each job retains its model, adapter, and prompt version.

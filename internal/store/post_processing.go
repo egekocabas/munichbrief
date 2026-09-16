@@ -619,31 +619,8 @@ func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string,
 		PostProcessingStatusReasonProcessorDisabled, formatted, formatted, processorKey); err != nil {
 		return PostProcessingJob{}, false, err
 	}
-	blockedCondition := ""
-	args := []any{processorKey, formatted, boolInt(options.AllowScheduled)}
-	if len(options.BlockedModels) > 0 {
-		blockedCondition = ` AND job.model_identity NOT IN (` + strings.TrimSuffix(strings.Repeat("?,", len(options.BlockedModels)), ",") + `)`
-		for _, model := range options.BlockedModels {
-			args = append(args, model)
-		}
-	}
-	args = append(args, options.YieldModel, options.PreferredModel)
 	for {
-		var job PostProcessingJob
-		err = tx.QueryRowContext(ctx, `SELECT job.id,job.presentation_run_id,r.incident_id,job.processor_key,job.scope_key,job.request_kind,
-		job.model_identity,job.adapter_key,job.prompt_version,job.input_hash,job.attempt_count
-		FROM post_processing_jobs job JOIN presentation_runs r ON r.id=job.presentation_run_id
-		JOIN incidents i ON i.id=r.incident_id AND i.content_hash=r.source_hash
-		WHERE job.processor_key=? AND job.status='pending' AND (job.next_retry_at IS NULL OR job.next_retry_at<=?)
-		AND (job.request_kind='manual' OR (? AND (SELECT automatic_processing_enabled FROM ai_runtime_control WHERE id=1)=1
-			AND EXISTS (SELECT 1 FROM post_processing_processor_controls processor WHERE processor.processor_key=job.processor_key AND processor.enabled=1)
-			AND EXISTS (SELECT 1 FROM post_processing_scopes scope WHERE scope.processor_key=job.processor_key AND scope.scope_key=job.scope_key AND scope.enabled=1)))`+blockedCondition+`
-		ORDER BY CASE job.request_kind WHEN 'manual' THEN 0 WHEN 'scheduled' THEN 1 ELSE 2 END,
-			CASE WHEN job.model_identity=? THEN 1 ELSE 0 END,
-			CASE WHEN job.model_identity=? THEN 0 ELSE 1 END,job.created_at,job.id LIMIT 1`, args...).Scan(
-			&job.ID, &job.PresentationRunID, &job.IncidentID, &job.ProcessorKey, &job.ScopeKey, &job.RequestKind,
-			&job.ModelIdentity, &job.AdapterKey, &job.PromptVersion, &job.InputHash, &job.AttemptCount,
-		)
+		job, err := selectPostProcessingJobTx(ctx, tx, processorKey, options, now, nil)
 		if errors.Is(err, sql.ErrNoRows) {
 			if err := tx.Commit(); err != nil {
 				return PostProcessingJob{}, false, err
@@ -808,4 +785,71 @@ func (s *Store) CyclePostProcessingPlans(ctx context.Context, cycleID int64) ([]
 		plans = append(plans, plan)
 	}
 	return plans, rows.Err()
+}
+
+// PeekPostProcessingJob previews the next runnable candidate without claiming,
+// skipping, or changing any job. It uses the claim's selection order and ignores
+// candidates whose current inputs or registered contracts cannot run.
+func (s *Store) PeekPostProcessingJob(ctx context.Context, processorKey string, contracts PostProcessingContract, options PostProcessingClaimOptions, now time.Time) (PostProcessingJob, bool, error) {
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return PostProcessingJob{}, false, err
+	}
+	defer tx.Rollback()
+	var excluded []int64
+	for {
+		job, err := selectPostProcessingJobTx(ctx, tx, processorKey, options, now, excluded)
+		if errors.Is(err, sql.ErrNoRows) {
+			return PostProcessingJob{}, false, nil
+		}
+		if err != nil {
+			return PostProcessingJob{}, false, err
+		}
+		contract, registered := contracts[job.ScopeKey]
+		if registered && contract.PromptVersion == job.PromptVersion && len(contract.InputKinds) > 0 && len(contract.OutputKinds) > 0 {
+			_, missing, err := postProcessingInputValuesTx(ctx, tx, job.PresentationRunID, contract.InputKinds)
+			if err != nil {
+				return PostProcessingJob{}, false, err
+			}
+			if missing == "" {
+				return job, true, nil
+			}
+		}
+		excluded = append(excluded, job.ID)
+	}
+}
+
+func selectPostProcessingJobTx(ctx context.Context, tx *sql.Tx, processorKey string, options PostProcessingClaimOptions, now time.Time, excluded []int64) (PostProcessingJob, error) {
+	formatted := formatTime(now.UTC())
+	blockedCondition := ""
+	args := []any{processorKey, PipelineVersion, formatted, boolInt(options.AllowScheduled)}
+	if len(options.BlockedModels) > 0 {
+		blockedCondition = ` AND job.model_identity NOT IN (` + strings.TrimSuffix(strings.Repeat("?,", len(options.BlockedModels)), ",") + `)`
+		for _, model := range options.BlockedModels {
+			args = append(args, model)
+		}
+	}
+	if len(excluded) > 0 {
+		blockedCondition += ` AND job.id NOT IN (` + strings.TrimSuffix(strings.Repeat("?,", len(excluded)), ",") + `)`
+		for _, id := range excluded {
+			args = append(args, id)
+		}
+	}
+	args = append(args, options.YieldModel, options.PreferredModel)
+	var job PostProcessingJob
+	err := tx.QueryRowContext(ctx, `SELECT job.id,job.presentation_run_id,r.incident_id,job.processor_key,job.scope_key,job.request_kind,
+		job.model_identity,job.adapter_key,job.prompt_version,job.input_hash,job.attempt_count
+		FROM post_processing_jobs job JOIN presentation_runs r ON r.id=job.presentation_run_id
+		JOIN incidents i ON i.id=r.incident_id AND i.content_hash=r.source_hash
+		WHERE job.processor_key=? AND r.status='complete' AND r.pipeline_version=? AND r.legacy=0 AND job.status='pending' AND (job.next_retry_at IS NULL OR job.next_retry_at<=?)
+		AND (job.request_kind='manual' OR (? AND (SELECT automatic_processing_enabled FROM ai_runtime_control WHERE id=1)=1
+			AND EXISTS (SELECT 1 FROM post_processing_processor_controls processor WHERE processor.processor_key=job.processor_key AND processor.enabled=1)
+			AND EXISTS (SELECT 1 FROM post_processing_scopes scope WHERE scope.processor_key=job.processor_key AND scope.scope_key=job.scope_key AND scope.enabled=1)))`+blockedCondition+`
+		ORDER BY CASE job.request_kind WHEN 'manual' THEN 0 WHEN 'scheduled' THEN 1 ELSE 2 END,
+			CASE WHEN job.model_identity=? THEN 1 ELSE 0 END,
+			CASE WHEN job.model_identity=? THEN 0 ELSE 1 END,job.created_at,job.id LIMIT 1`, args...).Scan(
+		&job.ID, &job.PresentationRunID, &job.IncidentID, &job.ProcessorKey, &job.ScopeKey, &job.RequestKind,
+		&job.ModelIdentity, &job.AdapterKey, &job.PromptVersion, &job.InputHash, &job.AttemptCount,
+	)
+	return job, err
 }

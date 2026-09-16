@@ -256,3 +256,54 @@ func TestVerificationPrecedesTranslationsAndUpdatesModelHint(t *testing.T) {
 		}
 	}
 }
+
+func TestTranslationBatchStatusPreviewsRunningAndNextModels(t *testing.T) {
+	for _, atLimit := range []bool{false, true} {
+		t.Run(fmt.Sprintf("limit=%t", atLimit), func(t *testing.T) {
+			worker, _, provider, _ := newTranslationBatchFixture(t, 2)
+			queueBatchLanguage(t, worker, "en", "A", 2)
+			queueBatchLanguage(t, worker, "tr", "B", 2)
+			ctx := context.Background()
+			initial, err := worker.Status(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if initial.Running != nil || initial.TranslationBatch.Limit != 50 || initial.TranslationBatch.NextModel != "A" {
+				t.Fatalf("initial status=%#v", initial.TranslationBatch)
+			}
+			if atLimit {
+				worker.translationBatch = translationModelBatch{model: "A", attempts: 49}
+			}
+			observed := false
+			provider.onTranslation = func() {
+				status, err := worker.Status(ctx)
+				if err != nil {
+					t.Fatal(err)
+				}
+				observed = true
+				if status.Running == nil || status.Running.Key != "translation/en" || status.Running.Model != "A" || status.Running.IncidentID == 0 {
+					t.Fatalf("running=%#v", status.Running)
+				}
+				wantCount, wantNext := 1, "A"
+				if atLimit {
+					wantCount, wantNext = 50, "B"
+				}
+				batch := status.TranslationBatch
+				if batch.Model != "A" || batch.Attempts != wantCount || batch.NextModel != wantNext || batch.NextSwitchModel != "B" || batch.NextRequestKind != "manual" {
+					t.Fatalf("batch=%#v", batch)
+				}
+			}
+			worker.processAvailable(ctx)
+			if !observed {
+				t.Fatal("running callback not observed")
+			}
+			final, err := worker.Status(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if final.Running != nil || final.TranslationBatch.Model != "" || final.TranslationBatch.Attempts != 0 || final.TranslationBatch.NextModel != "" {
+				t.Fatalf("idle status=%#v", final)
+			}
+		})
+	}
+}

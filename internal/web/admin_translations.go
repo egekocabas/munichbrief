@@ -37,10 +37,12 @@ func (s *Server) adminTranslationsPage(response http.ResponseWriter, request *ht
 		return
 	}
 
+	runtime := processing.PipelineRuntimeStatus{}
 	models := processing.PipelineModelStatus{}
 	var err error
 	if s.options.Processor != nil {
-		models, err = s.options.Processor.ModelStatus(request.Context())
+		runtime, err = s.options.Processor.Status(request.Context())
+		models = runtime.Models
 		if err != nil {
 			s.internalError(response, request, "read translation model status", err)
 			return
@@ -62,6 +64,7 @@ func (s *Server) adminTranslationsPage(response http.ResponseWriter, request *ht
 		CanonicalBacklog:  max(0, canonical.Total-canonical.Published),
 		ProcessingEnabled: s.options.Processor != nil,
 		Models:            models,
+		Runtime:           runtime,
 		TranslationModel:  translationProcessor,
 		Filters:           append([]adminTranslationFilterView(nil), adminTranslationFilters...),
 		UpdatedAt:         time.Now().In(s.location),
@@ -493,6 +496,7 @@ func nonNegativeQueryIntValues(query url.Values, key string) (int, bool) {
 }
 
 type adminTranslationsPage struct {
+	Runtime                     processing.PipelineRuntimeStatus
 	Canonical                   store.AdminCanonicalCoverage
 	CanonicalBacklog            int
 	Languages                   []adminLanguageCoverageView

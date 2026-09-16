@@ -73,6 +73,16 @@ func TestPostProcessingModelOrdering(t *testing.T) {
 					}
 				}
 			}
+			for range 2 {
+				preview, found, err := database.PeekPostProcessingJob(ctx, "translation", contracts, tt.options, now.Add(time.Minute))
+				if err != nil || !found || ids[preview.ID] != tt.want[0] || preview.AttemptCount != 0 {
+					t.Fatalf("preview = %#v/%t/%v", preview, found, err)
+				}
+			}
+			var attempts int
+			if err := database.db.QueryRowContext(ctx, `SELECT SUM(attempt_count) FROM post_processing_jobs`).Scan(&attempts); err != nil || attempts != 0 {
+				t.Fatalf("preview mutated attempts = %d/%v", attempts, err)
+			}
 			var got []int
 			for range len(tt.jobs) + 1 {
 				job, found, err := database.ClaimPostProcessingJob(ctx, "translation", contracts, tt.options, now.Add(time.Minute))
@@ -126,6 +136,14 @@ func TestPostProcessingClaimContinuesPastMissingInput(t *testing.T) {
 	contracts := PostProcessingContract{}
 	for _, plan := range plans {
 		contracts[plan.ScopeKey] = PostProcessingScopeContract{PromptVersion: plan.PromptVersion, InputKinds: plan.InputKinds, OutputKinds: []string{"note"}}
+	}
+	preview, previewFound, previewErr := database.PeekPostProcessingJob(ctx, "translation", contracts, PostProcessingClaimOptions{PreferredModel: "A"}, now)
+	if previewErr != nil || !previewFound || preview.ModelIdentity != "B" {
+		t.Fatalf("preview missing inputs = %#v/%t/%v", preview, previewFound, previewErr)
+	}
+	var pending int
+	if err := database.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM post_processing_jobs WHERE status='pending'`).Scan(&pending); err != nil || pending != 2 {
+		t.Fatalf("preview changed statuses = %d/%v", pending, err)
 	}
 	job, found, err := database.ClaimPostProcessingJob(ctx, "translation", contracts, PostProcessingClaimOptions{PreferredModel: "A"}, now)
 	if err != nil || !found || job.ModelIdentity != "B" {

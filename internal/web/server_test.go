@@ -107,6 +107,7 @@ func fixtureStore(t *testing.T) *store.Store {
 }
 
 type fakeProcessingRequester struct {
+	runtime     *processing.PipelineRuntimeStatus
 	database    *store.Store
 	err         error
 	status      *processing.PipelineModelStatus
@@ -242,6 +243,9 @@ func (p fakeProcessingRequester) RequestPostProcessing(ctx context.Context, requ
 }
 
 func (p fakeProcessingRequester) Status(ctx context.Context) (processing.PipelineRuntimeStatus, error) {
+	if p.runtime != nil {
+		return *p.runtime, nil
+	}
 	models, err := p.ModelStatus(ctx)
 	if err != nil {
 		return processing.PipelineRuntimeStatus{}, err

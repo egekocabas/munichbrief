@@ -8,6 +8,61 @@ import (
 
 const translationModelBatchLimit = 50
 
+// PipelineExecutionStatus identifies the claimed request currently being handled.
+type PipelineExecutionStatus struct {
+	Key        string `json:"key"`
+	Model      string `json:"model"`
+	IncidentID int64  `json:"incident_id"`
+}
+
+// TranslationBatchStatus previews queued translations, not higher-priority
+// canonical or verification work. The preview does not reserve any jobs.
+type TranslationBatchStatus struct {
+	Model           string `json:"model"`
+	Attempts        int    `json:"attempts"`
+	Limit           int    `json:"limit"`
+	NextModel       string `json:"next_model"`
+	NextScope       string `json:"next_scope"`
+	NextRequestKind string `json:"next_request_kind"`
+	NextSwitchModel string `json:"next_switch_model"`
+}
+
+func (w *PipelineWorker) translationBatchStatusLocked(ctx context.Context, allowScheduled, catalogAvailable bool) (TranslationBatchStatus, error) {
+	status := TranslationBatchStatus{Model: w.translationBatch.model, Attempts: w.translationBatch.attempts, Limit: translationModelBatchLimit}
+	if !catalogAvailable || !w.postProcessors.Ready(TranslationModelStep) {
+		return status, nil
+	}
+	definition, found := w.postProcessors.Definition(TranslationModelStep)
+	if !found {
+		return status, nil
+	}
+	contracts := make(store.PostProcessingContract, len(definition.Scopes))
+	for _, scope := range definition.Scopes {
+		contracts[scope.Key] = store.PostProcessingScopeContract{PromptVersion: scope.Step.PromptVersion, InputKinds: scope.Step.InputKinds, OutputKinds: scope.Step.OutputKinds}
+	}
+	now := w.clock()
+	options := store.PostProcessingClaimOptions{AllowScheduled: allowScheduled, BlockedModels: w.blockedModels(TranslationModelStep, now)}
+	options.PreferredModel, options.YieldModel = w.translationBatch.modelHints(w.lastInvokedModel)
+	next, found, err := w.repository.PeekPostProcessingJob(ctx, TranslationModelStep, contracts, options, now)
+	if err != nil {
+		return status, err
+	}
+	if found {
+		status.NextModel, status.NextScope, status.NextRequestKind = next.ModelIdentity, next.ScopeKey, next.RequestKind
+	}
+	if status.Model != "" {
+		options.PreferredModel, options.YieldModel = "", status.Model
+		next, found, err = w.repository.PeekPostProcessingJob(ctx, TranslationModelStep, contracts, options, now)
+		if err != nil {
+			return status, err
+		}
+		if found && next.ModelIdentity != status.Model {
+			status.NextSwitchModel = next.ModelIdentity
+		}
+	}
+	return status, nil
+}
+
 type translationModelBatch struct {
 	model    string
 	attempts int
