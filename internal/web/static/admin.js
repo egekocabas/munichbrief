@@ -117,6 +117,29 @@
     const queue = status.queue || {};
     const cycle = queue.active_cycle;
     setText(connection, "Live");
+    const running = status.running;
+    const runningKey = running?.key || "";
+    const runningSummary = panel.querySelector("[data-running-summary]");
+    if (runningSummary) runningSummary.dataset.running = String(Boolean(running));
+    setText(panel.querySelector("[data-running-key]"), runningKey || (cycle ? "Waiting for eligible work" : "Idle"));
+    setText(panel.querySelector("[data-running-model]"), running ? `${running.model} · incident #${running.incident_id}` : "No request in progress");
+    for (const card of panel.querySelectorAll("[data-execution-key]")) {
+      const isRunning = card.dataset.executionKey === runningKey;
+      card.dataset.running = String(isRunning);
+      const badge = card.querySelector("[data-running-badge]");
+      if (badge) badge.hidden = !isRunning;
+    }
+    const batch = status.translation_batch || {};
+    setText(panel.querySelector("[data-batch-model]"), batch.model || "No active batch");
+    setText(panel.querySelector("[data-batch-count]"), batch.limit ? `${batch.attempts || 0} / ${batch.limit} attempts` : "Batch status unavailable");
+    const batchProgress = panel.querySelector("[data-batch-progress]");
+    if (batchProgress instanceof HTMLProgressElement) {
+      batchProgress.max = Number(batch.limit) || 1;
+      batchProgress.value = Math.min(Number(batch.attempts) || 0, batchProgress.max);
+    }
+    setText(panel.querySelector("[data-batch-next]"), batch.next_model || "No eligible job");
+    setText(panel.querySelector("[data-batch-next-detail]"), batch.next_model ? `${batch.next_scope} · ${batch.next_request_kind}` : "Waiting for queued work to become eligible");
+    setText(panel.querySelector("[data-batch-switch]"), batch.next_switch_model || "No other eligible model");
     setText(worker, cycle ? `Cycle #${cycle.id} · ${cycle.kind} · ${cycle.status}` : "Idle");
     const incident = queue.current_incident_id ? ` · incident #${queue.current_incident_id}` : "";
     setText(activeStep, queue.active_step_key ? `${queue.active_step_key} · ${queue.active_model}${incident}` : "No active model");
@@ -165,6 +188,7 @@
       const card = panel.querySelector(`[data-step-stat="${CSS.escape(step.step_key)}"]`);
       if (!card) continue;
       const active = activeSteps.get(step.step_key) || {};
+      setText(card.querySelector("[data-step-brief]"), `Queued ${active.queued || 0} · Retrying ${active.retrying || 0}`);
       const average = Number(step.average_duration_seconds || 0).toFixed(1);
       const last = step.last_success ? new Date(step.last_success).toLocaleString() : "never";
       setText(card.querySelector("[data-active-step-stats]"), cycle
@@ -176,6 +200,7 @@
       const key = `${processor.processor_key}/${processor.scope_key}`;
       const card = panel.querySelector(`[data-post-processing-stat="${CSS.escape(key)}"]`);
       if (!card) continue;
+      setText(card.querySelector("[data-post-processing-brief]"), `Queued ${processor.pending || 0} · Retrying ${processor.retrying || 0}`);
       const counters = Object.entries(processor.counters || {}).map(([name, value]) => ` · ${name} ${value}`).join("");
       setText(card.querySelector("[data-post-processing-details]"), `Pending ${processor.pending || 0} · Running ${processor.running || 0} · Retrying ${processor.retrying || 0} · Review ${processor.needs_review || 0} · Failed ${processor.failed || 0} · Skipped ${processor.skipped || 0} · Completed ${processor.succeeded || 0}${counters}`);
       const runningStartedAt = processor.running_started_at && new Date(processor.running_started_at);
@@ -255,6 +280,13 @@
     } catch (_error) {
       failures += 1;
       setText(connection, failures > 1 ? "Disconnected" : "Stale");
+      setText(panel.querySelector("[data-running-key]"), "Live status unavailable");
+      setText(panel.querySelector("[data-running-model]"), "Showing the last received queue snapshot");
+      for (const card of panel.querySelectorAll("[data-running]")) card.dataset.running = "false";
+      for (const badge of panel.querySelectorAll("[data-running-badge]")) badge.hidden = true;
+      setText(panel.querySelector("[data-batch-next]"), "Preview unavailable");
+      setText(panel.querySelector("[data-batch-next-detail]"), "Waiting for connection");
+      setText(panel.querySelector("[data-batch-switch]"), "Preview unavailable");
       schedule(Math.min(30000, 2000 * (2 ** Math.min(failures, 4))));
     } finally {
       requestInFlight = false;
@@ -396,6 +428,15 @@ const initializeOperationsRefresh = ({regionSelector, intervalAttribute, connect
     } catch (_error) {
       failures += 1;
       setConnection("Stale");
+      for (const card of region.querySelectorAll("[data-running]")) card.dataset.running = "false";
+      for (const badge of region.querySelectorAll("[data-running-badge]")) badge.hidden = true;
+      const runningKey = region.querySelector("[data-running-key]");
+      if (runningKey) runningKey.textContent = "Live status unavailable";
+      const runningModel = region.querySelector("[data-running-model]");
+      if (runningModel) runningModel.textContent = "Showing the last received queue snapshot";
+      const nextDetail = region.querySelector("[data-batch-next-detail]");
+      if (nextDetail) nextDetail.textContent = "Waiting for connection";
+      for (const preview of region.querySelectorAll("[data-batch-next], [data-batch-switch]")) preview.textContent = "Preview unavailable";
       schedule(Math.min(30000, interval * (2 ** Math.min(failures, 3))));
     } finally {
       requestInFlight = false;

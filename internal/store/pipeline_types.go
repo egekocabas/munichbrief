@@ -121,6 +121,16 @@ type PostProcessingScopeContract struct {
 // prompt and immutable value contract.
 type PostProcessingContract map[string]PostProcessingScopeContract
 
+// PostProcessingClaimOptions controls eligibility and model affinity within each
+// request-priority group. Zero model hints preserve FIFO ordering. YieldModel
+// ranks behind alternatives but remains eligible when no alternative exists.
+type PostProcessingClaimOptions struct {
+	AllowScheduled bool
+	BlockedModels  []string
+	PreferredModel string
+	YieldModel     string
+}
+
 // PostProcessingJob is one independently claimed job for an immutable current
 // canonical presentation.
 type PostProcessingJob struct {

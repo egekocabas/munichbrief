@@ -879,3 +879,24 @@ html[data-theme="dark"]:has(.reader) {
  .contact-confirmation svg { width:1.5rem; height:1.5rem; flex:none; margin-top:.05rem; }
  .contact-confirmation span { min-width:0; overflow-wrap:anywhere; }
 }
+
+/* Live execution uses both a label and a static highlight in either theme. */
+[data-execution-key][data-running="true"],
+[data-running-summary][data-running="true"] {
+  border-color: var(--theme-color-civic);
+  background: color-mix(in srgb, var(--theme-color-civic) 9%, var(--theme-color-paper));
+  box-shadow: inset 3px 0 0 var(--theme-color-civic);
+}
+
+.admin-running-badge {
+  display: inline-flex;
+  flex: none;
+  border-radius: 9999px;
+  padding: 0.15rem 0.5rem;
+  background: var(--theme-color-civic);
+  color: var(--theme-color-on-accent);
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+
+.admin-running-badge[hidden] { display: none; }

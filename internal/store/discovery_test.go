@@ -168,7 +168,7 @@ func TestDiscoveryRechecksSkippedInputsAndAllowsForcedReplacement(t *testing.T) 
 	if queued, err := database.QueuePostProcessingForAll(ctx, "fixture", []PostProcessingPlan{plan}, false, now); err != nil || queued != 1 {
 		t.Fatalf("discovery after input repair = %d/%v", queued, err)
 	}
-	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract(plan.ScopeKey, plan.PromptVersion, []string{"title", "summary"}, plan.InputKinds...), true, nil, now)
+	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract(plan.ScopeKey, plan.PromptVersion, []string{"title", "summary"}, plan.InputKinds...), PostProcessingClaimOptions{AllowScheduled: true}, now)
 	if err != nil || !found {
 		t.Fatalf("claim repaired job = %t/%v", found, err)
 	}
@@ -184,7 +184,7 @@ func TestDiscoveryRechecksSkippedInputsAndAllowsForcedReplacement(t *testing.T) 
 	if queued, err := database.QueuePostProcessingForAll(ctx, "fixture", []PostProcessingPlan{plan}, true, now); err != nil || queued != 1 {
 		t.Fatalf("forced replacement with automatic work disabled = %d/%v", queued, err)
 	}
-	job, found, err = database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract(plan.ScopeKey, plan.PromptVersion, []string{"title", "summary"}, plan.InputKinds...), false, nil, now)
+	job, found, err = database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract(plan.ScopeKey, plan.PromptVersion, []string{"title", "summary"}, plan.InputKinds...), PostProcessingClaimOptions{}, now)
 	if err != nil || !found || job.RequestKind != "manual" {
 		t.Fatalf("claim forced replacement = %#v/%t/%v", job, found, err)
 	}

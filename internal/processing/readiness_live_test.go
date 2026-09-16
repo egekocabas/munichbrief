@@ -344,7 +344,7 @@ func readinessRunCase(t *testing.T, directory, baseURL, model, adapter, language
 	}
 	_, scope, _ := worker.postProcessors.Scope(TranslationModelStep, language)
 	contracts := store.PostProcessingContract{language: {PromptVersion: scope.Step.PromptVersion, InputKinds: scope.Step.InputKinds, OutputKinds: scope.Step.OutputKinds}}
-	job, found, err := database.ClaimPostProcessingJob(ctx, TranslationModelStep, contracts, true, nil, now)
+	job, found, err := database.ClaimPostProcessingJob(ctx, TranslationModelStep, contracts, store.PostProcessingClaimOptions{AllowScheduled: true}, now)
 	if err != nil || !found {
 		t.Fatalf("claim found=%v err=%v", found, err)
 	}

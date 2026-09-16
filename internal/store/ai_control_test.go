@@ -155,7 +155,7 @@ func TestAutomaticControlGatesScheduledPostProcessingClaimsAndDiscovery(t *testi
 		t.Fatal(err)
 	}
 	contract := testPostProcessingContract("en", plan.PromptVersion, []string{"title", "summary"}, plan.InputKinds...)
-	if _, found, err := database.ClaimPostProcessingJob(ctx, "translation", contract, true, nil, now.Add(2*time.Second)); err != nil || found {
+	if _, found, err := database.ClaimPostProcessingJob(ctx, "translation", contract, PostProcessingClaimOptions{AllowScheduled: true}, now.Add(2*time.Second)); err != nil || found {
 		t.Fatalf("disabled scheduled post-processing claim found=%t err=%v", found, err)
 	}
 	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{{ProcessorKey: "category_verification", ScopeKey: "default", PromptVersion: "category-v1", Model: "verify:4b", InputKinds: []string{"title_de", "summary_de"}}}, "scheduled", false, now.Add(2*time.Second)); err != nil || queued != 0 {
@@ -192,7 +192,7 @@ func TestStartupRecoveryWhileDisabledRequeuesWithoutRestartingAutomaticWork(t *t
 		t.Fatalf("queue scheduled post-processing = %d/%v", queued, err)
 	}
 	contract := testPostProcessingContract("en", postPlan.PromptVersion, []string{"title", "summary"}, postPlan.InputKinds...)
-	postJob, found, err := database.ClaimPostProcessingJob(ctx, "translation", contract, true, nil, now)
+	postJob, found, err := database.ClaimPostProcessingJob(ctx, "translation", contract, PostProcessingClaimOptions{AllowScheduled: true}, now)
 	if err != nil || !found {
 		t.Fatalf("claim post-processing job = %#v/%t/%v", postJob, found, err)
 	}
@@ -211,7 +211,7 @@ func TestStartupRecoveryWhileDisabledRequeuesWithoutRestartingAutomaticWork(t *t
 	if _, found, err := database.ClaimPipelineJob(ctx, cycle.ID, 0, now.Add(3*time.Second)); err != nil || found {
 		t.Fatalf("disabled recovered canonical claim found=%t err=%v", found, err)
 	}
-	if _, found, err := database.ClaimPostProcessingJob(ctx, "translation", contract, true, nil, now.Add(3*time.Second)); err != nil || found {
+	if _, found, err := database.ClaimPostProcessingJob(ctx, "translation", contract, PostProcessingClaimOptions{AllowScheduled: true}, now.Add(3*time.Second)); err != nil || found {
 		t.Fatalf("disabled recovered post-processing claim found=%t err=%v", found, err)
 	}
 	var cycleStatus, canonicalStatus, postStatus string
@@ -252,7 +252,7 @@ func TestCancelAllAIWorkIsAtomicAuditableAndIdempotent(t *testing.T) {
 	if queued, err := database.QueuePostProcessingForRun(ctx, completedRun, []PostProcessingPlan{postPlan}, "manual", false, now); err != nil || queued != 1 {
 		t.Fatalf("queue post-processing = %d/%v", queued, err)
 	}
-	postJob, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", postPlan.PromptVersion, []string{"title", "summary"}, postPlan.InputKinds...), false, nil, now)
+	postJob, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", postPlan.PromptVersion, []string{"title", "summary"}, postPlan.InputKinds...), PostProcessingClaimOptions{}, now)
 	if err != nil || !found {
 		t.Fatalf("claim post-processing = %#v/%t/%v", postJob, found, err)
 	}
@@ -328,7 +328,7 @@ func TestCancelAllPreservesCanonicalAndPostProcessingCompletionsThatCommitFirst(
 	if queued, err := database.QueuePostProcessingForRun(ctx, completedRun, []PostProcessingPlan{postPlan}, "manual", false, now); err != nil || queued != 1 {
 		t.Fatalf("queue post-processing = %d/%v", queued, err)
 	}
-	postJob, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", postPlan.PromptVersion, []string{"title", "summary"}, postPlan.InputKinds...), false, nil, now)
+	postJob, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", postPlan.PromptVersion, []string{"title", "summary"}, postPlan.InputKinds...), PostProcessingClaimOptions{}, now)
 	if err != nil || !found {
 		t.Fatalf("claim post-processing = %#v/%t/%v", postJob, found, err)
 	}

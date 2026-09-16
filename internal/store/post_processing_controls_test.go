@@ -133,7 +133,7 @@ func TestDisabledProcessorBlocksAutomaticButAllowsManualAndReenableDiscoversBack
 		t.Fatalf("manual queue while processor disabled = %d/%v", queued, err)
 	}
 	contract := testPostProcessingContract(plan.ScopeKey, plan.PromptVersion, []string{"title", "summary"}, plan.InputKinds...)
-	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, contract, true, nil, now.Add(3*time.Minute))
+	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, contract, PostProcessingClaimOptions{AllowScheduled: true}, now.Add(3*time.Minute))
 	if err != nil || !found || job.RequestKind != "manual" {
 		t.Fatalf("manual claim while processor disabled = %#v/%t/%v", job, found, err)
 	}
@@ -149,7 +149,7 @@ func TestDisabledProcessorBlocksAutomaticButAllowsManualAndReenableDiscoversBack
 	if _, err := database.db.ExecContext(ctx, `UPDATE post_processing_processor_controls SET enabled=0 WHERE processor_key=?`, plan.ProcessorKey); err != nil {
 		t.Fatal(err)
 	}
-	if job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, contract, true, nil, now.Add(6*time.Minute)); err != nil || found {
+	if job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, contract, PostProcessingClaimOptions{AllowScheduled: true}, now.Add(6*time.Minute)); err != nil || found {
 		t.Fatalf("claim-time processor gate = %#v/%t/%v", job, found, err)
 	}
 	if err := database.db.QueryRowContext(ctx, `SELECT status_reason FROM post_processing_jobs WHERE presentation_run_id=? AND request_kind='scheduled' ORDER BY id DESC LIMIT 1`, runs[0]).Scan(&reason); err != nil || reason != PostProcessingStatusReasonProcessorDisabled {
@@ -170,7 +170,7 @@ func TestDisableProcessorLetsRunningAutomaticJobFinish(t *testing.T) {
 		t.Fatalf("queue automatic work = %d/%v", queued, err)
 	}
 	contract := testPostProcessingContract(plan.ScopeKey, plan.PromptVersion, []string{"title", "summary"}, plan.InputKinds...)
-	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, contract, true, nil, now.Add(time.Minute))
+	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, contract, PostProcessingClaimOptions{AllowScheduled: true}, now.Add(time.Minute))
 	if err != nil || !found {
 		t.Fatalf("claim automatic work = %#v/%t/%v", job, found, err)
 	}
@@ -198,7 +198,7 @@ func TestDisabledScopeBlocksAutomaticButAllowsManualWork(t *testing.T) {
 	if queued, err := database.QueuePostProcessingForRun(ctx, runs[0], []PostProcessingPlan{plan}, "scheduled", false, now); err != nil || queued != 0 {
 		t.Fatalf("disabled scheduled queue = %d/%v", queued, err)
 	}
-	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract(plan.ScopeKey, plan.PromptVersion, []string{"title", "summary"}, plan.InputKinds...), true, nil, now)
+	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract(plan.ScopeKey, plan.PromptVersion, []string{"title", "summary"}, plan.InputKinds...), PostProcessingClaimOptions{AllowScheduled: true}, now)
 	if err != nil || !found || job.RequestKind != "manual" {
 		t.Fatalf("manual claim while disabled = %#v/%t/%v", job, found, err)
 	}
@@ -266,7 +266,7 @@ func TestDisableLetsRunningAutomaticJobFinish(t *testing.T) {
 		t.Fatalf("queue automatic work = %d/%v", queued, err)
 	}
 	contract := testPostProcessingContract(plan.ScopeKey, plan.PromptVersion, []string{"title", "summary"}, plan.InputKinds...)
-	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, contract, true, nil, now.Add(time.Minute))
+	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, contract, PostProcessingClaimOptions{AllowScheduled: true}, now.Add(time.Minute))
 	if err != nil || !found {
 		t.Fatalf("claim automatic work = %#v/%t/%v", job, found, err)
 	}

@@ -36,3 +36,28 @@
   </form>
 </dialog>
 {{end}}
+
+{{define "admin-running-summary"}}
+<div class="admin-running-summary mt-4 rounded-lg border border-rule bg-newsprint/60 p-4" data-running-summary data-running="{{if .Running}}true{{else}}false{{end}}">
+  <p class="text-xs font-extrabold uppercase tracking-wider text-civic">Running now</p>
+  <p class="admin-provenance mt-2 text-lg font-bold" data-running-key>{{if .Running}}{{.Running.Key}}{{else if .Queue.ActiveCycle}}Waiting for eligible work{{else}}Idle{{end}}</p>
+  <p class="admin-provenance mt-1 text-sm text-muted" data-running-model>{{with .Running}}{{.Model}} · incident #{{.IncidentID}}{{else}}No request in progress{{end}}</p>
+</div>
+{{end}}
+
+{{define "admin-translation-batch"}}
+<section class="mt-4 rounded-lg border border-rule bg-paper p-4" aria-label="Translation batch" data-translation-batch>
+  <div class="flex flex-wrap items-center justify-between gap-2"><h3 class="font-bold">Translation batch</h3><span class="text-xs text-muted">Manual requests first</span></div>
+  <dl class="mt-3 grid gap-4 sm:grid-cols-3">
+    <div><dt class="text-xs font-bold uppercase text-muted">Current model</dt><dd class="admin-provenance mt-1 font-bold"><span data-batch-model>{{if .Model}}{{.Model}}{{else}}No active batch{{end}}</span>
+      <div class="font-normal">
+      <p class="mt-2 text-sm tabular-nums" data-batch-count>{{if .Limit}}{{.Attempts}} / {{.Limit}} attempts{{else}}Batch status unavailable{{end}}</p>
+      <progress class="admin-progress mt-2 h-2" data-batch-progress max="{{if .Limit}}{{.Limit}}{{else}}1{{end}}" value="{{.Attempts}}" aria-label="Translation batch attempts">{{.Attempts}}</progress>
+      </div></dd>
+    </div>
+    <div><dt class="text-xs font-bold uppercase text-muted">Next translation</dt><dd class="admin-provenance mt-1 font-bold"><span data-batch-next>{{if .NextModel}}{{.NextModel}}{{else}}No eligible job{{end}}</span><p class="mt-1 text-xs font-normal text-muted" data-batch-next-detail>{{if .NextModel}}{{.NextScope}} · {{.NextRequestKind}}{{else}}Waiting for queued work to become eligible{{end}}</p></dd></div>
+    <div><dt class="text-xs font-bold uppercase text-muted">Next model switch</dt><dd class="admin-provenance mt-1 font-bold"><span data-batch-switch>{{if .NextSwitchModel}}{{.NextSwitchModel}}{{else}}No other eligible model{{end}}</span><p class="mt-1 text-xs font-normal text-muted">After the current model’s turn, or sooner for manual work.</p></dd></div>
+  </dl>
+  <p class="mt-3 text-xs text-muted">The count includes the current attempt. At the limit, the same model can continue if no other model is ready. Previews cover queued translations; other processing and new requests can change the order.</p>
+</section>
+{{end}}
