@@ -81,7 +81,7 @@ func seedV2Presentation(t *testing.T, database *store.Store, presentation testPr
 	if queued, err := database.QueuePostProcessingForRun(ctx, german.PresentationRunID, []store.PostProcessingPlan{translationPlan}, "manual", false, now); err != nil || queued != 1 {
 		t.Fatalf("queue test translation = %d/%v", queued, err)
 	}
-	translation, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", translationPlan.PromptVersion, []string{"title", "summary"}, "title_de", "summary_de"), false, nil, now)
+	translation, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", translationPlan.PromptVersion, []string{"title", "summary"}, "title_de", "summary_de"), store.PostProcessingClaimOptions{}, now)
 	if err != nil || !found {
 		t.Fatalf("claim test translation = %#v/%t/%v", translation, found, err)
 	}

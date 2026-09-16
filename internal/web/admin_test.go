@@ -750,7 +750,7 @@ func TestAdminTranslationOperationsOverviewDrilldownsAndActions(t *testing.T) {
 	if queued, err := database.QueueIncidentPostProcessing(context.Background(), job.IncidentID, []store.PostProcessingPlan{translationPlan}, now.Add(time.Minute)); err != nil || queued != 1 {
 		t.Fatalf("queue replacement translation = %d/%v", queued, err)
 	}
-	replacement, found, err := database.ClaimPostProcessingJob(context.Background(), processing.TranslationModelStep, testPostProcessingContract("en", translationPlan.PromptVersion, []string{"title", "summary"}, translationPlan.InputKinds...), false, nil, now.Add(2*time.Minute))
+	replacement, found, err := database.ClaimPostProcessingJob(context.Background(), processing.TranslationModelStep, testPostProcessingContract("en", translationPlan.PromptVersion, []string{"title", "summary"}, translationPlan.InputKinds...), store.PostProcessingClaimOptions{}, now.Add(2*time.Minute))
 	if err != nil || !found {
 		t.Fatalf("claim replacement translation = %#v/%t/%v", replacement, found, err)
 	}
@@ -1185,7 +1185,7 @@ func TestAdminPipelineHistoryCombinesCanonicalAndPostProcessingJobs(t *testing.T
 	if queued, err := database.QueuePostProcessingForRun(ctx, german.PresentationRunID, []store.PostProcessingPlan{translationPlan}, "manual", false, requestedAt); err != nil || queued != 1 {
 		t.Fatalf("queue history translation = %d/%v", queued, err)
 	}
-	translation, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", translationPlan.PromptVersion, []string{"title", "summary"}, "title_de", "summary_de"), false, nil, requestedAt)
+	translation, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", translationPlan.PromptVersion, []string{"title", "summary"}, "title_de", "summary_de"), store.PostProcessingClaimOptions{}, requestedAt)
 	if err != nil || !found {
 		t.Fatalf("claim history translation = %#v/%t/%v", translation, found, err)
 	}
@@ -1196,7 +1196,7 @@ func TestAdminPipelineHistoryCombinesCanonicalAndPostProcessingJobs(t *testing.T
 	if queued, err := database.QueuePostProcessingForRun(ctx, german.PresentationRunID, []store.PostProcessingPlan{verificationPlan}, "manual", false, requestedAt); err != nil || queued != 1 {
 		t.Fatalf("queue history category verification = %d/%v", queued, err)
 	}
-	verification, found, err := database.ClaimPostProcessingJob(ctx, "category_verification", testPostProcessingContract("default", verificationPlan.PromptVersion, []string{"is_correct", "corrected_category"}, "title_de", "summary_de", "category"), false, nil, requestedAt)
+	verification, found, err := database.ClaimPostProcessingJob(ctx, "category_verification", testPostProcessingContract("default", verificationPlan.PromptVersion, []string{"is_correct", "corrected_category"}, "title_de", "summary_de", "category"), store.PostProcessingClaimOptions{}, requestedAt)
 	if err != nil || !found {
 		t.Fatalf("claim history category verification = %#v/%t/%v", verification, found, err)
 	}
@@ -1278,7 +1278,7 @@ func TestAdminShowsPublicAssistanceVerificationControlsAndSafeHistory(t *testing
 	if queued, err := database.QueuePostProcessingForRun(ctx, job.PresentationRunID, []store.PostProcessingPlan{plan}, "manual", false, now.Add(time.Minute)); err != nil || queued != 1 {
 		t.Fatalf("queue assistance verification = %d/%v", queued, err)
 	}
-	verification, found, err := database.ClaimPostProcessingJob(ctx, processing.PublicAssistanceVerificationStep, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, plan.InputKinds...), false, nil, now.Add(2*time.Minute))
+	verification, found, err := database.ClaimPostProcessingJob(ctx, processing.PublicAssistanceVerificationStep, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, plan.InputKinds...), store.PostProcessingClaimOptions{}, now.Add(2*time.Minute))
 	if err != nil || !found {
 		t.Fatalf("claim assistance verification = %#v/%t/%v", verification, found, err)
 	}
@@ -1338,7 +1338,7 @@ func TestAdminVerificationOperationsShowsRetainedResultAndProtectedFailureDetail
 	if queued, err := database.QueuePostProcessingForRun(ctx, presentation.PresentationRunID, []store.PostProcessingPlan{plan}, "manual", false, now.Add(time.Minute)); err != nil || queued != 1 {
 		t.Fatalf("queue category verification = %d/%v", queued, err)
 	}
-	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract(plan.ScopeKey, plan.PromptVersion, []string{"is_correct", "corrected_category"}, plan.InputKinds...), false, nil, now.Add(2*time.Minute))
+	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract(plan.ScopeKey, plan.PromptVersion, []string{"is_correct", "corrected_category"}, plan.InputKinds...), store.PostProcessingClaimOptions{}, now.Add(2*time.Minute))
 	if err != nil || !found {
 		t.Fatalf("claim category verification = %#v/%t/%v", job, found, err)
 	}
@@ -1348,7 +1348,7 @@ func TestAdminVerificationOperationsShowsRetainedResultAndProtectedFailureDetail
 	if queued, err := database.QueueIncidentPostProcessing(ctx, presentation.IncidentID, []store.PostProcessingPlan{plan}, now.Add(4*time.Minute)); err != nil || queued != 1 {
 		t.Fatalf("queue category replacement = %d/%v", queued, err)
 	}
-	replacement, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract(plan.ScopeKey, plan.PromptVersion, []string{"is_correct", "corrected_category"}, plan.InputKinds...), false, nil, now.Add(5*time.Minute))
+	replacement, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract(plan.ScopeKey, plan.PromptVersion, []string{"is_correct", "corrected_category"}, plan.InputKinds...), store.PostProcessingClaimOptions{}, now.Add(5*time.Minute))
 	if err != nil || !found {
 		t.Fatalf("claim category replacement = %#v/%t/%v", replacement, found, err)
 	}
@@ -1454,7 +1454,7 @@ func TestAdminVerificationOperationsDiscoversFutureRegisteredVerifier(t *testing
 	if queued, err := database.QueuePostProcessingForRun(ctx, presentation.PresentationRunID, []store.PostProcessingPlan{plan}, "manual", false, now.Add(time.Minute)); err != nil || queued != 1 {
 		t.Fatalf("queue future verification = %d/%v", queued, err)
 	}
-	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract(plan.ScopeKey, plan.PromptVersion, []string{"is_correct", "corrected_quality_note"}, plan.InputKinds...), false, nil, now.Add(2*time.Minute))
+	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract(plan.ScopeKey, plan.PromptVersion, []string{"is_correct", "corrected_quality_note"}, plan.InputKinds...), store.PostProcessingClaimOptions{}, now.Add(2*time.Minute))
 	if err != nil || !found {
 		t.Fatalf("claim future verification = %#v/%t/%v", job, found, err)
 	}

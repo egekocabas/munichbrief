@@ -43,7 +43,7 @@ type PipelineRepository interface {
 	QueueIncidentPostProcessing(context.Context, int64, []store.PostProcessingPlan, time.Time) (int, error)
 	QueuePostProcessingForAll(context.Context, string, []store.PostProcessingPlan, bool, time.Time) (int, error)
 	QueueUnpublishedPostProcessingForAll(context.Context, string, []store.PostProcessingPlan, time.Time) (int, error)
-	ClaimPostProcessingJob(context.Context, string, store.PostProcessingContract, bool, []string, time.Time) (store.PostProcessingJob, bool, error)
+	ClaimPostProcessingJob(context.Context, string, store.PostProcessingContract, store.PostProcessingClaimOptions, time.Time) (store.PostProcessingJob, bool, error)
 	CompletePostProcessingJob(context.Context, store.PostProcessingJob, []store.PipelineValue, string, string, time.Time) error
 	FailPostProcessingJob(context.Context, store.PostProcessingJob, string, string, *time.Time, time.Time, error) error
 	RecoverPostProcessing(context.Context, time.Time) error
@@ -229,6 +229,9 @@ type PipelineWorker struct {
 	executionMu         sync.Mutex
 	executionGeneration uint64
 	currentCancel       context.CancelFunc
+	// Model hints and translation batches are protected by executionMu.
+	lastInvokedModel string
+	translationBatch translationModelBatch
 }
 
 // NewPipelineWorker validates dependencies and ensures all registered step
@@ -484,6 +487,8 @@ func (w *PipelineWorker) CancelAll(ctx context.Context) (store.PipelineCancellat
 		return store.PipelineCancellationResult{}, err
 	}
 	w.executionGeneration++
+	w.translationBatch = translationModelBatch{}
+	w.lastInvokedModel = ""
 	if w.currentCancel != nil {
 		w.currentCancel()
 		w.currentCancel = nil
@@ -707,15 +712,28 @@ func (w *PipelineWorker) processAvailable(ctx context.Context) {
 				}
 			}
 			w.executionMu.Lock()
-			job, found, err := w.repository.ClaimPostProcessingJob(ctx, definition.Key, contracts, control.AutomaticProcessingEnabled && windowOpen, w.blockedModels(definition.Key, now), now)
+			options := store.PostProcessingClaimOptions{
+				AllowScheduled: control.AutomaticProcessingEnabled && windowOpen,
+				BlockedModels:  w.blockedModels(definition.Key, now),
+			}
+			if definition.Key == TranslationModelStep {
+				options.PreferredModel, options.YieldModel = w.translationBatch.modelHints(w.lastInvokedModel)
+			}
+			job, found, err := w.repository.ClaimPostProcessingJob(ctx, definition.Key, contracts, options, now)
 			if err != nil {
 				w.executionMu.Unlock()
 				w.logger.Error("claim AI post-processing job", "processor", definition.Key, "error", err)
 				return
 			}
 			if !found {
+				if definition.Key == TranslationModelStep {
+					w.translationBatch = translationModelBatch{}
+				}
 				w.executionMu.Unlock()
 				continue
+			}
+			if definition.Key == TranslationModelStep {
+				w.recordTranslationClaimLocked(job, options)
 			}
 			requestCtx, finishExecution := w.beginExecutionLocked(ctx)
 			w.executionMu.Unlock()
@@ -895,6 +913,7 @@ func (w *PipelineWorker) processJob(ctx, requestCtx context.Context, job store.P
 		return w.handleJobFailure(ctx, job, errorOf(ErrorConfiguration, "create step generator: %v", err))
 	}
 	input, inputHash := stepInputAndHash(job, step)
+	w.recordModelInvocation(requestCtx, job.ModelIdentity)
 	output, modelIdentity, err := generator.GenerateStep(requestCtx, step, input)
 	if err != nil {
 		if errors.Is(err, context.Canceled) && requestCtx.Err() != nil && ctx.Err() == nil {
@@ -1024,6 +1043,7 @@ func (w *PipelineWorker) processPostProcessingJob(ctx, requestCtx context.Contex
 		hashParts = append(hashParts, "adapter", adapter)
 	}
 	inputHash := store.HashPipelineInput(hashParts...)
+	w.recordModelInvocation(requestCtx, job.ModelIdentity)
 	output, modelIdentity, err := generator.GenerateStep(requestCtx, scope.Step, StepInput{Values: inputValues})
 	if err != nil {
 		if errors.Is(err, context.Canceled) && requestCtx.Err() != nil && ctx.Err() == nil {

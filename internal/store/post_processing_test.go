@@ -48,7 +48,7 @@ func TestPostProcessingGenericLifecycleKeepsSuccessfulValueDuringForcedReplaceme
 	if queued, err := database.QueuePostProcessingForAll(ctx, "fixture", []PostProcessingPlan{plan}, false, now.Add(3*time.Minute)); err != nil || queued != 0 {
 		t.Fatalf("deduplicated scheduled queue = %d/%v", queued, err)
 	}
-	job, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", plan.PromptVersion, []string{"title", "summary"}, "title_de", "summary_de"), true, nil, now.Add(4*time.Minute))
+	job, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", plan.PromptVersion, []string{"title", "summary"}, "title_de", "summary_de"), PostProcessingClaimOptions{AllowScheduled: true}, now.Add(4*time.Minute))
 	if err != nil || !found || job.PresentationRunID != runID || job.RequestKind != "scheduled" || job.AttemptCount != 1 {
 		t.Fatalf("scheduled claim = %#v/%t/%v", job, found, err)
 	}
@@ -80,7 +80,7 @@ func TestPostProcessingGenericLifecycleKeepsSuccessfulValueDuringForcedReplaceme
 	if err != nil || visible.AITranslatedTitle != "First title" {
 		t.Fatalf("successful fallback during replacement = %#v/%v", visible, err)
 	}
-	replacement, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", plan.PromptVersion, []string{"title", "summary"}, "title_de", "summary_de"), false, nil, now.Add(7*time.Minute))
+	replacement, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", plan.PromptVersion, []string{"title", "summary"}, "title_de", "summary_de"), PostProcessingClaimOptions{}, now.Add(7*time.Minute))
 	if err != nil || !found || replacement.RequestKind != "manual" {
 		t.Fatalf("manual replacement claim = %#v/%t/%v", replacement, found, err)
 	}
@@ -128,7 +128,7 @@ func TestPostProcessingQueueStatsExplainAutomaticRetryWaits(t *testing.T) {
 	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{plan}, "scheduled", false, now); err != nil || queued != 1 {
 		t.Fatalf("queue scheduled retry fixture = %d/%v", queued, err)
 	}
-	job, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", plan.PromptVersion, []string{"title", "summary"}, plan.InputKinds...), true, nil, now.Add(time.Minute))
+	job, found, err := database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", plan.PromptVersion, []string{"title", "summary"}, plan.InputKinds...), PostProcessingClaimOptions{AllowScheduled: true}, now.Add(time.Minute))
 	if err != nil || !found {
 		t.Fatalf("claim scheduled retry fixture = %#v/%t/%v", job, found, err)
 	}
@@ -156,7 +156,7 @@ func TestPostProcessingQueueStatsExplainAutomaticRetryWaits(t *testing.T) {
 	}
 	assertStats(now.Add(5*time.Minute), 0)
 	assertStats(now.Add(11*time.Minute), 1)
-	job, found, err = database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", plan.PromptVersion, []string{"title", "summary"}, plan.InputKinds...), true, nil, now.Add(11*time.Minute))
+	job, found, err = database.ClaimPostProcessingJob(ctx, "translation", testPostProcessingContract("en", plan.PromptVersion, []string{"title", "summary"}, plan.InputKinds...), PostProcessingClaimOptions{AllowScheduled: true}, now.Add(11*time.Minute))
 	if err != nil || !found {
 		t.Fatalf("claim eligible retry fixture = %#v/%t/%v", job, found, err)
 	}
@@ -288,7 +288,7 @@ func TestPostProcessingRetryRecoveryAndTransactionalCompletion(t *testing.T) {
 	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{plan}, "manual", false, now); err != nil || queued != 1 {
 		t.Fatalf("queue retry job = %d/%v", queued, err)
 	}
-	job, found, err := database.ClaimPostProcessingJob(ctx, "test_processor", testPostProcessingContract("default", plan.PromptVersion, []string{"note"}, "title_de"), false, nil, now)
+	job, found, err := database.ClaimPostProcessingJob(ctx, "test_processor", testPostProcessingContract("default", plan.PromptVersion, []string{"note"}, "title_de"), PostProcessingClaimOptions{}, now)
 	if err != nil || !found {
 		t.Fatalf("claim retry job = %#v/%t/%v", job, found, err)
 	}
@@ -296,17 +296,17 @@ func TestPostProcessingRetryRecoveryAndTransactionalCompletion(t *testing.T) {
 	if err := database.FailPostProcessingJob(ctx, job, "pending", "transient", &retryAt, now, errors.New("private provider failure")); err != nil {
 		t.Fatal(err)
 	}
-	if _, found, err := database.ClaimPostProcessingJob(ctx, "test_processor", testPostProcessingContract("default", plan.PromptVersion, []string{"note"}, "title_de"), false, nil, now.Add(30*time.Second)); err != nil || found {
+	if _, found, err := database.ClaimPostProcessingJob(ctx, "test_processor", testPostProcessingContract("default", plan.PromptVersion, []string{"note"}, "title_de"), PostProcessingClaimOptions{}, now.Add(30*time.Second)); err != nil || found {
 		t.Fatalf("early retry claim = %t/%v", found, err)
 	}
-	retried, found, err := database.ClaimPostProcessingJob(ctx, "test_processor", testPostProcessingContract("default", plan.PromptVersion, []string{"note"}, "title_de"), false, nil, retryAt)
+	retried, found, err := database.ClaimPostProcessingJob(ctx, "test_processor", testPostProcessingContract("default", plan.PromptVersion, []string{"note"}, "title_de"), PostProcessingClaimOptions{}, retryAt)
 	if err != nil || !found || retried.AttemptCount != 2 {
 		t.Fatalf("due retry claim = %#v/%t/%v", retried, found, err)
 	}
 	if err := database.RecoverPostProcessing(ctx, now.Add(2*time.Minute)); err != nil {
 		t.Fatal(err)
 	}
-	recovered, found, err := database.ClaimPostProcessingJob(ctx, "test_processor", testPostProcessingContract("default", plan.PromptVersion, []string{"note"}, "title_de"), false, nil, now.Add(2*time.Minute))
+	recovered, found, err := database.ClaimPostProcessingJob(ctx, "test_processor", testPostProcessingContract("default", plan.PromptVersion, []string{"note"}, "title_de"), PostProcessingClaimOptions{}, now.Add(2*time.Minute))
 	if err != nil || !found || recovered.ID != job.ID || recovered.AttemptCount != 3 {
 		t.Fatalf("recovered claim = %#v/%t/%v", recovered, found, err)
 	}
@@ -379,7 +379,7 @@ func TestPostProcessingSkipsAndDeduplicatesUnavailableRequiredInput(t *testing.T
 	if status != "skipped" || reason != PostProcessingStatusReasonMissingInput || detail != "incident_body" || inputHash != expectedHash || attempts != 0 {
 		t.Fatalf("skip audit = %q/%q/%q/%q/%d, want missing incident body and hash %s", status, reason, detail, inputHash, attempts, expectedHash)
 	}
-	if job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, plan.InputKinds...), false, nil, now); err != nil || found {
+	if job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, plan.InputKinds...), PostProcessingClaimOptions{}, now); err != nil || found {
 		t.Fatalf("skipped verifier became claimable = %#v/%t/%v", job, found, err)
 	}
 	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{plan}, "manual", false, now.Add(time.Minute)); err != nil || queued != 0 {
@@ -436,7 +436,7 @@ func TestPostProcessingClaimSkipsInputThatBecameUnavailable(t *testing.T) {
 		t.Fatalf("queue verifier before source removal = %d/%v", queued, err)
 	}
 	contract := testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, plan.InputKinds...)
-	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, contract, false, nil, now.Add(time.Minute))
+	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, contract, PostProcessingClaimOptions{}, now.Add(time.Minute))
 	if err != nil || !found {
 		t.Fatalf("claim verifier before source removal = %#v/%t/%v", job, found, err)
 	}
@@ -447,7 +447,7 @@ func TestPostProcessingClaimSkipsInputThatBecameUnavailable(t *testing.T) {
 	if _, err := database.db.ExecContext(ctx, `UPDATE incidents SET body_de='' WHERE id=?`, incidentID); err != nil {
 		t.Fatal(err)
 	}
-	if job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, contract, false, nil, retryAt); err != nil || found {
+	if job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, contract, PostProcessingClaimOptions{}, retryAt); err != nil || found {
 		t.Fatalf("unavailable retrying verifier became claimable = %#v/%t/%v", job, found, err)
 	}
 	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{plan}, "manual", false, now.Add(3*time.Minute)); err != nil || queued != 0 {
@@ -519,7 +519,7 @@ func TestPostProcessingClaimsStalePromptWithoutMaterializingCurrentInputs(t *tes
 	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{stalePlan}, "manual", false, now); err != nil || queued != 1 {
 		t.Fatalf("queue stale prompt = %d/%v", queued, err)
 	}
-	job, found, err := database.ClaimPostProcessingJob(ctx, stalePlan.ProcessorKey, testPostProcessingContract("default", "future-v2", []string{"new_output"}, "new_required_input"), false, nil, now)
+	job, found, err := database.ClaimPostProcessingJob(ctx, stalePlan.ProcessorKey, testPostProcessingContract("default", "future-v2", []string{"new_output"}, "new_required_input"), PostProcessingClaimOptions{}, now)
 	if err != nil || !found {
 		t.Fatalf("claim stale prompt = %#v/%t/%v", job, found, err)
 	}
@@ -566,7 +566,7 @@ func TestPublicAssistanceVerificationKeepsLatestSuccessfulResult(t *testing.T) {
 	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{plan}, "manual", false, now.Add(time.Minute)); err != nil || queued != 1 {
 		t.Fatalf("queue first verification = %d/%v", queued, err)
 	}
-	first, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, plan.InputKinds...), false, nil, now.Add(2*time.Minute))
+	first, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, plan.InputKinds...), PostProcessingClaimOptions{}, now.Add(2*time.Minute))
 	if err != nil || !found {
 		t.Fatalf("claim first verification = %#v/%t/%v", first, found, err)
 	}
@@ -581,7 +581,7 @@ func TestPublicAssistanceVerificationKeepsLatestSuccessfulResult(t *testing.T) {
 	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{plan}, "manual", true, now.Add(3*time.Minute+10*time.Second)); err != nil || queued != 1 {
 		t.Fatalf("queue incomplete replacement = %d/%v", queued, err)
 	}
-	incomplete, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, plan.InputKinds...), false, nil, now.Add(3*time.Minute+20*time.Second))
+	incomplete, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, plan.InputKinds...), PostProcessingClaimOptions{}, now.Add(3*time.Minute+20*time.Second))
 	if err != nil || !found {
 		t.Fatalf("claim incomplete replacement = %#v/%t/%v", incomplete, found, err)
 	}
@@ -615,7 +615,7 @@ func TestPublicAssistanceVerificationKeepsLatestSuccessfulResult(t *testing.T) {
 	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{plan}, "manual", true, now.Add(4*time.Minute)); err != nil || queued != 1 {
 		t.Fatalf("queue failed replacement = %d/%v", queued, err)
 	}
-	failed, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, plan.InputKinds...), false, nil, now.Add(5*time.Minute))
+	failed, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, plan.InputKinds...), PostProcessingClaimOptions{}, now.Add(5*time.Minute))
 	if err != nil || !found {
 		t.Fatalf("claim failed replacement = %#v/%t/%v", failed, found, err)
 	}
@@ -632,7 +632,7 @@ func TestPublicAssistanceVerificationKeepsLatestSuccessfulResult(t *testing.T) {
 	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{plan}, "manual", true, now.Add(7*time.Minute)); err != nil || queued != 1 {
 		t.Fatalf("queue later replacement = %d/%v", queued, err)
 	}
-	later, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, plan.InputKinds...), false, nil, now.Add(8*time.Minute))
+	later, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, plan.InputKinds...), PostProcessingClaimOptions{}, now.Add(8*time.Minute))
 	if err != nil || !found {
 		t.Fatalf("claim later replacement = %#v/%t/%v", later, found, err)
 	}
@@ -687,7 +687,7 @@ func TestPublicAssistanceVerificationCutoverRequiresManualHistoricalBackfill(t *
 	if queued, err := database.QueuePostProcessingForAll(ctx, "fixture", []PostProcessingPlan{plan}, true, now.Add(6*time.Minute)); err != nil || queued != 1 {
 		t.Fatalf("manual historical backfill queue = %d/%v, want 1", queued, err)
 	}
-	manual, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, plan.InputKinds...), false, nil, now.Add(7*time.Minute))
+	manual, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types"}, plan.InputKinds...), PostProcessingClaimOptions{}, now.Add(7*time.Minute))
 	if err != nil || !found || manual.IncidentID != oldIncidentID || manual.RequestKind != "manual" {
 		t.Fatalf("historical manual claim = %#v/%t/%v", manual, found, err)
 	}
@@ -714,7 +714,7 @@ func TestGenericAdminVerificationSelectionSupportsAnotherProcessor(t *testing.T)
 	if queued, err := database.QueuePostProcessingForRun(ctx, runID, []PostProcessingPlan{plan}, "manual", false, now); err != nil || queued != 1 {
 		t.Fatalf("queue future verifier = %d/%v", queued, err)
 	}
-	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_value"}, plan.InputKinds...), false, nil, now)
+	job, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_value"}, plan.InputKinds...), PostProcessingClaimOptions{}, now)
 	if err != nil || !found {
 		t.Fatalf("claim future verifier = %#v/%t/%v", job, found, err)
 	}
@@ -734,7 +734,7 @@ func TestGenericAdminVerificationSelectionSupportsAnotherProcessor(t *testing.T)
 	if queued, err := database.QueueIncidentPostProcessing(ctx, incidentID, []PostProcessingPlan{plan}, now.Add(2*time.Minute)); err != nil || queued != 1 {
 		t.Fatalf("queue verifier replacement = %d/%v", queued, err)
 	}
-	replacement, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_value"}, plan.InputKinds...), false, nil, now.Add(3*time.Minute))
+	replacement, found, err := database.ClaimPostProcessingJob(ctx, plan.ProcessorKey, testPostProcessingContract("default", plan.PromptVersion, []string{"is_correct", "corrected_value"}, plan.InputKinds...), PostProcessingClaimOptions{}, now.Add(3*time.Minute))
 	if err != nil || !found {
 		t.Fatalf("claim verifier replacement = %#v/%t/%v", replacement, found, err)
 	}
