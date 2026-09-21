@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "reviewed_at": "2026-09-14",
+  "reviewed_at": "2026-09-21",
   "components": [
     {
       "id": "munichbrief",
@@ -184,7 +184,7 @@
     {
       "id": "go-7",
       "name": "modernc.org/sqlite",
-      "version": "v1.58.0",
+      "version": "v1.59.0",
       "source": "https://modernc.org/sqlite",
       "license": "BSD-3-Clause AND blessing AND MIT",
       "notices": [
@@ -199,7 +199,7 @@
       ],
       "public": true,
       "conditions": "Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.",
-      "reviewed_at": "2026-09-14",
+      "reviewed_at": "2026-09-21",
       "review_status": "reviewed",
       "module": "modernc.org/sqlite",
       "files": []
@@ -332,7 +332,7 @@
     {
       "id": "go-14",
       "name": "modernc.org/libc",
-      "version": "v1.75.6",
+      "version": "v1.75.7",
       "source": "https://modernc.org/libc",
       "license": "BSD-3-Clause AND LicenseRef-libc-third-party",
       "notices": [
@@ -346,7 +346,7 @@
       ],
       "public": true,
       "conditions": "Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.",
-      "reviewed_at": "2026-09-14",
+      "reviewed_at": "2026-09-21",
       "review_status": "reviewed",
       "module": "modernc.org/libc",
       "files": []
@@ -1283,19 +1283,19 @@
       "id": "go-7-0",
       "file": "LICENSES/go-7-0.txt",
       "sha256": "c6fe05491a60ae13bcd223088d2705e36dede24e5587226231d2459ada5c4822",
-      "source": "https://pkg.go.dev/modernc.org/sqlite@v1.58.0?tab=licenses"
+      "source": "https://pkg.go.dev/modernc.org/sqlite@v1.59.0?tab=licenses"
     },
     {
       "id": "go-7-1",
       "file": "LICENSES/go-7-1.txt",
       "sha256": "8438c9c89b849131ead81d5435cb97fcf052df5b0b286dda8a2d4c29e6cb3fd0",
-      "source": "https://pkg.go.dev/modernc.org/sqlite@v1.58.0?tab=licenses"
+      "source": "https://pkg.go.dev/modernc.org/sqlite@v1.59.0?tab=licenses"
     },
     {
       "id": "go-7-2",
       "file": "LICENSES/go-7-2.txt",
       "sha256": "6ce72bbe12d975bd5286e5ab0a064c069693300c47bccbc57bec18485f1621ea",
-      "source": "https://pkg.go.dev/modernc.org/sqlite@v1.58.0?tab=licenses"
+      "source": "https://pkg.go.dev/modernc.org/sqlite@v1.59.0?tab=licenses"
     },
     {
       "id": "go-8-0",
@@ -1331,13 +1331,13 @@
       "id": "go-14-0",
       "file": "LICENSES/go-14-0.txt",
       "sha256": "95ff867eb55a56935fa7492406cfa953fb7c13ca73f4c0a86ae05756b4605600",
-      "source": "https://pkg.go.dev/modernc.org/libc@v1.75.6?tab=licenses"
+      "source": "https://pkg.go.dev/modernc.org/libc@v1.75.7?tab=licenses"
     },
     {
       "id": "go-14-1",
       "file": "LICENSES/go-14-1.txt",
       "sha256": "f597097efe3d97021f89170746bd3a0fb9a8b6fb26b82043ed68a4e0283bee6c",
-      "source": "https://pkg.go.dev/modernc.org/libc@v1.75.6?tab=licenses"
+      "source": "https://pkg.go.dev/modernc.org/libc@v1.75.7?tab=licenses"
     },
     {
       "id": "go-15-0",
@@ -1623,8 +1623,8 @@
   "source_hashes": {
     "Dockerfile": "72a32693a1d95affaceacf02902041283c8184ce0bc5ad931474bd488eeb9e2e",
     "LICENSE": "ff01c1c270a6924fcd28aeddef170c7e8054876348bab5a43753954cd3c6de16",
-    "go.mod": "b287bca888a9a91855099cceb29c3ce4936bb950740efd7a13c52b97677dd150",
-    "go.sum": "ef7df7f81440d2162525203b8552e58cbf09d9690463705522fceb0a7759be73",
+    "go.mod": "71654d54a6ffb1fb6f868dd2b1855506dd1f293a5f9f7084678e81ef66ac7f0f",
+    "go.sum": "0f883c4b5561dedee1c95e49ee81783353ff3383bfbe252eaecbdb7cf834fa35",
     "internal/web/fonts/NotoSansDevanagari-VF.ttf": "9ce7b04f60e363d8870e5997744cf85cf69d38a4d7d129d364d92a3b14b461d7",
     "internal/web/fonts/NotoSansSC-VF.ttf": "a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
     "internal/web/fonts/OFL.txt": "d818eb48f072cc724dae53af004fe891cc7806fa6dbf15f3d34cdc5bb488bbd7",
@@ -1647,5 +1647,5 @@
     "package.json": "d276d6f2c6f95bda9480b99e9a82cfe3b697da128fe8e945f83fa657cf9abccd"
   },
   "container_zoneinfo_sha256": "602843bacd2b0d8b3bc135e0f2cbb7b9c25e4a6d31c53aae3ad35aea558478a7",
-  "credits_updated_at": "2026-09-15"
+  "credits_updated_at": "2026-09-21"
 }

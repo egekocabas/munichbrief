@@ -88,12 +88,12 @@ Preserve bundled copyright, licence and third-party notices when redistributing.
 
 Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.
 
-## modernc.org/sqlite — v1.58.0
+## modernc.org/sqlite — v1.59.0
 
 - Source: [upstream](https://modernc.org/sqlite)
 - Licence: BSD-3-Clause AND blessing AND MIT
 - Included in: binary, container
-- Reviewed: 2026-09-14
+- Reviewed: 2026-09-21
 - [go-7-0](LICENSES/go-7-0.txt)
 - [go-7-1](LICENSES/go-7-1.txt)
 - [go-7-2](LICENSES/go-7-2.txt)
@@ -161,12 +161,12 @@ Preserve bundled copyright, licence and third-party notices when redistributing.
 
 Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.
 
-## modernc.org/libc — v1.75.6
+## modernc.org/libc — v1.75.7
 
 - Source: [upstream](https://modernc.org/libc)
 - Licence: BSD-3-Clause AND LicenseRef-libc-third-party
 - Included in: binary, container
-- Reviewed: 2026-09-14
+- Reviewed: 2026-09-21
 - [go-14-0](LICENSES/go-14-0.txt)
 - [go-14-1](LICENSES/go-14-1.txt)
 
