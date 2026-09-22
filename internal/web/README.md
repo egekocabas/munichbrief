@@ -43,3 +43,16 @@ a template. AI disclosure and provenance are summarized in
 After changing templates or frontend sources, run `npm run build` and commit the
 generated files under `static/`. Add boundary tests for public-host routing,
 admin-disabled behavior, method/origin checks on mutations, and escaped content.
+
+Social cards use `static/social-brand.svg`, which references the current favicon
+and matches the reader header's Georgia wordmark. Regenerate its transparent PNG
+with Georgia installed after changing the logo or wordmark:
+
+```sh
+rsvg-convert internal/web/static/social-brand.svg -o internal/web/static/social-brand.png
+```
+
+The server embeds the PNG, so it needs no system fonts or SVG renderer. Branding
+assets and the renderer design version feed both image ETags and the versioned
+Open Graph/Twitter image URLs. After regenerating the PNG, update the asset hashes
+with `node scripts/licenses.mjs --record-inputs --write`.

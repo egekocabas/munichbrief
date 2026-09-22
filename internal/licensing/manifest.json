@@ -25,7 +25,9 @@
         "internal/web/static/theme.js",
         "internal/web/static/navigation.js",
         "internal/web/static/admin.js",
-        "internal/web/static/favicon.svg"
+        "internal/web/static/favicon.svg",
+        "internal/web/static/social-brand.svg",
+        "internal/web/static/social-brand.png"
       ]
     },
     {
@@ -1642,6 +1644,8 @@
     "internal/web/static/munichbrief-ai-generated-light.svg": "3a2c3b049829b029c8ac9799b1f56fa1451d71d6812fa414493178cc627054f0",
     "internal/web/static/navigation.js": "5d8180554b5b90d675fde48d8f41c839ea59eb5347dfc7bb88a5db316f2c4020",
     "internal/web/static/olympiapark-background.png": "23c86e90902d61f358bbdc5b0d47caddd7f86d72a07f51fae033ef4b91c020e4",
+    "internal/web/static/social-brand.png": "b7eff4f3853d9c324236cfaa16bbd0b32333207c1552c1f324450014733a1960",
+    "internal/web/static/social-brand.svg": "3f861b7ad462f05cb4e124da53ab486479e25bdf6ea679d392eb4f7812cb4c48",
     "internal/web/static/theme.js": "d67879f8af292d69e13930f2049305c6334775498fdd9819bff6a6f561731500",
     "package-lock.json": "f46e68a61e421f1eb8eb114deeb8d8a5c70bfb0bbee4a209d7114dc97d517527",
     "package.json": "d276d6f2c6f95bda9480b99e9a82cfe3b697da128fe8e945f83fa657cf9abccd"

@@ -79,7 +79,7 @@ func (s *Server) base(request *http.Request, language, canonicalRelativeURL stri
 		CanonicalOrigin: canonicalOrigin, CanonicalURL: canonicalOrigin + canonicalRelativeURL,
 		OpenGraphLocale: languageDefinition.OpenGraphLocale,
 		SocialTitle:     "MunichBrief", SocialType: "website",
-		SocialImageURL: canonicalOrigin + "/social/" + language + "/home",
+		SocialImageURL: canonicalOrigin + "/social/" + language + "/home?v=" + s.socialCards.version,
 		SocialImageAlt: s.localization.Text(language, "SocialImageAlt"),
 		Fixture:        s.options.SourceMode == "fixture", Review: s.options.PresentationMode == "review" && !s.isPublicRequest(request),
 	}
@@ -307,7 +307,7 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 	}
 	base.SocialTitle = view.Title + " · MunichBrief"
 	base.SocialType = "article"
-	base.SocialImageURL = fmt.Sprintf("%s/social/%s/incidents/%d", base.CanonicalOrigin, language, id)
+	base.SocialImageURL = fmt.Sprintf("%s/social/%s/incidents/%d?v=%s", base.CanonicalOrigin, language, id, s.socialCards.version)
 	if strings.HasPrefix(base.SocialImageURL, "https://") {
 		base.SocialImageSecureURL = base.SocialImageURL
 	}
@@ -358,7 +358,7 @@ func (s *Server) about(response http.ResponseWriter, request *http.Request) {
 	base.ShowReviewNotice = false
 	base.Description = s.localization.Text(language, "AboutIntro")
 	base.SocialTitle = s.localization.Text(language, "About") + " · MunichBrief"
-	base.SocialImageURL = base.CanonicalOrigin + "/social/" + language + "/about"
+	base.SocialImageURL = base.CanonicalOrigin + "/social/" + language + "/about?v=" + s.socialCards.version
 	if strings.HasPrefix(base.SocialImageURL, "https://") {
 		base.SocialImageSecureURL = base.SocialImageURL
 	}

@@ -39,24 +39,26 @@ import (
 )
 
 const (
-	socialCardWidth     = 1200
-	socialCardHeight    = 630
-	socialTextLeft      = 70
-	socialTextMaxWidth  = 550
-	socialTextRightEdge = socialTextLeft + socialTextMaxWidth
-	socialCardXMP       = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:Iptc4xmpExt="http://iptc.org/std/Iptc4xmpExt/2008-02-29/" xmlns:xmp="http://ns.adobe.com/xap/1.0/" Iptc4xmpExt:DigitalSourceType="` + iptcCompositeWithTrainedAlgorithmicMedia + `" xmp:CreatorTool="MunichBrief"/></rdf:RDF></x:xmpmeta><?xpacket end="w"?>`
+	socialCardWidth  = 1200
+	socialCardHeight = 630
+	// Bump when renderer layout or colors change; asset bytes are hashed below.
+	socialCardDesignVersion = "reader-brand-v1"
+	socialTextLeft          = 70
+	socialTextMaxWidth      = 550
+	socialTextRightEdge     = socialTextLeft + socialTextMaxWidth
+	socialCardXMP           = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:Iptc4xmpExt="http://iptc.org/std/Iptc4xmpExt/2008-02-29/" xmlns:xmp="http://ns.adobe.com/xap/1.0/" Iptc4xmpExt:DigitalSourceType="` + iptcCompositeWithTrainedAlgorithmicMedia + `" xmp:CreatorTool="MunichBrief"/></rdf:RDF></x:xmpmeta><?xpacket end="w"?>`
 )
 
 var (
-	socialInk                = color.RGBA{R: 20, G: 32, B: 43, A: 255}
-	socialCivic              = color.RGBA{R: 23, G: 75, B: 115, A: 255}
-	socialAlert              = color.RGBA{R: 163, G: 58, B: 48, A: 255}
-	socialPaper              = color.RGBA{R: 255, G: 254, B: 250, A: 255}
+	socialInk                = color.RGBA{R: 38, G: 60, B: 53, A: 255}
+	socialCivic              = color.RGBA{R: 50, G: 99, B: 79, A: 255}
+	socialAlert              = color.RGBA{R: 149, G: 97, B: 35, A: 255}
 	sharedSocialCardRenderer = sync.OnceValues(buildSocialCardRenderer)
 )
 
 type socialCardRenderer struct {
 	background     *image.RGBA
+	brand          image.Image
 	aiLabel        image.Image
 	boldFont       *opentype.Font
 	regularFont    *opentype.Font
@@ -114,6 +116,10 @@ func buildSocialCardRenderer() (*socialCardRenderer, error) {
 	}
 	background := image.NewRGBA(image.Rect(0, 0, socialCardWidth, socialCardHeight))
 	draw.Draw(background, background.Bounds(), source, source.Bounds().Min, draw.Src)
+	brand, err := png.Decode(bytes.NewReader(socialCardBrand))
+	if err != nil {
+		return nil, fmt.Errorf("decode social brand: %w", err)
+	}
 	aiLabel, err := png.Decode(bytes.NewReader(euAISocialLabel))
 	if err != nil {
 		return nil, fmt.Errorf("decode EU AI social label: %w", err)
@@ -136,10 +142,10 @@ func buildSocialCardRenderer() (*socialCardRenderer, error) {
 		return nil, fmt.Errorf("parse Noto Sans Devanagari: %w", err)
 	}
 	devanagariFont.SetVariations([]textfont.Variation{{Tag: textopentype.MustNewTag("wght"), Value: 700}})
-	versionInput := append(append(append(append(append([]byte{}, socialCardBackground...), euAISocialLabel...), notoSansSC...), notoSansDevanagari...), socialCardXMP...)
+	versionInput := bytes.Join([][]byte{[]byte(socialCardDesignVersion), socialCardBackground, socialCardBrand, euAISocialLabel, notoSansSC, notoSansDevanagari, []byte(socialCardXMP)}, nil)
 	digest := sha256.Sum256(versionInput)
 	return &socialCardRenderer{
-		background: background, aiLabel: aiLabel, boldFont: boldFont, regularFont: regularFont,
+		background: background, brand: brand, aiLabel: aiLabel, boldFont: boldFont, regularFont: regularFont,
 		chineseFont: chineseFont, devanagariFont: devanagariFont, version: fmt.Sprintf("%x", digest[:8]),
 	}, nil
 }
@@ -148,16 +154,6 @@ func (r *socialCardRenderer) render(spec socialCardSpec) ([]byte, error) {
 	canvas := image.NewRGBA(r.background.Bounds())
 	draw.Draw(canvas, canvas.Bounds(), r.background, image.Point{}, draw.Src)
 
-	logoFace, closeLogo, err := r.face(r.boldFont, 36)
-	if err != nil {
-		return nil, err
-	}
-	defer closeLogo()
-	brandFace, closeBrand, err := r.face(r.boldFont, 30)
-	if err != nil {
-		return nil, err
-	}
-	defer closeBrand()
 	eyebrowFace, closeEyebrow, err := r.face(r.boldFont, 16)
 	if err != nil {
 		return nil, err
@@ -176,9 +172,7 @@ func (r *socialCardRenderer) render(spec socialCardSpec) ([]byte, error) {
 	}
 	defer closeURL()
 
-	drawRoundedRect(canvas, image.Rect(70, 55, 122, 107), 8, socialCivic)
-	drawCenteredText(canvas, logoFace, socialPaper, "M", image.Rect(70, 55, 122, 107), 94)
-	drawText(canvas, brandFace, socialInk, "MunichBrief", 141, 91)
+	draw.Draw(canvas, r.brand.Bounds().Add(image.Pt(socialTextLeft, 49)), r.brand, r.brand.Bounds().Min, draw.Over)
 	if spec.AIGenerated {
 		xdraw.CatmullRom.Scale(canvas, image.Rect(899, 55, 1130, 129), r.aiLabel, r.aiLabel.Bounds(), draw.Over, nil)
 	}
@@ -342,23 +336,6 @@ func (r *socialCardRenderer) face(parsed *opentype.Font, size float64) (xfont.Fa
 func drawText(destination draw.Image, face xfont.Face, textColor color.Color, text string, x, baseline int) {
 	drawer := xfont.Drawer{Dst: destination, Src: image.NewUniform(textColor), Face: face, Dot: fixed.P(x, baseline)}
 	drawer.DrawString(text)
-}
-
-func drawCenteredText(destination draw.Image, face xfont.Face, textColor color.Color, text string, bounds image.Rectangle, baseline int) {
-	width := xfont.MeasureString(face, text).Ceil()
-	drawText(destination, face, textColor, text, bounds.Min.X+(bounds.Dx()-width)/2, baseline)
-}
-
-func drawRoundedRect(destination draw.Image, bounds image.Rectangle, radius int, fill color.Color) {
-	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-		for x := bounds.Min.X; x < bounds.Max.X; x++ {
-			dx := max(bounds.Min.X+radius-x, x-(bounds.Max.X-radius-1), 0)
-			dy := max(bounds.Min.Y+radius-y, y-(bounds.Max.Y-radius-1), 0)
-			if dx*dx+dy*dy <= radius*radius {
-				destination.Set(x, y, fill)
-			}
-		}
-	}
 }
 
 func wrapSocialTitle(value string, face socialTextFace, maxWidth, maxLines int) []string {
