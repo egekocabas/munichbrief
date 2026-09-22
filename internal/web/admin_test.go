@@ -436,7 +436,7 @@ func TestAdminControlsAutomaticProcessingAndCancelsAllWork(t *testing.T) {
 	}
 	page := httptest.NewRecorder()
 	handler.ServeHTTP(page, httptest.NewRequest(http.MethodGet, cancel.Header().Get("Location"), nil))
-	if page.Code != http.StatusOK || !strings.Contains(page.Body.String(), "Automatic AI processing disabled") || !strings.Contains(page.Body.String(), "Automatic processing remains disabled") || !strings.Contains(page.Body.String(), "Processing window open · automatic processing disabled · manual requests remain available") {
+	if page.Code != http.StatusOK || !strings.Contains(page.Body.String(), "Automatic processing: disabled") || !strings.Contains(page.Body.String(), "Automatic processing remains disabled") || !strings.Contains(page.Body.String(), "Processing window open · automatic processing disabled · manual requests remain available") {
 		t.Fatalf("cancel notice page = %d/%q", page.Code, page.Body.String())
 	}
 	manualAfterCancel := httptest.NewRecorder()
@@ -1301,7 +1301,7 @@ func TestAdminShowsPublicAssistanceVerificationControlsAndSafeHistory(t *testing
 	server.Handler().ServeHTTP(dashboard, httptest.NewRequest(http.MethodGet, "/admin", nil))
 	body := dashboard.Body.String()
 	for _, expected := range []string{
-		"Independent public-assistance verification runs next", "Public assistance verification", processing.PublicAssistanceVerificationPromptVersion,
+		"Public assistance verification", processing.PublicAssistanceVerificationPromptVersion,
 		"public_assistance_verification/default", "Corrected · succeeded", "not_requested / []", `requested / [&#34;identify_person&#34;]`,
 		"Identify a person", "Public assistance verifier provenance", "Recheck public assistance now",
 		`name="processor" type="hidden" value="public_assistance_verification"`,

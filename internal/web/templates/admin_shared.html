@@ -61,3 +61,7 @@
   <p class="mt-3 text-xs text-muted">The count includes the current attempt. At the limit, the same model can continue if no other model is ready. Previews cover queued translations; other processing and new requests can change the order.</p>
 </section>
 {{end}}
+
+{{define "admin-processing-status"}}
+<span class="admin-status-badge" data-processing-state data-state="{{if not .ProcessingEnabled}}unavailable{{else if .Runtime.AutomaticProcessingEnabled}}enabled{{else}}disabled{{end}}">{{if not .ProcessingEnabled}}AI unavailable{{else if .Runtime.AutomaticProcessingEnabled}}Automatic processing: enabled{{else}}Automatic processing: disabled{{end}}</span>
+{{end}}

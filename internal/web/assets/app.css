@@ -900,3 +900,27 @@ html[data-theme="dark"]:has(.reader) {
 }
 
 .admin-running-badge[hidden] { display: none; }
+
+.admin-status-badge, .admin-processing-controls { --admin-state-color: var(--theme-color-muted); }
+:is(.admin-status-badge, .admin-processing-controls)[data-state="enabled"] { --admin-state-color: var(--theme-color-success); }
+:is(.admin-status-badge, .admin-processing-controls)[data-state="disabled"] { --admin-state-color: var(--theme-color-warning); }
+:is(.admin-status-badge, .admin-processing-controls)[data-state="unavailable"] { --admin-state-color: var(--theme-color-alert); }
+.admin-status-badge[data-state="active"] { --admin-state-color: var(--theme-color-civic); }
+.admin-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  padding: .35rem .65rem;
+  border: 1px solid color-mix(in srgb, var(--admin-state-color) 35%, var(--theme-color-paper));
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--admin-state-color) 9%, var(--theme-color-paper));
+  color: var(--admin-state-color);
+  font-size: .75rem;
+  font-weight: 700;
+}
+.admin-status-badge::before { content: ""; flex: none; width: .4rem; height: .4rem; border-radius: 50%; background: currentColor; }
+.admin-processing-controls {
+  border-color: color-mix(in srgb, var(--admin-state-color) 35%, var(--theme-color-paper));
+  box-shadow: inset 3px 0 0 var(--admin-state-color);
+}
+.admin-processing-controls button:disabled { opacity: .5; cursor: not-allowed; }

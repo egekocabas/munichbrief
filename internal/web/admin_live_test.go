@@ -12,8 +12,85 @@ import (
 	"time"
 
 	"github.com/egekocabas/munichbrief/internal/processing"
+	"github.com/egekocabas/munichbrief/internal/store"
 	"golang.org/x/net/html"
 )
+
+func TestAdminProcessingOverviewStates(t *testing.T) {
+	database := fixtureStore(t)
+	runtime, err := (fakeProcessingRequester{database: database}).Status(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, state := range []string{"enabled", "disabled", "unavailable"} {
+		t.Run(state, func(t *testing.T) {
+			runtime.AutomaticProcessingEnabled = state == "enabled"
+			runtime.WindowOpen = false // An enabled switch is distinct from an open window.
+			runtime.Queue.ActiveCycle = &store.PipelineCycle{ID: 42, Kind: "manual", Status: "active"}
+			runtime.Queue.ActiveStepCompleted, runtime.Queue.ActiveStepTotal = 12, 30
+			runtime.Queue.CycleCompleted, runtime.Queue.CycleTotal = 42, 60
+			options := Options{PageSize: 20, SourceMode: "fixture", PresentationMode: "review", AdminEnabled: true}
+			if state != "unavailable" {
+				options.Processor = fakeProcessingRequester{database: database, runtime: &runtime}
+			}
+			server, err := NewWithOptions(database, slog.New(slog.NewTextHandler(io.Discard, nil)), options)
+			if err != nil {
+				t.Fatal(err)
+			}
+			response := httptest.NewRecorder()
+			server.Handler().ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/admin", nil))
+			body := response.Body.String()
+			if response.Code != http.StatusOK {
+				t.Fatalf("status = %d", response.Code)
+			}
+			if strings.Index(body, "Live operations") > strings.Index(body, "Registered pipeline steps") || strings.Index(body, "Cycle details and totals") > strings.Index(body, "Translation batch") {
+				t.Fatal("live canonical progress must precede configuration and translations")
+			}
+			doc, err := html.Parse(strings.NewReader(body))
+			if err != nil {
+				t.Fatal(err)
+			}
+			badges := 0
+			panels := 0
+			var walk func(*html.Node)
+			walk = func(node *html.Node) {
+				attrs := map[string]string{}
+				for _, attr := range node.Attr {
+					attrs[attr.Key] = attr.Val
+				}
+				if _, found := attrs["data-processing-state"]; found {
+					badges++
+					if attrs["data-state"] != state {
+						t.Errorf("processing badge = %q, want %q", attrs["data-state"], state)
+					}
+				}
+				for _, marker := range []string{"data-cycle-overview", "data-processing-controls"} {
+					if _, found := attrs[marker]; found {
+						panels++
+						for parent := node; parent != nil; parent = parent.Parent {
+							if parent.Data == "details" {
+								t.Errorf("%s must remain visible without expanding a disclosure", marker)
+							}
+						}
+					}
+				}
+				if _, found := attrs["data-cycle-progress"]; found && state != "unavailable" && (attrs["max"] != "60" || attrs["value"] != "42") {
+					t.Errorf("initial cycle progress = %v", attrs)
+				}
+				for child := node.FirstChild; child != nil; child = child.NextSibling {
+					walk(child)
+				}
+			}
+			walk(doc)
+			if badges != 2 {
+				t.Fatalf("processing badges = %d, want header and controls", badges)
+			}
+			if panels != 2 {
+				t.Fatalf("visible panels = %d, want cycle overview and controls", panels)
+			}
+		})
+	}
+}
 
 func TestAdminLiveBatchAndRunningHighlights(t *testing.T) {
 	database := fixtureStore(t)

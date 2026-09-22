@@ -43,7 +43,8 @@ rules without reserving jobs. Uninstalled models are omitted from the preview;
 the next-translation preview accounts for the batch reset when their queued
 attempts are deferred. New requests and higher-priority work can change
 the order. Live operations highlights the claimed canonical stage, verification
-scope, or translation language; detailed counts and history are expandable.
+scope, or translation language. The dashboard leads with processing controls and
+expanded canonical cycle progress; per-stage history remains expandable.
 
 ## Key rules
 
