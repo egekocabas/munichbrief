@@ -77,5 +77,6 @@ background size does not reduce the finished card's transfer size by the same
 amount.
 
 The incident AI label is centered on the logo row, in the rectangle from
-`(720, 44)` to `(951, 118)`, leaving the tower clear. Incident headlines use 48px
+`(514, 44)` to `(745, 118)`. Its transparent padding is accounted for so the
+visible badge ends at the incident title column’s right edge, x=720. Incident headlines use 48px
 bold type in a 650px-wide, two-line area and do not include summaries.

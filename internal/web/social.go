@@ -43,7 +43,7 @@ const (
 	socialCardWidth  = 1200
 	socialCardHeight = 630
 	// Bump when renderer layout or colors change; asset bytes are hashed below.
-	socialCardDesignVersion     = "reader-webp-background-header-label-v5"
+	socialCardDesignVersion     = "reader-webp-background-aligned-label-v6"
 	socialTextLeft              = 70
 	socialTextMaxWidth          = 550
 	socialTextRightEdge         = socialTextLeft + socialTextMaxWidth
@@ -200,7 +200,8 @@ func (r *socialCardRenderer) render(spec socialCardSpec) ([]byte, error) {
 
 	draw.Draw(canvas, r.brand.Bounds().Add(image.Pt(socialTextLeft, 49)), r.brand, r.brand.Bounds().Min, draw.Over)
 	if spec.AIGenerated {
-		xdraw.CatmullRom.Scale(canvas, image.Rect(720, 44, 951, 118), r.aiLabel, r.aiLabel.Bounds(), draw.Over, nil)
+		// Account for transparent padding so the visible badge ends at the title edge, x=720.
+		xdraw.CatmullRom.Scale(canvas, image.Rect(514, 44, 745, 118), r.aiLabel, r.aiLabel.Bounds(), draw.Over, nil)
 	}
 
 	spec.Eyebrow = normalizeSocialText(spec.Eyebrow)
