@@ -31,6 +31,7 @@ import (
 	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/math/fixed"
 	"golang.org/x/image/vector"
+	"golang.org/x/image/webp"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	"golang.org/x/text/unicode/norm"
@@ -42,7 +43,7 @@ const (
 	socialCardWidth  = 1200
 	socialCardHeight = 630
 	// Bump when renderer layout or colors change; asset bytes are hashed below.
-	socialCardDesignVersion     = "reader-wide-incident-title-v4"
+	socialCardDesignVersion     = "reader-webp-background-header-label-v5"
 	socialTextLeft              = 70
 	socialTextMaxWidth          = 550
 	socialTextRightEdge         = socialTextLeft + socialTextMaxWidth
@@ -118,7 +119,7 @@ func newSocialCardRenderer() (*socialCardRenderer, error) {
 }
 
 func buildSocialCardRenderer() (*socialCardRenderer, error) {
-	source, err := png.Decode(bytes.NewReader(socialCardBackground))
+	source, err := webp.Decode(bytes.NewReader(socialCardBackground))
 	if err != nil {
 		return nil, fmt.Errorf("decode background: %w", err)
 	}
@@ -199,7 +200,7 @@ func (r *socialCardRenderer) render(spec socialCardSpec) ([]byte, error) {
 
 	draw.Draw(canvas, r.brand.Bounds().Add(image.Pt(socialTextLeft, 49)), r.brand, r.brand.Bounds().Min, draw.Over)
 	if spec.AIGenerated {
-		xdraw.CatmullRom.Scale(canvas, image.Rect(899, 55, 1130, 129), r.aiLabel, r.aiLabel.Bounds(), draw.Over, nil)
+		xdraw.CatmullRom.Scale(canvas, image.Rect(720, 44, 951, 118), r.aiLabel, r.aiLabel.Bounds(), draw.Over, nil)
 	}
 
 	spec.Eyebrow = normalizeSocialText(spec.Eyebrow)

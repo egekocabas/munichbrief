@@ -60,3 +60,22 @@ with `node scripts/licenses.mjs --record-inputs --write`.
 Homepage cards reuse the localized `HeroTitle` and `HeroCopy` shown on the
 homepage. The subtitle wraps separately from the headline; all registered
 languages are checked for complete copy, glyph coverage, and safe-area fit.
+
+Keep `static/olympiapark-background.png` as the original illustration. Social
+cards embed the checked-in `static/olympiapark-background-q90.webp`, a 1200×630
+lossy WebP at quality 90. Regenerate it offline with libwebp's `cwebp` (1.5.0):
+
+```sh
+cwebp -q 90 -m 6 -metadata all internal/web/static/olympiapark-background.png -o internal/web/static/olympiapark-background-q90.webp
+```
+
+Commit the WebP and update the asset hashes with
+`node scripts/licenses.mjs --record-inputs --write`. The application decodes this
+existing asset once; it never converts the original PNG to WebP at runtime.
+Finished OG cards remain PNGs with embedded AI provenance. Reducing the embedded
+background size does not reduce the finished card's transfer size by the same
+amount.
+
+The incident AI label is centered on the logo row, in the rectangle from
+`(720, 44)` to `(951, 118)`, leaving the tower clear. Incident headlines use 48px
+bold type in a 650px-wide, two-line area and do not include summaries.

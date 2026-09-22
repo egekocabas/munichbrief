@@ -80,7 +80,7 @@ var favicon []byte
 //go:embed static/social-brand.png
 var socialCardBrand []byte
 
-//go:embed static/olympiapark-background.png
+//go:embed static/olympiapark-background-q90.webp
 var socialCardBackground []byte
 
 //go:embed static/eu-ai-*.svg static/munichbrief-ai-generated-light.svg
