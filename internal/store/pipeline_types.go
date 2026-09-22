@@ -129,6 +129,8 @@ type PostProcessingClaimOptions struct {
 	BlockedModels  []string
 	PreferredModel string
 	YieldModel     string
+	// PreferredScope groups ready jobs only within PreferredModel (or YieldModel).
+	PreferredScope string
 }
 
 // PostProcessingJob is one independently claimed job for an immutable current

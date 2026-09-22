@@ -30,6 +30,13 @@ func TestPostProcessingModelOrdering(t *testing.T) {
 		{"retry delayed preferred model", []queuedJob{{"A", "manual", 0, true}, {"B", "manual", 1, false}}, PostProcessingClaimOptions{PreferredModel: "A"}, []int{1}},
 		{"blocked preferred model", []queuedJob{{"A", "manual", 0, false}, {"B", "manual", 1, false}}, PostProcessingClaimOptions{PreferredModel: "A", BlockedModels: []string{"A"}}, []int{1}},
 		{"closed automatic window", []queuedJob{{"A", "scheduled", 0, false}, {"B", "manual", 1, false}}, PostProcessingClaimOptions{PreferredModel: "A"}, []int{1}},
+		{"scope affinity within model", []queuedJob{{"A", "manual", 0, false}, {"B", "manual", 1, false}, {"A", "manual", 2, false}}, PostProcessingClaimOptions{PreferredModel: "A", PreferredScope: "language_2"}, []int{2, 0, 1}},
+		{"manual overrides scope affinity", []queuedJob{{"A", "scheduled", 0, false}, {"A", "manual", 1, false}}, PostProcessingClaimOptions{AllowScheduled: true, PreferredModel: "A", PreferredScope: "language_0"}, []int{1, 0}},
+		{"yield overrides scope affinity", []queuedJob{{"A", "manual", 0, false}, {"B", "manual", 1, false}}, PostProcessingClaimOptions{YieldModel: "A", PreferredScope: "language_0"}, []int{1, 0}},
+		{"yield fallback retains scope affinity", []queuedJob{{"A", "manual", 0, false}, {"A", "manual", 1, false}}, PostProcessingClaimOptions{YieldModel: "A", PreferredScope: "language_1"}, []int{1, 0}},
+		{"scope does not bias alternative models", []queuedJob{{"A", "manual", 0, false}, {"B", "manual", 1, false}, {"C", "manual", 2, false}}, PostProcessingClaimOptions{YieldModel: "A", PreferredScope: "language_2"}, []int{1, 2, 0}},
+		{"scope does not survive model change", []queuedJob{{"B", "manual", 0, false}, {"B", "manual", 1, false}}, PostProcessingClaimOptions{PreferredModel: "A", PreferredScope: "language_1"}, []int{0, 1}},
+		{"retry delayed preferred scope", []queuedJob{{"A", "manual", 0, true}, {"A", "manual", 1, false}}, PostProcessingClaimOptions{PreferredModel: "A", PreferredScope: "language_0"}, []int{1}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

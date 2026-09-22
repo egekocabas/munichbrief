@@ -43,6 +43,7 @@ func (w *PipelineWorker) translationBatchStatusLocked(ctx context.Context, allow
 	now := w.clock()
 	options := store.PostProcessingClaimOptions{AllowScheduled: allowScheduled, BlockedModels: w.blockedModels(TranslationModelStep, now)}
 	options.PreferredModel, options.YieldModel = w.translationBatch.modelHints(w.lastInvokedModel)
+	options.PreferredScope = w.translationBatch.scope
 	// A queued model may have been removed since the job was created. The
 	// worker will defer that attempt without invoking it; preview the next
 	// installed model instead, without modifying the queue or its circuits.
@@ -57,6 +58,7 @@ func (w *PipelineWorker) translationBatchStatusLocked(ctx context.Context, allow
 				// Even a deferred claim starts a new model's attempt budget.
 				// Once that model is blocked, selection falls back to FIFO.
 				options.PreferredModel, options.YieldModel = job.ModelIdentity, ""
+				options.PreferredScope = job.ScopeKey
 			}
 		}
 	}
@@ -82,6 +84,7 @@ func (w *PipelineWorker) translationBatchStatusLocked(ctx context.Context, allow
 
 type translationModelBatch struct {
 	model    string
+	scope    string
 	attempts int
 }
 
@@ -112,6 +115,7 @@ func (w *PipelineWorker) recordTranslationClaimLocked(job store.PostProcessingJo
 			"batch_limit", translationModelBatchLimit)
 		w.translationBatch = translationModelBatch{model: job.ModelIdentity}
 	}
+	w.translationBatch.scope = job.ScopeKey
 	// Keep yielding once the budget is spent, even if the competing model only
 	// becomes eligible after further jobs on this model have run.
 	if w.translationBatch.attempts < translationModelBatchLimit {
