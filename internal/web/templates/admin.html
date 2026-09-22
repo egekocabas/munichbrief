@@ -17,10 +17,81 @@
     <div class="max-w-3xl">
       <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-civic">Operations</p>
       <h1 class="mt-1 font-serif text-4xl font-bold tracking-tight">AI processing</h1>
-      <p class="mt-3 text-muted">The two-stage canonical pipeline publishes German first. Independent public-assistance verification runs next, followed by category verification and per-language translations; none of these post-processors blocks German availability or another processor.</p>
+      <p class="mt-3 text-muted">Monitor canonical processing, verification and translations. German publishes first.</p>
     </div>
 
     {{if .Notice}}<div class="mt-6 rounded-md border px-4 py-3 font-semibold {{if .NoticeIsWarning}}border-alert/30 bg-alert-soft text-alert{{else}}border-civic/25 bg-paper text-civic{{end}}" role="status">{{.Notice}}</div>{{end}}
+
+    {{$runningKey := ""}}{{with .Runtime.Running}}{{$runningKey = .Key}}{{end}}
+    <section class="mt-8 rounded-lg border border-rule bg-paper p-5" aria-labelledby="queue-heading" {{if .ProcessingEnabled}}data-pipeline-status data-status-url="/api/admin/ai/status"{{end}}>
+      <div class="flex flex-wrap items-center justify-between gap-3"><div><p class="text-xs font-extrabold uppercase tracking-wider text-civic">Worker status</p><h2 id="queue-heading" class="mt-1 font-serif text-2xl font-bold">Live operations</h2></div><div class="flex flex-wrap items-center gap-2">{{template "admin-processing-status" .}}<p class="text-xs font-semibold text-muted" data-live-connection>{{if .ProcessingEnabled}}Connecting…{{else}}Live updates unavailable{{end}}</p></div></div>
+      <p class="mt-3 text-sm text-muted" data-window-state>{{if not .ProcessingEnabled}}Application-level AI processing is disabled; automatic and manual requests are unavailable{{else if not .Runtime.AutomaticProcessingEnabled}}{{if .Runtime.WindowOpen}}Processing window open{{else}}Processing window closed{{end}} · automatic processing disabled · manual requests remain available{{else if .Runtime.WindowOpen}}Processing window open{{else}}Processing window closed{{end}}</p>
+      <div class="grid gap-x-4 lg:grid-cols-2">
+      {{if .ProcessingEnabled}}{{template "admin-running-summary" .Runtime}}{{else}}<p class="mt-4 font-bold">AI processing unavailable</p>{{end}}
+<section class="admin-processing-controls mt-4 rounded-lg border border-rule bg-paper p-4" aria-labelledby="processing-controls-heading" data-processing-controls data-state="{{if not .ProcessingEnabled}}unavailable{{else if .Runtime.AutomaticProcessingEnabled}}enabled{{else}}disabled{{end}}">
+      <div class="flex flex-wrap items-center justify-between gap-2"><h3 id="processing-controls-heading" class="font-bold">Processing controls</h3>{{template "admin-processing-status" .}}</div>
+      {{if .ProcessingEnabled}}
+      <div class="mt-3 grid gap-3">
+        <div>
+          <p class="mt-1 text-sm text-muted">Controls scheduled work. Manual requests remain available when disabled.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <form method="post" action="/api/admin/ai/automatic-processing" data-automatic-form>
+            <input name="enabled" type="hidden" value="{{if .Runtime.AutomaticProcessingEnabled}}false{{else}}true{{end}}" data-automatic-value>
+            <input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}"><input name="all_page" type="hidden" value="{{.AllPage}}">
+            <button class="rounded-md border border-civic bg-white px-4 py-2 font-bold text-civic hover:bg-civic-soft" type="submit" data-automatic-button>{{if .Runtime.AutomaticProcessingEnabled}}Disable automatic processing{{else}}Enable automatic processing{{end}}</button>
+          </form>
+          <form method="post" action="/api/admin/ai/cancel-all" data-confirm-processing data-confirm-description="Cancel every unfinished automatic and manual canonical and post-processing job. Completed results remain available and automatic processing will stay disabled." data-confirm-behavior="Immediately interrupts the current Ollama request, preserves completed results and audit history, clears retry delays, and leaves automatic processing disabled.">
+            <input name="confirmed" type="hidden" value="false"><input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}"><input name="all_page" type="hidden" value="{{.AllPage}}">
+            <button class="rounded-md bg-alert px-4 py-2 font-bold text-on-accent hover:opacity-90" type="submit">Cancel all unfinished work</button>
+          </form>
+        </div>
+      </div>
+      {{else}}<p class="mt-3 text-sm text-muted">AI is disabled in the application configuration. Automatic and manual requests are unavailable.</p>{{end}}
+</section>
+      </div>
+<section class="admin-cycle-overview mt-6 rounded-lg border border-rule bg-newsprint/60 p-4" aria-labelledby="cycle-heading" data-cycle-overview>
+      <div class="flex flex-wrap items-center justify-between gap-2"><div><p class="text-xs font-extrabold uppercase tracking-wider text-civic">Canonical pipeline</p><h3 id="cycle-heading" class="mt-1 font-serif text-xl font-bold">Cycle details and totals</h3></div><span class="admin-status-badge" data-cycle-state data-state="{{if .Runtime.Queue.ActiveCycle}}active{{else}}idle{{end}}">{{if .Runtime.Queue.ActiveCycle}}Cycle in progress{{else}}No active cycle{{end}}</span></div>
+<p class="mt-3 text-sm font-bold" data-worker-state>{{if .Runtime.Queue.ActiveCycle}}Cycle #{{.Runtime.Queue.ActiveCycle.ID}} · {{.Runtime.Queue.ActiveCycle.Kind}}{{else}}No active cycle{{end}}</p>
+<p class="admin-provenance text-sm text-muted" data-active-step>{{if .Runtime.Queue.ActiveStepKey}}{{.Runtime.Queue.ActiveStepKey}} · {{.Runtime.Queue.ActiveModel}}{{else}}No active model{{end}}</p>
+      <p class="mt-1 text-sm text-muted" data-cycle-elapsed>{{if .Runtime.Queue.ActiveCycle}}Elapsed time updates live{{else}}No active cycle{{end}}</p>
+      <dl class="mt-5 grid gap-3 sm:grid-cols-2">
+        <div class="rounded-md border border-rule bg-white p-3"><dt class="text-xs font-bold uppercase text-muted">Active stage</dt><dd class="mt-1 text-xl font-bold"><span data-active-progress-text>{{.Runtime.Queue.ActiveStepCompleted}} / {{.Runtime.Queue.ActiveStepTotal}} incidents</span><progress class="admin-progress mt-3 h-2" data-active-step-progress aria-label="Active stage progress" max="{{if .Runtime.Queue.ActiveStepTotal}}{{.Runtime.Queue.ActiveStepTotal}}{{else}}1{{end}}" value="{{.Runtime.Queue.ActiveStepCompleted}}">{{.Runtime.Queue.ActiveStepCompleted}} / {{.Runtime.Queue.ActiveStepTotal}}</progress><p class="mt-2 text-xs font-normal text-muted">Completed in the current model batch.</p></dd></div>
+        <div class="rounded-md border border-rule bg-white p-3"><dt class="text-xs font-bold uppercase text-muted">Canonical pipeline</dt><dd class="mt-1 text-xl font-bold"><span data-progress-text>{{.Runtime.Queue.CycleCompleted}} / {{.Runtime.Queue.CycleTotal}} stage jobs</span><progress class="admin-progress mt-3 h-2" data-cycle-progress aria-label="Canonical cycle progress" max="{{if .Runtime.Queue.CycleTotal}}{{.Runtime.Queue.CycleTotal}}{{else}}1{{end}}" value="{{.Runtime.Queue.CycleCompleted}}">{{.Runtime.Queue.CycleCompleted}} / {{.Runtime.Queue.CycleTotal}}</progress><p class="mt-2 text-xs font-normal text-muted">All canonical steps across the frozen incident set.</p></dd></div>
+      </dl>
+      <dl class="mt-5 grid gap-3 sm:grid-cols-3">
+        <div><dt class="text-xs font-bold uppercase text-muted">Priority cycles</dt><dd class="mt-1 text-xl font-bold" data-manual-cycles>{{.Runtime.Queue.ManualCycles}}</dd></div>
+        <div><dt class="text-xs font-bold uppercase text-muted">Continuations</dt><dd class="mt-1 text-xl font-bold" data-continuations>{{.Runtime.Queue.ContinuationCycles}}</dd></div>
+        <div><dt class="text-xs font-bold uppercase text-muted">New outside cycle</dt><dd class="mt-1 text-xl font-bold"><span data-candidates>{{.Runtime.Queue.ScheduledCandidates}}</span><p class="mt-1 text-xs font-normal text-muted">Eligible incidents not already in an in-flight presentation run.</p></dd></div>
+      </dl>
+      <h3 class="mt-6 text-xs font-extrabold uppercase tracking-wider text-civic">Stage queues</h3>
+      <div class="mt-5 grid gap-3 lg:grid-cols-2" data-step-stats>
+        {{range $index, $step := .Runtime.Queue.Steps}}{{$active := index $.Runtime.Queue.ActiveSteps $index}}<div class="rounded-md border border-rule bg-white p-3" data-step-stat="{{$step.StepKey}}" data-execution-key="{{$step.StepKey}}" data-running="{{eq $runningKey $step.StepKey}}">
+          <div class="flex flex-wrap items-center justify-between gap-2"><p class="admin-provenance font-mono text-sm font-bold">{{$step.StepKey}}</p><span class="admin-running-badge" data-running-badge {{if ne $runningKey $step.StepKey}}hidden{{end}}>Running</span></div>
+<p class="mt-2 text-sm text-muted" data-step-brief>Queued {{$active.Queued}} · Retrying {{$active.Retrying}}</p>
+<details class="mt-3"><summary class="cursor-pointer text-xs font-bold text-civic">Details and history</summary>
+          <div class="mt-3 grid gap-3 sm:grid-cols-2">
+            <div><p class="text-xs font-extrabold uppercase tracking-wider text-civic">Active cycle</p><p class="mt-1 text-sm text-muted" data-active-step-stats>Waiting {{$active.Waiting}} · Ready after stage {{$active.ReadyAfterStage}} · Queued {{$active.Queued}} · Running {{$active.Running}} · Retrying {{$active.Retrying}} · Review {{$active.NeedsReview}} · Failed {{$active.Failed}} · Succeeded {{$active.Succeeded}}</p></div>
+            <div class="border-t border-rule pt-3 sm:border-l sm:border-t-0 sm:pl-3 sm:pt-0"><p class="text-xs font-extrabold uppercase tracking-wider text-muted">All-cycle history</p><p class="mt-1 text-sm text-muted" data-all-step-stats>Succeeded {{$step.Succeeded}} · Review {{$step.NeedsReview}} · Failed {{$step.Failed}} · Avg {{printf "%.1f" $step.AverageDurationSeconds}}s{{if $step.LastSuccess}} · Last success {{formatDateTime "en" $step.LastSuccess}}{{end}}</p></div>
+          </div>
+        </details></div>{{end}}
+      </div>
+</section>
+      {{template "admin-translation-batch" .Runtime.TranslationBatch}}
+      <div class="mt-5 border-t border-rule pt-4" data-post-processing-stats>
+        <h3 class="text-xs font-extrabold uppercase tracking-wider text-civic">Independent post-processing queues</h3>
+      <div class="mt-3 grid gap-3 lg:grid-cols-3">{{range .Runtime.Queue.PostProcessing}}<div class="min-w-0 rounded-md border border-rule bg-white p-3" data-post-processing-stat="{{.ProcessorKey}}/{{.ScopeKey}}" data-execution-key="{{.ProcessorKey}}/{{.ScopeKey}}" data-running="{{eq $runningKey (printf "%s/%s" .ProcessorKey .ScopeKey)}}"><div class="flex flex-wrap items-center justify-between gap-2"><p class="admin-provenance font-mono text-xs font-bold">{{.ProcessorKey}}/{{.ScopeKey}}</p><span class="admin-running-badge" data-running-badge {{if ne $runningKey (printf "%s/%s" .ProcessorKey .ScopeKey)}}hidden{{end}}>Running</span></div><p class="mt-2 text-sm text-muted" data-post-processing-brief>Queued {{.Pending}} · Retrying {{.Retrying}}</p><details class="mt-3"><summary class="cursor-pointer text-xs font-bold text-civic">Details and history</summary><p class="mt-1 text-sm text-muted" data-post-processing-details>Pending {{.Pending}} · Running {{.Running}} · Retrying {{.Retrying}} · Review {{.NeedsReview}} · Failed {{.Failed}} · Skipped {{.Skipped}} · Completed {{.Succeeded}}{{range $key, $value := .Counters}} · {{$key}} {{$value}}{{end}}</p><p class="mt-1 text-xs text-muted" data-post-processing-elapsed>{{if .RunningStartedAt}}Current job elapsed time updates live{{else}}No running job{{end}}</p><p class="mt-1 text-xs text-muted" data-post-processing-retry-state>{{if .Retrying}}Retry details update live{{else}}No retry backlog{{end}}</p><p class="mt-1 text-xs text-muted" data-post-processing-queue-age>{{if .QueueStartedAt}}Oldest unfinished job age updates live{{else}}No unfinished jobs{{end}}</p></details></div>{{else}}<p class="text-sm text-muted">No post-processing scopes registered.</p>{{end}}</div>
+      </div>
+
+<details class="mt-5 border-t border-rule pt-4"><summary class="cursor-pointer text-sm font-bold text-civic">Recent events and job states</summary>
+      {{if .Runtime.Queue.ScheduledAfter}}<p class="mt-2 rounded-md border border-rule bg-newsprint/60 px-3 py-2 text-sm text-muted"><strong class="text-ink">Automatic v2 cutover:</strong> <time datetime="{{.Runtime.Queue.ScheduledAfter.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime "en" .Runtime.Queue.ScheduledAfter}}</time>. Earlier incidents remain on their completed presentation unless manually reprocessed.</p>{{end}}
+      <p class="mt-4 rounded-md border border-civic/20 bg-civic-soft px-3 py-2 text-sm text-civic"><strong>Waiting jobs are durable.</strong> “Ready after stage” means the previous step succeeded; those jobs unlock together when the current model batch finishes. Retrying jobs will be attempted again. Review means output or privacy validation was still unsuccessful after three attempts and needs operator investigation before reprocessing.</p>
+      <div class="mt-5 border-t border-rule pt-4">
+        <div class="flex flex-wrap items-center justify-between gap-3"><h3 class="text-xs font-extrabold uppercase tracking-wider text-muted">Recent safe events</h3><a class="text-sm font-bold text-civic no-underline hover:text-civic-dark" href="/admin/history">View full history →</a></div>
+        <ol class="mt-2 grid gap-1 text-sm text-muted" data-recent-events>{{range .Runtime.Queue.RecentEvents}}<li>{{if .CycleID}}Cycle #{{.CycleID}}{{else}}Independent{{end}} · incident #{{.IncidentID}} · {{.ExecutionKey}} · {{pipelineStatusLabel .Status .FailureKind .StatusReason}}{{if .StatusReason}} ({{postProcessingStatusReason .StatusReason .StatusDetail}}){{else if .FailureKind}} ({{postProcessingStatusReason .FailureKind ""}}){{end}}</li>{{else}}<li>No pipeline events yet.</li>{{end}}</ol>
+      </div>
+</details>
+    </section>
 
     {{/* Canonical stages are numbered; independent registered processors are unnumbered. */}}
     <section class="mt-8" aria-labelledby="model-heading">
@@ -70,73 +141,6 @@
         </article>
         {{end}}
       </div>
-    </section>
-
-    {{$runningKey := ""}}{{with .Runtime.Running}}{{$runningKey = .Key}}{{end}}
-    <section class="mt-8 rounded-lg border border-rule bg-paper p-5" aria-labelledby="queue-heading" {{if .ProcessingEnabled}}data-pipeline-status data-status-url="/api/admin/ai/status"{{end}}>
-      <div class="flex flex-wrap items-center justify-between gap-3"><div><p class="text-xs font-extrabold uppercase tracking-wider text-civic">Worker status</p><h2 id="queue-heading" class="mt-1 font-serif text-2xl font-bold">Live operations</h2></div><p class="rounded-full border border-rule bg-white px-3 py-1 text-sm font-bold" data-live-connection>{{if .ProcessingEnabled}}Connecting…{{else}}Disabled{{end}}</p></div>
-      {{if .ProcessingEnabled}}{{template "admin-running-summary" .Runtime}}{{else}}<p class="mt-4 font-bold">AI processing unavailable</p>{{end}}
-      {{template "admin-translation-batch" .Runtime.TranslationBatch}}
-      <h3 class="mt-6 text-xs font-extrabold uppercase tracking-wider text-civic">Canonical pipeline</h3>
-      <div class="mt-5 grid gap-3 lg:grid-cols-2" data-step-stats>
-        {{range $index, $step := .Runtime.Queue.Steps}}{{$active := index $.Runtime.Queue.ActiveSteps $index}}<div class="rounded-md border border-rule bg-white p-3" data-step-stat="{{$step.StepKey}}" data-execution-key="{{$step.StepKey}}" data-running="{{eq $runningKey $step.StepKey}}">
-          <div class="flex flex-wrap items-center justify-between gap-2"><p class="admin-provenance font-mono text-sm font-bold">{{$step.StepKey}}</p><span class="admin-running-badge" data-running-badge {{if ne $runningKey $step.StepKey}}hidden{{end}}>Running</span></div>
-<p class="mt-2 text-sm text-muted" data-step-brief>Queued {{$active.Queued}} · Retrying {{$active.Retrying}}</p>
-<details class="mt-3"><summary class="cursor-pointer text-xs font-bold text-civic">Details and history</summary>
-          <div class="mt-3 grid gap-3 sm:grid-cols-2">
-            <div><p class="text-xs font-extrabold uppercase tracking-wider text-civic">Active cycle</p><p class="mt-1 text-sm text-muted" data-active-step-stats>Waiting {{$active.Waiting}} · Ready after stage {{$active.ReadyAfterStage}} · Queued {{$active.Queued}} · Running {{$active.Running}} · Retrying {{$active.Retrying}} · Review {{$active.NeedsReview}} · Failed {{$active.Failed}} · Succeeded {{$active.Succeeded}}</p></div>
-            <div class="border-t border-rule pt-3 sm:border-l sm:border-t-0 sm:pl-3 sm:pt-0"><p class="text-xs font-extrabold uppercase tracking-wider text-muted">All-cycle history</p><p class="mt-1 text-sm text-muted" data-all-step-stats>Succeeded {{$step.Succeeded}} · Review {{$step.NeedsReview}} · Failed {{$step.Failed}} · Avg {{printf "%.1f" $step.AverageDurationSeconds}}s{{if $step.LastSuccess}} · Last success {{formatDateTime "en" $step.LastSuccess}}{{end}}</p></div>
-          </div>
-        </details></div>{{end}}
-      </div>
-      <div class="mt-5 border-t border-rule pt-4" data-post-processing-stats>
-        <h3 class="text-xs font-extrabold uppercase tracking-wider text-civic">Independent post-processing queues</h3>
-      <div class="mt-3 grid gap-3 lg:grid-cols-3">{{range .Runtime.Queue.PostProcessing}}<div class="min-w-0 rounded-md border border-rule bg-white p-3" data-post-processing-stat="{{.ProcessorKey}}/{{.ScopeKey}}" data-execution-key="{{.ProcessorKey}}/{{.ScopeKey}}" data-running="{{eq $runningKey (printf "%s/%s" .ProcessorKey .ScopeKey)}}"><div class="flex flex-wrap items-center justify-between gap-2"><p class="admin-provenance font-mono text-xs font-bold">{{.ProcessorKey}}/{{.ScopeKey}}</p><span class="admin-running-badge" data-running-badge {{if ne $runningKey (printf "%s/%s" .ProcessorKey .ScopeKey)}}hidden{{end}}>Running</span></div><p class="mt-2 text-sm text-muted" data-post-processing-brief>Queued {{.Pending}} · Retrying {{.Retrying}}</p><details class="mt-3"><summary class="cursor-pointer text-xs font-bold text-civic">Details and history</summary><p class="mt-1 text-sm text-muted" data-post-processing-details>Pending {{.Pending}} · Running {{.Running}} · Retrying {{.Retrying}} · Review {{.NeedsReview}} · Failed {{.Failed}} · Skipped {{.Skipped}} · Completed {{.Succeeded}}{{range $key, $value := .Counters}} · {{$key}} {{$value}}{{end}}</p><p class="mt-1 text-xs text-muted" data-post-processing-elapsed>{{if .RunningStartedAt}}Current job elapsed time updates live{{else}}No running job{{end}}</p><p class="mt-1 text-xs text-muted" data-post-processing-retry-state>{{if .Retrying}}Retry details update live{{else}}No retry backlog{{end}}</p><p class="mt-1 text-xs text-muted" data-post-processing-queue-age>{{if .QueueStartedAt}}Oldest unfinished job age updates live{{else}}No unfinished jobs{{end}}</p></details></div>{{else}}<p class="text-sm text-muted">No post-processing scopes registered.</p>{{end}}</div>
-      </div>
-      <p class="mt-4 text-sm font-semibold {{if and .Runtime.WindowOpen .Runtime.AutomaticProcessingEnabled}}text-emerald-700{{else}}text-muted{{end}}" data-window-state>{{if not .ProcessingEnabled}}Application-level AI processing is disabled; automatic and manual requests are unavailable{{else if not .Runtime.AutomaticProcessingEnabled}}{{if .Runtime.WindowOpen}}Processing window open{{else}}Processing window closed{{end}} · automatic processing disabled · manual requests remain available{{else if .Runtime.WindowOpen}}Processing window open{{else}}Processing window closed{{end}}</p>
-<details class="mt-5 border-t border-rule pt-4"><summary class="cursor-pointer text-sm font-bold text-civic">Processing controls</summary>
-      {{if .ProcessingEnabled}}
-      <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-rule bg-newsprint/60 p-4">
-        <div>
-          <p class="font-bold" data-automatic-state>{{if .Runtime.AutomaticProcessingEnabled}}Automatic AI processing enabled{{else}}Automatic AI processing disabled{{end}}</p>
-          <p class="mt-1 text-sm text-muted">The master switch controls scheduled canonical and post-processing work. Explicit admin and CLI requests remain available.</p>
-        </div>
-        <div class="flex flex-wrap gap-2">
-          <form method="post" action="/api/admin/ai/automatic-processing" data-automatic-form>
-            <input name="enabled" type="hidden" value="{{if .Runtime.AutomaticProcessingEnabled}}false{{else}}true{{end}}" data-automatic-value>
-            <input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}"><input name="all_page" type="hidden" value="{{.AllPage}}">
-            <button class="rounded-md border border-civic bg-white px-4 py-2 font-bold text-civic hover:bg-civic-soft" type="submit" data-automatic-button>{{if .Runtime.AutomaticProcessingEnabled}}Disable automatic processing{{else}}Enable automatic processing{{end}}</button>
-          </form>
-          <form method="post" action="/api/admin/ai/cancel-all" data-confirm-processing data-confirm-description="Cancel every unfinished automatic and manual canonical and post-processing job. Completed results remain available and automatic processing will stay disabled." data-confirm-behavior="Immediately interrupts the current Ollama request, preserves completed results and audit history, clears retry delays, and leaves automatic processing disabled.">
-            <input name="confirmed" type="hidden" value="false"><input name="unprocessed_page" type="hidden" value="{{.UnprocessedPage}}"><input name="all_page" type="hidden" value="{{.AllPage}}">
-            <button class="rounded-md bg-alert px-4 py-2 font-bold text-on-accent hover:opacity-90" type="submit">Cancel all unfinished work</button>
-          </form>
-        </div>
-      </div>
-      {{end}}
-</details>
-<details class="mt-5 border-t border-rule pt-4"><summary class="cursor-pointer text-sm font-bold text-civic">Cycle details and totals</summary>
-<p class="mt-3 text-sm font-bold" data-worker-state>{{if .Runtime.Queue.ActiveCycle}}Cycle #{{.Runtime.Queue.ActiveCycle.ID}} · {{.Runtime.Queue.ActiveCycle.Kind}}{{else}}No active cycle{{end}}</p>
-<p class="admin-provenance text-sm text-muted" data-active-step>{{.Runtime.Queue.ActiveStepKey}} · {{.Runtime.Queue.ActiveModel}}</p>
-      <p class="mt-1 text-sm text-muted" data-cycle-elapsed>{{if .Runtime.Queue.ActiveCycle}}Elapsed time updates live{{else}}No active cycle{{end}}</p>
-      {{if .Runtime.Queue.ScheduledAfter}}<p class="mt-2 rounded-md border border-rule bg-newsprint/60 px-3 py-2 text-sm text-muted"><strong class="text-ink">Automatic v2 cutover:</strong> <time datetime="{{.Runtime.Queue.ScheduledAfter.Format "2006-01-02T15:04:05Z07:00"}}">{{formatDateTime "en" .Runtime.Queue.ScheduledAfter}}</time>. Earlier incidents remain on their completed presentation unless manually reprocessed.</p>{{end}}
-      <dl class="mt-5 grid gap-3 sm:grid-cols-2">
-        <div class="rounded-md border border-rule bg-white p-3"><dt class="text-xs font-bold uppercase text-muted">Active stage</dt><dd class="mt-1 text-xl font-bold"><span data-active-progress-text>{{.Runtime.Queue.ActiveStepCompleted}} / {{.Runtime.Queue.ActiveStepTotal}} incidents</span><progress class="admin-progress mt-3 h-2" data-active-step-progress max="1" value="0">0%</progress><p class="mt-2 text-xs font-normal text-muted">Completed in the current model batch.</p></dd></div>
-        <div class="rounded-md border border-rule bg-white p-3"><dt class="text-xs font-bold uppercase text-muted">Canonical pipeline</dt><dd class="mt-1 text-xl font-bold"><span data-progress-text>{{.Runtime.Queue.CycleCompleted}} / {{.Runtime.Queue.CycleTotal}} stage jobs</span><progress class="admin-progress mt-3 h-2" data-cycle-progress max="1" value="0">0%</progress><p class="mt-2 text-xs font-normal text-muted">All canonical steps across the frozen incident set.</p></dd></div>
-      </dl>
-      <dl class="mt-5 grid gap-3 sm:grid-cols-3">
-        <div><dt class="text-xs font-bold uppercase text-muted">Priority cycles</dt><dd class="mt-1 text-xl font-bold" data-manual-cycles>{{.Runtime.Queue.ManualCycles}}</dd></div>
-        <div><dt class="text-xs font-bold uppercase text-muted">Continuations</dt><dd class="mt-1 text-xl font-bold" data-continuations>{{.Runtime.Queue.ContinuationCycles}}</dd></div>
-        <div><dt class="text-xs font-bold uppercase text-muted">New outside cycle</dt><dd class="mt-1 text-xl font-bold"><span data-candidates>{{.Runtime.Queue.ScheduledCandidates}}</span><p class="mt-1 text-xs font-normal text-muted">Eligible incidents not already in an in-flight presentation run.</p></dd></div>
-      </dl>
-</details>
-<details class="mt-5 border-t border-rule pt-4"><summary class="cursor-pointer text-sm font-bold text-civic">Recent events and job states</summary>
-      <p class="mt-4 rounded-md border border-civic/20 bg-civic-soft px-3 py-2 text-sm text-civic"><strong>Waiting jobs are durable.</strong> “Ready after stage” means the previous step succeeded; those jobs unlock together when the current model batch finishes. Retrying jobs will be attempted again. Review means output or privacy validation was still unsuccessful after three attempts and needs operator investigation before reprocessing.</p>
-      <div class="mt-5 border-t border-rule pt-4">
-        <div class="flex flex-wrap items-center justify-between gap-3"><h3 class="text-xs font-extrabold uppercase tracking-wider text-muted">Recent safe events</h3><a class="text-sm font-bold text-civic no-underline hover:text-civic-dark" href="/admin/history">View full history →</a></div>
-        <ol class="mt-2 grid gap-1 text-sm text-muted" data-recent-events>{{range .Runtime.Queue.RecentEvents}}<li>{{if .CycleID}}Cycle #{{.CycleID}}{{else}}Independent{{end}} · incident #{{.IncidentID}} · {{.ExecutionKey}} · {{pipelineStatusLabel .Status .FailureKind .StatusReason}}{{if .StatusReason}} ({{postProcessingStatusReason .StatusReason .StatusDetail}}){{else if .FailureKind}} ({{postProcessingStatusReason .FailureKind ""}}){{end}}</li>{{else}}<li>No pipeline events yet.</li>{{end}}</ol>
-      </div>
-</details>
     </section>
 
     {{/* Manual controls freeze the selected models into each requested job. */}}

@@ -71,7 +71,6 @@
   const continuations = panel.querySelector("[data-continuations]");
   const candidates = panel.querySelector("[data-candidates]");
   const windowState = panel.querySelector("[data-window-state]");
-  const automaticState = panel.querySelector("[data-automatic-state]");
   const automaticValue = panel.querySelector("[data-automatic-value]");
   const automaticButton = panel.querySelector("[data-automatic-button]");
   const events = panel.querySelector("[data-recent-events]");
@@ -81,6 +80,16 @@
 
   const setText = (element, value) => {
     if (element) element.textContent = String(value);
+  };
+
+  const setProcessingState = (state, label) => {
+    for (const badge of panel.querySelectorAll("[data-processing-state]")) {
+      badge.dataset.state = state;
+      setText(badge, label);
+    }
+    const controls = panel.querySelector("[data-processing-controls]");
+    if (controls) controls.dataset.state = state;
+    if (automaticButton instanceof HTMLButtonElement) automaticButton.disabled = state === "unknown";
   };
 
   const postProcessingStatusReason = (reason, detail) => {
@@ -116,7 +125,12 @@
   const render = (status) => {
     const queue = status.queue || {};
     const cycle = queue.active_cycle;
-    setText(connection, "Live");
+    setText(connection, "Updates live");
+    const cycleState = panel.querySelector("[data-cycle-state]");
+    if (cycleState) {
+      cycleState.dataset.state = cycle ? "active" : "idle";
+      setText(cycleState, cycle ? "Cycle in progress" : "No active cycle");
+    }
     const running = status.running;
     const runningKey = running?.key || "";
     const runningSummary = panel.querySelector("[data-running-summary]");
@@ -155,14 +169,20 @@
     const activeCompleted = Number(queue.active_step_completed || 0);
     const activeTotal = Number(queue.active_step_total || 0);
     setText(activeProgressText, `${activeCompleted} / ${activeTotal} incidents`);
-    if (activeProgress instanceof HTMLProgressElement) activeProgress.value = activeTotal ? activeCompleted / activeTotal : 0;
+    if (activeProgress instanceof HTMLProgressElement) {
+      activeProgress.max = activeTotal || 1;
+      activeProgress.value = activeCompleted;
+    }
     setText(progressText, `${completed} / ${total} stage jobs`);
-    if (progress instanceof HTMLProgressElement) progress.value = total ? completed / total : 0;
+    if (progress instanceof HTMLProgressElement) {
+      progress.max = total || 1;
+      progress.value = completed;
+    }
     setText(manual, queue.manual_cycles || 0);
     setText(continuations, queue.continuation_cycles || 0);
     setText(candidates, queue.scheduled_candidates || 0);
     const automaticEnabled = Boolean(status.automatic_processing_enabled);
-    setText(automaticState, automaticEnabled ? "Automatic AI processing enabled" : "Automatic AI processing disabled");
+    setProcessingState(automaticEnabled ? "enabled" : "disabled", `Automatic processing: ${automaticEnabled ? "enabled" : "disabled"}`);
     if (automaticValue instanceof HTMLInputElement) automaticValue.value = automaticEnabled ? "false" : "true";
     setText(automaticButton, automaticEnabled ? "Disable automatic processing" : "Enable automatic processing");
     setText(windowState, !automaticEnabled
@@ -280,6 +300,13 @@
     } catch (_error) {
       failures += 1;
       setText(connection, failures > 1 ? "Disconnected" : "Stale");
+      setProcessingState("unknown", "Processing state unknown");
+      setText(windowState, "Live updates unavailable; showing the last received queue snapshot.");
+      const cycleState = panel.querySelector("[data-cycle-state]");
+      if (cycleState) {
+        cycleState.dataset.state = "unknown";
+        setText(cycleState, "Cycle status unavailable");
+      }
       setText(panel.querySelector("[data-running-key]"), "Live status unavailable");
       setText(panel.querySelector("[data-running-model]"), "Showing the last received queue snapshot");
       for (const card of panel.querySelectorAll("[data-running]")) card.dataset.running = "false";
