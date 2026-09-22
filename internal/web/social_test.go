@@ -2,6 +2,7 @@ package web
 
 import (
 	"bytes"
+	"image"
 	"image/color"
 	"image/png"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -204,7 +206,7 @@ func TestSocialCardShapingIsSafeForConcurrentRequests(t *testing.T) {
 			if index%2 == 1 {
 				tag, title = "hi-IN", "म्यूनिख में पुलिस जाँच जारी"
 			}
-			_, err := renderer.render(socialCardSpec{LanguageTag: tag, Eyebrow: title, Title: title})
+			_, err := renderer.render(socialCardSpec{LanguageTag: tag, Eyebrow: title, Title: title, Subtitle: title})
 			errors <- err
 		}(index)
 	}
@@ -286,4 +288,123 @@ func assertSocialCardDimensions(t *testing.T, contents []byte) {
 
 func rgba(value color.Color) color.RGBA {
 	return color.RGBAModel.Convert(value).(color.RGBA)
+}
+
+func TestSocialHomeCardsMatchHomepageInEveryLanguage(t *testing.T) {
+	t.Parallel()
+	server, _ := publicDiscoveryServer(t, fixtureStore(t), testPresentation{
+		TitleDE: "Beispiel", SummaryDE: "Beispieltext.", TitleEN: "Example", SummaryEN: "Example text.",
+	})
+	renderer := server.socialCards
+	titleFont, closeTitle, err := renderer.face(renderer.boldFont, socialHomeTitleSize)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeTitle()
+	subtitleFont, closeSubtitle, err := renderer.face(renderer.regularFont, socialSubtitleSize)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeSubtitle()
+	withoutWhitespace := func(value string) string {
+		return strings.Map(func(r rune) rune {
+			if unicode.IsSpace(r) {
+				return -1
+			}
+			return r
+		}, normalizeSocialText(value))
+	}
+	for _, definition := range server.languages {
+		t.Run(definition.Code, func(t *testing.T) {
+			spec := socialCardSpec{
+				LanguageTag: definition.Tag.String(),
+				Title:       server.localization.Text(definition.Code, "HeroTitle"),
+				Subtitle:    server.localization.Text(definition.Code, "HeroCopy"),
+			}
+			if definition.Code == "en" && (spec.Title != "Munich, in brief." || spec.Subtitle != "Reports from Munich Police Headquarters (Polizeipräsidium München), summarized in English.") {
+				t.Fatalf("English homepage copy = %#v", spec)
+			}
+			for _, block := range []struct {
+				name, text string
+				face       socialTextFace
+				maxLines   int
+			}{
+				{"headline", spec.Title, renderer.localizedFace(spec.LanguageTag, socialHomeTitleSize, titleFont), 2},
+				{"subtitle", spec.Subtitle, renderer.localizedRegularFace(spec.LanguageTag, socialSubtitleSize, subtitleFont), socialSubtitleMaxLines},
+			} {
+				lines := wrapSocialTitle(normalizeSocialText(block.text), block.face, socialTextMaxWidth, block.maxLines)
+				if block.name == "subtitle" {
+					lines = wrapSocialSubtitle(normalizeSocialText(block.text), block.face, socialTextMaxWidth, block.maxLines)
+				}
+				if block.name == "subtitle" && len(lines) > 1 && block.face.wordSeparator() == " " && len(strings.Fields(lines[len(lines)-1])) < 2 {
+					t.Errorf("subtitle ends with an isolated word: %#v", lines)
+				}
+				if block.name == "headline" && len(lines) != 1 {
+					t.Errorf("homepage headline should fit on one line: %#v", lines)
+				}
+				if len(lines) == 0 || withoutWhitespace(strings.Join(lines, "")) != withoutWhitespace(block.text) {
+					t.Errorf("%s copy was lost or truncated: %q -> %#v", block.name, block.text, lines)
+				}
+				for _, line := range lines {
+					if width := block.face.measure(line); width > socialTextMaxWidth {
+						t.Errorf("%s line is %dpx wide: %q", block.name, width, line)
+					}
+				}
+				for _, character := range normalizeSocialText(block.text) {
+					var covered bool
+					switch face := block.face.(type) {
+					case basicSocialTextFace:
+						_, covered = face.face.GlyphAdvance(character)
+					case shapedSocialTextFace:
+						_, covered = face.face.NominalGlyph(character)
+					}
+					if !covered {
+						t.Errorf("%s font has no glyph for %q (U+%04X)", block.name, character, character)
+					}
+				}
+				t.Logf("%s: %d lines, complete copy: %q", block.name, len(lines), lines)
+			}
+
+			response := httptest.NewRecorder()
+			server.Handler().ServeHTTP(response, publicDiscoveryRequest(http.MethodGet, "/social/"+definition.Code+"/home"))
+			if response.Code != http.StatusOK || response.Header().Get("Content-Language") != spec.LanguageTag {
+				t.Fatalf("social home = %d/%q", response.Code, response.Header().Get("Content-Language"))
+			}
+			expected, err := renderer.render(spec)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(response.Body.Bytes(), expected) {
+				t.Fatal("homepage OG does not use HeroTitle and HeroCopy")
+			}
+			assertSocialCardDimensions(t, response.Body.Bytes())
+			rendered, err := png.Decode(bytes.NewReader(response.Body.Bytes()))
+			if err != nil {
+				t.Fatal(err)
+			}
+			// This rectangle ends above the mountains and left of the stadium.
+			safeArea := image.Rect(socialTextLeft-2, 45, socialTextRightEdge+3, 442)
+			for y := 0; y < socialCardHeight; y++ {
+				for x := 0; x < socialCardWidth; x++ {
+					if rgba(rendered.At(x, y)) != rgba(renderer.background.At(x, y)) && !image.Pt(x, y).In(safeArea) {
+						t.Fatalf("rendered text escapes the sky safe area at (%d,%d)", x, y)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestSocialCardSubtitleInvalidatesCache(t *testing.T) {
+	t.Parallel()
+	renderer, err := newSocialCardRenderer()
+	if err != nil {
+		t.Fatal(err)
+	}
+	spec := socialCardSpec{LanguageTag: "en-GB", Title: "Munich, in brief.", Subtitle: "Previous subtitle"}
+	before := renderer.etag(spec)
+	spec.Subtitle = "Updated subtitle"
+	if before == renderer.etag(spec) {
+		t.Fatal("subtitle changes do not invalidate the OG image cache")
+	}
 }

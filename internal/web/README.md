@@ -56,3 +56,7 @@ The server embeds the PNG, so it needs no system fonts or SVG renderer. Branding
 assets and the renderer design version feed both image ETags and the versioned
 Open Graph/Twitter image URLs. After regenerating the PNG, update the asset hashes
 with `node scripts/licenses.mjs --record-inputs --write`.
+
+Homepage cards reuse the localized `HeroTitle` and `HeroCopy` shown on the
+homepage. The subtitle wraps separately from the headline; all registered
+languages are checked for complete copy, glyph coverage, and safe-area fit.
