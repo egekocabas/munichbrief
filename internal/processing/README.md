@@ -19,8 +19,10 @@ All model calls are sequential.
 Eligible manual translations run before automatic translations at each job
 boundary. Within that priority group, the worker keeps using the current model
 across languages for up to 50 claimed attempts, including retries. Jobs for the
-same model run oldest first, with job ID breaking timestamp ties. After 50
-attempts, another eligible model gets a turn, selected by its oldest waiting job.
+same model stay on the current target language until its ready queue is empty,
+then select the language with the oldest waiting job. Jobs within a language run
+oldest first, with job ID breaking timestamp ties. After 50 attempts across
+languages, another eligible model gets a turn, selected by its oldest waiting job.
 If no alternative is ready, the current model continues; its counter stays at
 50 so a newly eligible competitor gets the next turn. Retry-delayed jobs and
 models with open failure circuits do not hold up other models.

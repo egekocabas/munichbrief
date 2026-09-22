@@ -783,8 +783,8 @@ func TestPipelineWorkerGroupsModelsFreezesTargetsAndStartsNextCycle(t *testing.T
 		{GermanPresentationStep, "qwen:4b"}, {GermanPresentationStep, "qwen:4b"},
 		{IncidentMetadataStep, "qwen:4b"}, {GermanPresentationStep, "qwen:4b"},
 	}
-	for range 3 {
-		for _, translation := range RegisteredTranslations() {
+	for _, translation := range RegisteredTranslations() {
+		for range 3 {
 			want = append(want, struct{ step, model string }{translation.Step.Key, "translate:4b"})
 		}
 	}
@@ -1317,11 +1317,9 @@ func TestCanonicalWorkPreemptsTranslationsAtJobBoundaries(t *testing.T) {
 	provider.mu.Unlock()
 	want := []string{IncidentMetadataStep, GermanPresentationStep, EnglishTranslationStep, IncidentMetadataStep, GermanPresentationStep}
 	for _, translation := range RegisteredTranslations()[1:] {
-		want = append(want, translation.Step.Key)
+		want = append(want, translation.Step.Key, translation.Step.Key)
 	}
-	for _, translation := range RegisteredTranslations() {
-		want = append(want, translation.Step.Key)
-	}
+	want = append(want, EnglishTranslationStep)
 	if len(events) != len(want) {
 		t.Fatalf("events = %v", events)
 	}

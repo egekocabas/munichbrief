@@ -731,6 +731,7 @@ func (w *PipelineWorker) processAvailable(ctx context.Context) {
 			}
 			if definition.Key == TranslationModelStep {
 				options.PreferredModel, options.YieldModel = w.translationBatch.modelHints(w.lastInvokedModel)
+				options.PreferredScope = w.translationBatch.scope
 			}
 			job, found, err := w.repository.ClaimPostProcessingJob(ctx, definition.Key, contracts, options, now)
 			if err != nil {

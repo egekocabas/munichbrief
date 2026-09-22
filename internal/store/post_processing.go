@@ -836,7 +836,11 @@ func postProcessingSelectionQuery(processorKey string, options PostProcessingCla
 			args = append(args, model)
 		}
 	}
-	args = append(args, options.YieldModel, options.PreferredModel)
+	scopeModel := options.PreferredModel
+	if scopeModel == "" {
+		scopeModel = options.YieldModel
+	}
+	args = append(args, options.YieldModel, options.PreferredModel, scopeModel, options.PreferredScope)
 	return `SELECT job.id,job.presentation_run_id,r.incident_id,job.processor_key,job.scope_key,job.request_kind,
 		job.model_identity,job.adapter_key,job.prompt_version,job.input_hash,job.attempt_count
 		FROM post_processing_jobs job JOIN presentation_runs r ON r.id=job.presentation_run_id
@@ -847,7 +851,8 @@ func postProcessingSelectionQuery(processorKey string, options PostProcessingCla
 			AND EXISTS (SELECT 1 FROM post_processing_scopes scope WHERE scope.processor_key=job.processor_key AND scope.scope_key=job.scope_key AND scope.enabled=1)))` + blockedCondition + `
 		ORDER BY CASE job.request_kind WHEN 'manual' THEN 0 WHEN 'scheduled' THEN 1 ELSE 2 END,
 			CASE WHEN job.model_identity=? THEN 1 ELSE 0 END,
-			CASE WHEN job.model_identity=? THEN 0 ELSE 1 END,job.created_at,job.id`, args
+			CASE WHEN job.model_identity=? THEN 0 ELSE 1 END,
+			CASE WHEN job.model_identity=? AND job.scope_key=? THEN 0 ELSE 1 END,job.created_at,job.id`, args
 }
 
 func scanPostProcessingCandidate(row interface{ Scan(...any) error }) (PostProcessingJob, error) {

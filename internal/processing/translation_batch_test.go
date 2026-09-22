@@ -57,6 +57,84 @@ func batchModels(provider *pipelineTestProvider) []string {
 	return result
 }
 
+func queueInterleavedBatchLanguages(t *testing.T, worker *PipelineWorker, database *store.Store, incidents int, routes [][2]string) {
+	t.Helper()
+	ctx := context.Background()
+	records, total, err := database.ListIncidents(ctx, incidents, 0)
+	if err != nil || total != incidents || len(records) != incidents {
+		t.Fatalf("incidents = %d/%d/%v, want %d", len(records), total, err, incidents)
+	}
+	for _, record := range records {
+		for _, route := range routes {
+			count, err := worker.RequestPostProcessing(ctx, PostProcessingRequest{
+				ProcessorKey: TranslationModelStep, ScopeKeys: []string{route[0]}, Model: route[1], IncidentID: &record.ID,
+			})
+			if err != nil || count != 1 {
+				t.Fatalf("queue %s/%s = %d/%v", route[0], route[1], count, err)
+			}
+		}
+	}
+}
+
+func TestTranslationBatchDrainsLanguageBeforeFillingModelBudget(t *testing.T) {
+	worker, database, provider, _ := newTranslationBatchFixture(t, 30)
+	queueInterleavedBatchLanguages(t, worker, database, 30, [][2]string{{"tr", "A"}, {"en", "A"}, {"hr", "B"}})
+	var want []string
+	for _, group := range []struct {
+		event string
+		count int
+	}{{"translation/tr:A:", 30}, {"translation/en:A:", 20}, {"translation/hr:B:", 30}, {"translation/en:A:", 10}} {
+		for range group.count {
+			want = append(want, group.event)
+		}
+	}
+	calls := 0
+	provider.generateContext = func(ctx context.Context, _ StepDefinition, _ StepInput) (StepOutput, bool, error) {
+		calls++
+		status, err := worker.Status(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		next, wantNext := "", ""
+		if status.TranslationBatch.NextModel != "" {
+			next = fmt.Sprintf("translation/%s:%s:", status.TranslationBatch.NextScope, status.TranslationBatch.NextModel)
+		}
+		if calls < len(want) {
+			wantNext = want[calls]
+		}
+		if next != wantNext {
+			t.Fatalf("preview after attempt %d = %q, want %q", calls, next, wantNext)
+		}
+		return StepOutput{}, false, nil
+	}
+	worker.processAvailable(context.Background())
+	if !slices.Equal(provider.events, want) {
+		t.Fatalf("translation order = %v, want %v", provider.events, want)
+	}
+}
+
+func TestTranslationLanguageBatchSkipsDelayedRetry(t *testing.T) {
+	worker, database, provider, now := newTranslationBatchFixture(t, 2)
+	queueInterleavedBatchLanguages(t, worker, database, 2, [][2]string{{"en", "A"}, {"tr", "A"}})
+	provider.fail = func(step string, call int) error {
+		if step == EnglishTranslationStep && call == 1 {
+			return errorOf(ErrorOutput, "fixture invalid output")
+		}
+		return nil
+	}
+	worker.processAvailable(context.Background())
+	want := []string{"translation/en:A:", "translation/en:A:", "translation/tr:A:", "translation/tr:A:"}
+	if !slices.Equal(provider.events, want) {
+		t.Fatalf("translation order = %v, want %v", provider.events, want)
+	}
+	*now = now.Add(time.Hour)
+	worker.processAvailable(context.Background())
+	want = append(want, "translation/en:A:")
+	if !slices.Equal(provider.events, want) {
+		t.Fatalf("translation retry order = %v, want %v", provider.events, want)
+	}
+}
+
 func TestTranslationBatchesReduceModelSwitchesAcrossLanguages(t *testing.T) {
 	worker, _, provider, _ := newTranslationBatchFixture(t, 2)
 	for _, route := range [][2]string{{"en", "A"}, {"tr", "B"}, {"hr", "A"}, {"it", "C"}} {
@@ -115,19 +193,24 @@ func TestTranslationBatchLimitAndLateCompetitor(t *testing.T) {
 }
 
 func TestManualTranslationPreemptsAutomaticModelBatch(t *testing.T) {
-	worker, database, provider, now := newTranslationBatchFixture(t, 3)
-	plans, err := worker.postProcessors.Plans(TranslationModelStep, []string{"en"}, "A")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if count, err := database.QueuePostProcessingForAll(context.Background(), "fixture", plans, false, *now); err != nil || count != 3 {
-		t.Fatalf("automatic queue=%d/%v", count, err)
-	}
-	provider.onTranslation = func() { queueBatchLanguage(t, worker, "tr", "B", 3) }
-	worker.processAvailable(context.Background())
-	want := []string{"A", "B", "B", "B", "A", "A"}
-	if got := batchModels(provider); !slices.Equal(got, want) {
-		t.Fatalf("model calls=%v, want %v", got, want)
+	for _, manualModel := range []string{"A", "B"} {
+		t.Run(manualModel, func(t *testing.T) {
+			worker, database, provider, now := newTranslationBatchFixture(t, 3)
+			plans, err := worker.postProcessors.Plans(TranslationModelStep, []string{"en"}, "A")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if count, err := database.QueuePostProcessingForAll(context.Background(), "fixture", plans, false, *now); err != nil || count != 3 {
+				t.Fatalf("automatic queue=%d/%v", count, err)
+			}
+			provider.onTranslation = func() { queueBatchLanguage(t, worker, "tr", manualModel, 3) }
+			worker.processAvailable(context.Background())
+			manualEvent := "translation/tr:" + manualModel + ":"
+			want := []string{"translation/en:A:", manualEvent, manualEvent, manualEvent, "translation/en:A:", "translation/en:A:"}
+			if !slices.Equal(provider.events, want) {
+				t.Fatalf("translation order=%v, want %v", provider.events, want)
+			}
+		})
 	}
 }
 
