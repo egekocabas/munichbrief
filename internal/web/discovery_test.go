@@ -233,12 +233,12 @@ func TestPublicDocumentsExposeCanonicalAndAlternateLinks(t *testing.T) {
 		`<meta property="og:url" content="https://munichbrief.de/en">`,
 		`<meta property="og:locale" content="en_GB">`,
 		`<meta property="og:locale:alternate" content="de_DE">`,
-		`<meta property="og:image" content="https://munichbrief.de/social/en/home">`,
-		`<meta property="og:image:secure_url" content="https://munichbrief.de/social/en/home">`,
+		`<meta property="og:image" content="https://munichbrief.de/social/en/home?v=` + server.socialCards.version + `">`,
+		`<meta property="og:image:secure_url" content="https://munichbrief.de/social/en/home?v=` + server.socialCards.version + `">`,
 		`<meta property="og:image:width" content="1200">`,
 		`<meta property="og:image:height" content="630">`,
 		`<meta name="twitter:card" content="summary_large_image">`,
-		`<meta name="twitter:image" content="https://munichbrief.de/social/en/home">`,
+		`<meta name="twitter:image" content="https://munichbrief.de/social/en/home?v=` + server.socialCards.version + `">`,
 	} {
 		if !strings.Contains(timeline.Body.String(), expected) {
 			t.Errorf("timeline does not contain %q", expected)
@@ -282,7 +282,7 @@ func TestPublicDocumentsExposeCanonicalAndAlternateLinks(t *testing.T) {
 		`data-ai-generated="true" data-ai-model="qwen3.5:4b"`,
 		`<meta property="og:type" content="article">`,
 		`<meta property="og:title" content="Safe title · MunichBrief">`,
-		`<meta property="og:image" content="https://munichbrief.de/social/en/incidents/` + formatID(job.IncidentID) + `">`,
+		`<meta property="og:image" content="https://munichbrief.de/social/en/incidents/` + formatID(job.IncidentID) + `?v=` + server.socialCards.version + `">`,
 		`<meta name="twitter:title" content="Safe title · MunichBrief">`,
 		`<meta property="article:published_time" content="`,
 		`<meta property="article:modified_time" content="` + translated.AITranslationGeneratedAt.Format(time.RFC3339) + `">`,

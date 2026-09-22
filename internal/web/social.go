@@ -31,6 +31,7 @@ import (
 	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/math/fixed"
 	"golang.org/x/image/vector"
+	"golang.org/x/image/webp"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	"golang.org/x/text/unicode/norm"
@@ -39,32 +40,44 @@ import (
 )
 
 const (
-	socialCardWidth     = 1200
-	socialCardHeight    = 630
-	socialTextLeft      = 70
-	socialTextMaxWidth  = 550
-	socialTextRightEdge = socialTextLeft + socialTextMaxWidth
-	socialCardXMP       = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:Iptc4xmpExt="http://iptc.org/std/Iptc4xmpExt/2008-02-29/" xmlns:xmp="http://ns.adobe.com/xap/1.0/" Iptc4xmpExt:DigitalSourceType="` + iptcCompositeWithTrainedAlgorithmicMedia + `" xmp:CreatorTool="MunichBrief"/></rdf:RDF></x:xmpmeta><?xpacket end="w"?>`
+	socialCardWidth  = 1200
+	socialCardHeight = 630
+	// Bump when renderer layout or colors change; asset bytes are hashed below.
+	socialCardDesignVersion     = "reader-webp-background-aligned-label-v6"
+	socialTextLeft              = 70
+	socialTextMaxWidth          = 550
+	socialTextRightEdge         = socialTextLeft + socialTextMaxWidth
+	socialHomeTitleSize         = 46
+	socialIncidentTitleSize     = 48
+	socialIncidentTitleMaxWidth = 650
+	socialSubtitleMaxWidth      = 700
+	socialSubtitleSize          = 26
+	socialSubtitleLineHeight    = 34
+	socialSubtitleMaxLines      = 3
+	socialCardXMP               = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:Iptc4xmpExt="http://iptc.org/std/Iptc4xmpExt/2008-02-29/" xmlns:xmp="http://ns.adobe.com/xap/1.0/" Iptc4xmpExt:DigitalSourceType="` + iptcCompositeWithTrainedAlgorithmicMedia + `" xmp:CreatorTool="MunichBrief"/></rdf:RDF></x:xmpmeta><?xpacket end="w"?>`
 )
 
 var (
-	socialInk                = color.RGBA{R: 20, G: 32, B: 43, A: 255}
-	socialCivic              = color.RGBA{R: 23, G: 75, B: 115, A: 255}
-	socialAlert              = color.RGBA{R: 163, G: 58, B: 48, A: 255}
-	socialPaper              = color.RGBA{R: 255, G: 254, B: 250, A: 255}
+	socialInk                = color.RGBA{R: 38, G: 60, B: 53, A: 255}
+	socialCivic              = color.RGBA{R: 50, G: 99, B: 79, A: 255}
+	socialMuted              = color.RGBA{R: 104, G: 116, B: 110, A: 255}
+	socialAlert              = color.RGBA{R: 149, G: 97, B: 35, A: 255}
 	sharedSocialCardRenderer = sync.OnceValues(buildSocialCardRenderer)
 )
 
 type socialCardRenderer struct {
-	background     *image.RGBA
-	aiLabel        image.Image
-	boldFont       *opentype.Font
-	regularFont    *opentype.Font
-	chineseFont    *textfont.Face
-	devanagariFont *textfont.Face
-	shapeMu        sync.Mutex
-	shaper         shaping.HarfbuzzShaper
-	version        string
+	background            *image.RGBA
+	brand                 image.Image
+	aiLabel               image.Image
+	boldFont              *opentype.Font
+	regularFont           *opentype.Font
+	chineseFont           *textfont.Face
+	devanagariFont        *textfont.Face
+	chineseRegularFont    *textfont.Face
+	devanagariRegularFont *textfont.Face
+	shapeMu               sync.Mutex
+	shaper                shaping.HarfbuzzShaper
+	version               string
 }
 
 type socialTextFace interface {
@@ -94,6 +107,7 @@ type shapedSocialTextFace struct {
 type socialCardSpec struct {
 	Eyebrow       string
 	Title         string
+	Subtitle      string
 	LanguageTag   string
 	AIGenerated   bool
 	AIModel       string
@@ -105,7 +119,7 @@ func newSocialCardRenderer() (*socialCardRenderer, error) {
 }
 
 func buildSocialCardRenderer() (*socialCardRenderer, error) {
-	source, err := png.Decode(bytes.NewReader(socialCardBackground))
+	source, err := webp.Decode(bytes.NewReader(socialCardBackground))
 	if err != nil {
 		return nil, fmt.Errorf("decode background: %w", err)
 	}
@@ -114,6 +128,10 @@ func buildSocialCardRenderer() (*socialCardRenderer, error) {
 	}
 	background := image.NewRGBA(image.Rect(0, 0, socialCardWidth, socialCardHeight))
 	draw.Draw(background, background.Bounds(), source, source.Bounds().Min, draw.Src)
+	brand, err := png.Decode(bytes.NewReader(socialCardBrand))
+	if err != nil {
+		return nil, fmt.Errorf("decode social brand: %w", err)
+	}
 	aiLabel, err := png.Decode(bytes.NewReader(euAISocialLabel))
 	if err != nil {
 		return nil, fmt.Errorf("decode EU AI social label: %w", err)
@@ -136,10 +154,16 @@ func buildSocialCardRenderer() (*socialCardRenderer, error) {
 		return nil, fmt.Errorf("parse Noto Sans Devanagari: %w", err)
 	}
 	devanagariFont.SetVariations([]textfont.Variation{{Tag: textopentype.MustNewTag("wght"), Value: 700}})
-	versionInput := append(append(append(append(append([]byte{}, socialCardBackground...), euAISocialLabel...), notoSansSC...), notoSansDevanagari...), socialCardXMP...)
+	// Keep regular faces separate: variation settings and glyph caches are mutable.
+	chineseRegularFont := textfont.NewFace(chineseFont.Font)
+	chineseRegularFont.SetVariations([]textfont.Variation{{Tag: textopentype.MustNewTag("wght"), Value: 400}})
+	devanagariRegularFont := textfont.NewFace(devanagariFont.Font)
+	devanagariRegularFont.SetVariations([]textfont.Variation{{Tag: textopentype.MustNewTag("wght"), Value: 400}})
+	versionInput := bytes.Join([][]byte{[]byte(socialCardDesignVersion), socialCardBackground, socialCardBrand, euAISocialLabel, notoSansSC, notoSansDevanagari, []byte(socialCardXMP)}, nil)
 	digest := sha256.Sum256(versionInput)
 	return &socialCardRenderer{
-		background: background, aiLabel: aiLabel, boldFont: boldFont, regularFont: regularFont,
+		background: background, brand: brand, aiLabel: aiLabel, boldFont: boldFont, regularFont: regularFont,
+		chineseRegularFont: chineseRegularFont, devanagariRegularFont: devanagariRegularFont,
 		chineseFont: chineseFont, devanagariFont: devanagariFont, version: fmt.Sprintf("%x", digest[:8]),
 	}, nil
 }
@@ -148,52 +172,69 @@ func (r *socialCardRenderer) render(spec socialCardSpec) ([]byte, error) {
 	canvas := image.NewRGBA(r.background.Bounds())
 	draw.Draw(canvas, canvas.Bounds(), r.background, image.Point{}, draw.Src)
 
-	logoFace, closeLogo, err := r.face(r.boldFont, 36)
-	if err != nil {
-		return nil, err
-	}
-	defer closeLogo()
-	brandFace, closeBrand, err := r.face(r.boldFont, 30)
-	if err != nil {
-		return nil, err
-	}
-	defer closeBrand()
 	eyebrowFace, closeEyebrow, err := r.face(r.boldFont, 16)
 	if err != nil {
 		return nil, err
 	}
 	defer closeEyebrow()
-	titleFace, closeTitle, err := r.face(r.boldFont, 52)
+	titleSize := 52.0
+	titleMaxWidth := socialTextMaxWidth
+	if strings.TrimSpace(spec.Eyebrow) != "" {
+		titleSize = socialIncidentTitleSize
+		titleMaxWidth = socialIncidentTitleMaxWidth
+	} else if spec.Subtitle != "" {
+		titleSize = socialHomeTitleSize
+	}
+	titleFace, closeTitle, err := r.face(r.boldFont, titleSize)
 	if err != nil {
 		return nil, err
 	}
 	defer closeTitle()
 	localizedEyebrowFace := r.localizedFace(spec.LanguageTag, 16, eyebrowFace)
-	localizedTitleFace := r.localizedFace(spec.LanguageTag, 52, titleFace)
+	localizedTitleFace := r.localizedFace(spec.LanguageTag, titleSize, titleFace)
 	urlFace, closeURL, err := r.face(r.boldFont, 18)
 	if err != nil {
 		return nil, err
 	}
 	defer closeURL()
 
-	drawRoundedRect(canvas, image.Rect(70, 55, 122, 107), 8, socialCivic)
-	drawCenteredText(canvas, logoFace, socialPaper, "M", image.Rect(70, 55, 122, 107), 94)
-	drawText(canvas, brandFace, socialInk, "MunichBrief", 141, 91)
+	draw.Draw(canvas, r.brand.Bounds().Add(image.Pt(socialTextLeft, 49)), r.brand, r.brand.Bounds().Min, draw.Over)
 	if spec.AIGenerated {
-		xdraw.CatmullRom.Scale(canvas, image.Rect(899, 55, 1130, 129), r.aiLabel, r.aiLabel.Bounds(), draw.Over, nil)
+		// Account for transparent padding so the visible badge ends at the title edge, x=720.
+		xdraw.CatmullRom.Scale(canvas, image.Rect(514, 44, 745, 118), r.aiLabel, r.aiLabel.Bounds(), draw.Over, nil)
 	}
 
 	spec.Eyebrow = normalizeSocialText(spec.Eyebrow)
 	spec.Title = normalizeSocialText(spec.Title)
+	spec.Subtitle = normalizeSocialText(spec.Subtitle)
 	titleY := 235
+	if spec.Subtitle != "" {
+		titleY = 203
+	}
 	if strings.TrimSpace(spec.Eyebrow) != "" {
 		localizedEyebrowFace.draw(canvas, socialAlert, localizedUpper(spec.LanguageTag, spec.Eyebrow), socialTextLeft, 170)
 		titleY = 252
 	}
-	for index, line := range wrapSocialTitle(spec.Title, localizedTitleFace, socialTextMaxWidth, 2) {
+	titleLines := wrapSocialTitle(spec.Title, localizedTitleFace, titleMaxWidth, 2)
+	for index, line := range titleLines {
 		localizedTitleFace.draw(canvas, socialInk, line, socialTextLeft, titleY+index*62)
 	}
-	drawText(canvas, urlFace, socialCivic, "munichbrief.de", socialTextLeft, 385)
+	urlY := 385
+	if spec.Subtitle != "" {
+		subtitleFace, closeSubtitle, err := r.face(r.regularFont, socialSubtitleSize)
+		if err != nil {
+			return nil, err
+		}
+		defer closeSubtitle()
+		localizedSubtitleFace := r.localizedRegularFace(spec.LanguageTag, socialSubtitleSize, subtitleFace)
+		subtitleLines := wrapSocialSubtitle(spec.Subtitle, localizedSubtitleFace, socialSubtitleMaxWidth, socialSubtitleMaxLines)
+		subtitleY := titleY + (len(titleLines)-1)*62 + 50
+		for index, line := range subtitleLines {
+			localizedSubtitleFace.draw(canvas, socialMuted, line, socialTextLeft, subtitleY+index*socialSubtitleLineHeight)
+		}
+		urlY = max(urlY, subtitleY+(len(subtitleLines)-1)*socialSubtitleLineHeight+50)
+	}
+	drawText(canvas, urlFace, socialCivic, "munichbrief.de", socialTextLeft, urlY)
 
 	var output bytes.Buffer
 	if err := png.Encode(&output, canvas); err != nil {
@@ -214,6 +255,20 @@ func (r *socialCardRenderer) localizedFace(tag string, size float64, fallback xf
 	default:
 		return basicSocialTextFace{face: fallback}
 	}
+}
+
+func (r *socialCardRenderer) localizedRegularFace(tag string, size float64, fallback xfont.Face) socialTextFace {
+	face := r.localizedFace(tag, size, fallback)
+	if shaped, ok := face.(shapedSocialTextFace); ok {
+		switch shaped.script {
+		case textlanguage.Han:
+			shaped.face = r.chineseRegularFont
+		case textlanguage.Devanagari:
+			shaped.face = r.devanagariRegularFont
+		}
+		return shaped
+	}
+	return face
 }
 
 func (f shapedSocialTextFace) output(value string) shaping.Output {
@@ -285,7 +340,7 @@ func (f shapedSocialTextFace) draw(destination draw.Image, textColor color.Color
 }
 
 func (r *socialCardRenderer) etag(spec socialCardSpec) string {
-	digest := sha256.Sum256([]byte(r.version + "\x00" + spec.LanguageTag + "\x00" + spec.Eyebrow + "\x00" + spec.Title + "\x00" + strconv.FormatBool(spec.AIGenerated) + "\x00" + spec.AIModel + "\x00" + spec.CacheIdentity))
+	digest := sha256.Sum256([]byte(r.version + "\x00" + spec.LanguageTag + "\x00" + spec.Eyebrow + "\x00" + spec.Title + "\x00" + spec.Subtitle + "\x00" + strconv.FormatBool(spec.AIGenerated) + "\x00" + spec.AIModel + "\x00" + spec.CacheIdentity))
 	return fmt.Sprintf(`"%x"`, digest[:12])
 }
 
@@ -344,23 +399,6 @@ func drawText(destination draw.Image, face xfont.Face, textColor color.Color, te
 	drawer.DrawString(text)
 }
 
-func drawCenteredText(destination draw.Image, face xfont.Face, textColor color.Color, text string, bounds image.Rectangle, baseline int) {
-	width := xfont.MeasureString(face, text).Ceil()
-	drawText(destination, face, textColor, text, bounds.Min.X+(bounds.Dx()-width)/2, baseline)
-}
-
-func drawRoundedRect(destination draw.Image, bounds image.Rectangle, radius int, fill color.Color) {
-	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-		for x := bounds.Min.X; x < bounds.Max.X; x++ {
-			dx := max(bounds.Min.X+radius-x, x-(bounds.Max.X-radius-1), 0)
-			dy := max(bounds.Min.Y+radius-y, y-(bounds.Max.Y-radius-1), 0)
-			if dx*dx+dy*dy <= radius*radius {
-				destination.Set(x, y, fill)
-			}
-		}
-	}
-}
-
 func wrapSocialTitle(value string, face socialTextFace, maxWidth, maxLines int) []string {
 	separator := face.wordSeparator()
 	words := strings.Fields(value)
@@ -404,6 +442,49 @@ func wrapSocialTitle(value string, face socialTextFace, maxWidth, maxLines int) 
 	lines = lines[:maxLines]
 	lines[maxLines-1] = truncateSocialText(remainder, face, maxWidth)
 	return lines
+}
+
+// Balance word-spaced subtitles across the minimum number of lines. This avoids
+// leaving just the language name on a final line. Han keeps its script-aware
+// wrapping, which preserves embedded Latin words and their original spacing.
+func wrapSocialSubtitle(value string, face socialTextFace, maxWidth, maxLines int) []string {
+	wrapped := wrapSocialTitle(value, face, maxWidth, maxLines)
+	if len(wrapped) < 2 || face.wordSeparator() == "" {
+		return wrapped
+	}
+	words := strings.Fields(value)
+	bestScore := int(^uint(0) >> 1)
+	var best []string
+	var fit func(int, []string, int)
+	fit = func(start int, lines []string, score int) {
+		remaining := len(wrapped) - len(lines)
+		for end := start + 1; end <= len(words)-(remaining-1); end++ {
+			if remaining == 1 && end != len(words) {
+				continue
+			}
+			line := strings.Join(words[start:end], " ")
+			width := face.measure(line)
+			if width > maxWidth {
+				break
+			}
+			nextScore := score + (maxWidth-width)*(maxWidth-width)
+			if nextScore >= bestScore {
+				continue
+			}
+			next := append(lines, line)
+			if remaining == 1 {
+				bestScore = nextScore
+				best = append([]string(nil), next...)
+			} else {
+				fit(end, next, nextScore)
+			}
+		}
+	}
+	fit(0, nil, 0)
+	if best != nil {
+		return best
+	}
+	return wrapped
 }
 
 func hanSocialTitleTokens(value string) []string {
@@ -458,7 +539,10 @@ func (s *Server) socialHome(response http.ResponseWriter, request *http.Request)
 		http.NotFound(response, request)
 		return
 	}
-	s.writeSocialCard(response, request, language, socialCardSpec{Title: s.localization.Text(language, "BrandTagline")})
+	s.writeSocialCard(response, request, language, socialCardSpec{
+		Title:    s.localization.Text(language, "HeroTitle"),
+		Subtitle: s.localization.Text(language, "HeroCopy"),
+	})
 }
 
 func (s *Server) socialAbout(response http.ResponseWriter, request *http.Request) {
