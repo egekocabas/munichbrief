@@ -328,13 +328,14 @@ func TestSocialHomeCardsMatchHomepageInEveryLanguage(t *testing.T) {
 				name, text string
 				face       socialTextFace
 				maxLines   int
+				maxWidth   int
 			}{
-				{"headline", spec.Title, renderer.localizedFace(spec.LanguageTag, socialHomeTitleSize, titleFont), 2},
-				{"subtitle", spec.Subtitle, renderer.localizedRegularFace(spec.LanguageTag, socialSubtitleSize, subtitleFont), socialSubtitleMaxLines},
+				{"headline", spec.Title, renderer.localizedFace(spec.LanguageTag, socialHomeTitleSize, titleFont), 2, socialTextMaxWidth},
+				{"subtitle", spec.Subtitle, renderer.localizedRegularFace(spec.LanguageTag, socialSubtitleSize, subtitleFont), socialSubtitleMaxLines, socialSubtitleMaxWidth},
 			} {
-				lines := wrapSocialTitle(normalizeSocialText(block.text), block.face, socialTextMaxWidth, block.maxLines)
+				lines := wrapSocialTitle(normalizeSocialText(block.text), block.face, block.maxWidth, block.maxLines)
 				if block.name == "subtitle" {
-					lines = wrapSocialSubtitle(normalizeSocialText(block.text), block.face, socialTextMaxWidth, block.maxLines)
+					lines = wrapSocialSubtitle(normalizeSocialText(block.text), block.face, block.maxWidth, block.maxLines)
 				}
 				if block.name == "subtitle" && len(lines) > 1 && block.face.wordSeparator() == " " && len(strings.Fields(lines[len(lines)-1])) < 2 {
 					t.Errorf("subtitle ends with an isolated word: %#v", lines)
@@ -346,7 +347,7 @@ func TestSocialHomeCardsMatchHomepageInEveryLanguage(t *testing.T) {
 					t.Errorf("%s copy was lost or truncated: %q -> %#v", block.name, block.text, lines)
 				}
 				for _, line := range lines {
-					if width := block.face.measure(line); width > socialTextMaxWidth {
+					if width := block.face.measure(line); width > block.maxWidth {
 						t.Errorf("%s line is %dpx wide: %q", block.name, width, line)
 					}
 				}
@@ -384,9 +385,10 @@ func TestSocialHomeCardsMatchHomepageInEveryLanguage(t *testing.T) {
 			}
 			// This rectangle ends above the mountains and left of the stadium.
 			safeArea := image.Rect(socialTextLeft-2, 45, socialTextRightEdge+3, 442)
+			subtitleArea := image.Rect(socialTextLeft-2, 220, socialTextLeft+socialSubtitleMaxWidth+3, 340)
 			for y := 0; y < socialCardHeight; y++ {
 				for x := 0; x < socialCardWidth; x++ {
-					if rgba(rendered.At(x, y)) != rgba(renderer.background.At(x, y)) && !image.Pt(x, y).In(safeArea) {
+					if rgba(rendered.At(x, y)) != rgba(renderer.background.At(x, y)) && !image.Pt(x, y).In(safeArea) && !image.Pt(x, y).In(subtitleArea) {
 						t.Fatalf("rendered text escapes the sky safe area at (%d,%d)", x, y)
 					}
 				}

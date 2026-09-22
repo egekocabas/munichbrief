@@ -42,11 +42,12 @@ const (
 	socialCardWidth  = 1200
 	socialCardHeight = 630
 	// Bump when renderer layout or colors change; asset bytes are hashed below.
-	socialCardDesignVersion  = "reader-home-copy-v2"
+	socialCardDesignVersion  = "reader-wide-subtitle-v3"
 	socialTextLeft           = 70
 	socialTextMaxWidth       = 550
 	socialTextRightEdge      = socialTextLeft + socialTextMaxWidth
 	socialHomeTitleSize      = 46
+	socialSubtitleMaxWidth   = 700
 	socialSubtitleSize       = 26
 	socialSubtitleLineHeight = 34
 	socialSubtitleMaxLines   = 3
@@ -218,7 +219,7 @@ func (r *socialCardRenderer) render(spec socialCardSpec) ([]byte, error) {
 		}
 		defer closeSubtitle()
 		localizedSubtitleFace := r.localizedRegularFace(spec.LanguageTag, socialSubtitleSize, subtitleFace)
-		subtitleLines := wrapSocialSubtitle(spec.Subtitle, localizedSubtitleFace, socialTextMaxWidth, socialSubtitleMaxLines)
+		subtitleLines := wrapSocialSubtitle(spec.Subtitle, localizedSubtitleFace, socialSubtitleMaxWidth, socialSubtitleMaxLines)
 		subtitleY := titleY + (len(titleLines)-1)*62 + 50
 		for index, line := range subtitleLines {
 			localizedSubtitleFace.draw(canvas, socialMuted, line, socialTextLeft, subtitleY+index*socialSubtitleLineHeight)
