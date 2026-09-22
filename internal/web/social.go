@@ -42,16 +42,18 @@ const (
 	socialCardWidth  = 1200
 	socialCardHeight = 630
 	// Bump when renderer layout or colors change; asset bytes are hashed below.
-	socialCardDesignVersion  = "reader-wide-subtitle-v3"
-	socialTextLeft           = 70
-	socialTextMaxWidth       = 550
-	socialTextRightEdge      = socialTextLeft + socialTextMaxWidth
-	socialHomeTitleSize      = 46
-	socialSubtitleMaxWidth   = 700
-	socialSubtitleSize       = 26
-	socialSubtitleLineHeight = 34
-	socialSubtitleMaxLines   = 3
-	socialCardXMP            = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:Iptc4xmpExt="http://iptc.org/std/Iptc4xmpExt/2008-02-29/" xmlns:xmp="http://ns.adobe.com/xap/1.0/" Iptc4xmpExt:DigitalSourceType="` + iptcCompositeWithTrainedAlgorithmicMedia + `" xmp:CreatorTool="MunichBrief"/></rdf:RDF></x:xmpmeta><?xpacket end="w"?>`
+	socialCardDesignVersion     = "reader-wide-incident-title-v4"
+	socialTextLeft              = 70
+	socialTextMaxWidth          = 550
+	socialTextRightEdge         = socialTextLeft + socialTextMaxWidth
+	socialHomeTitleSize         = 46
+	socialIncidentTitleSize     = 48
+	socialIncidentTitleMaxWidth = 650
+	socialSubtitleMaxWidth      = 700
+	socialSubtitleSize          = 26
+	socialSubtitleLineHeight    = 34
+	socialSubtitleMaxLines      = 3
+	socialCardXMP               = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:Iptc4xmpExt="http://iptc.org/std/Iptc4xmpExt/2008-02-29/" xmlns:xmp="http://ns.adobe.com/xap/1.0/" Iptc4xmpExt:DigitalSourceType="` + iptcCompositeWithTrainedAlgorithmicMedia + `" xmp:CreatorTool="MunichBrief"/></rdf:RDF></x:xmpmeta><?xpacket end="w"?>`
 )
 
 var (
@@ -175,7 +177,11 @@ func (r *socialCardRenderer) render(spec socialCardSpec) ([]byte, error) {
 	}
 	defer closeEyebrow()
 	titleSize := 52.0
-	if spec.Subtitle != "" {
+	titleMaxWidth := socialTextMaxWidth
+	if strings.TrimSpace(spec.Eyebrow) != "" {
+		titleSize = socialIncidentTitleSize
+		titleMaxWidth = socialIncidentTitleMaxWidth
+	} else if spec.Subtitle != "" {
 		titleSize = socialHomeTitleSize
 	}
 	titleFace, closeTitle, err := r.face(r.boldFont, titleSize)
@@ -207,7 +213,7 @@ func (r *socialCardRenderer) render(spec socialCardSpec) ([]byte, error) {
 		localizedEyebrowFace.draw(canvas, socialAlert, localizedUpper(spec.LanguageTag, spec.Eyebrow), socialTextLeft, 170)
 		titleY = 252
 	}
-	titleLines := wrapSocialTitle(spec.Title, localizedTitleFace, socialTextMaxWidth, 2)
+	titleLines := wrapSocialTitle(spec.Title, localizedTitleFace, titleMaxWidth, 2)
 	for index, line := range titleLines {
 		localizedTitleFace.draw(canvas, socialInk, line, socialTextLeft, titleY+index*62)
 	}

@@ -248,29 +248,29 @@ func TestSocialCardTextStaysInsideSkySafeArea(t *testing.T) {
 			}
 		}
 	}
-	if maxChangedX > socialTextRightEdge+2 {
-		t.Errorf("social text changed pixels through x=%d, beyond safe edge %d", maxChangedX, socialTextRightEdge)
+	if maxChangedX > (socialTextLeft+socialIncidentTitleMaxWidth)+2 {
+		t.Errorf("social text changed pixels through x=%d, beyond safe edge %d", maxChangedX, (socialTextLeft + socialIncidentTitleMaxWidth))
 	}
 
-	titleFace, closeTitle, err := renderer.face(renderer.boldFont, 52)
+	titleFace, closeTitle, err := renderer.face(renderer.boldFont, socialIncidentTitleSize)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer closeTitle()
 	socialFace := basicSocialTextFace{face: titleFace}
-	lines := wrapSocialTitle(longestPublishedTitle, socialFace, socialTextMaxWidth, 2)
+	lines := wrapSocialTitle(longestPublishedTitle, socialFace, socialIncidentTitleMaxWidth, 2)
 	if len(lines) > 2 {
 		t.Fatalf("wrapped title has %d lines, want at most 2: %#v", len(lines), lines)
 	}
 	for _, line := range lines {
-		if width := socialFace.measure(line); width > socialTextMaxWidth {
-			t.Errorf("wrapped line %q is %dpx wide, max %dpx", line, width, socialTextMaxWidth)
+		if width := socialFace.measure(line); width > socialIncidentTitleMaxWidth {
+			t.Errorf("wrapped line %q is %dpx wide, max %dpx", line, width, socialIncidentTitleMaxWidth)
 		}
 	}
 	longUnbrokenTitle := strings.Repeat("W", 90)
-	for _, line := range wrapSocialTitle(longUnbrokenTitle, socialFace, socialTextMaxWidth, 2) {
-		if width := socialFace.measure(line); width > socialTextMaxWidth {
-			t.Errorf("unbroken wrapped line %q is %dpx wide, max %dpx", line, width, socialTextMaxWidth)
+	for _, line := range wrapSocialTitle(longUnbrokenTitle, socialFace, socialIncidentTitleMaxWidth, 2) {
+		if width := socialFace.measure(line); width > socialIncidentTitleMaxWidth {
+			t.Errorf("unbroken wrapped line %q is %dpx wide, max %dpx", line, width, socialIncidentTitleMaxWidth)
 		}
 	}
 }
