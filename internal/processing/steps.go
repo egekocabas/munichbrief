@@ -875,36 +875,56 @@ type translationClock struct {
 	minutes    int
 }
 
-func removeEquivalentLocalizedTimes(source, translated string) (string, string, bool) {
-	sourceClocks := translation24HourPattern.FindAllStringSubmatchIndex(source, -1)
-	twelveHourClocks := translation12HourPattern.FindAllStringSubmatchIndex(translated, -1)
-	hourMarkerClocks := translationHourMarkerPattern.FindAllStringSubmatchIndex(translated, -1)
-	chineseClocks := translationChineseTimePattern.FindAllStringSubmatchIndex(translated, -1)
-	if len(sourceClocks) == 0 || len(twelveHourClocks) == 0 && len(hourMarkerClocks) == 0 && len(chineseClocks) == 0 {
-		return source, translated, true
+func overlapsTranslationClock(clocks []translationClock, start, end int) bool {
+	for _, clock := range clocks {
+		if start < clock.end && end > clock.start {
+			return true
+		}
 	}
-	sourceMatches := make([]translationClock, 0, len(sourceClocks))
-	for _, match := range sourceClocks {
-		hour, _ := strconv.Atoi(source[match[2]:match[3]])
-		minute, _ := strconv.Atoi(source[match[4]:match[5]])
-		sourceMatches = append(sourceMatches, translationClock{start: match[0], end: match[1], minutes: hour*60 + minute})
-	}
-	translatedMatches := make([]translationClock, 0, len(twelveHourClocks)+len(hourMarkerClocks)+len(chineseClocks))
-	for _, match := range twelveHourClocks {
-		hour, _ := strconv.Atoi(translated[match[2]:match[3]])
+	return false
+}
+
+func translationClockMatches(value string) []translationClock {
+	var clocks []translationClock
+	for _, match := range translation12HourPattern.FindAllStringSubmatchIndex(value, -1) {
+		hour, _ := strconv.Atoi(value[match[2]:match[3]])
 		minute := 0
 		if match[4] >= 0 {
-			minute, _ = strconv.Atoi(translated[match[4]:match[5]])
+			minute, _ = strconv.Atoi(value[match[4]:match[5]])
 		}
 		if hour == 12 {
 			hour = 0
 		}
-		if strings.EqualFold(translated[match[6]:match[7]], "p") {
+		if strings.EqualFold(value[match[6]:match[7]], "p") {
 			hour += 12
 		}
-		translatedMatches = append(translatedMatches, translationClock{start: match[0], end: match[1], minutes: hour*60 + minute})
+		clocks = append(clocks, translationClock{start: match[0], end: match[1], minutes: hour*60 + minute})
+	}
+	for _, match := range translation24HourPattern.FindAllStringSubmatchIndex(value, -1) {
+		// The colon portion of "3:00 PM" belongs to the 12-hour clock above.
+		if overlapsTranslationClock(clocks, match[0], match[1]) {
+			continue
+		}
+		hour, _ := strconv.Atoi(value[match[2]:match[3]])
+		minute, _ := strconv.Atoi(value[match[4]:match[5]])
+		clocks = append(clocks, translationClock{start: match[0], end: match[1], minutes: hour*60 + minute})
+	}
+	return clocks
+}
+
+func removeEquivalentLocalizedTimes(source, translated string) (string, string, bool) {
+	sourceMatches := translationClockMatches(source)
+	translatedMatches := translationClockMatches(translated)
+	requiredTranslatedClocks := len(translatedMatches)
+	hourMarkerClocks := translationHourMarkerPattern.FindAllStringSubmatchIndex(translated, -1)
+	chineseClocks := translationChineseTimePattern.FindAllStringSubmatchIndex(translated, -1)
+	if len(sourceMatches) == 0 || len(translatedMatches) == 0 && len(hourMarkerClocks) == 0 && len(chineseClocks) == 0 {
+		return source, translated, true
 	}
 	for _, match := range hourMarkerClocks {
+		if overlapsTranslationClock(translatedMatches, match[0], match[1]) {
+			continue
+		}
 		hour, _ := strconv.Atoi(translated[match[2]:match[3]])
 		minute := 0
 		if match[4] >= 0 {
@@ -913,6 +933,9 @@ func removeEquivalentLocalizedTimes(source, translated string) (string, string, 
 		translatedMatches = append(translatedMatches, translationClock{start: match[0], end: match[1], minutes: hour*60 + minute})
 	}
 	for _, match := range chineseClocks {
+		if overlapsTranslationClock(translatedMatches, match[0], match[1]) {
+			continue
+		}
 		hour, _ := strconv.Atoi(translated[match[2]:match[3]])
 		minute := 0
 		if match[4] >= 0 {
@@ -932,10 +955,14 @@ func removeEquivalentLocalizedTimes(source, translated string) (string, string, 
 			}
 		}
 	}
-	// A changed AM/PM marker can preserve every digit. Other formats such as
-	// "5 h" can also be durations, so leave their unmatched numbers to the
-	// numeric fallback rather than assuming that they must denote a clock.
-	for _, matched := range used[:len(twelveHourClocks)] {
+	// Compare whole clocks, including AM/PM, before the numeric fallback:
+	// changed markers or swapped hours/minutes can preserve every digit.
+	if len(sourceRemove) != len(sourceMatches) {
+		return source, translated, false
+	}
+	// Other formats such as "5 h" can also be durations, so leave their
+	// unmatched numbers to the fallback rather than treating them as clocks.
+	for _, matched := range used[:requiredTranslatedClocks] {
 		if !matched {
 			return source, translated, false
 		}

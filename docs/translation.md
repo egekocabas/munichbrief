@@ -16,6 +16,11 @@ For example, a street name stays exactly as written in German while the
 sentence around it changes language. Missing, duplicated, or invented tokens
 cause the result to be rejected.
 
+Clock validation accepts equivalent 12-hour and 24-hour notation, including
+omitting AM when using 24-hour notation: `02:20 AM` can become `2:20`, and
+`3 PM` can become `15:00`. Noon is `12:00`; midnight is `00:00`.
+Changing the hour, minutes, or AM/PM meaning is rejected.
+
 ## Where the names come from
 
 | Source | Names used | Attribution |
