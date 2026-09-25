@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/egekocabas/munichbrief/internal/processing"
-	"github.com/egekocabas/munichbrief/internal/source"
 	"github.com/egekocabas/munichbrief/internal/store"
 )
 
@@ -94,16 +93,7 @@ func seedV2Presentation(t *testing.T, database *store.Store, presentation testPr
 
 func fixtureStore(t *testing.T) *store.Store {
 	t.Helper()
-	ctx := context.Background()
-	database := openTestStore(t)
-	documents, err := source.NewFixtureProvider().Load(ctx)
-	if err != nil {
-		t.Fatalf("Load() error = %v", err)
-	}
-	if err := database.UpsertDocuments(ctx, documents, time.Now()); err != nil {
-		t.Fatalf("UpsertDocuments() error = %v", err)
-	}
-	return database
+	return openTestSnapshot(t, fixtureTestDatabase)
 }
 
 type fakeProcessingRequester struct {

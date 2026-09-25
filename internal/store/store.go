@@ -28,8 +28,9 @@ var (
 
 // Store is the application's single SQLite persistence boundary.
 type Store struct {
-	db   *sql.DB
-	path string
+	db         *sql.DB
+	path       string
+	statements preparedStatementCache
 }
 
 // IncidentRecord is a query model used by review and presentation code. Public
@@ -250,16 +251,8 @@ func (s *Store) Ready(ctx context.Context) error {
 	return nil
 }
 
-func (s *Store) UpsertDocuments(ctx context.Context, documents []domain.SourceDocument, observedAt time.Time) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("begin fixture ingestion: %w", err)
-	}
-	defer tx.Rollback()
-
-	now := formatTime(observedAt.UTC())
-	for _, document := range documents {
-		if _, err := tx.ExecContext(ctx, `
+const (
+	upsertFixtureDocumentSQL = `
 			INSERT INTO source_documents (
 				external_id, source_url, title, published_at, discovered_at, last_seen_at,
 				feed_fingerprint, fetch_status, source_hash, last_fetched_at
@@ -273,7 +266,35 @@ func (s *Store) UpsertDocuments(ctx context.Context, documents []domain.SourceDo
 				fetch_status = excluded.fetch_status,
 				source_hash = excluded.source_hash,
 				last_fetched_at = excluded.last_fetched_at,
-				error_message = NULL`,
+				error_message = NULL`
+	upsertFixtureIncidentSQL = `
+				INSERT INTO incidents (
+					source_document_id, incident_number, position, title_de, body_de,
+					content_hash, created_at, updated_at
+				) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+				ON CONFLICT(source_document_id, position) DO UPDATE SET
+					incident_number = excluded.incident_number,
+					title_de = excluded.title_de,
+					body_de = excluded.body_de,
+					content_hash = excluded.content_hash,
+					updated_at = excluded.updated_at`
+)
+
+func (s *Store) UpsertDocuments(ctx context.Context, documents []domain.SourceDocument, observedAt time.Time) error {
+	statements, err := s.prepareStatements(ctx, upsertFixtureDocumentSQL, upsertFixtureIncidentSQL)
+	if err != nil {
+		return err
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin fixture ingestion: %w", err)
+	}
+	defer tx.Rollback()
+
+	now := formatTime(observedAt.UTC())
+	for _, document := range documents {
+		if _, err := tx.StmtContext(ctx, statements[upsertFixtureDocumentSQL]).ExecContext(ctx,
 			document.ExternalID,
 			document.SourceURL,
 			document.Title,
@@ -293,17 +314,7 @@ func (s *Store) UpsertDocuments(ctx context.Context, documents []domain.SourceDo
 		}
 
 		for _, incident := range document.Incidents {
-			if _, err := tx.ExecContext(ctx, `
-				INSERT INTO incidents (
-					source_document_id, incident_number, position, title_de, body_de,
-					content_hash, created_at, updated_at
-				) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-				ON CONFLICT(source_document_id, position) DO UPDATE SET
-					incident_number = excluded.incident_number,
-					title_de = excluded.title_de,
-					body_de = excluded.body_de,
-					content_hash = excluded.content_hash,
-					updated_at = excluded.updated_at`,
+			if _, err := tx.StmtContext(ctx, statements[upsertFixtureIncidentSQL]).ExecContext(ctx,
 				sourceDocumentID,
 				incident.Number,
 				incident.Position,

@@ -588,36 +588,49 @@ func postProcessingInputValuesTx(ctx context.Context, tx *sql.Tx, runID int64, k
 	return values, "", nil
 }
 
+const (
+	supersedePostProcessingSQL = `UPDATE post_processing_jobs SET status='superseded',completed_at=?,updated_at=?
+		WHERE status='pending' AND presentation_run_id IN (
+			SELECT r.id FROM presentation_runs r JOIN incidents i ON i.id=r.incident_id
+			WHERE r.source_hash<>i.content_hash OR r.status<>'complete' OR r.pipeline_version<>? OR r.legacy<>0
+		)`
+	skipDisabledPostProcessingScopeSQL = `UPDATE post_processing_jobs SET status='skipped',status_reason=?,status_detail=NULL,
+		next_retry_at=NULL,failure_kind=NULL,error_message=NULL,started_at=NULL,completed_at=?,updated_at=?
+		WHERE processor_key=? AND request_kind='scheduled' AND status='pending'
+		AND EXISTS (SELECT 1 FROM post_processing_scopes scope WHERE scope.processor_key=post_processing_jobs.processor_key
+			AND scope.scope_key=post_processing_jobs.scope_key AND scope.enabled=0)`
+	skipDisabledPostProcessorSQL = `UPDATE post_processing_jobs SET status='skipped',status_reason=?,status_detail=NULL,
+		next_retry_at=NULL,failure_kind=NULL,error_message=NULL,started_at=NULL,completed_at=?,updated_at=?
+		WHERE processor_key=? AND request_kind='scheduled' AND status='pending'
+		AND EXISTS (SELECT 1 FROM post_processing_processor_controls processor
+			WHERE processor.processor_key=post_processing_jobs.processor_key AND processor.enabled=0)`
+	claimPostProcessingSQL = `UPDATE post_processing_jobs SET status='running',attempt_count=?,next_retry_at=NULL,
+		failure_kind=NULL,error_message=NULL,started_at=?,updated_at=? WHERE id=? AND status='pending'`
+)
+
 // ClaimPostProcessingJob atomically claims the next eligible job for a
 // registered processor. Obsolete scopes and prompts are failed without a model
 // call so they cannot retry indefinitely or block other scopes after a deployment.
 func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string, contracts PostProcessingContract, options PostProcessingClaimOptions, now time.Time) (PostProcessingJob, bool, error) {
+	statements, err := s.prepareStatements(ctx, supersedePostProcessingSQL, skipDisabledPostProcessingScopeSQL, skipDisabledPostProcessorSQL, claimPostProcessingSQL)
+	if err != nil {
+		return PostProcessingJob{}, false, err
+	}
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return PostProcessingJob{}, false, err
 	}
 	defer tx.Rollback()
 	formatted := formatTime(now.UTC())
-	if _, err := tx.ExecContext(ctx, `UPDATE post_processing_jobs SET status='superseded',completed_at=?,updated_at=?
-		WHERE status='pending' AND presentation_run_id IN (
-			SELECT r.id FROM presentation_runs r JOIN incidents i ON i.id=r.incident_id
-			WHERE r.source_hash<>i.content_hash OR r.status<>'complete' OR r.pipeline_version<>? OR r.legacy<>0
-		)`, formatted, formatted, PipelineVersion); err != nil {
+	if _, err := tx.StmtContext(ctx, statements[supersedePostProcessingSQL]).ExecContext(ctx, formatted, formatted, PipelineVersion); err != nil {
 		return PostProcessingJob{}, false, err
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE post_processing_jobs SET status='skipped',status_reason=?,status_detail=NULL,
-		next_retry_at=NULL,failure_kind=NULL,error_message=NULL,started_at=NULL,completed_at=?,updated_at=?
-		WHERE processor_key=? AND request_kind='scheduled' AND status='pending'
-		AND EXISTS (SELECT 1 FROM post_processing_scopes scope WHERE scope.processor_key=post_processing_jobs.processor_key
-			AND scope.scope_key=post_processing_jobs.scope_key AND scope.enabled=0)`,
+	if _, err := tx.StmtContext(ctx, statements[skipDisabledPostProcessingScopeSQL]).ExecContext(ctx,
 		PostProcessingStatusReasonScopeDisabled, formatted, formatted, processorKey); err != nil {
 		return PostProcessingJob{}, false, err
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE post_processing_jobs SET status='skipped',status_reason=?,status_detail=NULL,
-		next_retry_at=NULL,failure_kind=NULL,error_message=NULL,started_at=NULL,completed_at=?,updated_at=?
-		WHERE processor_key=? AND request_kind='scheduled' AND status='pending'
-		AND EXISTS (SELECT 1 FROM post_processing_processor_controls processor
-			WHERE processor.processor_key=post_processing_jobs.processor_key AND processor.enabled=0)`,
+	if _, err := tx.StmtContext(ctx, statements[skipDisabledPostProcessorSQL]).ExecContext(ctx,
 		PostProcessingStatusReasonProcessorDisabled, formatted, formatted, processorKey); err != nil {
 		return PostProcessingJob{}, false, err
 	}
@@ -671,8 +684,7 @@ func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string,
 			continue
 		}
 		job.AttemptCount++
-		result, err := tx.ExecContext(ctx, `UPDATE post_processing_jobs SET status='running',attempt_count=?,next_retry_at=NULL,
-		failure_kind=NULL,error_message=NULL,started_at=?,updated_at=? WHERE id=? AND status='pending'`, job.AttemptCount, formatted, formatted, job.ID)
+		result, err := tx.StmtContext(ctx, statements[claimPostProcessingSQL]).ExecContext(ctx, job.AttemptCount, formatted, formatted, job.ID)
 		if err != nil {
 			return PostProcessingJob{}, false, err
 		}
@@ -686,6 +698,11 @@ func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string,
 	}
 }
 
+const (
+	insertPostProcessingValueSQL = `INSERT INTO post_processing_values(job_id,kind,value) VALUES(?,?,?)`
+	completePostProcessingSQL    = `UPDATE post_processing_jobs SET status='succeeded',model_identity=?,input_hash=?,completed_at=?,updated_at=? WHERE id=? AND status='running'`
+)
+
 // CompletePostProcessingJob stores validated named values and succeeds the job
 // atomically, leaving older successful attempts available until this commit.
 func (s *Store) CompletePostProcessingJob(ctx context.Context, job PostProcessingJob, values []PipelineValue, modelIdentity, inputHash string, now time.Time) error {
@@ -698,6 +715,11 @@ func (s *Store) CompletePostProcessingJob(ctx context.Context, job PostProcessin
 	if inputHash != job.InputHash {
 		return errors.New("post-processing input hash changed after claim")
 	}
+	statements, err := s.prepareStatements(ctx, insertPostProcessingValueSQL, completePostProcessingSQL)
+	if err != nil {
+		return err
+	}
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -707,12 +729,12 @@ func (s *Store) CompletePostProcessingJob(ctx context.Context, job PostProcessin
 		if strings.TrimSpace(value.Kind) == "" || strings.TrimSpace(value.Value) == "" {
 			return errors.New("post-processing output kind and value are required")
 		}
-		if _, err := tx.ExecContext(ctx, `INSERT INTO post_processing_values(job_id,kind,value) VALUES(?,?,?)`, job.ID, value.Kind, value.Value); err != nil {
+		if _, err := tx.StmtContext(ctx, statements[insertPostProcessingValueSQL]).ExecContext(ctx, job.ID, value.Kind, value.Value); err != nil {
 			return fmt.Errorf("store post-processing output %s: %w", value.Kind, err)
 		}
 	}
 	formatted := formatTime(now.UTC())
-	result, err := tx.ExecContext(ctx, `UPDATE post_processing_jobs SET status='succeeded',model_identity=?,input_hash=?,completed_at=?,updated_at=? WHERE id=? AND status='running'`, modelIdentity, inputHash, formatted, formatted, job.ID)
+	result, err := tx.StmtContext(ctx, statements[completePostProcessingSQL]).ExecContext(ctx, modelIdentity, inputHash, formatted, formatted, job.ID)
 	if err != nil {
 		return err
 	}
