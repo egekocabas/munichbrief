@@ -318,6 +318,36 @@ func TestTranslationValidationAcceptsEquivalentLocalized24HourNotation(t *testin
 	}
 }
 
+func TestTranslationValidationRejectsChangedClockMeaningWithSameDigits(t *testing.T) {
+	for _, test := range []struct{ source, translated string }{
+		{"Um 04:40 Uhr begann der Einsatz.", "The operation began at 4:40 p.m."},
+		{"Um 12:00 Uhr begann der Einsatz.", "The operation began at 12:00 a.m."},
+		{"Um 04:40 Uhr und 16:40 Uhr gab es Einsätze.", "Operations happened at 4:40 a.m. and 4:40 a.m."},
+	} {
+		input := StepInput{Values: map[string]string{"title_de": "Einsatz", "summary_de": test.source}}
+		output := StepOutput{Values: map[string]string{"title": "Operation", "summary": test.translated}}
+		if err := validateTranslation(input, &output); err == nil {
+			t.Errorf("accepted changed clock meaning: %q -> %q", test.source, test.translated)
+		}
+	}
+}
+
+func TestTranslationValidationKeepsEquivalentClocksAndDurations(t *testing.T) {
+	for _, test := range []struct{ source, translated string }{
+		{"Um 04:40 Uhr begann der Einsatz.", "The operation began at 4:40 a.m."},
+		{"Um 12:00 Uhr begann der Einsatz.", "The operation began at 12:00 p.m."},
+		{"Um 00:00 Uhr begann der Einsatz.", "The operation began at 12 a.m."},
+		{"Um 04:40 Uhr und 16:40 Uhr gab es Einsätze.", "Operations happened at 4:40 a.m. and 16:40."},
+		{"Um 20:00 Uhr begann der Einsatz und dauerte 5 Stunden.", "L’intervention a commencé à 20 h et a duré 5 h."},
+	} {
+		input := StepInput{Values: map[string]string{"title_de": "Einsatz", "summary_de": test.source}}
+		output := StepOutput{Values: map[string]string{"title": "Operation", "summary": test.translated}}
+		if err := validateTranslation(input, &output); err != nil {
+			t.Errorf("rejected equivalent time or duration: %q -> %q: %v", test.source, test.translated, err)
+		}
+	}
+}
+
 func TestTranslationValidationAcceptsEquivalentChineseTimeNotation(t *testing.T) {
 	input := StepInput{Values: map[string]string{
 		"title_de": "Titel", "summary_de": "Am Freitagabend gegen 20:00 Uhr begann der Einsatz.",

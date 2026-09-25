@@ -835,7 +835,10 @@ func validateTranslation(input StepInput, output *StepOutput) error {
 }
 
 func sameTranslationNumbers(source, translated string) bool {
-	source, translated = removeEquivalentLocalizedTimes(source, translated)
+	source, translated, clocksMatch := removeEquivalentLocalizedTimes(source, translated)
+	if !clocksMatch {
+		return false
+	}
 	normalize := func(value string) []string {
 		value = translationURLPattern.ReplaceAllString(value, "")
 		value = translationPlaceTokenPattern.ReplaceAllString(value, "")
@@ -872,13 +875,13 @@ type translationClock struct {
 	minutes    int
 }
 
-func removeEquivalentLocalizedTimes(source, translated string) (string, string) {
+func removeEquivalentLocalizedTimes(source, translated string) (string, string, bool) {
 	sourceClocks := translation24HourPattern.FindAllStringSubmatchIndex(source, -1)
 	twelveHourClocks := translation12HourPattern.FindAllStringSubmatchIndex(translated, -1)
 	hourMarkerClocks := translationHourMarkerPattern.FindAllStringSubmatchIndex(translated, -1)
 	chineseClocks := translationChineseTimePattern.FindAllStringSubmatchIndex(translated, -1)
 	if len(sourceClocks) == 0 || len(twelveHourClocks) == 0 && len(hourMarkerClocks) == 0 && len(chineseClocks) == 0 {
-		return source, translated
+		return source, translated, true
 	}
 	sourceMatches := make([]translationClock, 0, len(sourceClocks))
 	for _, match := range sourceClocks {
@@ -929,6 +932,14 @@ func removeEquivalentLocalizedTimes(source, translated string) (string, string) 
 			}
 		}
 	}
+	// A changed AM/PM marker can preserve every digit. Other formats such as
+	// "5 h" can also be durations, so leave their unmatched numbers to the
+	// numeric fallback rather than assuming that they must denote a clock.
+	for _, matched := range used[:len(twelveHourClocks)] {
+		if !matched {
+			return source, translated, false
+		}
+	}
 	blank := func(value string, matches []translationClock) string {
 		result := []byte(value)
 		for _, match := range matches {
@@ -938,7 +949,7 @@ func removeEquivalentLocalizedTimes(source, translated string) (string, string) 
 		}
 		return string(result)
 	}
-	return blank(source, sourceRemove), blank(translated, translatedRemove)
+	return blank(source, sourceRemove), blank(translated, translatedRemove), true
 }
 
 func germanMonthNumber(value string) string {

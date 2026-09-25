@@ -415,3 +415,65 @@ func TestTranslationBatchPreviewSkipsRemovedModels(t *testing.T) {
 		t.Fatalf("model invocations = %v, want A,C", got)
 	}
 }
+
+func TestTranslationBatchRetiresObsoleteContractsWithoutBlockingHealthyJobs(t *testing.T) {
+	for _, change := range []string{"prompt", "removed_scope"} {
+		t.Run(change, func(t *testing.T) {
+			worker, _, provider, now := newTranslationBatchFixture(t, 1)
+			queueBatchLanguage(t, worker, "en", "A", 1)
+			queueBatchLanguage(t, worker, "tr", "A", 1)
+			definitions := worker.postProcessors.Definitions()
+			for index := range definitions {
+				if definitions[index].Key != TranslationModelStep {
+					continue
+				}
+				var scopes []PostProcessorScope
+				for _, scope := range definitions[index].Scopes {
+					if scope.Key == "en" {
+						if change == "removed_scope" {
+							continue
+						}
+						scope.Step.PromptVersion = "replacement-prompt"
+					}
+					scopes = append(scopes, scope)
+				}
+				definitions[index].Scopes = scopes
+			}
+			registry, err := NewPostProcessorRegistry(definitions...)
+			if err != nil {
+				t.Fatal(err)
+			}
+			worker.postProcessors = registry
+			status, err := worker.Status(context.Background())
+			if err != nil || status.TranslationBatch.NextScope != "tr" {
+				t.Fatalf("preview = %#v/%v", status.TranslationBatch, err)
+			}
+			for range 3 {
+				worker.processAvailable(context.Background())
+				*now = now.Add(time.Hour)
+			}
+			if !slices.Equal(provider.events, []string{"translation/tr:A:"}) {
+				t.Fatalf("healthy job was blocked by obsolete contract: %v", provider.events)
+			}
+			status, err = worker.Status(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			foundQueue := false
+			for _, queue := range status.Queue.PostProcessing {
+				if queue.ProcessorKey == TranslationModelStep && queue.ScopeKey == "en" {
+					foundQueue = true
+					if queue.Failed != 1 || queue.Pending != 0 || queue.Retrying != 0 {
+						t.Fatalf("obsolete contract queue = %#v", queue)
+					}
+				}
+			}
+			if !foundQueue {
+				t.Fatal("obsolete contract disappeared from queue history")
+			}
+			if len(worker.blockedModels(TranslationModelStep, *now)) != 0 {
+				t.Fatal("obsolete contract opened a model circuit")
+			}
+		})
+	}
+}

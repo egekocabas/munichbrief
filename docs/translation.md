@@ -43,6 +43,11 @@ implicitly translate the historical archive.
 - Ollama runs separately; the application image includes no model weights.
 - Adapters handle different model request formats.
 - Jobs retain the model, adapter, and prompt version used for that attempt.
+- Output and privacy failures stop after three attempts. Automatic discovery
+  does not recreate terminally failed jobs for unchanged inputs, model, adapter,
+  and prompt; an explicit manual retry or changed work can start a new job.
+- Queued jobs whose scope or prompt is no longer registered fail without a model
+  call, allowing current jobs to continue.
 - A failed replacement leaves the earlier successful result available when it
   still matches the current German presentation.
 - Validation catches structural problems; fluent human review is still needed

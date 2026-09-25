@@ -1337,7 +1337,9 @@ func TestTranslationFailureDoesNotChangeCanonicalCompletion(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer database.Close()
-	now := time.Date(2026, 8, 27, 4, 0, 0, 0, time.UTC)
+	// Keep the presentation after the automatic scope cutover so discovery
+	// exercises the exhausted job as well as the initial completion enqueue.
+	now := time.Now().UTC().Add(time.Minute)
 	insertWorkerDocument(t, ctx, database, now, "one")
 	if err := database.EnsurePipelineSteps(ctx, ModelSettingKeys(), now); err != nil {
 		t.Fatal(err)
@@ -1362,6 +1364,13 @@ func TestTranslationFailureDoesNotChangeCanonicalCompletion(t *testing.T) {
 	worker.processAvailable(ctx)
 	now = now.Add(11 * time.Minute)
 	worker.processAvailable(ctx)
+	for range 3 {
+		now = now.Add(10 * time.Minute)
+		worker.processAvailable(ctx)
+	}
+	if calls := provider.calls[EnglishTranslationStep]; calls != contentMaxAttempts {
+		t.Fatalf("exhausted translation made %d calls, want %d", calls, contentMaxAttempts)
+	}
 
 	records, _, err := database.ListIncidents(ctx, 1, 0)
 	if err != nil || len(records) != 1 {
@@ -1380,7 +1389,7 @@ func TestTranslationFailureDoesNotChangeCanonicalCompletion(t *testing.T) {
 			translationStats = &snapshot.PostProcessing[index]
 		}
 	}
-	if err != nil || len(snapshot.PostProcessing) != 2+len(RegisteredTranslations()) || translationStats == nil || translationStats.NeedsReview != 1 {
+	if err != nil || len(snapshot.PostProcessing) != 2+len(RegisteredTranslations()) || translationStats == nil || translationStats.NeedsReview != 1 || translationStats.Pending != 0 || translationStats.Retrying != 0 {
 		t.Fatalf("translation failure snapshot = %#v, err=%v", snapshot.PostProcessing, err)
 	}
 }
