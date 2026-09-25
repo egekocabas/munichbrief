@@ -495,7 +495,7 @@ func TestPostProcessingSkipsAnyUnavailableDeclaredInput(t *testing.T) {
 	}
 }
 
-func TestPostProcessingClaimsStalePromptWithoutMaterializingCurrentInputs(t *testing.T) {
+func TestPostProcessingFailsStalePromptWithoutMaterializingCurrentInputs(t *testing.T) {
 	ctx := context.Background()
 	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "post-processing-stale-prompt.db"))
 	if err != nil {
@@ -520,14 +520,16 @@ func TestPostProcessingClaimsStalePromptWithoutMaterializingCurrentInputs(t *tes
 		t.Fatalf("queue stale prompt = %d/%v", queued, err)
 	}
 	job, found, err := database.ClaimPostProcessingJob(ctx, stalePlan.ProcessorKey, testPostProcessingContract("default", "future-v2", []string{"new_output"}, "new_required_input"), PostProcessingClaimOptions{}, now)
-	if err != nil || !found {
+	if err != nil || found {
 		t.Fatalf("claim stale prompt = %#v/%t/%v", job, found, err)
 	}
-	if job.PromptVersion != stalePlan.PromptVersion || len(job.InputValues) != 0 || len(job.OutputKinds) != 0 || job.AttemptCount != 1 {
-		t.Fatalf("stale prompt claim = %#v", job)
+	var status, failureKind string
+	var attempts int
+	if err := database.db.QueryRowContext(ctx, `SELECT status,failure_kind,attempt_count FROM post_processing_jobs WHERE presentation_run_id=?`, runID).Scan(&status, &failureKind, &attempts); err != nil {
+		t.Fatal(err)
 	}
-	if err := database.CompletePostProcessingJob(ctx, job, []PipelineValue{{Kind: "new_output", Value: "unsafe"}}, job.ModelIdentity, job.InputHash, now); err == nil {
-		t.Fatal("stale prompt job unexpectedly completed with the current output contract")
+	if status != "failed" || failureKind != "configuration" || attempts != 0 {
+		t.Fatalf("obsolete contract state = %s/%s, attempts=%d", status, failureKind, attempts)
 	}
 }
 

@@ -390,7 +390,11 @@ func (s *Store) ListAdminIncidents(ctx context.Context, limit, offset int, sourc
 		FROM incidents i
 		JOIN source_documents d ON d.id = i.source_document_id
 		WHERE ` + statusCondition + filterCondition
-	if err := s.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
+	statements, err := s.prepareStatements(ctx, countQuery)
+	if err != nil {
+		return nil, 0, fmt.Errorf("prepare admin incident count: %w", err)
+	}
+	if err := statements[countQuery].QueryRowContext(ctx, args...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count admin incidents: %w", err)
 	}
 
@@ -405,7 +409,11 @@ func (s *Store) ListAdminIncidents(ctx context.Context, limit, offset int, sourc
 		ORDER BY d.published_at DESC, i.position ASC
 		LIMIT @limit OFFSET @offset`
 	args = append(args, sql.Named("limit", limit), sql.Named("offset", offset))
-	rows, err := s.db.QueryContext(ctx, query, args...)
+	statements, err = s.prepareStatements(ctx, query)
+	if err != nil {
+		return nil, 0, fmt.Errorf("prepare admin incidents: %w", err)
+	}
+	rows, err := statements[query].QueryContext(ctx, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list admin incidents: %w", err)
 	}

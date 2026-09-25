@@ -16,6 +16,11 @@ For example, a street name stays exactly as written in German while the
 sentence around it changes language. Missing, duplicated, or invented tokens
 cause the result to be rejected.
 
+Clock validation accepts equivalent 12-hour and 24-hour notation, including
+omitting AM when using 24-hour notation: `02:20 AM` can become `2:20`, and
+`3 PM` can become `15:00`. Noon is `12:00`; midnight is `00:00`.
+Changing the hour, minutes, or AM/PM meaning is rejected.
+
 ## Where the names come from
 
 | Source | Names used | Attribution |
@@ -43,6 +48,11 @@ implicitly translate the historical archive.
 - Ollama runs separately; the application image includes no model weights.
 - Adapters handle different model request formats.
 - Jobs retain the model, adapter, and prompt version used for that attempt.
+- Output and privacy failures stop after three attempts. Automatic discovery
+  does not recreate terminally failed jobs for unchanged inputs, model, adapter,
+  and prompt; an explicit manual retry or changed work can start a new job.
+- Queued jobs whose scope or prompt is no longer registered fail without a model
+  call, allowing current jobs to continue.
 - A failed replacement leaves the earlier successful result available when it
   still matches the current German presentation.
 - Validation catches structural problems; fluent human review is still needed

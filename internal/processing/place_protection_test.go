@@ -318,6 +318,79 @@ func TestTranslationValidationAcceptsEquivalentLocalized24HourNotation(t *testin
 	}
 }
 
+func TestTranslationValidationRejectsChangedClockMeaningWithSameDigits(t *testing.T) {
+	for _, test := range []struct{ source, translated string }{
+		{"Um 04:40 Uhr begann der Einsatz.", "The operation began at 4:40 p.m."},
+		{"Um 12:00 Uhr begann der Einsatz.", "The operation began at 12:00 a.m."},
+		{"Um 04:40 Uhr und 16:40 Uhr gab es Einsätze.", "Operations happened at 4:40 a.m. and 4:40 a.m."},
+	} {
+		input := StepInput{Values: map[string]string{"title_de": "Einsatz", "summary_de": test.source}}
+		output := StepOutput{Values: map[string]string{"title": "Operation", "summary": test.translated}}
+		if err := validateTranslation(input, &output); err == nil {
+			t.Errorf("accepted changed clock meaning: %q -> %q", test.source, test.translated)
+		}
+	}
+}
+
+func TestTranslationValidationKeepsEquivalentClocksAndDurations(t *testing.T) {
+	for _, test := range []struct{ source, translated string }{
+		{"Um 04:40 Uhr begann der Einsatz.", "The operation began at 4:40 a.m."},
+		{"Um 12:00 Uhr begann der Einsatz.", "The operation began at 12:00 p.m."},
+		{"Um 00:00 Uhr begann der Einsatz.", "The operation began at 12 a.m."},
+		{"Um 04:40 Uhr und 16:40 Uhr gab es Einsätze.", "Operations happened at 4:40 a.m. and 16:40."},
+		{"Um 20:00 Uhr begann der Einsatz und dauerte 5 Stunden.", "L’intervention a commencé à 20 h et a duré 5 h."},
+	} {
+		input := StepInput{Values: map[string]string{"title_de": "Einsatz", "summary_de": test.source}}
+		output := StepOutput{Values: map[string]string{"title": "Operation", "summary": test.translated}}
+		if err := validateTranslation(input, &output); err != nil {
+			t.Errorf("rejected equivalent time or duration: %q -> %q: %v", test.source, test.translated, err)
+		}
+	}
+}
+
+func TestTranslationValidationConvertsClockSystems(t *testing.T) {
+	for _, test := range []struct {
+		source, translated string
+		valid              bool
+	}{
+		{"02:20 am", "02:20", true},
+		{"02:20 am", "2:20", true},
+		{"02:20", "2:20", true},
+		{"02:20", "2:02", false},
+		{"02:20", "20:02", false},
+		{"03:00", "3:00", true},
+		{"03:00", "3 a.m.", true},
+		{"03:00 AM", "03:00", true},
+		{"03:00 PM", "15:00", true},
+		{"15:00", "3 p.m.", true},
+		{"15:00", "3:00", false},
+		{"03:00 PM", "03:00", false},
+		{"03:00 PM", "3:00 AM", false},
+		{"03:00 PM", "3 p.m.", true},
+		{"3 p.m.", "15:00", true},
+		{"03:00 PM", "15 h", true},
+		{"03:00 PM", "15点", true},
+		{"12:00 AM", "00:00", true},
+		{"12 a.m.", "00:00", true},
+		{"12:00 PM", "12:00", true},
+		{"12:00 AM", "12:00", false},
+		{"12:00 PM", "00:00", false},
+		{"02:20 AM and 02:20 PM", "2:20 and 14:20", true},
+		{"02:20 AM and 02:20 PM", "2:20 and 2:20", false},
+		{"04:20 and 20:00", "4:20点", false},
+		{"04:20 and 20:00", "4:20 h", false},
+	} {
+		t.Run(test.source+" to "+test.translated, func(t *testing.T) {
+			input := StepInput{Values: map[string]string{"title_de": "Einsatz", "summary_de": "Beginn: " + test.source}}
+			output := StepOutput{Values: map[string]string{"title": "Operation", "summary": "Start: " + test.translated}}
+			err := validateTranslation(input, &output)
+			if (err == nil) != test.valid {
+				t.Errorf("valid = %t, want %t: %v", err == nil, test.valid, err)
+			}
+		})
+	}
+}
+
 func TestTranslationValidationAcceptsEquivalentChineseTimeNotation(t *testing.T) {
 	input := StepInput{Values: map[string]string{
 		"title_de": "Titel", "summary_de": "Am Freitagabend gegen 20:00 Uhr begann der Einsatz.",

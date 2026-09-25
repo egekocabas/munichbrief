@@ -110,9 +110,22 @@ func (s *Store) ClaimPipelineJob(ctx context.Context, cycleID int64, stepOrder i
 	return job, true, nil
 }
 
+const (
+	upsertPresentationValueSQL = `
+			INSERT INTO presentation_values(presentation_run_id, kind, value, model_identity, prompt_version, generated_at)
+			VALUES (?, ?, ?, ?, ?, ?)
+			ON CONFLICT(presentation_run_id, kind) DO UPDATE SET value = excluded.value, model_identity = excluded.model_identity,
+			prompt_version = excluded.prompt_version, generated_at = excluded.generated_at`
+)
+
 // CompletePipelineJob stores validated values and marks their running job
 // successful in the same transaction.
 func (s *Store) CompletePipelineJob(ctx context.Context, job PipelineJob, values []PipelineValue, modelIdentity, inputHash string, completedAt time.Time) error {
+	statements, err := s.prepareStatements(ctx, upsertPresentationValueSQL)
+	if err != nil {
+		return err
+	}
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -123,11 +136,7 @@ func (s *Store) CompletePipelineJob(ctx context.Context, job PipelineJob, values
 		if strings.TrimSpace(value.Kind) == "" || strings.TrimSpace(value.Value) == "" {
 			return errors.New("pipeline output kind and value are required")
 		}
-		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO presentation_values(presentation_run_id, kind, value, model_identity, prompt_version, generated_at)
-			VALUES (?, ?, ?, ?, ?, ?)
-			ON CONFLICT(presentation_run_id, kind) DO UPDATE SET value = excluded.value, model_identity = excluded.model_identity,
-			prompt_version = excluded.prompt_version, generated_at = excluded.generated_at`, job.PresentationRunID, value.Kind, value.Value, modelIdentity, job.PromptVersion, formatted); err != nil {
+		if _, err := tx.StmtContext(ctx, statements[upsertPresentationValueSQL]).ExecContext(ctx, job.PresentationRunID, value.Kind, value.Value, modelIdentity, job.PromptVersion, formatted); err != nil {
 			return fmt.Errorf("store pipeline output %s: %w", value.Kind, err)
 		}
 	}
