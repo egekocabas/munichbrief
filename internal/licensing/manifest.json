@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "reviewed_at": "2026-09-21",
+  "reviewed_at": "2026-09-28",
   "components": [
     {
       "id": "munichbrief",
@@ -421,7 +421,7 @@
     {
       "id": "htmx-org",
       "name": "htmx.org",
-      "version": "2.0.10",
+      "version": "2.0.11",
       "source": "https://www.npmjs.com/package/htmx.org",
       "license": "0BSD",
       "notices": [
@@ -435,7 +435,7 @@
       ],
       "public": true,
       "conditions": "",
-      "reviewed_at": "2026-09-14",
+      "reviewed_at": "2026-09-28",
       "review_status": "reviewed",
       "npm": "htmx.org",
       "files": [
@@ -1370,7 +1370,7 @@
       "id": "htmx-org",
       "file": "LICENSES/htmx-org.txt",
       "sha256": "d3d2456f76414f2456104660ebd65aff1c04cd7966b942bdabd63f3cdb316a38",
-      "source": "https://www.npmjs.com/package/htmx.org/v/2.0.10"
+      "source": "https://www.npmjs.com/package/htmx.org/v/2.0.11"
     },
     {
       "id": "tailwindcss",
@@ -1641,7 +1641,7 @@
     "internal/web/static/eu-ai-generated-white.svg": "c60221bbfea40a29aee090c0daa18166f4617053702c164fa419e5228a4057dc",
     "internal/web/static/favicon.svg": "ebda3fca1cf2d7e8b8375927e57b7e29f4426286eaffc5528c09e00fa46c8125",
     "internal/web/static/head-support.js": "207f449ba70ad0d384b1734288ddae8493d26737bd74d8510829c0be5b737568",
-    "internal/web/static/htmx.min.js": "71ea67185bfa8c98c39d31717c6fce5d852370fcdfd129db4543774d3145c0de",
+    "internal/web/static/htmx.min.js": "d6fdc75f204e6bdefa99b69bf1e6d4ac69b8a364f77929f45c13476b4000f717",
     "internal/web/static/munichbrief-ai-generated-light.svg": "3a2c3b049829b029c8ac9799b1f56fa1451d71d6812fa414493178cc627054f0",
     "internal/web/static/navigation.js": "5d8180554b5b90d675fde48d8f41c839ea59eb5347dfc7bb88a5db316f2c4020",
     "internal/web/static/olympiapark-background-q90.webp": "7a5d6f4f1b328038bcc27a3928cebefe2fec0bda7e6d899fcf5f87cae7f25e04",
@@ -1649,9 +1649,9 @@
     "internal/web/static/social-brand.png": "b7eff4f3853d9c324236cfaa16bbd0b32333207c1552c1f324450014733a1960",
     "internal/web/static/social-brand.svg": "3f861b7ad462f05cb4e124da53ab486479e25bdf6ea679d392eb4f7812cb4c48",
     "internal/web/static/theme.js": "d67879f8af292d69e13930f2049305c6334775498fdd9819bff6a6f561731500",
-    "package-lock.json": "f46e68a61e421f1eb8eb114deeb8d8a5c70bfb0bbee4a209d7114dc97d517527",
-    "package.json": "d276d6f2c6f95bda9480b99e9a82cfe3b697da128fe8e945f83fa657cf9abccd"
+    "package-lock.json": "80893ca5bb0ce89b1334098751a3e4119ea53a631fc395af7660bf0b07854b7c",
+    "package.json": "daae8eb164ce0e988b9058cc386ca7f9fe74f133c0df9f9bbd95e3cce579d119"
   },
   "container_zoneinfo_sha256": "602843bacd2b0d8b3bc135e0f2cbb7b9c25e4a6d31c53aae3ad35aea558478a7",
-  "credits_updated_at": "2026-09-21"
+  "credits_updated_at": "2026-09-28"
 }
