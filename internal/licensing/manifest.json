@@ -1622,9 +1622,9 @@
       "arm64": "sha256:06c3c14b7fa252d9f4285242d2d665ce3b51f74b02d3c529464f220f2912aecb"
     }
   },
-  "container_builder": "golang:1.27.1-bookworm@sha256:648f440f42a0958804efb24df176f806f9d353b41f1c0627f666428e40310f6b",
+  "container_builder": "golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195",
   "source_hashes": {
-    "Dockerfile": "72a32693a1d95affaceacf02902041283c8184ce0bc5ad931474bd488eeb9e2e",
+    "Dockerfile": "a0b1b7692a6454c4acfbfac8cd7a377ade6942b22232dd3359b14b036b70b1a0",
     "LICENSE": "ff01c1c270a6924fcd28aeddef170c7e8054876348bab5a43753954cd3c6de16",
     "go.mod": "71654d54a6ffb1fb6f868dd2b1855506dd1f293a5f9f7084678e81ef66ac7f0f",
     "go.sum": "0f883c4b5561dedee1c95e49ee81783353ff3383bfbe252eaecbdb7cf834fa35",
