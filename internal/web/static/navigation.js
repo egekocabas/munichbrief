@@ -117,9 +117,16 @@
   document.addEventListener("htmx:afterSwap", updateDocumentLanguage);
   document.addEventListener("htmx:afterSettle", updateNavigation);
   document.addEventListener("htmx:historyRestore", updateNavigation);
-  document.addEventListener("htmx:historyCacheMiss", () => {
+  document.addEventListener("htmx:historyCacheMiss", (event) => {
+    // Browser Back (including trackpad gestures) bypasses the All reports click.
+    // Carry the saved position through the full-page history reload as well.
+    if (returnTo && currentURL() === returnTo.timeline) {
+      returnTo.restore = true;
+      saveReturn();
+    }
     // Public history snapshots are disabled. A native restoration also keeps
     // every head tag and document attribute aligned with the server response.
+    event.preventDefault();
     location.reload();
   });
   window.addEventListener("pageshow", updateNavigation);

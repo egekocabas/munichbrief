@@ -37,6 +37,9 @@ jobs:
       - name: Audit frontend dependencies
         run: npm audit --audit-level=high
 
+      - name: Test reader navigation
+        run: node --test scripts/navigation.test.mjs
+
       - name: Check documentation links
         run: node scripts/check-docs.mjs
 
