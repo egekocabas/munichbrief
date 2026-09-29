@@ -98,3 +98,16 @@ func TestTypeOnlyConfirmationAndNormalizedAreas(t *testing.T) {
 		})
 	}
 }
+
+func TestEvidenceCannotCarveAreaOutOfStreetOrDistrict(t *testing.T) {
+	for _, tt := range []struct{ name, body, evidence string }{
+		{"Haar", "Vorfall an der Haarstraße.", "Haar"},
+		{"Haar", "Vorfall an der Haar-Straße.", "Haar-Straße"},
+		{"Schwabing", "Vorfall in Schwabing-West.", "Vorfall in Schwabing-West."},
+	} {
+		_, err := Resolve(Interpretation{Scope: "single", Mentions: []Mention{{Name: tt.name, Kind: "area", Role: "primary", Source: "body", Evidence: tt.evidence}}}, Area{}, "", tt.body, Source{}, false)
+		if err == nil {
+			t.Errorf("accepted fragment %q from %q", tt.name, tt.body)
+		}
+	}
+}

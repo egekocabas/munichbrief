@@ -228,3 +228,25 @@ func TestBoldParagraphBoundaryAndFestivalContext(t *testing.T) {
 		t.Fatal("missing context provenance")
 	}
 }
+
+func TestFestivalContextExcludesContentsAndStopsAtSectionBoundary(t *testing.T) {
+	for _, heading := range []string{"Wiesnberichte", "Wiesnberichte:", "Wiesn-Berichte: "} {
+		t.Run(heading, func(t *testing.T) {
+			text := `<main id="readspeaker_lesen"><section class="bp-template bp-presse"><p>1. Contents</p><h3>` + heading + `</h3><p>2. Festival contents</p></section><section><h3>1. Ordinary report</h3><p>Ordinary body.</p></section><section><h3>` + heading + `</h3><p><strong>2. Festival report</strong></p><p>Im Festzelt.</p></section><section><h3>3. Another report</h3><p>Ein anderes Festzelt.</p></section></main>`
+			parsed, err := ParsePoliceRelease([]byte(text))
+			if err != nil || len(parsed.Incidents) != 3 {
+				t.Fatalf("parse %d/%v", len(parsed.Incidents), err)
+			}
+			if parsed.Incidents[0].SectionContext != "" || parsed.Incidents[1].SectionContext == "" || parsed.Incidents[2].SectionContext != "" {
+				t.Fatalf("contexts: %q/%q/%q", parsed.Incidents[0].SectionContext, parsed.Incidents[1].SectionContext, parsed.Incidents[2].SectionContext)
+			}
+		})
+	}
+}
+
+func TestFirstDetailCanBeBoldParagraph(t *testing.T) {
+	parsed, err := ParsePoliceRelease([]byte(`<main id="readspeaker_lesen"><section class="bp-template bp-presse"><p><strong>1. Contents</strong></p></section><section><p><strong>1. Actual report</strong></p><p>Actual body.</p></section></main>`))
+	if err != nil || len(parsed.Incidents) != 1 || parsed.Incidents[0].TitleDE != "Actual report" {
+		t.Fatalf("parse: %#v/%v", parsed.Incidents, err)
+	}
+}

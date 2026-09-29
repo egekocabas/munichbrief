@@ -121,15 +121,12 @@ func (s *Server) adminVerificationsPage(response http.ResponseWriter, request *h
 				AdminVerificationIncident: item,
 				Verdict:                   adminVerificationVerdict(item.IsCorrect),
 				StatusLabel:               adminVerificationAttemptLabel(item.Status, item.StatusReason, item.Attempts),
-				RetainedSuccess:           item.IsCorrect != nil && item.Status != "" && item.Status != "succeeded",
+				RetainedSuccess:           item.RetainedSuccess,
 				CanProcess:                selected.ActionsAvailable && canRetryPostProcessing(item.Status, item.StatusReason),
 			}
 			if assessment := item.LocationAssessment; assessment != nil {
 				if !assessment.Applicable() {
 					view.Verdict = "Unresolved · " + strings.ReplaceAll(assessment.Outcome, "_", " ")
-				}
-				if assessment.Applicable() && assessment.SummaryConflict && item.Status == "needs_review" {
-					view.RetainedSuccess = false
 				}
 			}
 			for index, field := range processor.Verification.Fields {

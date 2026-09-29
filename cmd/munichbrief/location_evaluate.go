@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -39,7 +40,11 @@ func runLocationEvaluation(ctx context.Context, cfg config.Config, args []string
 	if !snapshotInfo.Mode().IsRegular() {
 		return errors.New("snapshot must be a regular file")
 	}
-	if liveInfo, err := os.Stat(cfg.DatabasePath); err == nil && os.SameFile(liveInfo, snapshotInfo) {
+	livePath, err := evaluationLiveDatabasePath(cfg.DatabasePath)
+	if err != nil {
+		return err
+	}
+	if liveInfo, err := os.Stat(livePath); err == nil && os.SameFile(liveInfo, snapshotInfo) {
 		return errors.New("snapshot aliases configured live database")
 	}
 
@@ -96,4 +101,24 @@ func runLocationEvaluation(ctx context.Context, cfg config.Config, args []string
 		fmt.Fprintf(progress, "incident %d: completed (valid=%t)\n", input.IncidentID, err == nil)
 	}
 	return nil
+}
+
+// SQLite accepts file: URIs as well as filesystem paths. Compare their actual
+// files before store.Open can migrate a supposed evaluation snapshot.
+func evaluationLiveDatabasePath(path string) (string, error) {
+	if !strings.HasPrefix(path, "file:") {
+		return path, nil
+	}
+	u, err := url.Parse(path)
+	if err != nil || (u.Host != "" && u.Host != "localhost") {
+		return "", errors.New("cannot establish isolation from configured database URI")
+	}
+	if u.Opaque != "" {
+		decoded, err := url.PathUnescape(u.Opaque)
+		if err != nil {
+			return "", err
+		}
+		return decoded, nil
+	}
+	return u.Path, nil
 }

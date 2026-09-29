@@ -89,7 +89,7 @@ func TestLocationPublicationFallbackAndStaleContext(t *testing.T) {
 		t.Fatalf("coverage %#v / %v", coverage, err)
 	}
 	items, _, err := db.ListAdminVerificationIncidents(ctx, 20, 0, "fixture", spec, AdminVerificationsAttention)
-	if err != nil || len(items) != 1 || items[0].LocationAssessment == nil {
+	if err != nil || len(items) != 1 || items[0].LocationAssessment == nil || items[0].Status != "needs_review" {
 		t.Fatalf("admin assessment %v", err)
 	}
 	job = claim()
@@ -103,17 +103,29 @@ func TestLocationPublicationFallbackAndStaleContext(t *testing.T) {
 		t.Fatal(err)
 	}
 	get("Maxvorstadt")
+	items, _, err = db.ListAdminVerificationIncidents(ctx, 20, 0, "fixture", spec, AdminVerificationsAttention)
+	if err != nil || len(items) != 1 || !items[0].RetainedSuccess || items[0].Status != "needs_review" {
+		t.Fatalf("unresolved replacement lost retained-success status: %v", err)
+	}
 	var original string
 	if err := db.db.QueryRow(`SELECT value FROM presentation_values WHERE presentation_run_id=? AND kind='area_name'`, run).Scan(&original); err != nil || original != "München" {
 		t.Fatal("canonical extraction overwritten")
 	}
 	job = claim()
-	if _, err := db.db.Exec(`UPDATE incidents SET context_hash='changed' WHERE id=?`, id); err != nil {
+	if _, err := db.db.Exec(`UPDATE incidents SET context_hash='changed',updated_at=? WHERE id=?`, formatTime(now.Add(time.Second)), id); err != nil {
 		t.Fatal(err)
 	}
 	get("München")
+	links, err := db.ListPublicIncidentLinks(ctx, "fixture", PresentationScope{Language: "de"})
+	if err != nil || len(links) != 1 || links[0].ModifiedAt.Before(now.Add(time.Second)) {
+		t.Fatalf("context invalidation missing from sitemap modification time: %#v / %v", links, err)
+	}
 	if err := db.CompletePostProcessingJob(ctx, job, result(job, "corrected"), "test", job.InputHash, now); !errors.Is(err, ErrJobNotRunning) {
 		t.Fatalf("accepted stale result: %v", err)
+	}
+	items, _, err = db.ListAdminVerificationIncidents(ctx, 20, 0, "fixture", spec, AdminVerificationsAll)
+	if err != nil || len(items) != 1 || !items[0].LocationAssessmentStale {
+		t.Fatalf("stale assessment is not identified: %v", err)
 	}
 	// Omitted optional canonical fields must remain eligible inputs.
 	if _, err := db.db.Exec(`DELETE FROM presentation_values WHERE presentation_run_id=? AND kind IN ('area_name','area_type')`, run); err != nil {

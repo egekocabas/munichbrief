@@ -91,6 +91,9 @@ func TestLocationCorrectionAcrossReaderSurfacesAndPrivateAdmin(t *testing.T) {
 			t.Errorf("admin lacks %q", want)
 		}
 	}
+	if strings.Contains(response.Body.String(), "The latest replacement needs attention") {
+		t.Error("same-job wording conflict mislabeled as a failed replacement")
+	}
 	if response.Header().Get("Cache-Control") != "private, no-store" {
 		t.Error("assessment page is not private")
 	}

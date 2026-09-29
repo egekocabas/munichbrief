@@ -27,9 +27,11 @@ type ParsedRelease struct {
 }
 
 type block struct {
-	Kind string
-	Text string
-	Bold bool
+	Kind    string
+	Text    string
+	Bold    bool
+	Section *html.Node
+	InPress bool
 }
 
 // ParsePoliceRelease extracts incidents from supported police release page
@@ -59,6 +61,16 @@ func ParsePoliceRelease(contents []byte) (ParsedRelease, error) {
 	var current *domain.Incident
 	var bodyBlocks []string
 	sectionContext := ""
+	var contextSection *html.Node
+	// Daily bundles keep the contents inside bp-presse and details in sibling
+	// sections. Context and numbered entries in that contents block are not
+	// authoritative report data. Standalone releases keep their details inside.
+	externalDetails := false
+	for _, candidate := range blocks {
+		if !candidate.InPress && numberedHeadingPattern.MatchString(candidate.Text) && (candidate.Kind == "h2" || candidate.Kind == "h3" || candidate.Bold) {
+			externalDetails = true
+		}
+	}
 
 	// A new numbered heading closes the preceding incident. Non-numbered headings
 	// remain part of that incident's body because real releases use them as
@@ -76,17 +88,21 @@ func ParsePoliceRelease(contents []byte) (ParsedRelease, error) {
 	}
 
 	for index, candidate := range blocks {
-		if candidate.Text == "" {
+		if candidate.Text == "" || (externalDetails && candidate.InPress) {
 			continue
 		}
-		if candidate.Text == "Wiesnberichte" || candidate.Text == "Wiesn-Berichte" {
-			sectionContext = candidate.Text
+		if candidate.Section != contextSection {
+			sectionContext = ""
+			contextSection = candidate.Section
+		}
+		if context := festivalContext(candidate.Text); context != "" {
+			sectionContext = context
 		} else if (candidate.Kind == "h2" || candidate.Kind == "h3") && !numberedHeadingPattern.MatchString(candidate.Text) {
 			sectionContext = ""
 		}
 		// Paragraph headings are accepted only in the detail stream and with
 		// following body text. Numbered contents-list entries are not reports.
-		paragraphHeading := candidate.Kind == "p" && candidate.Bold && current != nil && index+1 < len(blocks) && !numberedHeadingPattern.MatchString(blocks[index+1].Text)
+		paragraphHeading := candidate.Kind == "p" && candidate.Bold && index+1 < len(blocks) && blocks[index+1].Kind == "p" && blocks[index+1].Section == candidate.Section && !numberedHeadingPattern.MatchString(blocks[index+1].Text)
 		if candidate.Kind == "h2" || candidate.Kind == "h3" || paragraphHeading {
 			if match := numberedHeadingPattern.FindStringSubmatch(candidate.Text); match != nil {
 				finishCurrent()
@@ -185,7 +201,10 @@ func collectBlocks(node *html.Node, blocks *[]block) {
 			case "h2", "h3", "h4", "p":
 				text := normalizeText(textContent(child))
 				if text != "" {
-					*blocks = append(*blocks, block{Kind: child.Data, Text: text, Bold: whollyBold(child)})
+					*blocks = append(*blocks, block{Kind: child.Data, Text: text, Bold: whollyBold(child),
+						Section: closestAncestor(child, func(n *html.Node) bool { return n.Data == "section" }),
+						InPress: closestAncestor(child, func(n *html.Node) bool { return n.Data == "section" && hasClasses(n, "bp-template", "bp-presse") }) != nil,
+					})
 				}
 				continue
 			}
@@ -316,4 +335,13 @@ func extractReleaseText(root *html.Node) string {
 func whollyBold(node *html.Node) bool {
 	bold := findElement(node, func(n *html.Node) bool { return n.Data == "strong" || n.Data == "b" })
 	return bold != nil && normalizeText(textContent(bold)) == normalizeText(textContent(node))
+}
+
+func festivalContext(text string) string {
+	switch strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(text), ":")) {
+	case "Wiesnberichte", "Wiesn-Berichte":
+		return "Wiesnberichte"
+	default:
+		return ""
+	}
 }

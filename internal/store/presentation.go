@@ -331,12 +331,14 @@ func (s *Store) ListPublicIncidentLinks(ctx context.Context, sourceMode string, 
 		SELECT i.id,
 			CASE WHEN @language = @canonical_language THEN
 				COALESCE(NULLIF(MAX(
+					i.updated_at,
 					COALESCE((SELECT r.completed_at FROM presentation_runs r WHERE r.id = ` + latestPresentationRun + `),''),
 					COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompletePublicAssistanceVerificationJob + `),''),
 					COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompleteCategoryVerificationJob + `),''),
 					COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompleteLocationVerificationJob + `),'')
 				),''), i.updated_at)
 			ELSE COALESCE(NULLIF(MAX(
+					i.updated_at,
 				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompletePublicTranslationJob + `),''),
 				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompletePublicAssistanceVerificationJob + `),''),
 				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompleteCategoryVerificationJob + `),''),

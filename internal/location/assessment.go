@@ -5,6 +5,8 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"golang.org/x/text/unicode/norm"
 )
 
 type Mention struct {
@@ -86,7 +88,7 @@ func Resolve(input Interpretation, original Area, title, body string, source Sou
 		default:
 			return a, fmt.Errorf("invalid evidence source")
 		}
-		if !strings.Contains(normalize(text), normalize(m.Evidence)) || !containsName(m.Evidence, m.Name) {
+		if !containsName(text, m.Evidence) || !containsName(m.Evidence, m.Name) {
 			return a, fmt.Errorf("ungrounded location evidence")
 		}
 		candidates := Lookup(m.Name)
@@ -153,7 +155,7 @@ func Resolve(input Interpretation, original Area, title, body string, source Sou
 }
 
 func containsName(text, name string) bool {
-	text, name = normalize(text), normalize(name)
+	text, name = normalizeEvidence(text), normalizeEvidence(name)
 	for offset := 0; offset <= len(text); {
 		index := strings.Index(text[offset:], name)
 		if index < 0 {
@@ -167,7 +169,7 @@ func containsName(text, name string) bool {
 		if end := index + len(name); end < len(text) {
 			after, _ = utf8.DecodeRuneInString(text[end:])
 		}
-		if !unicode.IsLetter(before) && !unicode.IsDigit(before) && !unicode.IsLetter(after) && !unicode.IsDigit(after) {
+		if !locationWordRune(before) && !locationWordRune(after) {
 			return true
 		}
 		offset = index + len(name)
@@ -181,4 +183,15 @@ func genericFestivalVenue(name string) bool {
 		return true
 	}
 	return false
+}
+
+// A hyphen joins compound place/street names, not two independent mentions.
+func locationWordRune(r rune) bool { return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' }
+
+// Preserve spaces around title separators; catalog alias normalization removes
+// those spaces and must not be used to determine source word boundaries.
+func normalizeEvidence(s string) string {
+	s = strings.ToLower(norm.NFC.String(s))
+	s = strings.NewReplacer("–", "-", "—", "-").Replace(s)
+	return strings.Join(strings.Fields(s), " ")
 }

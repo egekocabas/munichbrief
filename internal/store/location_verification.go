@@ -30,16 +30,16 @@ func locationInputsTx(ctx context.Context, tx *sql.Tx, run int64) (string, strin
 }
 
 // Assessment JSON is protected admin-only data, never part of IncidentRecord.
-func (s *Store) latestLocationAssessment(ctx context.Context, runID int64) (*location.Assessment, error) {
-	var data string
-	err := s.db.QueryRowContext(ctx, `SELECT v.value FROM post_processing_values v JOIN post_processing_jobs j ON j.id=v.job_id WHERE j.presentation_run_id=? AND j.processor_key='location_verification' AND j.status='succeeded' AND v.kind='location_assessment' ORDER BY j.completed_at DESC,j.id DESC LIMIT 1`, runID).Scan(&data)
+func (s *Store) latestLocationAssessment(ctx context.Context, runID int64) (*location.Assessment, bool, error) {
+	var data, sourceHash, contextHash string
+	err := s.db.QueryRowContext(ctx, `SELECT v.value,i.content_hash,i.context_hash FROM post_processing_values v JOIN post_processing_jobs j ON j.id=v.job_id JOIN presentation_runs r ON r.id=j.presentation_run_id JOIN incidents i ON i.id=r.incident_id WHERE j.presentation_run_id=? AND j.processor_key='location_verification' AND j.status='succeeded' AND v.kind='location_assessment' ORDER BY j.completed_at DESC,j.id DESC LIMIT 1`, runID).Scan(&data, &sourceHash, &contextHash)
 	if err == sql.ErrNoRows {
-		return nil, nil
+		return nil, false, nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	var a location.Assessment
 	err = json.Unmarshal([]byte(data), &a)
-	return &a, err
+	return &a, a.Source.SourceHash != sourceHash || a.Source.ContextHash != contextHash || a.ResolverVersion != location.CatalogVersion, err
 }

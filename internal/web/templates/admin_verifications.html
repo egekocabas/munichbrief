@@ -84,6 +84,7 @@
             {{with .LocationAssessment}}
             <section class="mt-4 rounded-md border border-rule p-4" aria-label="Location assessment">
               <h4 class="font-bold">Location assessment: {{.Outcome}}</h4>
+              {{if $item.LocationAssessmentStale}}<p class="mt-2 font-semibold text-alert">This assessment is stale: the source, section context, or resolver version changed. Its proposal is not effective.</p>{{end}}
               <p class="mt-2 text-sm">{{.Reason}}</p>
               {{if .Proposed}}<p class="mt-2 text-sm">Proposed: {{.Proposed.Name}} ({{.Proposed.Type}})</p>{{else}}<p class="mt-2 text-sm">No location override. The canonical location remains the fallback.</p>{{end}}
               {{if .SummaryConflict}}<p class="mt-2 font-semibold text-alert">Review summary wording: it may contradict the verified location. Text has not been regenerated.</p>{{end}}

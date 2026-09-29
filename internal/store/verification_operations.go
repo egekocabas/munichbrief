@@ -63,28 +63,30 @@ type AdminVerificationCoverage struct {
 // AdminVerificationIncident combines the latest valid successful result with
 // the newest attempt for one current canonical presentation.
 type AdminVerificationIncident struct {
-	LocationAssessment   *location.Assessment
-	IncidentID           int64
-	PresentationRunID    int64
-	CanonicalTitle       string
-	PublishedAt          time.Time
-	OriginalValues       []string
-	EffectiveValues      []string
-	IsCorrect            *bool
-	SuccessModel         string
-	SuccessPromptVersion string
-	SuccessCompletedAt   *time.Time
-	Status               string
-	StatusReason         string
-	StatusDetail         string
-	Attempts             int
-	NextRetryAt          *time.Time
-	FailureKind          string
-	ErrorMessage         string
-	RequestKind          string
-	AttemptModel         string
-	AttemptPromptVersion string
-	AttemptUpdatedAt     *time.Time
+	LocationAssessment      *location.Assessment
+	LocationAssessmentStale bool
+	RetainedSuccess         bool
+	IncidentID              int64
+	PresentationRunID       int64
+	CanonicalTitle          string
+	PublishedAt             time.Time
+	OriginalValues          []string
+	EffectiveValues         []string
+	IsCorrect               *bool
+	SuccessModel            string
+	SuccessPromptVersion    string
+	SuccessCompletedAt      *time.Time
+	Status                  string
+	StatusReason            string
+	StatusDetail            string
+	Attempts                int
+	NextRetryAt             *time.Time
+	FailureKind             string
+	ErrorMessage            string
+	RequestKind             string
+	AttemptModel            string
+	AttemptPromptVersion    string
+	AttemptUpdatedAt        *time.Time
 }
 
 // AdminVerificationCoverageFor returns current-canonical operational counts
@@ -104,7 +106,7 @@ func (s *Store) AdminVerificationCoverageFor(ctx context.Context, sourceMode str
 		COALESCE(SUM(CASE WHEN success_verdict='true' THEN 1 ELSE 0 END),0),
 		COALESCE(SUM(CASE WHEN success_verdict='false' THEN 1 ELSE 0 END),0),
 		COALESCE(SUM(CASE WHEN latest_status='skipped' THEN 1 ELSE 0 END),0),
-		COALESCE(SUM(CASE WHEN success_id IS NOT NULL AND latest_status IN ('needs_review','failed','skipped') THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN success_id IS NOT NULL AND success_id<>latest_id AND latest_status IN ('needs_review','failed','skipped') THEN 1 ELSE 0 END),0),
         COALESCE(SUM(CASE WHEN latest_outcome IN ('ambiguous','no_location','withheld','source_problem') THEN 1 ELSE 0 END),0),
         COALESCE(SUM(CASE WHEN latest_outcome='source_problem' THEN 1 ELSE 0 END),0),
         COALESCE(SUM(CASE WHEN latest_wording_conflict=1 THEN 1 ELSE 0 END),0)
@@ -155,7 +157,7 @@ func (s *Store) ListAdminVerificationIncidents(ctx context.Context, limit, offse
 		COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id=matrix.run_id AND kind='title_de' LIMIT 1),''),
 		d.published_at` + valueColumns.String() + `,matrix.success_verdict,
 		COALESCE(success.model_identity,''),COALESCE(success.prompt_version,''),COALESCE(success.completed_at,''),
-		COALESCE(latest.status,''),COALESCE(latest.status_reason,''),COALESCE(latest.status_detail,''),COALESCE(latest.attempt_count,0),
+		COALESCE(success.id<>latest.id,0),matrix.latest_status,COALESCE(latest.status_reason,''),COALESCE(latest.status_detail,''),COALESCE(latest.attempt_count,0),
 		COALESCE(latest.next_retry_at,''),COALESCE(latest.failure_kind,''),COALESCE(latest.error_message,''),COALESCE(latest.request_kind,''),
 		COALESCE(latest.model_identity,''),COALESCE(latest.prompt_version,''),COALESCE(latest.updated_at,'')
 		FROM verification_matrix matrix
@@ -178,7 +180,7 @@ func (s *Store) ListAdminVerificationIncidents(ctx context.Context, limit, offse
 			destinations = append(destinations, &item.OriginalValues[index], &item.EffectiveValues[index])
 		}
 		destinations = append(destinations, &verdict, &item.SuccessModel, &item.SuccessPromptVersion, &successCompletedAt,
-			&item.Status, &item.StatusReason, &item.StatusDetail, &item.Attempts, &nextRetryAt, &item.FailureKind,
+			&item.RetainedSuccess, &item.Status, &item.StatusReason, &item.StatusDetail, &item.Attempts, &nextRetryAt, &item.FailureKind,
 			&item.ErrorMessage, &item.RequestKind, &item.AttemptModel, &item.AttemptPromptVersion, &attemptUpdatedAt)
 		if err := rows.Scan(destinations...); err != nil {
 			return nil, 0, fmt.Errorf("scan admin verification incident: %w", err)
@@ -213,7 +215,7 @@ func (s *Store) ListAdminVerificationIncidents(ctx context.Context, limit, offse
 	}
 	if spec.ProcessorKey == "location_verification" {
 		for index := range items {
-			items[index].LocationAssessment, err = s.latestLocationAssessment(ctx, items[index].PresentationRunID)
+			items[index].LocationAssessment, items[index].LocationAssessmentStale, err = s.latestLocationAssessment(ctx, items[index].PresentationRunID)
 			if err != nil {
 				return nil, 0, err
 			}
