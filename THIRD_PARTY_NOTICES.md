@@ -205,12 +205,12 @@ Preserve bundled copyright, licence and third-party notices when redistributing.
 
 Runtime notices are included for compiled Go code. Build verification checks the actual container toolchain licence. Includes the standard library’s vendored golang.org/x packages under the Go BSD licence and patent grant. Compiler-only dependencies and optional BoringCrypto are not linked into the supported CGO-disabled builds.
 
-## htmx.org — 2.0.10
+## htmx.org — 2.0.11
 
 - Source: [upstream](https://www.npmjs.com/package/htmx.org)
 - Licence: 0BSD
 - Included in: browser, binary, container
-- Reviewed: 2026-09-14
+- Reviewed: 2026-09-28
 - [htmx-org](LICENSES/htmx-org.txt)
 
 ## tailwindcss — 4.3.3
