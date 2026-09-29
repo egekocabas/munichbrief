@@ -68,6 +68,7 @@ func TestLocationPublicationFallbackAndStaleContext(t *testing.T) {
 		a := location.Assessment{Outcome: outcome, Source: src, ResolverVersion: location.CatalogVersion}
 		verdict := "unresolved"
 		if outcome == "corrected" {
+			a.SummaryConflict = true
 			a.Proposed = &location.Area{ID: "munich:district:maxvorstadt", Name: "Maxvorstadt", Type: "district"}
 			verdict = "false"
 		}
@@ -99,6 +100,10 @@ func TestLocationPublicationFallbackAndStaleContext(t *testing.T) {
 	get("Maxvorstadt")
 	job = claim()
 	get("Maxvorstadt")
+	coverage, err = db.AdminVerificationCoverageFor(ctx, "fixture", spec)
+	if err != nil || coverage.WordingConflicts != 1 {
+		t.Fatalf("pending replacement hides wording conflict: %#v / %v", coverage, err)
+	}
 	if err := db.CompletePostProcessingJob(ctx, job, result(job, "ambiguous"), "test", job.InputHash, now); err != nil {
 		t.Fatal(err)
 	}

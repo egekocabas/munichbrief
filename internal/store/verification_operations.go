@@ -276,17 +276,27 @@ func adminVerificationMatrixSQL(sourceMode string, spec AdminVerificationSpec) (
 			WHERE job.processor_key=@verification_processor AND job.scope_key=@verification_scope
 		),
 		latest_attempts AS (SELECT * FROM ranked_attempts WHERE rank=1),
+		ranked_assessments AS (
+			SELECT job.presentation_run_id,value.value,
+				ROW_NUMBER() OVER (PARTITION BY job.presentation_run_id ORDER BY job.completed_at DESC,job.id DESC) AS rank
+			FROM post_processing_jobs job JOIN canonical_runs canonical ON canonical.run_id=job.presentation_run_id
+			JOIN post_processing_values value ON value.job_id=job.id AND value.kind='location_assessment'
+			WHERE job.processor_key='location_verification' AND job.processor_key=@verification_processor
+				AND job.scope_key=@verification_scope AND job.status='succeeded'
+		),
+		latest_assessments AS (SELECT * FROM ranked_assessments WHERE rank=1),
 		verification_matrix AS (
 			SELECT canonical.incident_id,canonical.run_id,success.id AS success_id,latest.id AS latest_id,
 				COALESCE((SELECT value FROM post_processing_values WHERE job_id=success.id AND kind=@verdict_kind LIMIT 1),'') AS success_verdict,
-				COALESCE((SELECT json_extract(value,'$.outcome') FROM post_processing_values WHERE job_id=latest.id AND kind='location_assessment'),'') AS latest_outcome,
-                COALESCE((SELECT json_extract(value,'$.summary_conflict') FROM post_processing_values WHERE job_id=latest.id AND kind='location_assessment'),0) AS latest_wording_conflict,
+				COALESCE(json_extract(assessment.value,'$.outcome'),'') AS latest_outcome,
+                COALESCE(json_extract(assessment.value,'$.summary_conflict'),0) AS latest_wording_conflict,
                 CASE WHEN latest.processor_key='location_verification' AND latest.status='succeeded' AND EXISTS (
                     SELECT 1 FROM post_processing_values av JOIN presentation_runs ar ON ar.id=latest.presentation_run_id JOIN incidents ai ON ai.id=ar.incident_id
                     WHERE av.job_id=latest.id AND av.kind='location_assessment' AND (json_extract(av.value,'$.outcome') NOT IN ('confirmed','corrected') OR json_extract(av.value,'$.summary_conflict')=1 OR json_extract(av.value,'$.source.context_hash')<>ai.context_hash OR json_extract(av.value,'$.resolver_version')<>` + sqlStringLiteral(location.CatalogVersion) + `)) THEN 'needs_review' ELSE COALESCE(latest.status,'') END AS latest_status
 			FROM canonical_runs canonical
 			LEFT JOIN selected_successes success ON success.presentation_run_id=canonical.run_id
 			LEFT JOIN latest_attempts latest ON latest.presentation_run_id=canonical.run_id
+			LEFT JOIN latest_assessments assessment ON assessment.presentation_run_id=canonical.run_id
 		)`
 	return query, args, nil
 }

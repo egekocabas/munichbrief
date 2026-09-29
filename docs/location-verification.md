@@ -64,8 +64,9 @@ MUNICHBRIEF_OLLAMA_BASE_URL=http://localhost:11434 munichbrief location-evaluate
 
 This command **makes LLM requests**. It is explicitly deferred for the current
 implementation review at the user's request. Omit `--ids` only for a deliberate
-full evaluation. The snapshot may receive schema migrations; use a copy, never
-the live database. The command does not queue or apply corrections. Output is
+full evaluation. Empty selections and requested IDs without a current eligible
+presentation are rejected before any model request. The snapshot may receive
+schema migrations; use a copy, never the live database. The command does not queue or apply corrections. Output is
 created exclusively with mode 0600 and contains protected evidence. Historical
 snapshots without section context cannot evaluate context-based venue recovery
 until context has been prepared on the isolated copy.
@@ -79,8 +80,10 @@ model precision. Keep automatic production use unconfigured until that review.
 Admin shows original/effective locations plus the latest protected assessment,
 proposed location, evidence, geographic sources, roles, and wording conflicts.
 Confirmed/corrected, unresolved, source-problem, and wording-conflict counts
-supplement the existing queue/history metrics. Disabling the
-processor stops future automatic work without removing accepted results.
+supplement the existing queue/history metrics. Unresolved, source-problem, and
+wording-conflict counts track the latest completed assessment and remain visible
+during pending or failed rechecks. Disabling the processor stops future
+automatic work without removing accepted results.
 
 ## Targeted source repair
 

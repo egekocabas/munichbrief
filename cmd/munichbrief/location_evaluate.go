@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -67,6 +68,10 @@ func runLocationEvaluation(ctx context.Context, cfg config.Config, args []string
 	if err != nil {
 		return err
 	}
+	inputs, err = selectLocationEvaluationInputs(inputs, selected)
+	if err != nil {
+		return err
+	}
 	client, err := processing.NewOllamaClient(cfg.OllamaBaseURL, *model, cfg.AITimeout, cfg.AIContextSize, nil)
 	if err != nil {
 		return err
@@ -78,9 +83,6 @@ func runLocationEvaluation(ctx context.Context, cfg config.Config, args []string
 	defer file.Close()
 	encoder := json.NewEncoder(file)
 	for _, input := range inputs {
-		if len(selected) > 0 && !selected[input.IncidentID] {
-			continue
-		}
 		if err := ctx.Err(); err != nil {
 			return err
 		}
@@ -121,4 +123,31 @@ func evaluationLiveDatabasePath(path string) (string, error) {
 		return decoded, nil
 	}
 	return u.Path, nil
+}
+
+// Validate the complete requested cohort before creating output or contacting a
+// provider. Silently dropping missing IDs would bias the evaluation results.
+func selectLocationEvaluationInputs(inputs []store.LocationEvaluationInput, selected map[int64]bool) ([]store.LocationEvaluationInput, error) {
+	var result []store.LocationEvaluationInput
+	found := make(map[int64]bool)
+	for _, input := range inputs {
+		if len(selected) == 0 || selected[input.IncidentID] {
+			result = append(result, input)
+			found[input.IncidentID] = true
+		}
+	}
+	var missing []int64
+	for id := range selected {
+		if !found[id] {
+			missing = append(missing, id)
+		}
+	}
+	if len(missing) > 0 {
+		sort.Slice(missing, func(i, j int) bool { return missing[i] < missing[j] })
+		return nil, fmt.Errorf("no eligible current presentation for incident IDs %v", missing)
+	}
+	if len(result) == 0 {
+		return nil, errors.New("no eligible current presentations in snapshot")
+	}
+	return result, nil
 }
