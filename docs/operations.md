@@ -63,3 +63,10 @@ Automated off-machine backups are not included.
 
 For available commands, see [the CLI](../cmd/munichbrief/main.go); build and
 validation steps are recorded in [CI](../.github/workflows/ci.yml).
+
+## Location verification
+
+See [location verification](location-verification.md) for model configuration,
+new-presentation cutover, protected evidence, isolated evaluation, and targeted
+source repair. Keep the processor model unconfigured until focused LLM evaluation
+is complete. No historical location backfill runs automatically.

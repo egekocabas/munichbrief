@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"slices"
 	"time"
 
 	"github.com/egekocabas/munichbrief/internal/domain"
@@ -146,57 +145,22 @@ func (s *Store) StoreRSSFetch(ctx context.Context, checkID, documentID int64, pa
 		return err
 	}
 	defer tx.Rollback()
-	type previous struct {
-		id           int64
-		hash, number string
-	}
-	existing := map[int]previous{}
-	rows, err := tx.QueryContext(ctx, `SELECT id,position,content_hash,incident_number FROM incidents WHERE source_document_id=? ORDER BY position`, documentID)
+	outcomes, err := documentIncidentChanges(ctx, tx, documentID, parsed.Incidents)
 	if err != nil {
 		return err
 	}
-	for rows.Next() {
-		var pos int
-		var p previous
-		if err := rows.Scan(&p.id, &pos, &p.hash, &p.number); err != nil {
-			rows.Close()
-			return err
-		}
-		existing[pos] = p
-	}
-	err = rows.Err()
-	rows.Close()
-	if err != nil {
-		return err
-	}
-	var outcomes []RSSIncidentOutcome
 	inserted, updated, unchanged, removed := 0, 0, 0, 0
-	for _, i := range parsed.Incidents {
-		p, exists := existing[i.Position]
-		status := "inserted"
-		if !exists {
+	for _, outcome := range outcomes {
+		switch outcome.Status {
+		case "inserted":
 			inserted++
-		} else if p.hash == i.ContentHash {
-			status = "unchanged"
-			unchanged++
-		} else {
-			status = "updated"
+		case "updated":
 			updated++
+		case "unchanged":
+			unchanged++
+		case "removed":
+			removed++
 		}
-		outcomes = append(outcomes, RSSIncidentOutcome{Position: i.Position, IncidentID: p.id, Status: status, Number: i.Number})
-	}
-	// Removal follows the existing position-based replacement semantics exactly.
-	var removedPositions []int
-	for pos := range existing {
-		if pos >= len(parsed.Incidents) {
-			removedPositions = append(removedPositions, pos)
-		}
-	}
-	slices.Sort(removedPositions)
-	for _, pos := range removedPositions {
-		p := existing[pos]
-		removed++
-		outcomes = append(outcomes, RSSIncidentOutcome{Position: pos, IncidentID: p.id, Status: "removed", Number: p.number})
 	}
 	if err := replaceDocumentIncidents(ctx, tx, documentID, parsed.SourceHash, parsed.Incidents, now); err != nil {
 		return err

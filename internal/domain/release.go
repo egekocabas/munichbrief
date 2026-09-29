@@ -17,9 +17,11 @@ type SourceDocument struct {
 // Incident represents one report within a source document. Number is empty
 // when the official source publishes a standalone report without one.
 type Incident struct {
-	Number      string
-	Position    int
-	TitleDE     string
-	BodyDE      string
-	ContentHash string
+	Number         string
+	Position       int
+	TitleDE        string
+	BodyDE         string
+	ContentHash    string
+	SectionContext string
+	ContextHash    string
 }

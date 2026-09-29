@@ -33,10 +33,14 @@ not guarantee that every generated statement is correct.
 Website pages identify AI-generated text and link to the source. HTML metadata,
 Markdown, and share images carry corresponding disclosure or provenance.
 
-Canonical processing and public-assistance verification send original source
+Canonical processing, public-assistance verification, and location verification send original source
 text to the configured Ollama endpoint. Translation and category verification
 use the accepted German presentation. Protect that endpoint and its transport.
 Logs exclude source bodies, prompts, generated text, and raw model responses.
+Location evidence (including possible exact addresses) remains protected admin
+data. Public location corrections contain only catalog area names/types.
+Intentionally minimized wanted/missing-person records retain their canonical
+location and receive a withheld assessment.
 
 ## Retention
 

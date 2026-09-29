@@ -853,6 +853,7 @@ func TestPipelineWorkerPrioritizesPublicAssistanceThenCategoryBeforeTranslation(
 	queueOrder := []string{
 		PublicAssistanceVerificationStep + "/" + DefaultPostProcessingScope,
 		CategoryVerificationStep + "/" + DefaultPostProcessingScope,
+		LocationVerificationStep + "/" + DefaultPostProcessingScope,
 	}
 	for _, translation := range RegisteredTranslations() {
 		queueOrder = append(queueOrder, TranslationModelStep+"/"+translation.Language)
@@ -927,7 +928,7 @@ func TestInjectedPostProcessorUsesGenericSchedulingManualExecutionStatusAndHisto
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(status.Models.PostProcessors) != 4 || len(status.Queue.PostProcessing) != 3+len(RegisteredTranslations()) {
+	if len(status.Models.PostProcessors) != 5 || len(status.Queue.PostProcessing) != 4+len(RegisteredTranslations()) {
 		t.Fatalf("injected processor status = %#v / %#v", status.Models.PostProcessors, status.Queue.PostProcessing)
 	}
 	records, _, err := database.ListIncidents(ctx, 1, 0)
@@ -1200,10 +1201,10 @@ func TestMissingTranslationModelDoesNotBlockCanonicalGerman(t *testing.T) {
 		t.Fatalf("English was visible without a translation: %v", err)
 	}
 	status, err := worker.ModelStatus(ctx)
-	if err != nil || !status.Ready || len(status.PostProcessors) != 3 || status.PostProcessors[2].PreferredAvailable {
+	if err != nil || !status.Ready || len(status.PostProcessors) != 4 || status.PostProcessors[3].PreferredAvailable {
 		t.Fatalf("split model readiness = %#v/%v", status, err)
 	}
-	if status.PostProcessors[0].Verification == nil || status.PostProcessors[1].Verification == nil || status.PostProcessors[2].Verification != nil {
+	if status.PostProcessors[0].Verification == nil || status.PostProcessors[1].Verification == nil || status.PostProcessors[2].Verification == nil || status.PostProcessors[3].Verification != nil {
 		t.Fatalf("verification model metadata = %#v", status.PostProcessors)
 	}
 }
@@ -1389,7 +1390,7 @@ func TestTranslationFailureDoesNotChangeCanonicalCompletion(t *testing.T) {
 			translationStats = &snapshot.PostProcessing[index]
 		}
 	}
-	if err != nil || len(snapshot.PostProcessing) != 2+len(RegisteredTranslations()) || translationStats == nil || translationStats.NeedsReview != 1 || translationStats.Pending != 0 || translationStats.Retrying != 0 {
+	if err != nil || len(snapshot.PostProcessing) != 3+len(RegisteredTranslations()) || translationStats == nil || translationStats.NeedsReview != 1 || translationStats.Pending != 0 || translationStats.Retrying != 0 {
 		t.Fatalf("translation failure snapshot = %#v, err=%v", snapshot.PostProcessing, err)
 	}
 }

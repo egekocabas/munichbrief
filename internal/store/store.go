@@ -74,8 +74,11 @@ type IncidentRecord struct {
 	AIPublicAssistanceVerificationPromptVersion string
 	AIPublicAssistanceVerificationGeneratedAt   *time.Time
 	AICategoryVerificationModel                 string
+	AILocationVerificationModel                 string
 	AICategoryVerificationPromptVersion         string
+	AILocationVerificationPromptVersion         string
 	AICategoryVerificationGeneratedAt           *time.Time
+	AILocationVerificationGeneratedAt           *time.Time
 	AIModel                                     string
 	AIPromptVersion                             string
 	AIGeneratedAt                               *time.Time

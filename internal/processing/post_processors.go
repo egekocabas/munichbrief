@@ -194,6 +194,12 @@ func DefaultPostProcessorRegistry(protectors ...TranslationProtector) *PostProce
 			}},
 		},
 		PostProcessorDefinition{
+			Key: LocationVerificationStep, DisplayName: "Location verification", Description: "Check original-source locations; apply grounded corrections and retain canonical locations when unresolved.", Priority: 25, ModelSettingKey: LocationVerificationStep, Automatic: true, Manual: true,
+			Scopes:       []PostProcessorScope{{Key: DefaultPostProcessingScope, DisplayName: "Default", Step: LocationVerificationDefinition()}},
+			Counters:     []PostProcessorCounter{{Key: "corrected", OutputKind: "is_correct", EqualsValue: "false"}, {Key: "unresolved", OutputKind: "is_correct", EqualsValue: "unresolved"}},
+			Verification: &PostProcessorVerification{VerdictKind: "is_correct", Fields: []PostProcessorVerificationField{{DisplayName: "Location", OriginalKind: "location_original", CorrectedKind: "location_proposed"}}},
+		},
+		PostProcessorDefinition{
 			Key: TranslationModelStep, DisplayName: "Translations", Description: "Translate current presentations into one registered language or every registered language.", Priority: 30, ModelSettingKey: TranslationModelStep, Automatic: true, Manual: true,
 			Scopes: translationScopes,
 		},

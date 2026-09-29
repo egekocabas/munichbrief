@@ -528,6 +528,13 @@ func postProcessingInputValuesTx(ctx context.Context, tx *sql.Tx, runID int64, k
 	presentationKinds := make([]string, 0, len(kinds))
 	for _, kind := range kinds {
 		switch kind {
+		case "location_source", "location_original":
+			source, original, err := locationInputsTx(ctx, tx, runID)
+			if err != nil {
+				return nil, "", err
+			}
+			values["location_source"], present["location_source"] = source, true
+			values["location_original"], present["location_original"] = original, true
 		case "original_title":
 			needOriginalTitle = true
 		case "incident_body":
@@ -683,6 +690,12 @@ func (s *Store) ClaimPostProcessingJob(ctx context.Context, processorKey string,
 			// is no eligible job, rather than only a skipped candidate.
 			continue
 		}
+		if job.ProcessorKey == "location_verification" {
+			job.InputHash = postProcessingInputHash(job.ProcessorKey, job.ScopeKey, contract.InputKinds, job.InputValues, job.PromptVersion, job.ModelIdentity, job.AdapterKey)
+			if _, err := tx.ExecContext(ctx, `UPDATE post_processing_jobs SET input_hash=? WHERE id=?`, job.InputHash, job.ID); err != nil {
+				return PostProcessingJob{}, false, err
+			}
+		}
 		job.AttemptCount++
 		result, err := tx.StmtContext(ctx, statements[claimPostProcessingSQL]).ExecContext(ctx, job.AttemptCount, formatted, formatted, job.ID)
 		if err != nil {
@@ -725,6 +738,25 @@ func (s *Store) CompletePostProcessingJob(ctx context.Context, job PostProcessin
 		return err
 	}
 	defer tx.Rollback()
+	if job.ProcessorKey == "location_verification" {
+		source, original, err := locationInputsTx(ctx, tx, job.PresentationRunID)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+		var current int
+		if err2 := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM incidents i WHERE i.id=? AND `+latestPresentationRun+`=?`, job.IncidentID, job.PresentationRunID).Scan(&current); err2 != nil {
+			return err2
+		}
+		if err != nil || current != 1 || source != job.InputValues["location_source"] || original != job.InputValues["location_original"] {
+			if _, err := tx.ExecContext(ctx, `UPDATE post_processing_jobs SET status='superseded',completed_at=?,updated_at=? WHERE id=? AND status='running'`, formatTime(now.UTC()), formatTime(now.UTC()), job.ID); err != nil {
+				return err
+			}
+			if err := tx.Commit(); err != nil {
+				return err
+			}
+			return ErrJobNotRunning
+		}
+	}
 	for _, value := range values {
 		if strings.TrimSpace(value.Kind) == "" || strings.TrimSpace(value.Value) == "" {
 			return errors.New("post-processing output kind and value are required")

@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/egekocabas/munichbrief/internal/location"
 )
 
 // AdminVerificationFilter selects one operational verifier subset. Successful
@@ -43,6 +45,9 @@ type AdminVerificationSpec struct {
 // AdminVerificationCoverage summarizes current canonical presentations for a
 // single verification scope.
 type AdminVerificationCoverage struct {
+	Unresolved           int
+	SourceProblems       int
+	WordingConflicts     int
 	Current              int
 	Verified             int
 	Unverified           int
@@ -58,6 +63,7 @@ type AdminVerificationCoverage struct {
 // AdminVerificationIncident combines the latest valid successful result with
 // the newest attempt for one current canonical presentation.
 type AdminVerificationIncident struct {
+	LocationAssessment   *location.Assessment
 	IncidentID           int64
 	PresentationRunID    int64
 	CanonicalTitle       string
@@ -98,12 +104,15 @@ func (s *Store) AdminVerificationCoverageFor(ctx context.Context, sourceMode str
 		COALESCE(SUM(CASE WHEN success_verdict='true' THEN 1 ELSE 0 END),0),
 		COALESCE(SUM(CASE WHEN success_verdict='false' THEN 1 ELSE 0 END),0),
 		COALESCE(SUM(CASE WHEN latest_status='skipped' THEN 1 ELSE 0 END),0),
-		COALESCE(SUM(CASE WHEN success_id IS NOT NULL AND latest_status IN ('needs_review','failed','skipped') THEN 1 ELSE 0 END),0)
+		COALESCE(SUM(CASE WHEN success_id IS NOT NULL AND latest_status IN ('needs_review','failed','skipped') THEN 1 ELSE 0 END),0),
+        COALESCE(SUM(CASE WHEN latest_outcome IN ('ambiguous','no_location','withheld','source_problem') THEN 1 ELSE 0 END),0),
+        COALESCE(SUM(CASE WHEN latest_outcome='source_problem' THEN 1 ELSE 0 END),0),
+        COALESCE(SUM(CASE WHEN latest_wording_conflict=1 THEN 1 ELSE 0 END),0)
 		FROM verification_matrix`
 	if err := s.db.QueryRowContext(ctx, query, args...).Scan(
 		&coverage.Current, &coverage.Verified, &coverage.Unverified, &coverage.NeverQueued,
 		&coverage.Active, &coverage.Attention, &coverage.Confirmed, &coverage.Corrected,
-		&coverage.Skipped, &coverage.ReplacementAttention,
+		&coverage.Skipped, &coverage.ReplacementAttention, &coverage.Unresolved, &coverage.SourceProblems, &coverage.WordingConflicts,
 	); err != nil {
 		return AdminVerificationCoverage{}, fmt.Errorf("read admin verification coverage: %w", err)
 	}
@@ -137,6 +146,9 @@ func (s *Store) ListAdminVerificationIncidents(ctx context.Context, limit, offse
 		originalName := fmt.Sprintf("original_kind_%d", index)
 		correctedName := fmt.Sprintf("corrected_kind_%d", index)
 		originalValue := `(SELECT value FROM presentation_values WHERE presentation_run_id=matrix.run_id AND kind=@` + originalName + ` LIMIT 1)`
+		if spec.Fields[index].OriginalKind == "location_original" {
+			originalValue = locationOriginalSQL("matrix.run_id")
+		}
 		valueColumns.WriteString(`,COALESCE(` + originalValue + `,''),COALESCE((SELECT value FROM post_processing_values WHERE job_id=matrix.success_id AND kind=@` + correctedName + ` LIMIT 1),` + originalValue + `,'')`)
 	}
 	query := base + ` SELECT matrix.incident_id,matrix.run_id,
@@ -196,6 +208,17 @@ func (s *Store) ListAdminVerificationIncidents(ctx context.Context, limit, offse
 	if err := rows.Err(); err != nil {
 		return nil, 0, fmt.Errorf("iterate admin verification incidents: %w", err)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, 0, err
+	}
+	if spec.ProcessorKey == "location_verification" {
+		for index := range items {
+			items[index].LocationAssessment, err = s.latestLocationAssessment(ctx, items[index].PresentationRunID)
+			if err != nil {
+				return nil, 0, err
+			}
+		}
+	}
 	return items, total, nil
 }
 
@@ -235,6 +258,9 @@ func adminVerificationMatrixSQL(sourceMode string, spec AdminVerificationSpec) (
 		seenOriginals[field.OriginalKind] = struct{}{}
 		seenCorrected[field.CorrectedKind] = struct{}{}
 	}
+	if spec.ProcessorKey == "location_verification" {
+		successRequirements.WriteString(locationResultEligibility("job"))
+	}
 	query := `WITH canonical_runs AS (` + adminCurrentCanonicalRunsSQL(statusCondition) + `),
 		ranked_successes AS (
 			SELECT job.*,ROW_NUMBER() OVER (PARTITION BY job.presentation_run_id ORDER BY job.completed_at DESC,job.id DESC) AS rank
@@ -251,7 +277,11 @@ func adminVerificationMatrixSQL(sourceMode string, spec AdminVerificationSpec) (
 		verification_matrix AS (
 			SELECT canonical.incident_id,canonical.run_id,success.id AS success_id,latest.id AS latest_id,
 				COALESCE((SELECT value FROM post_processing_values WHERE job_id=success.id AND kind=@verdict_kind LIMIT 1),'') AS success_verdict,
-				COALESCE(latest.status,'') AS latest_status
+				COALESCE((SELECT json_extract(value,'$.outcome') FROM post_processing_values WHERE job_id=latest.id AND kind='location_assessment'),'') AS latest_outcome,
+                COALESCE((SELECT json_extract(value,'$.summary_conflict') FROM post_processing_values WHERE job_id=latest.id AND kind='location_assessment'),0) AS latest_wording_conflict,
+                CASE WHEN latest.processor_key='location_verification' AND latest.status='succeeded' AND EXISTS (
+                    SELECT 1 FROM post_processing_values av JOIN presentation_runs ar ON ar.id=latest.presentation_run_id JOIN incidents ai ON ai.id=ar.incident_id
+                    WHERE av.job_id=latest.id AND av.kind='location_assessment' AND (json_extract(av.value,'$.outcome') NOT IN ('confirmed','corrected') OR json_extract(av.value,'$.summary_conflict')=1 OR json_extract(av.value,'$.source.context_hash')<>ai.context_hash OR json_extract(av.value,'$.resolver_version')<>` + sqlStringLiteral(location.CatalogVersion) + `)) THEN 'needs_review' ELSE COALESCE(latest.status,'') END AS latest_status
 			FROM canonical_runs canonical
 			LEFT JOIN selected_successes success ON success.presentation_run_id=canonical.run_id
 			LEFT JOIN latest_attempts latest ON latest.presentation_run_id=canonical.run_id

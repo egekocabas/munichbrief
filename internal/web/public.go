@@ -329,6 +329,9 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 	if view.Record.AICategoryVerificationGeneratedAt != nil && view.Record.AICategoryVerificationGeneratedAt.After(modifiedAt) {
 		modifiedAt = *view.Record.AICategoryVerificationGeneratedAt
 	}
+	if view.Record.AILocationVerificationGeneratedAt != nil && view.Record.AILocationVerificationGeneratedAt.After(modifiedAt) {
+		modifiedAt = *view.Record.AILocationVerificationGeneratedAt
+	}
 	if view.Translated && view.Record.AITranslationGeneratedAt != nil && view.Record.AITranslationGeneratedAt.After(modifiedAt) {
 		modifiedAt = *view.Record.AITranslationGeneratedAt
 	}
@@ -442,6 +445,12 @@ func (s *Server) incidentForLanguage(record store.IncidentRecord, language strin
 			view.ProcessingSteps = append(view.ProcessingSteps, processingStepView{
 				Label: s.localization.Text(language, "CategoryVerificationStep"), Name: s.localization.Text(language, "CategoryVerificationStep"), Model: record.AICategoryVerificationModel,
 				PromptVersion: record.AICategoryVerificationPromptVersion, GeneratedAt: record.AICategoryVerificationGeneratedAt,
+			})
+		}
+		if record.AILocationVerificationModel != "" {
+			view.ProcessingSteps = append(view.ProcessingSteps, processingStepView{
+				Label: s.localization.Text(language, "LocationVerificationStep"), Name: s.localization.Text(language, "LocationVerificationStep"), Model: record.AILocationVerificationModel,
+				PromptVersion: record.AILocationVerificationPromptVersion, GeneratedAt: record.AILocationVerificationGeneratedAt,
 			})
 		}
 		if !languageDefinition.Canonical {
@@ -559,6 +568,7 @@ type basePage struct {
 	AIMetadataModel                     string
 	AIPublicAssistanceVerificationModel string
 	AICategoryVerificationModel         string
+	AILocationVerificationModel         string
 	AITranslationModel                  string
 	LanguageAlternates                  []languageLink
 	LanguageSwitches                    []languageLink

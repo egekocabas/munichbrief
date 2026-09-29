@@ -455,3 +455,6 @@ other = "Страница {{.Page}} из {{.TotalPages}}"
 [ModelVariant]
 other = "Вариант модели"
 
+
+[LocationVerificationStep]
+other = "Проверка места"

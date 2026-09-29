@@ -884,3 +884,6 @@ other = "Seite {{.Page}} von {{.TotalPages}}"
 [ModelVariant]
 other = "Modellvariante"
 
+
+[LocationVerificationStep]
+other = "Ortsprüfung"

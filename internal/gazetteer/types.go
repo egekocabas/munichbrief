@@ -25,6 +25,7 @@ type Entry struct {
 }
 
 type EntrySource struct {
+	DistrictHint    string // Point-feature district; never proof of whole-street containment.
 	Key             string
 	ExternalID      string
 	Kind            string

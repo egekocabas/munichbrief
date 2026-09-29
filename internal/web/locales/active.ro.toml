@@ -729,3 +729,6 @@ other = "Pagina {{.Page}} din {{.TotalPages}}"
 [ModelVariant]
 other = "Varianta modelului"
 
+
+[LocationVerificationStep]
+other = "Verificarea locației"

@@ -50,6 +50,9 @@ type PromptDefinition struct {
 }
 
 var promptRegistry = append([]PromptDefinition{{
+	Version: LocationVerificationPromptVersion, StepKey: LocationVerificationStep, Status: PromptActive,
+	SystemPrompt: locationVerificationSystemPrompt, UserPromptTemplate: "Prüfe den Vorfallsort anhand dieser Quelldaten:\n%s",
+}, {
 	Version:            IncidentMetadataPromptVersion,
 	StepKey:            IncidentMetadataStep,
 	Status:             PromptActive,

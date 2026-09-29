@@ -211,3 +211,20 @@ func TestExtractedTextSurvivesUnsupportedIncidentStructure(t *testing.T) {
 		t.Fatalf("extracted=%q want %q", parsed.ExtractedText, want)
 	}
 }
+
+func TestBoldParagraphBoundaryAndFestivalContext(t *testing.T) {
+	text := `<main id="readspeaker_lesen"><section class="bp-template bp-presse"><p><strong>1. Contents one</strong></p><p><strong>2. Contents two</strong></p></section><section><h3>1. Synthetic first</h3><p>First body.</p><p><strong>2. Synthetic second</strong></p><p>Second body.</p><h3>Wiesnberichte</h3><h3>3. Synthetic tent</h3><p>Festzelt.</p><h4>Fall 1</h4><p>First case.</p><h4>Fall 2</h4><p>Second case.</p></section></main>`
+	parsed, err := ParsePoliceRelease([]byte(text))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(parsed.Incidents) != 3 {
+		t.Fatalf("got %d reports", len(parsed.Incidents))
+	}
+	if strings.Contains(parsed.Incidents[0].BodyDE, "Second") || parsed.Incidents[2].SectionContext != "Wiesnberichte" || !strings.Contains(parsed.Incidents[2].BodyDE, "Fall 2") {
+		t.Fatalf("incorrect boundaries or context: %#v", parsed.Incidents)
+	}
+	if parsed.Incidents[2].ContextHash == "" {
+		t.Fatal("missing context provenance")
+	}
+}

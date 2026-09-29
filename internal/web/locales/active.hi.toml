@@ -455,3 +455,6 @@ other = "पन्ना {{.Page}} / {{.TotalPages}}"
 [ModelVariant]
 other = "मॉडल का संस्करण"
 
+
+[LocationVerificationStep]
+other = "स्थान सत्यापन"

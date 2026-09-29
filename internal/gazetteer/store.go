@@ -262,7 +262,7 @@ func (s *Store) SourceValidators(ctx context.Context, key string) (etag, modifie
 
 func (s *Store) ActiveSourceEntries(ctx context.Context, key string) ([]Entry, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT DISTINCT n.value, ns.source_kind, ns.source_priority, ns.requires_context, ns.external_id
+		SELECT DISTINCT n.value, ns.source_kind, ns.source_priority, ns.requires_context, ns.external_id, ns.district_hint
 		FROM gazetteer_names n
 		JOIN gazetteer_state st ON st.active_generation_id = n.generation_id AND st.singleton = 1
 		JOIN gazetteer_name_sources ns ON ns.name_id = n.id
@@ -274,11 +274,11 @@ func (s *Store) ActiveSourceEntries(ctx context.Context, key string) ([]Entry, e
 	var entries []Entry
 	for rows.Next() {
 		var entry Entry
-		var externalID string
-		if err := rows.Scan(&entry.Name, &entry.Kind, &entry.Priority, &entry.RequiresContext, &externalID); err != nil {
+		var externalID, districtHint string
+		if err := rows.Scan(&entry.Name, &entry.Kind, &entry.Priority, &entry.RequiresContext, &externalID, &districtHint); err != nil {
 			return nil, err
 		}
-		entry.Sources = []EntrySource{{Key: key, ExternalID: externalID, Kind: entry.Kind, Priority: entry.Priority, RequiresContext: entry.RequiresContext}}
+		entry.Sources = []EntrySource{{Key: key, ExternalID: externalID, DistrictHint: districtHint, Kind: entry.Kind, Priority: entry.Priority, RequiresContext: entry.RequiresContext}}
 		entries = append(entries, entry)
 	}
 	return entries, rows.Err()
@@ -389,7 +389,7 @@ func (s *Store) activate(ctx context.Context, snapshots []SourceSnapshot, entrie
 			if priority == 0 {
 				priority = entry.Priority
 			}
-			if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO gazetteer_name_sources(name_id, source_key, external_id, source_kind, source_priority, requires_context) VALUES (?, ?, ?, ?, ?, ?)`, nameID, source.Key, source.ExternalID, source.Kind, priority, source.RequiresContext); err != nil {
+			if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO gazetteer_name_sources(name_id, source_key, external_id, source_kind, source_priority, requires_context, district_hint) VALUES (?, ?, ?, ?, ?, ?, ?)`, nameID, source.Key, source.ExternalID, source.Kind, priority, source.RequiresContext, source.DistrictHint); err != nil {
 				return 0, false, err
 			}
 		}

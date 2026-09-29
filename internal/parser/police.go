@@ -29,6 +29,7 @@ type ParsedRelease struct {
 type block struct {
 	Kind string
 	Text string
+	Bold bool
 }
 
 // ParsePoliceRelease extracts incidents from supported police release page
@@ -57,6 +58,7 @@ func ParsePoliceRelease(contents []byte) (ParsedRelease, error) {
 	var incidents []domain.Incident
 	var current *domain.Incident
 	var bodyBlocks []string
+	sectionContext := ""
 
 	// A new numbered heading closes the preceding incident. Non-numbered headings
 	// remain part of that incident's body because real releases use them as
@@ -67,22 +69,32 @@ func ParsePoliceRelease(contents []byte) (ParsedRelease, error) {
 		}
 		current.BodyDE = strings.Join(bodyBlocks, "\n\n")
 		current.ContentHash = hash(current.Number, current.TitleDE, current.BodyDE)
+		current.ContextHash = hash("section-context-v1", current.SectionContext)
 		incidents = append(incidents, *current)
 		current = nil
 		bodyBlocks = nil
 	}
 
-	for _, candidate := range blocks {
+	for index, candidate := range blocks {
 		if candidate.Text == "" {
 			continue
 		}
-		if candidate.Kind == "h2" || candidate.Kind == "h3" {
+		if candidate.Text == "Wiesnberichte" || candidate.Text == "Wiesn-Berichte" {
+			sectionContext = candidate.Text
+		} else if (candidate.Kind == "h2" || candidate.Kind == "h3") && !numberedHeadingPattern.MatchString(candidate.Text) {
+			sectionContext = ""
+		}
+		// Paragraph headings are accepted only in the detail stream and with
+		// following body text. Numbered contents-list entries are not reports.
+		paragraphHeading := candidate.Kind == "p" && candidate.Bold && current != nil && index+1 < len(blocks) && !numberedHeadingPattern.MatchString(blocks[index+1].Text)
+		if candidate.Kind == "h2" || candidate.Kind == "h3" || paragraphHeading {
 			if match := numberedHeadingPattern.FindStringSubmatch(candidate.Text); match != nil {
 				finishCurrent()
 				current = &domain.Incident{
-					Number:   match[1],
-					Position: len(incidents),
-					TitleDE:  strings.TrimSpace(match[2]),
+					Number:         match[1],
+					Position:       len(incidents),
+					TitleDE:        strings.TrimSpace(match[2]),
+					SectionContext: sectionContext,
 				}
 				continue
 			}
@@ -102,7 +114,7 @@ func ParsePoliceRelease(contents []byte) (ParsedRelease, error) {
 	}
 	incidentHashes := make([]string, 0, len(incidents))
 	for _, incident := range incidents {
-		incidentHashes = append(incidentHashes, incident.ContentHash)
+		incidentHashes = append(incidentHashes, incident.ContentHash, incident.ContextHash)
 	}
 	return ParsedRelease{
 		ExtractedText: extractedText,
@@ -173,7 +185,7 @@ func collectBlocks(node *html.Node, blocks *[]block) {
 			case "h2", "h3", "h4", "p":
 				text := normalizeText(textContent(child))
 				if text != "" {
-					*blocks = append(*blocks, block{Kind: child.Data, Text: text})
+					*blocks = append(*blocks, block{Kind: child.Data, Text: text, Bold: whollyBold(child)})
 				}
 				continue
 			}
@@ -298,4 +310,10 @@ func extractReleaseText(root *html.Node) string {
 	walk(root)
 	flush()
 	return strings.Join(parts, "\n\n")
+}
+
+// whollyBold distinguishes a report heading from prose containing emphasis.
+func whollyBold(node *html.Node) bool {
+	bold := findElement(node, func(n *html.Node) bool { return n.Data == "strong" || n.Data == "b" })
+	return bold != nil && normalizeText(textContent(bold)) == normalizeText(textContent(node))
 }

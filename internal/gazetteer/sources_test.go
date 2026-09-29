@@ -182,3 +182,10 @@ func TestFetcherRejectsOversizedAndImplausibleResponses(t *testing.T) {
 type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(request *http.Request) (*http.Response, error) { return f(request) }
+
+func TestStreetDistrictIsRetainedOnlyAsHint(t *testing.T) {
+	entries, err := parseMunichStreets([]byte(`{"features":[{"id":"synthetic","properties":{"strassenname":"Example Straße","sb_name":"Example District"}}]}`))
+	if err != nil || len(entries) != 1 || entries[0].Sources[0].DistrictHint != "Example District" || entries[0].Kind != KindStreet {
+		t.Fatalf("street hint %#v/%v", entries, err)
+	}
+}

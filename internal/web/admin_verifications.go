@@ -124,12 +124,20 @@ func (s *Server) adminVerificationsPage(response http.ResponseWriter, request *h
 				RetainedSuccess:           item.IsCorrect != nil && item.Status != "" && item.Status != "succeeded",
 				CanProcess:                selected.ActionsAvailable && canRetryPostProcessing(item.Status, item.StatusReason),
 			}
+			if assessment := item.LocationAssessment; assessment != nil {
+				if !assessment.Applicable() {
+					view.Verdict = "Unresolved · " + strings.ReplaceAll(assessment.Outcome, "_", " ")
+				}
+				if assessment.Applicable() && assessment.SummaryConflict && item.Status == "needs_review" {
+					view.RetainedSuccess = false
+				}
+			}
 			for index, field := range processor.Verification.Fields {
 				view.Fields = append(view.Fields, adminVerificationFieldView{
 					DisplayName: field.DisplayName, Original: item.OriginalValues[index], Effective: item.EffectiveValues[index],
 					OriginalDisplay:  s.adminVerificationValueDisplay(field.OriginalKind, item.OriginalValues[index]),
 					EffectiveDisplay: s.adminVerificationValueDisplay(field.OriginalKind, item.EffectiveValues[index]),
-					Changed:          item.OriginalValues[index] != item.EffectiveValues[index],
+					Changed:          s.adminVerificationValueDisplay(field.OriginalKind, item.OriginalValues[index]) != s.adminVerificationValueDisplay(field.OriginalKind, item.EffectiveValues[index]),
 					Monospace:        adminVerificationValueUsesFallback(field.OriginalKind),
 				})
 			}
@@ -236,6 +244,17 @@ func (s *Server) adminVerificationValueDisplay(kind, value string) string {
 		return "Unavailable"
 	}
 	switch kind {
+	case "location_original":
+		var area struct {
+			Name string `json:"name"`
+			Type string `json:"type"`
+		}
+		if json.Unmarshal([]byte(value), &area) == nil {
+			if area.Name == "" {
+				return "No extracted location"
+			}
+			return area.Name + " (" + area.Type + ")"
+		}
 	case "category":
 		return s.metadataCodeLabel(adminLocaleCode, "Category", value)
 	case "public_assistance_types":
@@ -256,7 +275,7 @@ func (s *Server) adminVerificationValueDisplay(kind, value string) string {
 
 func adminVerificationValueUsesFallback(kind string) bool {
 	switch kind {
-	case "category", "public_assistance_types", "public_assistance_status":
+	case "category", "public_assistance_types", "public_assistance_status", "location_original":
 		return false
 	default:
 		return true
