@@ -15,14 +15,22 @@ the same selection. Original extraction values remain in presentation history.
 
 `ambiguous`, `no_location`, `withheld`, and `source_problem` are completed
 assessments, not model failures. They appear in admin Attention and do not cause
-retry loops. A summary contradiction can accompany a clear area correction;
-it appears in Attention without regenerating German text or translations.
+retry loops. Source-only checks explicitly mark summary wording as not assessed.
+Historical v1 wording-conflict flags remain visible without regenerating text.
 Multiple independent scenes and unresolved routes retain the original public
-label. The protected assessment retains the individual locations and roles.
+label. New protected assessments retain at most one primary location and its evidence.
+Historical multi-location assessments remain readable.
 
 ## Geographic resolution
 
-The model identifies source mentions and roles. The deterministic catalog in
+The model selects one explicit primary area or named venue, or abstains. It sees
+the full original title/body, report number, verified section context and a small
+list of source-backed catalog candidates, never the accepted summary or extracted
+area. Its compact response contains only a decision and one candidate ID (or
+null). Code copies the exact evidence and field from the selected candidate; the
+model supplies no quotations, geographic types, or street-to-district guesses.
+An unknown candidate ID is invalid output. `unresolved` is a completed ambiguous
+assessment, including street-only reports with no supported area candidate. The deterministic catalog in
 `internal/location` supplies geographic identity, public type, aliases, and
 explicit parent relationships. It is separate from the translation spelling
 dictionary and is versioned with the application. Updating its interpretation
@@ -36,6 +44,25 @@ left unresolved; the model cannot create catalog entries. A locality such as
 Schwabing does not establish one official district. Source population-place
 codes and dictionary name collisions are not administrative evidence.
 
+Explicit vehicle evasion over multiple named streets is conservatively unresolved
+even when the model selects a heading area: street containment is not established.
+Ordinary collisions with approach streets and generic flight are not sufficient
+for this guard. Unknown catalog names remain unresolved; evidence is not fuzzily
+matched or silently corrected.
+
+Candidate matching uses whole names and reviewed aliases; longer compound
+names take precedence. County references do not become city candidates, and an
+unrecognised qualified locality is not reduced to its base spelling. Only
+explicit catalog areas/venues or a generic venue with verified festival context
+are offered. Genitive tent spellings are explicit aliases, not fuzzy matching.
+
+A conservative source guard compares a recognised trailing heading area with
+explicit body scene-area phrases. Incompatible areas yield an ambiguous result
+and a protected source-conflict flag, even if the model selects one of them.
+Catalog parent/child relationships remain compatible. Residence and earlier-event
+markers are excluded from this guard. Pattern coverage is intentionally limited;
+this is not a complete parser of every possible geographic contradiction.
+
 Official street point features retain `sb_name` as `DistrictHint`. This field
 never proves that an entire street lies in a district and is not an automatic
 resolution rule. Street/address geometry and broader venue coverage are deferred.
@@ -46,7 +73,9 @@ visitors' residences or the investigating authority.
 ## Operation and evaluation
 
 The processor key is `location_verification`, scope `default`, priority 25.
-Its immutable prompt is `incident-location-verification-v1`. Startup creates an
+Its active immutable prompt is `incident-location-verification-v3`; v1 and v2 remain
+retired prompts for history. Candidate generation is versioned separately as
+`source-area-candidates-v1`, and the resolver/catalog is `munich-areas-v2`. Startup creates an
 unconfigured model preference; no location inference runs until an operator
 selects an installed model. It uses the usual automatic controls and manual
 recheck actions. Automatic discovery respects the scope's initial presentation-
@@ -62,8 +91,8 @@ MUNICHBRIEF_OLLAMA_BASE_URL=http://localhost:11434 munichbrief location-evaluate
   --output /private/path/new-results.jsonl
 ```
 
-This command **makes LLM requests**. It is explicitly deferred for the current
-implementation review at the user's request. Omit `--ids` only for a deliberate
+This command **makes LLM requests**. Run it only for an explicitly authorized
+evaluation. Omit `--ids` only for a deliberate
 full evaluation. Empty selections and requested IDs without a current eligible
 presentation are rejected before any model request. The snapshot may receive
 schema migrations; use a copy, never the live database. The command does not queue or apply corrections. Output is

@@ -21,7 +21,11 @@ type Interpretation struct {
 	Scope           string    `json:"scope"`
 	Mentions        []Mention `json:"mentions"`
 	SummaryConflict bool      `json:"summary_conflict"`
-	Reason          string    `json:"reason"`
+	// Empty denotes the legacy v1 wording check; v2 explicitly records deferral.
+	SummaryConflictStatus string `json:"summary_conflict_status,omitempty"`
+	Reason                string `json:"reason"`
+	CandidateVersion      string `json:"candidate_version,omitempty"`
+	SourceConflict        bool   `json:"source_conflict,omitempty"`
 }
 type Source struct {
 	SourceHash     string `json:"source_hash"`
@@ -94,7 +98,7 @@ func Resolve(input Interpretation, original Area, title, body string, source Sou
 		candidates := Lookup(m.Name)
 		// Context is evidence for the festival, never for a guest's home or an
 		// unrelated tent. The model must still identify it as the primary scene.
-		if len(candidates) == 0 && genericFestivalVenue(m.Name) && m.Kind == "venue" && (source.SectionContext == "Wiesnberichte" || source.SectionContext == "Wiesn-Berichte") {
+		if len(candidates) == 0 && IsGenericFestivalVenue(m.Name) && m.Kind == "venue" && (source.SectionContext == "Wiesnberichte" || source.SectionContext == "Wiesn-Berichte") {
 			candidates = Lookup("Oktoberfest")
 		}
 		a.Mentions[index].Candidates = candidates
@@ -177,9 +181,11 @@ func containsName(text, name string) bool {
 	return false
 }
 
-func genericFestivalVenue(name string) bool {
+// IsGenericFestivalVenue recognizes a venue label, not its geographic identity.
+// Resolve still requires verified section context before assigning an area.
+func IsGenericFestivalVenue(name string) bool {
 	switch normalize(name) {
-	case "festzelt", "festgelände", "wiesnzelt", "wiesn-zelt":
+	case "festzelt", "festzelts", "festgelände", "festgeländes", "wiesnzelt", "wiesnzelts", "wiesn-zelt", "wiesn-zelts":
 		return true
 	}
 	return false

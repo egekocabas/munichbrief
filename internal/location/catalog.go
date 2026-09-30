@@ -9,7 +9,7 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
-const CatalogVersion = "munich-areas-v1"
+const CatalogVersion = "munich-areas-v2"
 
 type Area struct {
 	ID   string `json:"id"`
@@ -70,7 +70,7 @@ func buildCatalog() []Entity {
 	}
 	entries = append(entries,
 		Entity{Area: Area{"locality:garching-hochbrueck", "Garching-Hochbrück", "neighbourhood"}, Kind: "neighbourhood", Aliases: []string{"Hochbrück"}, Parent: "municipality:garching", Sources: []string{"https://www.garching.de/stadtportr%C3%A4t-leben/stadtportr%C3%A4t/_spuren-der-geschichte_/_/Hochbr%C3%BCck.pdf"}},
-		Entity{Area: Area{"venue:schottenhamel", "Schottenhamel-Festzelt", "broad_area"}, Kind: "venue", Aliases: []string{"Schottenhamel", "Festhalle Schottenhamel", "Schottenhamel Festzelt", "Schottenhammel-Festzelt", "Schottenhammel"}, Parent: "munich:locality:ludwigsvorstadt", Sources: []string{"https://www.oktoberfest.de/bierzelte/grosse-zelte/festhalle-schottenhamel", festivalSource}},
+		Entity{Area: Area{"venue:schottenhamel", "Schottenhamel-Festzelt", "broad_area"}, Kind: "venue", Aliases: []string{"Schottenhamel", "Festhalle Schottenhamel", "Schottenhamel Festzelt", "Schottenhammel-Festzelt", "Schottenhammel", "Schottenhamel-Festzelts", "Schottenhammel-Festzelts"}, Parent: "munich:locality:ludwigsvorstadt", Sources: []string{"https://www.oktoberfest.de/bierzelte/grosse-zelte/festhalle-schottenhamel", festivalSource}},
 		Entity{Area: Area{"locality:riemerling", "Riemerling", "neighbourhood"}, Kind: "neighbourhood", Parent: "municipality:hohenbrunn", Sources: []string{"https://hohenbrunn.de/unser-hohenbrunn/ortsportrait/"}},
 		Entity{Area: Area{"venue:theresienwiese", "Theresienwiese", "broad_area"}, Kind: "venue", Aliases: []string{"Oktoberfest", "Wiesn"}, Parent: "munich:locality:ludwigsvorstadt", Sources: []string{festivalSource}},
 		Entity{Area: Area{"natural:forstenrieder-park", "Forstenrieder Park", "broad_area"}, Kind: "natural_area", Sources: []string{"https://www.landkreis-muenchen.de/landkreis/gemeinden-und-staedte/baierbrunn/"}},
