@@ -136,6 +136,7 @@ func (p fakeProcessingRequester) ModelStatus(ctx context.Context) (processing.Pi
 		return *p.status, nil
 	}
 	registry := processing.DefaultPostProcessorRegistry()
+	location, _ := registry.Definition(processing.LocationVerificationStep)
 	assistance, _ := registry.Definition(processing.PublicAssistanceVerificationStep)
 	category, _ := registry.Definition(processing.CategoryVerificationStep)
 	translationScopes := make([]processing.PostProcessorScopeStatus, 0, len(processing.RegisteredTranslations()))
@@ -162,8 +163,9 @@ func (p fakeProcessingRequester) ModelStatus(ctx context.Context) (processing.Pi
 		})
 	}
 	postProcessors := []processing.PostProcessorModelStatus{
-		{Key: processing.PublicAssistanceVerificationStep, DisplayName: "Public assistance verification", Description: "Verify public assistance metadata.", ModelSettingKey: processing.PublicAssistanceVerificationStep, Manual: true, Preferred: "qwen3.5:4b", PreferredAvailable: true, Enabled: processorEnabled[processing.PublicAssistanceVerificationStep], Scopes: []processing.PostProcessorScopeStatus{{Key: "default", DisplayName: "Default", Enabled: scopeEnabled[processing.PublicAssistanceVerificationStep+"/default"]}}, Verification: assistance.Verification},
+		{Key: processing.LocationVerificationStep, DisplayName: "Location verification", Description: location.Description, ModelSettingKey: processing.LocationVerificationStep, Manual: true, Enabled: processorEnabled[processing.LocationVerificationStep], Scopes: []processing.PostProcessorScopeStatus{{Key: "default", DisplayName: "Default", Enabled: scopeEnabled[processing.LocationVerificationStep+"/default"]}}, Verification: location.Verification},
 		{Key: processing.CategoryVerificationStep, DisplayName: "Category verification", Description: "Verify categories.", ModelSettingKey: processing.CategoryVerificationStep, Manual: true, Preferred: "qwen3.5:4b", PreferredAvailable: true, Enabled: processorEnabled[processing.CategoryVerificationStep], Scopes: []processing.PostProcessorScopeStatus{{Key: "default", DisplayName: "Default", Enabled: scopeEnabled[processing.CategoryVerificationStep+"/default"]}}, Verification: category.Verification},
+		{Key: processing.PublicAssistanceVerificationStep, DisplayName: "Public assistance verification", Description: "Verify public assistance metadata.", ModelSettingKey: processing.PublicAssistanceVerificationStep, Manual: true, Preferred: "qwen3.5:4b", PreferredAvailable: true, Enabled: processorEnabled[processing.PublicAssistanceVerificationStep], Scopes: []processing.PostProcessorScopeStatus{{Key: "default", DisplayName: "Default", Enabled: scopeEnabled[processing.PublicAssistanceVerificationStep+"/default"]}}, Verification: assistance.Verification},
 		{Key: processing.TranslationModelStep, DisplayName: "Translations", Description: "Translate presentations.", ModelSettingKey: processing.TranslationModelStep, Manual: true, PreferredAvailable: true, PerScopeSettings: true, Enabled: processorEnabled[processing.TranslationModelStep], Scopes: translationScopes},
 	}
 	return processing.PipelineModelStatus{Steps: defaultTestStepStatus("qwen3.5:4b"), PostProcessors: postProcessors, Models: []string{"granite4:3b", longTestModel, "qwen3.5:4b"}, CatalogAvailable: true, Ready: true}, nil

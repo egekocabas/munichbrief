@@ -130,6 +130,9 @@ const latestPresentationRun = latestCanonicalPresentationRun
 func latestCompletePostProcessingJob(runExpression, processorKey, scopeExpression string, outputKinds ...string) string {
 	query := `(SELECT job.id FROM post_processing_jobs job WHERE job.presentation_run_id = ` + runExpression +
 		` AND job.processor_key=` + sqlStringLiteral(processorKey) + ` AND job.scope_key=` + scopeExpression + ` AND job.status='succeeded'`
+	if processorKey == "location_verification" {
+		query += locationResultEligibility("job")
+	}
 	for _, kind := range outputKinds {
 		query += ` AND EXISTS (SELECT 1 FROM post_processing_values output WHERE output.job_id=job.id AND output.kind=` + sqlStringLiteral(kind) + `)`
 	}
@@ -141,6 +144,7 @@ func sqlStringLiteral(value string) string {
 }
 
 var (
+	latestCompleteLocationVerificationJob         = latestCompletePostProcessingJob(latestPresentationRun, "location_verification", "'default'", "location_assessment", "location_proposed")
 	latestCompletePublicAssistanceVerificationJob = latestCompletePostProcessingJob(latestPresentationRun, "public_assistance_verification", "'default'", "is_correct", "corrected_public_assistance_status", "corrected_public_assistance_types")
 	latestCompleteCategoryVerificationJob         = latestCompletePostProcessingJob(latestPresentationRun, "category_verification", "'default'", "is_correct", "corrected_category")
 	latestCompleteTranslationJob                  = latestCompletePostProcessingJob(latestPresentationRun, "translation", "@translation_language", "title", "summary")
@@ -155,8 +159,8 @@ var scopedAIColumns = `
 				COALESCE((SELECT value FROM post_processing_values WHERE job_id = ` + latestCompleteCategoryVerificationJob + ` AND kind='corrected_category' LIMIT 1),
 					(SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'category' LIMIT 1), ''),
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'category' LIMIT 1), ''),
-				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'area_name' LIMIT 1), ''),
-				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'area_type' LIMIT 1), ''),
+				` + effectiveLocationSQL(latestPresentationRun, "name") + `,
+				` + effectiveLocationSQL(latestPresentationRun, "type") + `,
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'event_start_date' LIMIT 1), ''),
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'event_start_time' LIMIT 1), ''),
 				COALESCE((SELECT value FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'event_day_part' LIMIT 1), ''),
@@ -176,6 +180,9 @@ var scopedAIColumns = `
 				COALESCE((SELECT model_identity FROM post_processing_jobs WHERE id = ` + latestCompleteCategoryVerificationJob + `), ''),
 				COALESCE((SELECT prompt_version FROM post_processing_jobs WHERE id = ` + latestCompleteCategoryVerificationJob + `), ''),
 				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompleteCategoryVerificationJob + `), ''),
+				COALESCE((SELECT model_identity FROM post_processing_jobs WHERE id = ` + latestCompleteLocationVerificationJob + `), ''),
+				COALESCE((SELECT prompt_version FROM post_processing_jobs WHERE id = ` + latestCompleteLocationVerificationJob + `), ''),
+				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompleteLocationVerificationJob + `), ''),
 				COALESCE((SELECT model_identity FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
 				COALESCE((SELECT prompt_version FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
 				COALESCE((SELECT generated_at FROM presentation_values WHERE presentation_run_id = ` + latestPresentationRun + ` AND kind = 'summary_de' LIMIT 1), ''),
@@ -282,6 +289,7 @@ func (s *Store) ListPresentationEntries(ctx context.Context, limit, offset int, 
 				'', '', '',
 				'', '', '',
 				'', '', '',
+				'', '', '',
 				'', '', 0, '', '',
 				'', 0, '', ''
 			FROM source_documents d
@@ -323,14 +331,18 @@ func (s *Store) ListPublicIncidentLinks(ctx context.Context, sourceMode string, 
 		SELECT i.id,
 			CASE WHEN @language = @canonical_language THEN
 				COALESCE(NULLIF(MAX(
+					i.updated_at,
 					COALESCE((SELECT r.completed_at FROM presentation_runs r WHERE r.id = ` + latestPresentationRun + `),''),
 					COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompletePublicAssistanceVerificationJob + `),''),
-					COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompleteCategoryVerificationJob + `),'')
+					COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompleteCategoryVerificationJob + `),''),
+					COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompleteLocationVerificationJob + `),'')
 				),''), i.updated_at)
 			ELSE COALESCE(NULLIF(MAX(
+					i.updated_at,
 				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompletePublicTranslationJob + `),''),
 				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompletePublicAssistanceVerificationJob + `),''),
-				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompleteCategoryVerificationJob + `),'')
+				COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompleteCategoryVerificationJob + `),''),
+					COALESCE((SELECT completed_at FROM post_processing_jobs WHERE id = ` + latestCompleteLocationVerificationJob + `),'')
 			),''), i.updated_at) END
 		FROM incidents i
 		JOIN source_documents d ON d.id = i.source_document_id
@@ -714,7 +726,7 @@ func (s *Store) GetPresentationIncident(ctx context.Context, id int64, scope Pre
 
 func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 	var record IncidentRecord
-	var publishedAt, updatedAt, aiMetadataGeneratedAt, aiPublicAssistanceVerificationGeneratedAt, aiCategoryVerificationGeneratedAt, aiGeneratedAt, aiTranslationGeneratedAt, nextRetryAt, translationNextRetryAt string
+	var publishedAt, updatedAt, aiMetadataGeneratedAt, aiPublicAssistanceVerificationGeneratedAt, aiCategoryVerificationGeneratedAt, aiLocationVerificationGeneratedAt, aiGeneratedAt, aiTranslationGeneratedAt, nextRetryAt, translationNextRetryAt string
 	if err := row.Scan(
 		&record.ID, &record.SourceDocumentID, &record.HasIncident, &record.Number, &record.Position,
 		&record.TitleDE, &record.BodyDE, &record.ContentHash, &record.SourceTitle, &record.SourceURL,
@@ -727,6 +739,7 @@ func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 		&record.AIMetadataModel, &record.AIMetadataPromptVersion, &aiMetadataGeneratedAt,
 		&record.AIPublicAssistanceVerificationModel, &record.AIPublicAssistanceVerificationPromptVersion, &aiPublicAssistanceVerificationGeneratedAt,
 		&record.AICategoryVerificationModel, &record.AICategoryVerificationPromptVersion, &aiCategoryVerificationGeneratedAt,
+		&record.AILocationVerificationModel, &record.AILocationVerificationPromptVersion, &aiLocationVerificationGeneratedAt,
 		&record.AIModel, &record.AIPromptVersion, &aiGeneratedAt,
 		&record.AITranslationModel, &record.AITranslationPromptVersion, &aiTranslationGeneratedAt,
 		&record.AIPipelineVersion,
@@ -764,6 +777,13 @@ func scanPresentationIncident(row scanner) (IncidentRecord, error) {
 			return IncidentRecord{}, fmt.Errorf("parse AI category verification generation time: %w", err)
 		}
 		record.AICategoryVerificationGeneratedAt = &generatedAt
+	}
+	if aiLocationVerificationGeneratedAt != "" {
+		generatedAt, err := time.Parse(time.RFC3339Nano, aiLocationVerificationGeneratedAt)
+		if err != nil {
+			return IncidentRecord{}, fmt.Errorf("parse AI location verification generation time: %w", err)
+		}
+		record.AILocationVerificationGeneratedAt = &generatedAt
 	}
 	if aiGeneratedAt != "" {
 		generatedAt, err := time.Parse(time.RFC3339Nano, aiGeneratedAt)

@@ -884,3 +884,6 @@ other = "Page {{.Page}} of {{.TotalPages}}"
 [ModelVariant]
 other = "Model variant"
 
+
+[LocationVerificationStep]
+other = "Location verification"

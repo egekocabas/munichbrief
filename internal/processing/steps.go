@@ -41,6 +41,9 @@ type StepDefinition struct {
 	SystemPrompt  string
 	Schema        json.RawMessage
 	Generator     func(StepInput) (StepInput, string, error)
+	// LocalResponse may supply a deterministic response without a provider call.
+	// It is decoded and validated by the same path as provider responses.
+	LocalResponse func(StepInput) (string, bool)
 	OutputDecoder func(string) (StepOutput, error)
 	Validator     func(StepInput, *StepOutput) error
 	OutputValues  func(StepOutput) ([]store.PipelineValue, error)

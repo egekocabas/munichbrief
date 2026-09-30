@@ -165,6 +165,13 @@ func (g pipelineTestGenerator) GenerateStep(ctx context.Context, step StepDefini
 		}
 		return StepOutput{Values: map[string]string{"is_correct": "true", "corrected_public_assistance_status": "not_requested", "corrected_public_assistance_types": "[]"}}, g.model, nil
 	}
+	if step.Key == LocationVerificationStep {
+		output, err := locationDecode(`{"decision":"no_location","candidate_id":null}`)
+		if err == nil {
+			err = validateLocation(input, &output)
+		}
+		return output, g.model, err
+	}
 	if step.Key == CategoryVerificationStep {
 		if input.Value("title_de") != "Sicherer Titel" || input.Value("summary_de") != "Sichere Zusammenfassung." || input.Value("category") != "other" || input.Value("incident_body") != "" {
 			return StepOutput{}, "", fmt.Errorf("category verifier received invalid inputs")
@@ -800,7 +807,7 @@ func TestPipelineWorkerGroupsModelsFreezesTargetsAndStartsNextCycle(t *testing.T
 	}
 }
 
-func TestPipelineWorkerPrioritizesPublicAssistanceThenCategoryBeforeTranslation(t *testing.T) {
+func TestPipelineWorkerPrioritizesLocationThenCategoryThenPublicAssistanceBeforeTranslation(t *testing.T) {
 	ctx := context.Background()
 	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "worker-category-priority.db"))
 	if err != nil {
@@ -823,6 +830,9 @@ func TestPipelineWorkerPrioritizesPublicAssistanceThenCategoryBeforeTranslation(
 	if err := database.SetPipelineStepModel(ctx, PublicAssistanceVerificationStep, "assist:4b", now); err != nil {
 		t.Fatal(err)
 	}
+	if err := database.SetPipelineStepModel(ctx, LocationVerificationStep, "verify:4b", now); err != nil {
+		t.Fatal(err)
+	}
 	provider := &pipelineTestProvider{}
 	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"assist:4b", "qwen:4b", "translate:4b", "verify:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
 	if err != nil {
@@ -833,7 +843,7 @@ func TestPipelineWorkerPrioritizesPublicAssistanceThenCategoryBeforeTranslation(
 	provider.mu.Lock()
 	events := append([]string(nil), provider.events...)
 	provider.mu.Unlock()
-	want := []string{IncidentMetadataStep, GermanPresentationStep, PublicAssistanceVerificationStep, CategoryVerificationStep}
+	want := []string{IncidentMetadataStep, GermanPresentationStep, LocationVerificationStep, CategoryVerificationStep, PublicAssistanceVerificationStep}
 	for _, translation := range RegisteredTranslations() {
 		want = append(want, translation.Step.Key)
 	}
@@ -851,8 +861,9 @@ func TestPipelineWorkerPrioritizesPublicAssistanceThenCategoryBeforeTranslation(
 		t.Fatal(err)
 	}
 	queueOrder := []string{
-		PublicAssistanceVerificationStep + "/" + DefaultPostProcessingScope,
+		LocationVerificationStep + "/" + DefaultPostProcessingScope,
 		CategoryVerificationStep + "/" + DefaultPostProcessingScope,
+		PublicAssistanceVerificationStep + "/" + DefaultPostProcessingScope,
 	}
 	for _, translation := range RegisteredTranslations() {
 		queueOrder = append(queueOrder, TranslationModelStep+"/"+translation.Language)
@@ -927,7 +938,7 @@ func TestInjectedPostProcessorUsesGenericSchedulingManualExecutionStatusAndHisto
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(status.Models.PostProcessors) != 4 || len(status.Queue.PostProcessing) != 3+len(RegisteredTranslations()) {
+	if len(status.Models.PostProcessors) != 5 || len(status.Queue.PostProcessing) != 4+len(RegisteredTranslations()) {
 		t.Fatalf("injected processor status = %#v / %#v", status.Models.PostProcessors, status.Queue.PostProcessing)
 	}
 	records, _, err := database.ListIncidents(ctx, 1, 0)
@@ -1200,10 +1211,10 @@ func TestMissingTranslationModelDoesNotBlockCanonicalGerman(t *testing.T) {
 		t.Fatalf("English was visible without a translation: %v", err)
 	}
 	status, err := worker.ModelStatus(ctx)
-	if err != nil || !status.Ready || len(status.PostProcessors) != 3 || status.PostProcessors[2].PreferredAvailable {
+	if err != nil || !status.Ready || len(status.PostProcessors) != 4 || status.PostProcessors[3].PreferredAvailable {
 		t.Fatalf("split model readiness = %#v/%v", status, err)
 	}
-	if status.PostProcessors[0].Verification == nil || status.PostProcessors[1].Verification == nil || status.PostProcessors[2].Verification != nil {
+	if status.PostProcessors[0].Verification == nil || status.PostProcessors[1].Verification == nil || status.PostProcessors[2].Verification == nil || status.PostProcessors[3].Verification != nil {
 		t.Fatalf("verification model metadata = %#v", status.PostProcessors)
 	}
 }
@@ -1389,7 +1400,7 @@ func TestTranslationFailureDoesNotChangeCanonicalCompletion(t *testing.T) {
 			translationStats = &snapshot.PostProcessing[index]
 		}
 	}
-	if err != nil || len(snapshot.PostProcessing) != 2+len(RegisteredTranslations()) || translationStats == nil || translationStats.NeedsReview != 1 || translationStats.Pending != 0 || translationStats.Retrying != 0 {
+	if err != nil || len(snapshot.PostProcessing) != 3+len(RegisteredTranslations()) || translationStats == nil || translationStats.NeedsReview != 1 || translationStats.Pending != 0 || translationStats.Retrying != 0 {
 		t.Fatalf("translation failure snapshot = %#v, err=%v", snapshot.PostProcessing, err)
 	}
 }
@@ -1675,7 +1686,7 @@ func insertWorkerDocument(t *testing.T, ctx context.Context, database *store.Sto
 }
 
 func TestSharedModelTransientFailureDefersOtherConsumers(t *testing.T) {
-	for _, failedStep := range []string{GermanPresentationStep, PublicAssistanceVerificationStep} {
+	for _, failedStep := range []string{GermanPresentationStep, LocationVerificationStep} {
 		t.Run(failedStep, func(t *testing.T) {
 			ctx := context.Background()
 			database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "shared-outage.db"))
@@ -1690,6 +1701,7 @@ func TestSharedModelTransientFailureDefersOtherConsumers(t *testing.T) {
 				t.Fatal(err)
 			}
 			models := pipelineTestModels()
+			models[LocationVerificationStep] = "qwen:4b"
 			models[PublicAssistanceVerificationStep] = "qwen:4b"
 			models[CategoryVerificationStep] = "qwen:4b"
 			for step, model := range models {
@@ -1698,7 +1710,7 @@ func TestSharedModelTransientFailureDefersOtherConsumers(t *testing.T) {
 				}
 			}
 			provider := &pipelineTestProvider{fail: func(step string, call int) error {
-				if step == failedStep && ((step == GermanPresentationStep && call == 2) || (step == PublicAssistanceVerificationStep && call == 1)) {
+				if step == failedStep && ((step == GermanPresentationStep && call == 2) || (step == LocationVerificationStep && call == 1)) {
 					return errorOf(ErrorTransient, "synthetic connection refused")
 				}
 				return nil
@@ -1712,11 +1724,14 @@ func TestSharedModelTransientFailureDefersOtherConsumers(t *testing.T) {
 			if provider.callCount(CategoryVerificationStep) != 0 {
 				t.Fatal("category called the model during a shared outage")
 			}
-			wantAssistance := 0
-			if failedStep == PublicAssistanceVerificationStep {
-				wantAssistance = 1
+			wantLocation := 0
+			if failedStep == LocationVerificationStep {
+				wantLocation = 1
 			}
-			if provider.callCount(PublicAssistanceVerificationStep) != wantAssistance {
+			if provider.callCount(LocationVerificationStep) != wantLocation {
+				t.Fatal("location called the model during a shared outage")
+			}
+			if provider.callCount(PublicAssistanceVerificationStep) != 0 {
 				t.Fatal("assistance called the model during a shared outage")
 			}
 			if failedStep == GermanPresentationStep {
@@ -1734,13 +1749,13 @@ func TestSharedModelTransientFailureDefersOtherConsumers(t *testing.T) {
 				t.Fatal(err)
 			}
 			for _, stats := range snapshot.PostProcessing {
-				if stats.ProcessorKey == CategoryVerificationStep && (stats.Pending == 0 || stats.Retrying != 0) {
-					t.Fatalf("unattempted category jobs consumed retries: %#v", stats)
+				if (stats.ProcessorKey == CategoryVerificationStep || stats.ProcessorKey == PublicAssistanceVerificationStep) && (stats.Pending == 0 || stats.Retrying != 0) {
+					t.Fatalf("unattempted verification jobs consumed retries: %#v", stats)
 				}
 			}
 			now = now.Add(time.Minute)
 			worker.processAvailable(ctx)
-			if provider.callCount(CategoryVerificationStep) != 2 || provider.callCount(EnglishTranslationStep) != 2 {
+			if provider.callCount(CategoryVerificationStep) != 2 || provider.callCount(PublicAssistanceVerificationStep) != 2 || provider.callCount(EnglishTranslationStep) != 2 {
 				t.Fatal("jobs did not resume after shared cooldown")
 			}
 		})

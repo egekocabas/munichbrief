@@ -455,3 +455,6 @@ other = "第 {{.Page}} 页，共 {{.TotalPages}} 页"
 [ModelVariant]
 other = "模型变体"
 
+
+[LocationVerificationStep]
+other = "地点核验"

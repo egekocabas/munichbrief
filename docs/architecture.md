@@ -23,7 +23,10 @@ flowchart LR
 1. **Discover.** Read the official Munich Police RSS feed. Fetch only linked
    articles within the seven-day discovery window, with bounded requests.
 2. **Split.** Separate a combined release into incidents. Keep source URLs,
-   publication times, and content hashes so changes can be detected.
+   publication times, and content hashes so changes can be detected. Release
+   section headings immediately preceding a report stay outside incident bodies;
+   internal subheadings and multi-case text stay with their report. Numbered and
+   unnumbered single-report pages retain their existing identity rules.
 3. **Summarize.** Extract structured metadata, then generate a shorter German
    title and summary. Validate the result before making it public.
 4. **Check and translate.** Independent jobs verify categories and appeals for

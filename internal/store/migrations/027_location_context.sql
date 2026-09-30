@@ -1,0 +1,2 @@
+ALTER TABLE incidents ADD COLUMN section_context TEXT NOT NULL DEFAULT '';
+ALTER TABLE incidents ADD COLUMN context_hash TEXT NOT NULL DEFAULT '';

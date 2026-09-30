@@ -25,7 +25,7 @@ const (
 	// sourceContractVersion invalidates conditional HTTP validators whenever parsing,
 	// filtering, or source-entry semantics change. Bump it with those changes so a
 	// 304 cannot silently reuse entries produced by an older contract.
-	sourceContractVersion = "2026-09-02-2"
+	sourceContractVersion = "2026-09-29-1"
 	munichStreetURL       = "https://geoportal.muenchen.de/geoserver/gsm_wfs/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=gsm_wfs:erlaeuterung_strassennamen&outputFormat=application/json"
 	munichDistrictURL     = "https://geoportal.muenchen.de/geoserver/gsm_wfs/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=gsm_wfs:vablock_stadtbezirk&outputFormat=application/json"
 	geoNamesURL           = "https://download.geonames.org/export/dump/DE.zip"
@@ -160,7 +160,12 @@ func validateSourceDefinition(definition SourceDefinition) error {
 
 func parseMunichStreets(data []byte) ([]Entry, error) {
 	return parseFeatureProperties(data, func(properties map[string]any, id string) []Entry {
-		return entriesForNames("munich_streets", id, KindStreet, 10, properties, "strassenname")
+		entries := entriesForNames("munich_streets", id, KindStreet, 10, properties, "strassenname")
+		hint, _ := properties["sb_name"].(string)
+		for i := range entries {
+			entries[i].Sources[0].DistrictHint = strings.TrimSpace(hint)
+		}
+		return entries
 	})
 }
 

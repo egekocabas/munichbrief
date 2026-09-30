@@ -11,3 +11,5 @@ A short tour of the system behind [MunichBrief](https://munichbrief.de).
 | [Licences and credits](licensing-review.md) | What ships and where its terms are recorded |
 
 For the code map, see [internal packages](../internal/README.md).
+
+- [Location verification](location-verification.md): conservative area corrections, evaluation, and source repair.

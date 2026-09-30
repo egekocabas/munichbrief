@@ -50,6 +50,18 @@ type PromptDefinition struct {
 }
 
 var promptRegistry = append([]PromptDefinition{{
+	Version: "incident-location-verification-v1", StepKey: LocationVerificationStep, Status: PromptRetired,
+	SystemPrompt: locationVerificationV1SystemPrompt, UserPromptTemplate: "Prüfe den Vorfallsort anhand dieser Quelldaten:\n%s",
+}, {
+	Version: "incident-location-verification-v2", StepKey: LocationVerificationStep, Status: PromptRetired,
+	SystemPrompt: locationVerificationV2SystemPrompt, UserPromptTemplate: "Prüfe den Vorfallsort anhand dieser Quelldaten:\n%s",
+}, {
+	Version: "incident-location-verification-v3", StepKey: LocationVerificationStep, Status: PromptRetired,
+	SystemPrompt: locationVerificationV3SystemPrompt, UserPromptTemplate: "Prüfe den Vorfallsort anhand dieser Quelldaten:\n%s",
+}, {
+	Version: LocationVerificationPromptVersion, StepKey: LocationVerificationStep, Status: PromptActive,
+	SystemPrompt: locationVerificationSystemPrompt, UserPromptTemplate: "Prüfe den Vorfallsort anhand dieser Quelldaten:\n%s",
+}, {
 	Version:            IncidentMetadataPromptVersion,
 	StepKey:            IncidentMetadataStep,
 	Status:             PromptActive,

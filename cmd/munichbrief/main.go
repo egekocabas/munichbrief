@@ -74,6 +74,10 @@ func run(ctx context.Context, logger *slog.Logger, arguments []string) error {
 		return runMigrate(ctx, logger, cfg)
 	case "sync":
 		return runOneShotSync(ctx, logger, cfg)
+	case "location-evaluate":
+		return runLocationEvaluation(ctx, cfg, arguments, os.Stdout)
+	case "source-repair":
+		return runSourceRepair(ctx, cfg, arguments, os.Stdout)
 	case "backup":
 		return runBackup(ctx, cfg, arguments, os.Stdout)
 	case "gazetteer":
@@ -653,6 +657,8 @@ func printUsage(writer io.Writer) {
 	fmt.Fprintln(writer, "  munichbrief backup --output PATH  Create a consistent SQLite backup")
 	fmt.Fprintln(writer, "  munichbrief backup --output -     Stream a consistent backup to stdout")
 	fmt.Fprintln(writer, "  munichbrief backup --database gazetteer --output -  Stream a gazetteer backup")
+	fmt.Fprintln(writer, "  munichbrief location-evaluate     Evaluate locations on an isolated snapshot")
+	fmt.Fprintln(writer, "  munichbrief source-repair         Preview a targeted local source repair (--apply to commit)")
 	fmt.Fprintln(writer, "  munichbrief gazetteer refresh     Refresh and activate place-name data")
 	fmt.Fprintln(writer, "  munichbrief gazetteer status      Show the active gazetteer generation")
 	fmt.Fprintln(writer, "  munichbrief ai-process --incident ID  Request immediate processing for one incident")

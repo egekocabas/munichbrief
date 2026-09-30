@@ -189,3 +189,26 @@ type roundTripFunc func(*http.Request) (*http.Response, error)
 func (function roundTripFunc) RoundTrip(request *http.Request) (*http.Response, error) {
 	return function(request)
 }
+
+func TestLocationCaptionUsesValidatedLocalResultWithoutHTTP(t *testing.T) {
+	client, err := NewOllamaClient("http://ollama.test:11434", "test", time.Second, 8192, &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		t.Fatal("caption must not contact provider")
+		return nil, nil
+	})})
+	if err != nil {
+		t.Fatal(err)
+	}
+	in := candidateInput("Pressekonferenz zur Sicherheit auf dem Oktoberfest", "Sonderbeilage Polizei und Behörde", "")
+	out, model, err := client.GenerateStep(context.Background(), LocationVerificationDefinition(), in)
+	if err != nil || model != "local:source-guard-v1" || !strings.Contains(out.Values["location_assessment"], `"outcome":"source_problem"`) || !strings.Contains(out.Values["location_assessment"], `"decision_origin":"source_guard"`) {
+		t.Fatalf("%+v %s %v", out, model, err)
+	}
+	if out.Values["location_proposed"] != "null" {
+		t.Fatal("local source guard supplied override")
+	}
+	step := LocationVerificationDefinition()
+	step.LocalResponse = func(StepInput) (string, bool) { return `{"decision":"located","candidate_id":"c999"}`, true }
+	if _, _, err = client.GenerateStep(context.Background(), step, in); err == nil {
+		t.Fatal("local result bypassed validation")
+	}
+}

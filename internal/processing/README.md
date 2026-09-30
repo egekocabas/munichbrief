@@ -7,7 +7,7 @@ independent verification and translation jobs.
 
 1. **Metadata:** extract validated fields from minimized source text.
 2. **German presentation:** generate and validate the canonical title and summary.
-3. **Post-processing:** verify categories and public-assistance metadata, and
+3. **Post-processing:** verify categories, public-assistance metadata, and locations, and
    translate the accepted German presentation into each selected language.
 
 German can publish after step 2. Post-processing waits for the active canonical
@@ -71,3 +71,7 @@ expanded canonical cycle progress; per-stage history remains expandable.
 
 See [architecture](../../docs/architecture.md) and
 [translation](../../docs/translation.md) for the wider system.
+
+Location verification uses originals and separate geographic evidence. Unresolved
+assessments retain canonical locations and never block publication. See
+[location verification](../../docs/location-verification.md).

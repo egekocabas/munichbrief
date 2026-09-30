@@ -243,32 +243,34 @@ func replaceDocumentIncidents(ctx context.Context, tx *sql.Tx, documentID int64,
 		return ErrNotFound
 	}
 
-	for _, incident := range incidents {
-		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO incidents (
-				source_document_id, incident_number, position, title_de, body_de,
-				content_hash, created_at, updated_at
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-			ON CONFLICT(source_document_id, position) DO UPDATE SET
-				incident_number = excluded.incident_number,
-				title_de = excluded.title_de,
-				body_de = excluded.body_de,
-				content_hash = excluded.content_hash,
-				updated_at = excluded.updated_at`,
-			documentID,
-			incident.Number,
-			incident.Position,
-			incident.TitleDE,
-			incident.BodyDE,
-			incident.ContentHash,
-			now,
-			now,
-		); err != nil {
-			return fmt.Errorf("upsert parsed incident %d/%d: %w", documentID, incident.Position, err)
+	changes, err := documentIncidentChanges(ctx, tx, documentID, incidents)
+	if err != nil {
+		return err
+	}
+	// Park positions outside both old and new ranges before reordering. IDs,
+	// presentation history and external URLs remain attached to report identity.
+	var positionOffset int
+	if err := tx.QueryRowContext(ctx, `SELECT COALESCE(MAX(position),0)+? FROM incidents WHERE source_document_id=?`, len(incidents)+1, documentID).Scan(&positionOffset); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE incidents SET position=position+? WHERE source_document_id=?`, positionOffset, documentID); err != nil {
+		return err
+	}
+	for index, incident := range incidents {
+		id := changes[index].IncidentID
+		if id == 0 {
+			_, err = tx.ExecContext(ctx, `INSERT INTO incidents(source_document_id,incident_number,position,title_de,body_de,content_hash,section_context,context_hash,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)`, documentID, incident.Number, incident.Position, incident.TitleDE, incident.BodyDE, incident.ContentHash, incident.SectionContext, incident.ContextHash, now, now)
+		} else {
+			_, err = tx.ExecContext(ctx, `UPDATE incidents SET position=?,title_de=?,body_de=?,content_hash=?,section_context=?,context_hash=?,updated_at=? WHERE id=?`, incident.Position, incident.TitleDE, incident.BodyDE, incident.ContentHash, incident.SectionContext, incident.ContextHash, now, id)
+		}
+		if err != nil {
+			return fmt.Errorf("store report identity: %w", err)
 		}
 	}
-	if _, err := tx.ExecContext(ctx, "DELETE FROM incidents WHERE source_document_id = ? AND position >= ?", documentID, len(incidents)); err != nil {
-		return fmt.Errorf("remove stale parsed incidents: %w", err)
+	for _, change := range changes[len(incidents):] {
+		if _, err := tx.ExecContext(ctx, `DELETE FROM incidents WHERE id=?`, change.IncidentID); err != nil {
+			return err
+		}
 	}
 
 	return nil

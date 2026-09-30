@@ -98,8 +98,8 @@ func init() {
 
 // Bump the contract comment when registered SQL function semantics change.
 // The complete SQL definitions also capture pipeline/language/selection changes.
-// v3 rebuilds normalized text after the x/text v0.42.0 normalization fixes.
-const readerIndexContract = "reader-index-v3"
+// v4 projects verified locations and invalidates them when source context changes.
+const readerIndexContract = "reader-index-v4"
 const readerIndexColumns = "incident_id,language,run_id,title,summary,area,category,assistance,event_date,event_time,day_part,published_at,published_date,position,number,time_group,search_text"
 
 type readerIndexDefinition struct{ name, kind, sql string }
@@ -123,7 +123,7 @@ func readerIndexDefinitions() []readerIndexDefinition {
  reader_normalize(title||' '||summary||' '||area||' '||number) AS search_text FROM (SELECT i.id AS incident_id,l.language,pr.id AS run_id,
  CASE WHEN l.language=` + canonical + ` THEN ` + val("title_de") + ` ELSE ` + translated("title") + ` END AS title,
  CASE WHEN l.language=` + canonical + ` THEN ` + val("summary_de") + ` ELSE ` + translated("summary") + ` END AS summary,
- ` + val("area_name") + ` AS area,` + corrected("category_job", "corrected_category", "category") + ` AS category,
+ ` + effectiveLocationSQL("pr.id", "name") + ` AS area,` + corrected("category_job", "corrected_category", "category") + ` AS category,
  ` + corrected("assistance_job", "corrected_public_assistance_status", "public_assistance_status") + ` AS assistance,
  ` + val("event_start_date") + ` AS event_date,` + val("event_start_time") + ` AS event_time,` + val("event_day_part") + ` AS day_part,
  d.published_at,reader_berlin_date(d.published_at) AS published_date,i.position,i.incident_number AS number
@@ -188,7 +188,7 @@ func readerIndexDefinitions() []readerIndexDefinition {
 				case "source_documents":
 					triggerEvent += " OF published_at"
 				case "incidents":
-					triggerEvent += " OF content_hash,source_document_id,position,incident_number"
+					triggerEvent += " OF content_hash,context_hash,source_document_id,position,incident_number"
 				case "presentation_runs":
 					triggerEvent += " OF status,completed_at,source_hash,pipeline_version,legacy,incident_id"
 				case "post_processing_jobs":

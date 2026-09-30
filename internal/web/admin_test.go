@@ -244,14 +244,15 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 	if page.Code != http.StatusOK || page.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("admin page = %d/%q", page.Code, page.Header().Get("Cache-Control"))
 	}
-	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", longTestModel, "Installed and ready", "admin-control", "admin-action-button", "sm:grid-cols-2", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/post-processing/process", "/api/admin/ai/automatic-processing", "/api/admin/ai/cancel-all", "Cancel all unfinished work", "/api/admin/ai/status", "/admin/rss-history", "RSS history", "/admin/history", "Pipeline history", "Open reader", "View full history", "Confirm AI request", staticAssets["theme.js"].path, "data-theme-toggle", staticAssets["admin.js"].path, "Active stage", "Canonical pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover", "Independent post-processing queues", "Post-processing only", "Configure translation routes", "Category verification only"} {
+	for _, expected := range []string{"AI processing", "Registered pipeline steps", "qwen3.5:4b", longTestModel, "Installed and ready", "admin-control", "admin-action-button", "sm:grid-cols-2", "name=\"model_incident_metadata\"", "name=\"model_german_presentation\"", "name=\"model_translation\"", "/api/admin/ai/process-now", "/api/admin/ai/process-all-now", "/api/admin/ai/reprocess-all", "/api/admin/ai/step-model", "/api/admin/ai/post-processing/process", "/api/admin/ai/automatic-processing", "/api/admin/ai/cancel-all", "Cancel all unfinished work", "/api/admin/ai/status", "/admin/rss-history", "RSS history", "/admin/history", "Pipeline history", "Open reader", "View full history", "Confirm AI request", staticAssets["theme.js"].path, "data-theme-toggle", staticAssets["admin.js"].path, "Active stage", "Canonical pipeline", "New outside cycle", "Ready after stage", "All-cycle history", "Waiting jobs are durable", "Automatic v2 cutover", "Independent post-processing queues", "Post-processing only", "Configure translation routes", "Category verification only", "Location verification only", `id="preferred-location_verification"`, `name="model_location_verification"`} {
 		if !strings.Contains(page.Body.String(), expected) {
 			t.Errorf("admin page does not contain %q", expected)
 		}
 	}
 	queueOrder := []string{
-		`data-post-processing-stat="public_assistance_verification/default"`,
+		`data-post-processing-stat="location_verification/default"`,
 		`data-post-processing-stat="category_verification/default"`,
+		`data-post-processing-stat="public_assistance_verification/default"`,
 		`data-post-processing-stat="translation/en"`,
 	}
 	previous := -1
@@ -261,6 +262,34 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 			t.Fatalf("admin post-processing queue order does not follow registry priority: %q", page.Body.String())
 		}
 		previous = position
+	}
+	verifications := httptest.NewRecorder()
+	handler.ServeHTTP(verifications, httptest.NewRequest(http.MethodGet, "/admin/verifications", nil))
+	if verifications.Code != http.StatusOK {
+		t.Fatalf("verification overview status = %d", verifications.Code)
+	}
+	previous = -1
+	for _, key := range []string{"location_verification/default", "category_verification/default", "public_assistance_verification/default"} {
+		position := strings.Index(verifications.Body.String(), key)
+		if position < 0 || position <= previous {
+			t.Fatalf("verification sections do not follow priority: %q", verifications.Body.String())
+		}
+		previous = position
+	}
+	locationDetail := httptest.NewRecorder()
+	handler.ServeHTTP(locationDetail, httptest.NewRequest(http.MethodGet, "/admin/verifications?processor=location_verification&scope=default", nil))
+	if locationDetail.Code != http.StatusOK {
+		t.Fatalf("location verification detail status = %d", locationDetail.Code)
+	}
+	for _, marker := range []string{"Location verification", `id="verification-all-model"`, `name="processor" type="hidden" value="location_verification"`, "Recheck all incidents"} {
+		if !strings.Contains(locationDetail.Body.String(), marker) {
+			t.Fatalf("location verification detail lacks %q", marker)
+		}
+	}
+	locationModel := httptest.NewRecorder()
+	handler.ServeHTTP(locationModel, formRequest(http.MethodPost, "/api/admin/ai/step-model", "step=location_verification&model=granite4%3A3b"))
+	if locationModel.Code != http.StatusSeeOther {
+		t.Fatalf("save location model preference = %d", locationModel.Code)
 	}
 	for _, removed := range []string{"Backfill English history", "Backfill category history", "/api/admin/ai/translation-backfill", "/api/admin/ai/category-verification-backfill"} {
 		if strings.Contains(page.Body.String(), removed) {
@@ -368,7 +397,7 @@ func TestAdminRendersStatsAndRequestsImmediateProcessing(t *testing.T) {
 		t.Fatalf("pipeline status = %d/%q/%q", status.Code, status.Header().Get("Cache-Control"), status.Body.String())
 	}
 	previous = -1
-	for _, processor := range []string{`"processor_key":"public_assistance_verification"`, `"processor_key":"category_verification"`, `"processor_key":"translation"`} {
+	for _, processor := range []string{`"processor_key":"location_verification"`, `"processor_key":"category_verification"`, `"processor_key":"public_assistance_verification"`, `"processor_key":"translation"`} {
 		position := strings.Index(status.Body.String(), processor)
 		if position < 0 || position <= previous {
 			t.Fatalf("post-processing status order does not follow registry priority: %q", status.Body.String())

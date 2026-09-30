@@ -10,14 +10,14 @@ import (
 func TestDefaultPostProcessorRegistryOrdersAndExpandsScopes(t *testing.T) {
 	registry := DefaultPostProcessorRegistry()
 	definitions := registry.Definitions()
-	if len(definitions) != 3 || definitions[0].Key != PublicAssistanceVerificationStep || definitions[1].Key != CategoryVerificationStep || definitions[2].Key != TranslationModelStep {
+	if len(definitions) != 4 || definitions[0].Key != LocationVerificationStep || definitions[1].Key != CategoryVerificationStep || definitions[2].Key != PublicAssistanceVerificationStep || definitions[3].Key != TranslationModelStep {
 		t.Fatalf("post-processor priority order = %#v", definitions)
 	}
-	if definitions[0].Priority != 10 || definitions[0].ModelSettingKey != PublicAssistanceVerificationStep || !definitions[0].Automatic || !definitions[0].Manual || len(definitions[0].Counters) != 1 || definitions[0].Counters[0].Key != "corrected" || definitions[0].Verification == nil || len(definitions[0].Verification.Fields) != 2 {
-		t.Fatalf("public assistance processor registration = %#v", definitions[0])
+	if definitions[2].Priority != 25 || definitions[2].ModelSettingKey != PublicAssistanceVerificationStep || !definitions[2].Automatic || !definitions[2].Manual || len(definitions[2].Counters) != 1 || definitions[2].Counters[0].Key != "corrected" || definitions[2].Verification == nil || len(definitions[2].Verification.Fields) != 2 {
+		t.Fatalf("public assistance processor registration = %#v", definitions[2])
 	}
-	if definitions[2].Verification != nil {
-		t.Fatalf("translation unexpectedly registered as a verifier: %#v", definitions[2].Verification)
+	if definitions[3].Verification != nil {
+		t.Fatalf("translation unexpectedly registered as a verifier: %#v", definitions[3].Verification)
 	}
 	plans, err := registry.Plans(TranslationModelStep, nil, "translate:4b")
 	if err != nil || len(plans) != len(RegisteredTranslations()) || plans[0].ScopeKey != EnglishLanguage || plans[0].Model != "translate:4b" {
@@ -86,12 +86,14 @@ func TestPostProcessorRegistryOrdersQueueStatsWithDefinitions(t *testing.T) {
 		{ProcessorKey: "retired", ScopeKey: "z"},
 		{ProcessorKey: CategoryVerificationStep, ScopeKey: DefaultPostProcessingScope},
 		{ProcessorKey: PublicAssistanceVerificationStep, ScopeKey: DefaultPostProcessingScope},
+		{ProcessorKey: LocationVerificationStep, ScopeKey: DefaultPostProcessingScope},
 		{ProcessorKey: "retired", ScopeKey: "a"},
 	}
 	ordered := registry.OrderedQueueStats(stats)
 	want := []string{
-		PublicAssistanceVerificationStep + "/" + DefaultPostProcessingScope,
+		LocationVerificationStep + "/" + DefaultPostProcessingScope,
 		CategoryVerificationStep + "/" + DefaultPostProcessingScope,
+		PublicAssistanceVerificationStep + "/" + DefaultPostProcessingScope,
 		TranslationModelStep + "/" + EnglishLanguage,
 		"retired/a",
 		"retired/z",

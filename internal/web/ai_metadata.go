@@ -20,6 +20,7 @@ type machineReadableAIMetadata struct {
 	AIMetadataModel                     string `json:"ai_metadata_model,omitempty"`
 	AIPublicAssistanceVerificationModel string `json:"ai_public_assistance_verification_model,omitempty"`
 	AICategoryVerificationModel         string `json:"ai_category_verification_model,omitempty"`
+	AILocationVerificationModel         string `json:"ai_location_verification_model,omitempty"`
 	AITranslationModel                  string `json:"ai_translation_model,omitempty"`
 	DigitalSourceType                   string `json:"digital_source_type,omitempty"`
 }
@@ -30,6 +31,7 @@ func (page *basePage) setAIMetadata(state string, record *store.IncidentRecord) 
 	page.AIMetadataModel = ""
 	page.AIPublicAssistanceVerificationModel = ""
 	page.AICategoryVerificationModel = ""
+	page.AILocationVerificationModel = ""
 	page.AITranslationModel = ""
 	metadata := machineReadableAIMetadata{AIGenerated: state != "false", AIGeneratedState: state}
 	if state != "false" {
@@ -40,6 +42,7 @@ func (page *basePage) setAIMetadata(state string, record *store.IncidentRecord) 
 		page.AIMetadataModel = record.AIMetadataModel
 		page.AIPublicAssistanceVerificationModel = record.AIPublicAssistanceVerificationModel
 		page.AICategoryVerificationModel = record.AICategoryVerificationModel
+		page.AILocationVerificationModel = record.AILocationVerificationModel
 		if page.Lang != page.CanonicalLanguageCode {
 			page.AITranslationModel = record.AITranslationModel
 		}
@@ -47,6 +50,7 @@ func (page *basePage) setAIMetadata(state string, record *store.IncidentRecord) 
 		metadata.AIMetadataModel = page.AIMetadataModel
 		metadata.AIPublicAssistanceVerificationModel = page.AIPublicAssistanceVerificationModel
 		metadata.AICategoryVerificationModel = page.AICategoryVerificationModel
+		metadata.AILocationVerificationModel = page.AILocationVerificationModel
 		metadata.AITranslationModel = page.AITranslationModel
 	}
 	page.AIContentMetadata = structuredJSON(metadata)
@@ -79,6 +83,9 @@ func setAIResponseHeaders(header http.Header, page basePage) {
 	}
 	if page.AICategoryVerificationModel != "" {
 		header.Set("X-AI-Category-Verification-Model", safeMetadataHeader(page.AICategoryVerificationModel))
+	}
+	if page.AILocationVerificationModel != "" {
+		header.Set("X-AI-Location-Verification-Model", safeMetadataHeader(page.AILocationVerificationModel))
 	}
 	if page.AIPublicAssistanceVerificationModel != "" {
 		header.Set("X-AI-Public-Assistance-Verification-Model", safeMetadataHeader(page.AIPublicAssistanceVerificationModel))

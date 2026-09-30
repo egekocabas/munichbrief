@@ -179,9 +179,18 @@ func (c *OllamaClient) GenerateStep(ctx context.Context, step StepDefinition, in
 	if err != nil {
 		return StepOutput{}, "", err
 	}
-	content, modelIdentity, err := c.chat(ctx, step.UserOnly, step.SystemPrompt, userContent, step.Schema)
-	if err != nil {
-		return StepOutput{}, "", err
+	var content, modelIdentity string
+	local := false
+	if step.LocalResponse != nil {
+		content, local = step.LocalResponse(requestInput)
+	}
+	if local {
+		modelIdentity = "local:source-guard-v1"
+	} else {
+		content, modelIdentity, err = c.chat(ctx, step.UserOnly, step.SystemPrompt, userContent, step.Schema)
+		if err != nil {
+			return StepOutput{}, "", err
+		}
 	}
 	var output StepOutput
 	if step.OutputDecoder != nil {

@@ -585,7 +585,7 @@ func (s *Server) socialIncident(response http.ResponseWriter, request *http.Requ
 	view := s.incidentForLanguage(incident, language)
 	cacheIdentity := ""
 	var latestVerification *time.Time
-	for _, generatedAt := range []*time.Time{view.Record.AIPublicAssistanceVerificationGeneratedAt, view.Record.AICategoryVerificationGeneratedAt} {
+	for _, generatedAt := range []*time.Time{view.Record.AIPublicAssistanceVerificationGeneratedAt, view.Record.AICategoryVerificationGeneratedAt, view.Record.AILocationVerificationGeneratedAt} {
 		if generatedAt != nil && (latestVerification == nil || generatedAt.After(*latestVerification)) {
 			latestVerification = generatedAt
 		}
