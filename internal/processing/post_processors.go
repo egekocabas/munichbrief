@@ -177,7 +177,7 @@ func DefaultPostProcessorRegistry(protectors ...TranslationProtector) *PostProce
 	}
 	registry, err := NewPostProcessorRegistry(
 		PostProcessorDefinition{
-			Key: PublicAssistanceVerificationStep, DisplayName: "Public assistance verification", Description: "Recheck public-assistance status and types while keeping the last successful result effective until a replacement succeeds.", Priority: 10, ModelSettingKey: PublicAssistanceVerificationStep, Automatic: true, Manual: true,
+			Key: PublicAssistanceVerificationStep, DisplayName: "Public assistance verification", Description: "Recheck public-assistance status and types while keeping the last successful result effective until a replacement succeeds.", Priority: 25, ModelSettingKey: PublicAssistanceVerificationStep, Automatic: true, Manual: true,
 			Scopes:   []PostProcessorScope{{Key: DefaultPostProcessingScope, DisplayName: "Default", Step: PublicAssistanceVerificationDefinition()}},
 			Counters: []PostProcessorCounter{{Key: "corrected", OutputKind: "is_correct", EqualsValue: "false"}},
 			Verification: &PostProcessorVerification{VerdictKind: "is_correct", Fields: []PostProcessorVerificationField{
@@ -194,7 +194,7 @@ func DefaultPostProcessorRegistry(protectors ...TranslationProtector) *PostProce
 			}},
 		},
 		PostProcessorDefinition{
-			Key: LocationVerificationStep, DisplayName: "Location verification", Description: "Check original-source locations; apply grounded corrections and retain canonical locations when unresolved.", Priority: 25, ModelSettingKey: LocationVerificationStep, Automatic: true, Manual: true,
+			Key: LocationVerificationStep, DisplayName: "Location verification", Description: "Check original-source locations; apply grounded corrections and retain canonical locations when unresolved.", Priority: 10, ModelSettingKey: LocationVerificationStep, Automatic: true, Manual: true,
 			Scopes:       []PostProcessorScope{{Key: DefaultPostProcessingScope, DisplayName: "Default", Step: LocationVerificationDefinition()}},
 			Counters:     []PostProcessorCounter{{Key: "corrected", OutputKind: "is_correct", EqualsValue: "false"}, {Key: "unresolved", OutputKind: "is_correct", EqualsValue: "unresolved"}},
 			Verification: &PostProcessorVerification{VerdictKind: "is_correct", Fields: []PostProcessorVerificationField{{DisplayName: "Location", OriginalKind: "location_original", CorrectedKind: "location_proposed"}}},

@@ -91,7 +91,17 @@ named next to them, but never infer an absent area from street geography.
 
 ## Operation and evaluation
 
-The processor key is `location_verification`, scope `default`, priority 25.
+The processor key is `location_verification`, scope `default`, priority 10.
+Lower priorities run first: location verification (10), category verification
+(20), public-assistance verification (25), then translations (30). The same
+registry order is used for admin model controls, verification sections, and
+queue status. This orders eligible post-processing work; it does not interrupt
+an already running request or bypass canonical presentation generation.
+
+The admin dashboard provides a location model preference and a location-only
+manual processing action. `/admin/verifications` has a dedicated Location
+verification section; its default-scope drill-down provides per-request model
+selection, rechecks, coverage counts, and protected assessment details.
 Its active immutable prompt is `incident-location-verification-v4`; v1, v2 and v3 remain
 retired prompts for history. Candidate generation is versioned separately as
 `source-area-candidates-v2`, and the resolver/catalog is `munich-areas-v3`. Startup creates an

@@ -165,6 +165,13 @@ func (g pipelineTestGenerator) GenerateStep(ctx context.Context, step StepDefini
 		}
 		return StepOutput{Values: map[string]string{"is_correct": "true", "corrected_public_assistance_status": "not_requested", "corrected_public_assistance_types": "[]"}}, g.model, nil
 	}
+	if step.Key == LocationVerificationStep {
+		output, err := locationDecode(`{"decision":"no_location","candidate_id":null}`)
+		if err == nil {
+			err = validateLocation(input, &output)
+		}
+		return output, g.model, err
+	}
 	if step.Key == CategoryVerificationStep {
 		if input.Value("title_de") != "Sicherer Titel" || input.Value("summary_de") != "Sichere Zusammenfassung." || input.Value("category") != "other" || input.Value("incident_body") != "" {
 			return StepOutput{}, "", fmt.Errorf("category verifier received invalid inputs")
@@ -800,7 +807,7 @@ func TestPipelineWorkerGroupsModelsFreezesTargetsAndStartsNextCycle(t *testing.T
 	}
 }
 
-func TestPipelineWorkerPrioritizesPublicAssistanceThenCategoryBeforeTranslation(t *testing.T) {
+func TestPipelineWorkerPrioritizesLocationThenCategoryThenPublicAssistanceBeforeTranslation(t *testing.T) {
 	ctx := context.Background()
 	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "worker-category-priority.db"))
 	if err != nil {
@@ -823,6 +830,9 @@ func TestPipelineWorkerPrioritizesPublicAssistanceThenCategoryBeforeTranslation(
 	if err := database.SetPipelineStepModel(ctx, PublicAssistanceVerificationStep, "assist:4b", now); err != nil {
 		t.Fatal(err)
 	}
+	if err := database.SetPipelineStepModel(ctx, LocationVerificationStep, "verify:4b", now); err != nil {
+		t.Fatal(err)
+	}
 	provider := &pipelineTestProvider{}
 	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"assist:4b", "qwen:4b", "translate:4b", "verify:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
 	if err != nil {
@@ -833,7 +843,7 @@ func TestPipelineWorkerPrioritizesPublicAssistanceThenCategoryBeforeTranslation(
 	provider.mu.Lock()
 	events := append([]string(nil), provider.events...)
 	provider.mu.Unlock()
-	want := []string{IncidentMetadataStep, GermanPresentationStep, PublicAssistanceVerificationStep, CategoryVerificationStep}
+	want := []string{IncidentMetadataStep, GermanPresentationStep, LocationVerificationStep, CategoryVerificationStep, PublicAssistanceVerificationStep}
 	for _, translation := range RegisteredTranslations() {
 		want = append(want, translation.Step.Key)
 	}
@@ -851,9 +861,9 @@ func TestPipelineWorkerPrioritizesPublicAssistanceThenCategoryBeforeTranslation(
 		t.Fatal(err)
 	}
 	queueOrder := []string{
-		PublicAssistanceVerificationStep + "/" + DefaultPostProcessingScope,
-		CategoryVerificationStep + "/" + DefaultPostProcessingScope,
 		LocationVerificationStep + "/" + DefaultPostProcessingScope,
+		CategoryVerificationStep + "/" + DefaultPostProcessingScope,
+		PublicAssistanceVerificationStep + "/" + DefaultPostProcessingScope,
 	}
 	for _, translation := range RegisteredTranslations() {
 		queueOrder = append(queueOrder, TranslationModelStep+"/"+translation.Language)
