@@ -96,6 +96,8 @@ var notoSansSC []byte
 var notoSansDevanagari []byte
 
 type incidentStore interface {
+	RSSSyncEnabled(context.Context) (bool, error)
+	SetRSSSyncEnabled(context.Context, bool) error
 	ListReaderEntries(context.Context, store.ReaderQuery) (store.ReaderResult, error)
 	ReaderAreas(context.Context, string, string) ([]string, error)
 	ListPresentationEntries(context.Context, int, int, string, store.PresentationScope) ([]store.IncidentRecord, int, error)
@@ -396,6 +398,7 @@ func (s *Server) Handler() http.Handler {
 		mux.HandleFunc("GET /admin/translations", s.adminTranslationsPage)
 		mux.HandleFunc("GET /admin/verifications", s.adminVerificationsPage)
 		mux.HandleFunc("GET /admin/rss-history", s.adminRSSHistory)
+		mux.HandleFunc("POST /api/admin/rss/enabled", s.updateRSSSyncEnabled)
 		mux.HandleFunc("GET /admin/rss-history/{id}", s.adminRSSDetails)
 		mux.HandleFunc("GET /admin/rss-history/{id}/documents/{document}", s.adminRSSDetails)
 		mux.HandleFunc("GET /admin/gazetteer", s.adminGazetteer)

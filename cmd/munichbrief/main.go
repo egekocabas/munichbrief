@@ -584,9 +584,13 @@ func shutdownServers(ctx context.Context, logger *slog.Logger, servers ...*http.
 
 func runLiveSyncLoop(ctx context.Context, location *time.Location, syncer *ingest.Syncer, metrics *observability.Metrics, logger *slog.Logger) {
 	synchronize := func() bool {
-		metrics.RecordFeedAttempt()
 		startedAt := time.Now()
 		result, err := syncer.Sync(ctx)
+		if errors.Is(err, ingest.ErrSyncDisabled) {
+			logger.Info("RSS synchronization disabled; skipping scheduled check")
+			return true
+		}
+		metrics.RecordFeedAttempt()
 		metrics.RecordFeedDuration(time.Since(startedAt))
 		if err != nil {
 			metrics.RecordFeedFailure()

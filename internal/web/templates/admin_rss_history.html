@@ -23,6 +23,16 @@
       <p class="text-sm font-semibold text-muted">{{len .Entries}} checks shown</p>
     </div>
 
+    <section class="mt-8 rounded-lg border border-rule bg-paper p-4" aria-label="RSS synchronization control">
+      <p class="admin-status-badge" data-state="{{if .SyncEnabled}}enabled{{else}}disabled{{end}}">RSS synchronization: {{if .SyncEnabled}}enabled{{else}}disabled{{end}}</p>
+      <p class="mt-2 text-sm text-muted">Disabling prevents new scheduled and one-shot syncs. A running sync can finish. This setting survives restarts; enabling resumes at the next scheduled check (up to 6½ hours). AI processing is unaffected.</p>
+      {{if not .LiveSource}}<p class="mt-2 text-sm text-muted">Fixture mode is active; no RSS checks run in this mode.</p>{{end}}
+      <form class="mt-3" method="post" action="/api/admin/rss/enabled">
+        <input type="hidden" name="enabled" value="{{if .SyncEnabled}}false{{else}}true{{end}}">
+        <button class="rounded-md border border-civic bg-white px-4 py-2 font-bold text-civic hover:bg-newsprint" type="submit">{{if .SyncEnabled}}Disable{{else}}Enable{{end}} RSS synchronization</button>
+      </form>
+    </section>
+
     {{if .Entries}}
     <div class="rss-history-table mt-8 overflow-x-auto rounded-lg border border-rule bg-paper">
       <table class="w-full border-collapse text-left text-sm">

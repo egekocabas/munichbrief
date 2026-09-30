@@ -36,7 +36,12 @@ func (s *Server) adminRSSHistory(response http.ResponseWriter, request *http.Req
 		return
 	}
 
-	data := adminRSSHistoryPage{Entries: page.Entries, HasNewer: page.HasNewer, HasOlder: page.HasOlder}
+	enabled, err := s.store.RSSSyncEnabled(request.Context())
+	if err != nil {
+		s.internalError(response, request, "read RSS synchronization control", err)
+		return
+	}
+	data := adminRSSHistoryPage{Entries: page.Entries, HasNewer: page.HasNewer, HasOlder: page.HasOlder, SyncEnabled: enabled, LiveSource: s.options.SourceMode == "live"}
 	if len(page.Entries) > 0 {
 		first := page.Entries[0]
 		last := page.Entries[len(page.Entries)-1]
@@ -52,11 +57,39 @@ func (s *Server) adminRSSHistory(response http.ResponseWriter, request *http.Req
 }
 
 type adminRSSHistoryPage struct {
-	Entries  []store.RSSSyncHistoryEntry
-	HasNewer bool
-	HasOlder bool
-	NewerURL string
-	OlderURL string
+	SyncEnabled bool
+	LiveSource  bool
+	Entries     []store.RSSSyncHistoryEntry
+	HasNewer    bool
+	HasOlder    bool
+	NewerURL    string
+	OlderURL    string
+}
+
+func (s *Server) updateRSSSyncEnabled(response http.ResponseWriter, request *http.Request) {
+	if !validAdminMutation(request) {
+		http.Error(response, "cross-site request blocked", http.StatusForbidden)
+		return
+	}
+	if !isFormPost(request) {
+		http.Error(response, "form content type required", http.StatusUnsupportedMediaType)
+		return
+	}
+	request.Body = http.MaxBytesReader(response, request.Body, 4096)
+	if err := request.ParseForm(); err != nil {
+		http.Error(response, "invalid form", http.StatusBadRequest)
+		return
+	}
+	raw := request.PostForm.Get("enabled")
+	if raw != "true" && raw != "false" {
+		http.Error(response, "enabled must be true or false", http.StatusBadRequest)
+		return
+	}
+	if err := s.store.SetRSSSyncEnabled(request.Context(), raw == "true"); err != nil {
+		s.internalError(response, request, "update RSS synchronization control", err)
+		return
+	}
+	http.Redirect(response, request, "/admin/rss-history", http.StatusSeeOther)
 }
 
 func requestedRSSSyncHistoryCursor(request *http.Request, name string) (*store.RSSSyncHistoryCursor, error) {
