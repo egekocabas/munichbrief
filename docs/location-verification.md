@@ -142,6 +142,13 @@ number **within a source document**; numbers are not globally unique. Reordering
 or inserting a report cannot repurpose an existing incident URL. Ambiguous
 identities are rejected transactionally.
 
+Release section labels immediately before a numbered report in the same HTML
+section are excluded from the preceding incident's body. Internal subheadings,
+witness appeals, multi-case labels, and headings with intervening source content
+are preserved. Removing a misplaced section label is a source-body change, not
+a context-only update. If that label previously triggered privacy minimization,
+repair the source and reprocess canonically; do not weaken the privacy minimizer.
+
 Preview a repair using retained official HTML and the existing document ID:
 
 ```sh

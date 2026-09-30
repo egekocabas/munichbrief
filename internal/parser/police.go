@@ -30,6 +30,7 @@ type block struct {
 	Kind    string
 	Text    string
 	Bold    bool
+	Node    *html.Node
 	Section *html.Node
 	InPress bool
 }
@@ -73,9 +74,8 @@ func ParsePoliceRelease(contents []byte) (ParsedRelease, error) {
 		}
 	}
 
-	// A new numbered heading closes the preceding incident. Non-numbered headings
-	// remain part of that incident's body because real releases use them as
-	// subheadings.
+	// Numbered report headings and release section labels close the preceding
+	// incident. Internal subheadings remain part of its body.
 	finishCurrent := func() {
 		if current == nil {
 			return
@@ -101,20 +101,19 @@ func ParsePoliceRelease(contents []byte) (ParsedRelease, error) {
 		} else if (candidate.Kind == "h2" || candidate.Kind == "h3") && !numberedHeadingPattern.MatchString(candidate.Text) {
 			sectionContext = ""
 		}
-		// Paragraph headings are accepted only in the detail stream and with
-		// following body text. Numbered contents-list entries are not reports.
-		paragraphHeading := candidate.Kind == "p" && candidate.Bold && index+1 < len(blocks) && blocks[index+1].Kind == "p" && blocks[index+1].Section == candidate.Section && !numberedHeadingPattern.MatchString(blocks[index+1].Text)
-		if candidate.Kind == "h2" || candidate.Kind == "h3" || paragraphHeading {
-			if match := numberedHeadingPattern.FindStringSubmatch(candidate.Text); match != nil {
-				finishCurrent()
-				current = &domain.Incident{
-					Number:         match[1],
-					Position:       len(incidents),
-					TitleDE:        strings.TrimSpace(match[2]),
-					SectionContext: sectionContext,
-				}
-				continue
+		if releaseSectionHeading(blocks, index) {
+			finishCurrent()
+			continue
+		}
+		if match := reportHeading(blocks, index); match != nil {
+			finishCurrent()
+			current = &domain.Incident{
+				Number:         match[1],
+				Position:       len(incidents),
+				TitleDE:        strings.TrimSpace(match[2]),
+				SectionContext: sectionContext,
 			}
+			continue
 		}
 		if current != nil {
 			bodyBlocks = append(bodyBlocks, candidate.Text)
@@ -138,6 +137,80 @@ func ParsePoliceRelease(contents []byte) (ParsedRelease, error) {
 		SourceHash:    hash(incidentHashes...),
 		Incidents:     incidents,
 	}, nil
+}
+
+// reportHeading retains the detail-heading contract: bold paragraphs need a
+// following prose paragraph in the same section. Contents entries are filtered
+// by the caller before they can become reports.
+func reportHeading(blocks []block, index int) []string {
+	candidate := blocks[index]
+	paragraphHeading := candidate.Kind == "p" && candidate.Bold && index+1 < len(blocks) && blocks[index+1].Kind == "p" && blocks[index+1].Section == candidate.Section && !numberedHeadingPattern.MatchString(blocks[index+1].Text)
+	if candidate.Kind == "h2" || candidate.Kind == "h3" || paragraphHeading {
+		return numberedHeadingPattern.FindStringSubmatch(candidate.Text)
+	}
+	return nil
+}
+
+// releaseSectionHeading recognizes a heading-only prefix to the next report,
+// such as Wiesnberichte or a wanted-person withdrawal section. Prose between a
+// heading and the next report makes it an internal subheading instead. Requiring
+// a report in the same HTML section avoids dropping trailing headings or body
+// continuations across containers. h4 and bold prose retain their old behavior.
+func releaseSectionHeading(blocks []block, index int) bool {
+	first := blocks[index]
+	if (first.Kind != "h2" && first.Kind != "h3") || numberedHeadingPattern.MatchString(first.Text) {
+		return false
+	}
+	for next := index + 1; next < len(blocks); next++ {
+		candidate := blocks[next]
+		if candidate.Section != first.Section || candidate.InPress != first.InPress || !headingOnlyGap(blocks[next-1].Node, candidate.Node) {
+			return false
+		}
+		if reportHeading(blocks, next) != nil {
+			return true
+		}
+		if (candidate.Kind != "h2" && candidate.Kind != "h3") || numberedHeadingPattern.MatchString(candidate.Text) {
+			return false
+		}
+	}
+	return false
+}
+
+// Block collection intentionally supports only a few source elements. Do not
+// mistake an internal heading before a list, image, or uncollected text for a
+// release label merely because the next collected block is a report heading.
+func headingOnlyGap(previous, next *html.Node) bool {
+	after := func(node *html.Node) *html.Node {
+		for node != nil {
+			if node.NextSibling != nil {
+				return node.NextSibling
+			}
+			node = node.Parent
+		}
+		return nil
+	}
+	for node := after(previous); node != nil; {
+		if node == next {
+			return true
+		}
+		if node.Type == html.TextNode && strings.TrimSpace(node.Data) != "" {
+			return false
+		}
+		if node.Type == html.ElementNode {
+			switch node.Data {
+			case "div", "section", "span", "strong", "b", "p", "br", "hr":
+				// Empty layout/formatting nodes can separate adjacent headings.
+			default:
+				return false
+			}
+		}
+		if node.FirstChild != nil {
+			node = node.FirstChild
+		} else {
+			node = after(node)
+		}
+	}
+	return false
 }
 
 // parseUnnumberedStandalone accepts only the official single-release shape. A
@@ -202,7 +275,7 @@ func collectBlocks(node *html.Node, blocks *[]block) {
 			case "h2", "h3", "h4", "p":
 				text := normalizeText(textContent(child))
 				if text != "" {
-					*blocks = append(*blocks, block{Kind: child.Data, Text: text, Bold: whollyBold(child),
+					*blocks = append(*blocks, block{Kind: child.Data, Text: text, Bold: whollyBold(child), Node: child,
 						Section: closestAncestor(child, func(n *html.Node) bool { return n.Data == "section" }),
 						InPress: closestAncestor(child, func(n *html.Node) bool { return n.Data == "section" && hasClasses(n, "bp-template", "bp-presse") }) != nil,
 					})
