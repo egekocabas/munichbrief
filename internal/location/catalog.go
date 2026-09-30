@@ -9,7 +9,7 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
-const CatalogVersion = "munich-areas-v2"
+const CatalogVersion = "munich-areas-v3"
 
 type Area struct {
 	ID   string `json:"id"`

@@ -172,3 +172,22 @@ func TestVehicleRouteGuard(t *testing.T) {
 		}
 	}
 }
+
+func TestLocationParentSelectionRetainsSupportedCanonicalChild(t *testing.T) {
+	in := candidateInput("Unfall – Hadern", "Am Abend fuhr eine Person mit Wohnsitz in München die Teststraße in Neuhadern stadtauswärts.", "")
+	in.Values["location_original"] = `{"name":"Neuhadern","type":"municipality"}`
+	out := selectCandidate(t, in, "Hadern")
+	if err := validateLocation(in, &out); err != nil {
+		t.Fatal(err)
+	}
+	if out.Values["location_proposed"] != "null" || !strings.Contains(out.Values["location_assessment"], "more precise scene") {
+		t.Fatalf("%+v", out)
+	}
+	out = selectCandidate(t, in, "Neuhadern")
+	if err := validateLocation(in, &out); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.Values["location_proposed"], `"type":"neighbourhood"`) {
+		t.Fatal("supported direct child selection should still fix type")
+	}
+}

@@ -17,8 +17,9 @@ the same selection. Original extraction values remain in presentation history.
 assessments, not model failures. They appear in admin Attention and do not cause
 retry loops. Source-only checks explicitly mark summary wording as not assessed.
 Historical v1 wording-conflict flags remain visible without regenerating text.
-Multiple independent scenes and unresolved routes retain the original public
-label. New protected assessments retain at most one primary location and its evidence.
+A legitimate multi-scene report may use one source-supported representative
+area as its public label; this does not assert that every scene is there.
+Unresolved routes retain the original public label. New protected assessments retain at most one primary location and its evidence.
 Historical multi-location assessments remain readable.
 
 ## Geographic resolution
@@ -67,15 +68,33 @@ Official street point features retain `sb_name` as `DistrictHint`. This field
 never proves that an entire street lies in a district and is not an automatic
 resolution rule. Street/address geometry and broader venue coverage are deferred.
 Festival context allows generic festival-ground/tent references to resolve only
-inside a captured Wiesn section. Named places elsewhere are not inferred from
-visitors' residences or the investigating authority.
+inside a captured Wiesn section. The parser recognises singular/plural Wiesn
+headings in report-detail content and a narrowly recognised dedicated Wiesn
+release title (including the dialect edition). Contents headings in mixed daily
+releases do not establish context. Context resets at section/heading boundaries;
+its versioned hash changes independently of the original title/body.
+
+Oktoberfest/Wiesn aliases become venue candidates only with a trailing venue
+heading or a supported locative phrase, excluding topic/safety/briefing phrases.
+Section membership alone is never a scene. Caption-only attachments with no
+narrative return `source_problem` through the normal decoder/validator without
+an Ollama call; model provenance is `local:source-guard-v1` and the assessment
+records `decision_origin=source_guard`. No positive keyword-only fast path is
+used. Missing context does not justify reconstructing a district.
+
+A selected parent area cannot replace a canonical child area when explicit
+body scene wording supports that child. This conservative guard retains the
+canonical fields, including their original type; direct supported child
+selection may still correct the type. Residence and previous-scene mentions do
+not qualify. Street phrases can supply explicit textual evidence for an area
+named next to them, but never infer an absent area from street geography.
 
 ## Operation and evaluation
 
 The processor key is `location_verification`, scope `default`, priority 25.
-Its active immutable prompt is `incident-location-verification-v3`; v1 and v2 remain
+Its active immutable prompt is `incident-location-verification-v4`; v1, v2 and v3 remain
 retired prompts for history. Candidate generation is versioned separately as
-`source-area-candidates-v1`, and the resolver/catalog is `munich-areas-v2`. Startup creates an
+`source-area-candidates-v2`, and the resolver/catalog is `munich-areas-v3`. Startup creates an
 unconfigured model preference; no location inference runs until an operator
 selects an installed model. It uses the usual automatic controls and manual
 recheck actions. Automatic discovery respects the scope's initial presentation-

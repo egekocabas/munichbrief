@@ -8,7 +8,7 @@ import (
 	"unicode/utf8"
 )
 
-const CandidateVersion = "source-area-candidates-v1"
+const CandidateVersion = "source-area-candidates-v2"
 
 // CandidateEvidence is copied from the source. The model selects an ID and
 // never supplies geographic identity, quotations, offsets, or field names.
@@ -141,6 +141,9 @@ func SourceCandidates(title, body string, source Source) []Candidate {
 	festival := source.SectionContext == "Wiesnberichte" || source.SectionContext == "Wiesn-Berichte"
 	for _, field := range []struct{ name, text string }{{"original_title", title}, {"incident_body", body}, {"section_context", source.SectionContext}} {
 		for _, m := range sourceMatches(field.text, festival) {
+			if m.entity.ID == "venue:theresienwiese" && !festivalSceneEvidence(field.name, field.text, m.start, m.end) {
+				continue
+			}
 			index, exists := byEntity[m.entity.ID]
 			if !exists {
 				index = len(candidates)

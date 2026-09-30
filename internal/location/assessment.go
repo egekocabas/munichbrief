@@ -25,6 +25,7 @@ type Interpretation struct {
 	SummaryConflictStatus string `json:"summary_conflict_status,omitempty"`
 	Reason                string `json:"reason"`
 	CandidateVersion      string `json:"candidate_version,omitempty"`
+	DecisionOrigin        string `json:"decision_origin,omitempty"`
 	SourceConflict        bool   `json:"source_conflict,omitempty"`
 }
 type Source struct {

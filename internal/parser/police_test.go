@@ -230,7 +230,7 @@ func TestBoldParagraphBoundaryAndFestivalContext(t *testing.T) {
 }
 
 func TestFestivalContextExcludesContentsAndStopsAtSectionBoundary(t *testing.T) {
-	for _, heading := range []string{"Wiesnberichte", "Wiesnberichte:", "Wiesn-Berichte: "} {
+	for _, heading := range []string{"Wiesnberichte", "Wiesnbericht", "Wiesn-Bericht:", "Wiesnberichte:", "Wiesn-Berichte: "} {
 		t.Run(heading, func(t *testing.T) {
 			text := `<main id="readspeaker_lesen"><section class="bp-template bp-presse"><p>1. Contents</p><h3>` + heading + `</h3><p>2. Festival contents</p></section><section><h3>1. Ordinary report</h3><p>Ordinary body.</p></section><section><h3>` + heading + `</h3><p><strong>2. Festival report</strong></p><p>Im Festzelt.</p></section><section><h3>3. Another report</h3><p>Ein anderes Festzelt.</p></section></main>`
 			parsed, err := ParsePoliceRelease([]byte(text))
@@ -248,5 +248,30 @@ func TestFirstDetailCanBeBoldParagraph(t *testing.T) {
 	parsed, err := ParsePoliceRelease([]byte(`<main id="readspeaker_lesen"><section class="bp-template bp-presse"><p><strong>1. Contents</strong></p></section><section><p><strong>1. Actual report</strong></p><p>Actual body.</p></section></main>`))
 	if err != nil || len(parsed.Incidents) != 1 || parsed.Incidents[0].TitleDE != "Actual report" {
 		t.Fatalf("parse: %#v/%v", parsed.Incidents, err)
+	}
+}
+
+func TestDedicatedFestivalReleaseContextAndUnchangedBody(t *testing.T) {
+	for _, tc := range []struct {
+		title string
+		want  bool
+	}{
+		{"Wiesnbericht der Polizei München vom 24.09.2026 auf Boarisch", true},
+		{"Medieninformation der Polizei München vom 24.09.2026", false},
+		{"Pressekonferenz über das Oktoberfest", false},
+	} {
+		page := `<main id="readspeaker_lesen"><section class="bp-template bp-presse"><bp-headline title="` + tc.title + `"></bp-headline><h2>Wiesnbericht auf Boarisch</h2><p>1. Contents</p></section><section><h3>1. Synthetischer Vorfall</h3><p>Unveränderter Testtext.</p><h3>2. Noch ein Vorfall</h3><p>Zweiter Text.</p></section></main>`
+		parsed, err := ParsePoliceRelease([]byte(page))
+		if err != nil || len(parsed.Incidents) != 2 {
+			t.Fatalf("%+v %v", parsed, err)
+		}
+		for _, i := range parsed.Incidents {
+			if (i.SectionContext != "") != tc.want {
+				t.Errorf("%s: %+v", tc.title, i)
+			}
+		}
+		if parsed.Incidents[0].BodyDE != "Unveränderter Testtext." {
+			t.Fatal("context injected into source body")
+		}
 	}
 }

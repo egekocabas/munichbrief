@@ -60,7 +60,8 @@ func ParsePoliceRelease(contents []byte) (ParsedRelease, error) {
 	var incidents []domain.Incident
 	var current *domain.Incident
 	var bodyBlocks []string
-	sectionContext := ""
+	releaseContext := dedicatedFestivalRelease(pressContent)
+	sectionContext := releaseContext
 	var contextSection *html.Node
 	// Daily bundles keep the contents inside bp-presse and details in sibling
 	// sections. Context and numbered entries in that contents block are not
@@ -81,7 +82,7 @@ func ParsePoliceRelease(contents []byte) (ParsedRelease, error) {
 		}
 		current.BodyDE = strings.Join(bodyBlocks, "\n\n")
 		current.ContentHash = hash(current.Number, current.TitleDE, current.BodyDE)
-		current.ContextHash = hash("section-context-v1", current.SectionContext)
+		current.ContextHash = hash("section-context-v2", current.SectionContext)
 		incidents = append(incidents, *current)
 		current = nil
 		bodyBlocks = nil
@@ -92,7 +93,7 @@ func ParsePoliceRelease(contents []byte) (ParsedRelease, error) {
 			continue
 		}
 		if candidate.Section != contextSection {
-			sectionContext = ""
+			sectionContext = releaseContext
 			contextSection = candidate.Section
 		}
 		if context := festivalContext(candidate.Text); context != "" {
@@ -339,9 +340,21 @@ func whollyBold(node *html.Node) bool {
 
 func festivalContext(text string) string {
 	switch strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(text), ":")) {
-	case "Wiesnberichte", "Wiesn-Berichte":
+	case "Wiesnbericht", "Wiesn-Bericht", "Wiesnberichte", "Wiesn-Berichte":
 		return "Wiesnberichte"
 	default:
 		return ""
 	}
+}
+
+var dedicatedFestivalTitle = regexp.MustCompile(`^Wiesnberichte? der Polizei München vom [0-9]{2}\.[0-9]{2}\.[0-9]{4}(?: auf Boarisch)?$`)
+
+// A dedicated release title establishes event context, never scene location.
+// Contents headings in mixed daily releases remain excluded.
+func dedicatedFestivalRelease(press *html.Node) string {
+	headline := findElement(press, func(n *html.Node) bool { return n.Data == "bp-headline" })
+	if headline != nil && dedicatedFestivalTitle.MatchString(normalizeText(attributeValue(headline, "title"))) {
+		return "Wiesnberichte"
+	}
+	return ""
 }
