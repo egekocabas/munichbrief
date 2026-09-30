@@ -248,7 +248,7 @@ func (p fakeProcessingRequester) Status(ctx context.Context) (processing.Pipelin
 	if err == nil {
 		err = controlErr
 	}
-	return processing.PipelineRuntimeStatus{GeneratedAt: time.Now(), WindowOpen: true, ScheduledReady: models.Ready && control.AutomaticProcessingEnabled, AutomaticProcessingEnabled: control.AutomaticProcessingEnabled, AutomaticProcessingUpdatedAt: control.UpdatedAt, ProcessorAvailable: true, Models: models, Queue: queue}, err
+	return processing.PipelineRuntimeStatus{GeneratedAt: time.Now(), WindowOpen: true, ProcessingEnabled: control.ProcessingEnabled, ScheduledReady: control.ProcessingEnabled && models.Ready && control.AutomaticProcessingEnabled, AutomaticProcessingEnabled: control.AutomaticProcessingEnabled, AutomaticProcessingUpdatedAt: control.UpdatedAt, ProcessorAvailable: true, Models: models, Queue: queue}, err
 }
 
 func (p fakeProcessingRequester) SetAutomaticProcessing(ctx context.Context, enabled bool) error {
@@ -256,6 +256,10 @@ func (p fakeProcessingRequester) SetAutomaticProcessing(ctx context.Context, ena
 		return p.err
 	}
 	return p.database.SetAutomaticProcessing(ctx, enabled, time.Now())
+}
+
+func (p fakeProcessingRequester) SetProcessingEnabled(ctx context.Context, enabled bool) error {
+	return p.database.SetProcessingEnabled(ctx, enabled, time.Now())
 }
 
 func (p fakeProcessingRequester) CancelAll(ctx context.Context) (store.PipelineCancellationResult, error) {

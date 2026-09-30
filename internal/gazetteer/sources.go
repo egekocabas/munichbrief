@@ -25,7 +25,7 @@ const (
 	// sourceContractVersion invalidates conditional HTTP validators whenever parsing,
 	// filtering, or source-entry semantics change. Bump it with those changes so a
 	// 304 cannot silently reuse entries produced by an older contract.
-	sourceContractVersion = "2026-09-29-1"
+	sourceContractVersion = "2026-09-30-1"
 	munichStreetURL       = "https://geoportal.muenchen.de/geoserver/gsm_wfs/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=gsm_wfs:erlaeuterung_strassennamen&outputFormat=application/json"
 	munichDistrictURL     = "https://geoportal.muenchen.de/geoserver/gsm_wfs/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=gsm_wfs:vablock_stadtbezirk&outputFormat=application/json"
 	geoNamesURL           = "https://download.geonames.org/export/dump/DE.zip"
@@ -46,6 +46,10 @@ func DefaultSources() []SourceDefinition {
 }
 
 func osmSource(key, name, query string, minimum, maximum int) SourceDefinition {
+	// These regional, tags-only queries need less than Overpass's default 512
+	// MiB reservation. A smaller explicit budget improves admission under load;
+	// server remarks still fail closed if the limit is insufficient.
+	query = strings.Replace(query, "[out:json]", "[out:json][maxsize:134217728]", 1)
 	return SourceDefinition{Key: key, DisplayName: name, URL: overpassURL + url.QueryEscape(query), License: "ODbL 1.0", Attribution: "© OpenStreetMap contributors", MinimumRows: minimum, MaximumRows: maximum, MaximumSize: 48 << 20, Parse: func(data []byte) ([]Entry, error) { return parseOSM(key, data) }}
 }
 
@@ -284,6 +288,16 @@ func parseOSM(source string, data []byte) ([]Entry, error) {
 			return nil, err
 		}
 		key, _ := keyToken.(string)
+		if key == "remark" {
+			var remark string
+			if err := decoder.Decode(&remark); err != nil {
+				return nil, err
+			}
+			if strings.TrimSpace(remark) != "" {
+				return nil, errors.New("OSM server remark: refusing potentially incomplete results")
+			}
+			continue
+		}
 		if key != "elements" {
 			var ignored json.RawMessage
 			if err := decoder.Decode(&ignored); err != nil {

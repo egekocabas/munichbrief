@@ -92,6 +92,13 @@ func (s *Store) ActivateNextPipelineCycle(ctx context.Context, sourceMode string
 	if err != nil {
 		return PipelineCycle{}, false, fmt.Errorf("read automatic AI processing state: %w", err)
 	}
+	var processingEnabled bool
+	if err := tx.QueryRowContext(ctx, `SELECT processing_enabled FROM ai_runtime_control WHERE id=1`).Scan(&processingEnabled); err != nil {
+		return PipelineCycle{}, false, err
+	}
+	if !processingEnabled {
+		return PipelineCycle{}, false, nil
+	}
 	cycle, found, err := selectCycleTx(ctx, tx, `status = 'running'`, nil)
 	if err != nil {
 		return PipelineCycle{}, false, err

@@ -40,7 +40,7 @@
 {{define "admin-running-summary"}}
 <div class="admin-running-summary mt-4 rounded-lg border border-rule bg-newsprint/60 p-4" data-running-summary data-running="{{if .Running}}true{{else}}false{{end}}">
   <p class="text-xs font-extrabold uppercase tracking-wider text-civic">Running now</p>
-  <p class="admin-provenance mt-2 text-lg font-bold" data-running-key>{{if .Running}}{{.Running.Key}}{{else if .Queue.ActiveCycle}}Waiting for eligible work{{else}}Idle{{end}}</p>
+  <p class="admin-provenance mt-2 text-lg font-bold" data-running-key>{{if .Running}}{{.Running.Key}}{{else if not .ProcessingEnabled}}Processing paused{{else if .Queue.ActiveCycle}}Waiting for eligible work{{else}}Idle{{end}}</p>
   <p class="admin-provenance mt-1 text-sm text-muted" data-running-model>{{with .Running}}{{.Model}} · incident #{{.IncidentID}}{{else}}No request in progress{{end}}</p>
 </div>
 {{end}}
@@ -63,5 +63,5 @@
 {{end}}
 
 {{define "admin-processing-status"}}
-<span class="admin-status-badge" data-processing-state data-state="{{if not .ProcessingEnabled}}unavailable{{else if .Runtime.AutomaticProcessingEnabled}}enabled{{else}}disabled{{end}}">{{if not .ProcessingEnabled}}AI unavailable{{else if .Runtime.AutomaticProcessingEnabled}}Automatic processing: enabled{{else}}Automatic processing: disabled{{end}}</span>
+<span class="admin-status-badge" data-processing-state data-state="{{if not .ProcessingEnabled}}unavailable{{else if not .Runtime.ProcessingEnabled}}disabled{{else if .Runtime.AutomaticProcessingEnabled}}enabled{{else}}disabled{{end}}">{{if not .ProcessingEnabled}}AI unavailable{{else if not .Runtime.ProcessingEnabled}}{{if .Runtime.Running}}Pausing after current request{{else}}All processing: disabled{{end}}{{else if .Runtime.AutomaticProcessingEnabled}}Automatic processing: enabled{{else}}Automatic processing: disabled{{end}}</span>
 {{end}}

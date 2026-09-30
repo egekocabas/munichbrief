@@ -1773,3 +1773,188 @@ func TestConfigurationCircuitRemainsLocalToStep(t *testing.T) {
 		t.Fatal("configuration failure blocked other consumers")
 	}
 }
+
+func TestMasterSwitchFinishesManualRequestAndResumesQueue(t *testing.T) {
+	ctx := context.Background()
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "worker-master-control.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 16, 0, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "one")
+	if err := database.EnsurePipelineSteps(ctx, ModelSettingKeys(), now); err != nil {
+		t.Fatal(err)
+	}
+	for step, model := range pipelineTestModels() {
+		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	started := make(chan struct{})
+	release := make(chan struct{})
+	var once sync.Once
+	provider := &pipelineTestProvider{generateContext: func(_ context.Context, step StepDefinition, _ StepInput) (StepOutput, bool, error) {
+		if step.Key != IncidentMetadataStep {
+			return StepOutput{}, false, nil
+		}
+		once.Do(func() { close(started) })
+		<-release
+		return StepOutput{Category: "other", ReportKind: "incident", PublicAssistanceStatus: "not_requested", PublicAssistanceTypes: []string{}}, true, nil
+	}}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := worker.RequestNow(ctx, "fixture", pipelineTestModels(), nil, true); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan struct{})
+	go func() {
+		worker.processAvailable(ctx)
+		close(done)
+	}()
+	<-started
+	if err := worker.SetProcessingEnabled(ctx, false); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-done:
+		t.Fatal("master switch interrupted current request")
+	default:
+	}
+	close(release)
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("worker did not stop at automatic job boundary")
+	}
+	if provider.callCount(IncidentMetadataStep) != 1 || provider.callCount(GermanPresentationStep) != 0 {
+		t.Fatalf("calls while disabled: metadata=%d german=%d", provider.callCount(IncidentMetadataStep), provider.callCount(GermanPresentationStep))
+	}
+	status, err := worker.Status(ctx)
+	if err != nil || status.ProcessingEnabled || !status.AutomaticProcessingEnabled {
+		t.Fatalf("disabled worker status = %#v/%v", status, err)
+	}
+	worker.processAvailable(ctx)
+	if provider.callCount(GermanPresentationStep) != 0 {
+		t.Fatal("manual work ran while paused")
+	}
+	if err := worker.SetProcessingEnabled(ctx, true); err != nil {
+		t.Fatal(err)
+	}
+	worker.processAvailable(ctx)
+	if provider.callCount(GermanPresentationStep) != 1 {
+		t.Fatalf("German calls after resume = %d, want 1", provider.callCount(GermanPresentationStep))
+	}
+}
+
+func TestMasterSwitchFinishesManualPostProcessingAndResumesQueue(t *testing.T) {
+	ctx := context.Background()
+	database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "worker-post-control.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	now := time.Date(2026, 8, 29, 16, 45, 0, 0, time.UTC)
+	insertWorkerDocument(t, ctx, database, now, "one")
+	insertWorkerDocument(t, ctx, database, now.Add(time.Second), "two")
+	if err := database.EnsurePipelineSteps(ctx, ModelSettingKeys(), now); err != nil {
+		t.Fatal(err)
+	}
+	for step, model := range pipelineTestModels() {
+		if err := database.SetPipelineStepModel(ctx, step, model, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	started := make(chan struct{})
+	release := make(chan struct{})
+	var once sync.Once
+	provider := &pipelineTestProvider{generateContext: func(_ context.Context, step StepDefinition, _ StepInput) (StepOutput, bool, error) {
+		if step.Key != EnglishTranslationStep {
+			return StepOutput{}, false, nil
+		}
+		once.Do(func() { close(started) })
+		<-release
+		return StepOutput{Values: map[string]string{"title": "Safe title", "summary": "Safe summary."}}, true, nil
+	}}
+	worker, err := NewPipelineWorker(database, provider, testModelCatalog{snapshot: ModelCatalogSnapshot{Models: []string{"qwen:4b", "translate:4b"}, CheckedAt: now}}, DefaultPostProcessorRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, func() time.Time { return now }, Schedule{Immediate: true}, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	settings, err := database.TranslationLanguageSettings(ctx)
+	if err != nil || len(settings) == 0 {
+		t.Fatalf("translation settings were not initialized: %#v/%v", settings, err)
+	}
+	for _, setting := range settings {
+		wantModel := ""
+		if setting.LanguageCode == EnglishLanguage {
+			wantModel = "translate:4b"
+		}
+		if setting.PreferredModel != wantModel || setting.AdapterKey != TranslationAdapterStructured {
+			t.Fatalf("initialized translation setting = %#v", setting)
+		}
+	}
+	configured, err := worker.configuredTranslationPlans(ctx, nil)
+	if err != nil || len(configured) != 1 || configured[0].ScopeKey != EnglishLanguage {
+		t.Fatalf("configured translation plans = %#v/%v", configured, err)
+	}
+	if _, err := worker.RequestNow(ctx, "fixture", pipelineTestModels(), nil, true); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan struct{})
+	go func() {
+		worker.processAvailable(ctx)
+		close(done)
+	}()
+	// Canonical completion also maintains the reader index. Under the race
+	// detector SQLite work can exceed two seconds; this is a deadlock guard,
+	// not a timing assertion about the worker.
+	select {
+	case <-started:
+	case <-done:
+		status, statusErr := worker.Status(ctx)
+		t.Fatalf("worker completed before claiming English translation: %#v/%v", status.Queue.PostProcessing, statusErr)
+	case <-time.After(10 * time.Second):
+		t.Fatal("worker did not reach English translation")
+	}
+	if err := worker.SetProcessingEnabled(ctx, false); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-done:
+		t.Fatal("master switch interrupted current request")
+	default:
+	}
+	close(release)
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		t.Fatal("post-processing worker did not stop after current request")
+	}
+	if provider.callCount(EnglishTranslationStep) != 1 {
+		t.Fatalf("translation calls while disabled = %d, want 1", provider.callCount(EnglishTranslationStep))
+	}
+	status, err := worker.Status(ctx)
+	englishPending := -1
+	for _, queue := range status.Queue.PostProcessing {
+		if queue.ProcessorKey == TranslationModelStep && queue.ScopeKey == EnglishLanguage {
+			englishPending = queue.Pending
+		}
+	}
+	if err != nil || englishPending != 1 {
+		t.Fatalf("disabled post-processing status = %#v/%v", status.Queue.PostProcessing, err)
+	}
+
+	worker.processAvailable(ctx)
+	if provider.callCount(EnglishTranslationStep) != 1 {
+		t.Fatal("manual translation ran while paused")
+	}
+	if err := worker.SetProcessingEnabled(ctx, true); err != nil {
+		t.Fatal(err)
+	}
+	worker.processAvailable(ctx)
+	if provider.callCount(EnglishTranslationStep) != 2 {
+		t.Fatal("manual translation did not resume")
+	}
+}

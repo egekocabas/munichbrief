@@ -360,3 +360,32 @@ func TestCancelAllPreservesCanonicalAndPostProcessingCompletionsThatCommitFirst(
 		t.Fatalf("completion-first preservation = canonical:%s/%d post:%s/%d run:%s", canonicalStatus, canonicalValues, postStatus, postValues, completedRunStatus)
 	}
 }
+
+func TestMasterProcessingSwitchPersistsIndependently(t *testing.T) {
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "master.db")
+	db, err := Open(ctx, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now()
+	if err := db.SetProcessingEnabled(ctx, false, now); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SetAutomaticProcessing(ctx, false, now); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SetAutomaticProcessing(ctx, true, now); err != nil {
+		t.Fatal(err)
+	}
+	db.Close()
+	db, err = Open(ctx, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	state, err := db.AIControl(ctx)
+	if err != nil || state.ProcessingEnabled || !state.AutomaticProcessingEnabled {
+		t.Fatalf("reopened master gate=%#v %v", state, err)
+	}
+}

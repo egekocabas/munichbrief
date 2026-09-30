@@ -51,6 +51,7 @@ type PipelineRepository interface {
 	CyclePostProcessingPlans(context.Context, int64) ([]store.PostProcessingPlan, error)
 	AIControl(context.Context) (store.AIControlState, error)
 	SetAutomaticProcessing(context.Context, bool, time.Time) error
+	SetProcessingEnabled(context.Context, bool, time.Time) error
 	SuspendAutomaticCycle(context.Context, int64, time.Time) (bool, error)
 	CancelAllAIWork(context.Context, time.Time) (store.PipelineCancellationResult, error)
 }
@@ -198,6 +199,8 @@ type PostProcessorModelStatus struct {
 
 // PipelineRuntimeStatus combines model, schedule, worker, and queue readiness.
 type PipelineRuntimeStatus struct {
+	ProcessingEnabled            bool                     `json:"processing_enabled"`
+	ProcessingUpdatedAt          time.Time                `json:"processing_updated_at"`
 	Running                      *PipelineExecutionStatus `json:"running,omitempty"`
 	TranslationBatch             TranslationBatchStatus   `json:"translation_batch"`
 	GeneratedAt                  time.Time                `json:"generated_at"`
@@ -480,6 +483,19 @@ func (w *PipelineWorker) SetAutomaticProcessing(ctx context.Context, enabled boo
 	return nil
 }
 
+// SetProcessingEnabled pauses at the next request boundary, retaining all work
+// and the independent automatic-processing preference.
+func (w *PipelineWorker) SetProcessingEnabled(ctx context.Context, enabled bool) error {
+	w.executionMu.Lock()
+	defer w.executionMu.Unlock()
+	if err := w.repository.SetProcessingEnabled(ctx, enabled, w.clock()); err != nil {
+		return err
+	}
+	w.logger.Info("AI processing master switch changed", "enabled", enabled)
+	w.signal()
+	return nil
+}
+
 // CancelAll disables automatic processing, terminalizes every unfinished job,
 // and then interrupts the current provider request. Holding executionMu across
 // the transaction closes the gap between a database claim and cancel setup.
@@ -604,7 +620,9 @@ func (w *PipelineWorker) Status(ctx context.Context) (PipelineRuntimeStatus, err
 	return PipelineRuntimeStatus{
 		Running: w.running, TranslationBatch: batch,
 		GeneratedAt: w.clock(), WindowOpen: window,
-		ScheduledReady:               window && control.AutomaticProcessingEnabled && models.Ready,
+		ScheduledReady:               control.ProcessingEnabled && window && control.AutomaticProcessingEnabled && models.Ready,
+		ProcessingEnabled:            control.ProcessingEnabled,
+		ProcessingUpdatedAt:          control.ProcessingUpdatedAt,
 		AutomaticProcessingEnabled:   control.AutomaticProcessingEnabled,
 		AutomaticProcessingUpdatedAt: control.UpdatedAt,
 		ProcessorAvailable:           available && models.CatalogAvailable, Models: models, Queue: queue,
@@ -672,6 +690,10 @@ func (w *PipelineWorker) processAvailable(ctx context.Context) {
 		control, controlErr := w.repository.AIControl(ctx)
 		if controlErr != nil {
 			w.logger.Error("read automatic AI processing state", "error", controlErr)
+			return
+		}
+		if !control.ProcessingEnabled {
+			w.publishSnapshot(ctx)
 			return
 		}
 		canonicalReady := modelsErr == nil && plansErr == nil && catalog.Available()
@@ -793,6 +815,10 @@ func (w *PipelineWorker) processAvailable(ctx context.Context) {
 func (w *PipelineWorker) processCycle(ctx context.Context, cycle store.PipelineCycle) bool {
 	steps := RegisteredSteps()
 	for ctx.Err() == nil {
+		control, err := w.repository.AIControl(ctx)
+		if err != nil || !control.ProcessingEnabled {
+			return false
+		}
 		if w.suspendDisabledAutomaticCycle(ctx, cycle) {
 			return true
 		}

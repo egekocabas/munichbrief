@@ -912,6 +912,7 @@ func postProcessingSelectionQuery(processorKey string, options PostProcessingCla
 		FROM post_processing_jobs job JOIN presentation_runs r ON r.id=job.presentation_run_id
 		JOIN incidents i ON i.id=r.incident_id AND i.content_hash=r.source_hash
 		WHERE job.processor_key=? AND r.status='complete' AND r.pipeline_version=? AND r.legacy=0 AND job.status='pending' AND (job.next_retry_at IS NULL OR job.next_retry_at<=?)
+		AND (SELECT processing_enabled FROM ai_runtime_control WHERE id=1)=1
 		AND (job.request_kind='manual' OR (? AND (SELECT automatic_processing_enabled FROM ai_runtime_control WHERE id=1)=1
 			AND EXISTS (SELECT 1 FROM post_processing_processor_controls processor WHERE processor.processor_key=job.processor_key AND processor.enabled=1)
 			AND EXISTS (SELECT 1 FROM post_processing_scopes scope WHERE scope.processor_key=job.processor_key AND scope.scope_key=job.scope_key AND scope.enabled=1)))` + blockedCondition + `

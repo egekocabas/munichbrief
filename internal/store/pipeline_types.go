@@ -194,9 +194,11 @@ type PipelineRequestResult struct {
 	Current   int
 }
 
-// AIControlState is the durable operator-controlled automatic-processing gate.
-// Manual work remains eligible while AutomaticProcessingEnabled is false.
+// AIControlState holds durable operator-controlled processing gates. Manual
+// work requires ProcessingEnabled but bypasses AutomaticProcessingEnabled.
 type AIControlState struct {
+	ProcessingEnabled          bool      `json:"processing_enabled"`
+	ProcessingUpdatedAt        time.Time `json:"processing_updated_at"`
 	AutomaticProcessingEnabled bool      `json:"automatic_processing_enabled"`
 	UpdatedAt                  time.Time `json:"updated_at"`
 }

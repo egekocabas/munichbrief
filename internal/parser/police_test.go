@@ -65,6 +65,9 @@ func TestParsePoliceReleaseAnonymizedProductionShapes(t *testing.T) {
 			var allBodies strings.Builder
 			for position, wantNumber := range test.wantNumbers {
 				incident := result.Incidents[position]
+				if incident.ContextHash == "" {
+					t.Error("parsed incident has no versioned context hash")
+				}
 				if incident.Number != wantNumber || incident.Position != position {
 					t.Errorf("incident %d identity = %q/%d, want %q/%d", position, incident.Number, incident.Position, wantNumber, position)
 				}
