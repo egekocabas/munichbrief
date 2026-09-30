@@ -50,6 +50,11 @@ Git. Read [privacy and sources](source-policy.md) before enabling live ingestion
 - Readiness checks storage availability; it does not mean every model or
   translation is ready.
 
+On the admin RSS history page, use **Disable RSS synchronization** to prevent new
+scheduled and one-shot syncs. A running sync finishes normally. The setting
+persists across restarts and does not affect AI processing. Re-enabling resumes
+at the next scheduled check (up to 6½ hours); it does not trigger an immediate sync.
+
 ## Backups and upgrades
 
 `munichbrief backup --output FILE` creates a consistent snapshot of the configured

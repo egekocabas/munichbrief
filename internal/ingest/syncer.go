@@ -16,6 +16,7 @@ import (
 
 // Repository captures the atomic persistence operations needed by a source sync.
 type Repository interface {
+	RSSSyncEnabled(context.Context) (bool, error)
 	GetSyncState(context.Context) (store.SyncState, error)
 	RecordSyncAttempt(context.Context, time.Time, time.Time, time.Time) (int64, error)
 	RecordSyncSuccess(context.Context, int64, string, string, time.Time, store.SyncRunResult) error
@@ -27,6 +28,9 @@ type Repository interface {
 	StoreRSSFetch(context.Context, int64, int64, parser.ParsedRelease, time.Time) error
 	FailRSSFetch(context.Context, int64, int64, string, parser.ParsedRelease, time.Time, error) error
 }
+
+// ErrSyncDisabled means an administrator has paused new RSS synchronizations.
+var ErrSyncDisabled = errors.New("RSS synchronization is disabled")
 
 // Syncer serializes conditional feed refreshes and article parsing.
 type Syncer struct {
@@ -83,6 +87,13 @@ func NewSyncer(repository Repository, client source.LiveClient, refreshAfter tim
 func (s *Syncer) Sync(ctx context.Context) (Result, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	enabled, err := s.repository.RSSSyncEnabled(ctx)
+	if err != nil {
+		return Result{}, err
+	}
+	if !enabled {
+		return Result{}, ErrSyncDisabled
+	}
 
 	now := s.clock()
 	syncStartedAt := time.Now()

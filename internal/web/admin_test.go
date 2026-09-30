@@ -32,6 +32,7 @@ func TestAdminIsDisabledByDefault(t *testing.T) {
 		{method: http.MethodGet, path: "/admin"},
 		{method: http.MethodGet, path: "/admin/translations"},
 		{method: http.MethodGet, path: "/admin/rss-history"},
+		{method: http.MethodPost, path: "/api/admin/rss/enabled"},
 		{method: http.MethodGet, path: "/admin/rss-history/1"},
 		{method: http.MethodGet, path: "/admin/rss-history/1/documents/1?fragment=1"},
 		{method: http.MethodGet, path: "/admin/gazetteer"},
