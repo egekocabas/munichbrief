@@ -1686,7 +1686,7 @@ func insertWorkerDocument(t *testing.T, ctx context.Context, database *store.Sto
 }
 
 func TestSharedModelTransientFailureDefersOtherConsumers(t *testing.T) {
-	for _, failedStep := range []string{GermanPresentationStep, PublicAssistanceVerificationStep} {
+	for _, failedStep := range []string{GermanPresentationStep, LocationVerificationStep} {
 		t.Run(failedStep, func(t *testing.T) {
 			ctx := context.Background()
 			database, err := openTestStore(ctx, filepath.Join(t.TempDir(), "shared-outage.db"))
@@ -1701,6 +1701,7 @@ func TestSharedModelTransientFailureDefersOtherConsumers(t *testing.T) {
 				t.Fatal(err)
 			}
 			models := pipelineTestModels()
+			models[LocationVerificationStep] = "qwen:4b"
 			models[PublicAssistanceVerificationStep] = "qwen:4b"
 			models[CategoryVerificationStep] = "qwen:4b"
 			for step, model := range models {
@@ -1709,7 +1710,7 @@ func TestSharedModelTransientFailureDefersOtherConsumers(t *testing.T) {
 				}
 			}
 			provider := &pipelineTestProvider{fail: func(step string, call int) error {
-				if step == failedStep && ((step == GermanPresentationStep && call == 2) || (step == PublicAssistanceVerificationStep && call == 1)) {
+				if step == failedStep && ((step == GermanPresentationStep && call == 2) || (step == LocationVerificationStep && call == 1)) {
 					return errorOf(ErrorTransient, "synthetic connection refused")
 				}
 				return nil
@@ -1723,11 +1724,14 @@ func TestSharedModelTransientFailureDefersOtherConsumers(t *testing.T) {
 			if provider.callCount(CategoryVerificationStep) != 0 {
 				t.Fatal("category called the model during a shared outage")
 			}
-			wantAssistance := 0
-			if failedStep == PublicAssistanceVerificationStep {
-				wantAssistance = 1
+			wantLocation := 0
+			if failedStep == LocationVerificationStep {
+				wantLocation = 1
 			}
-			if provider.callCount(PublicAssistanceVerificationStep) != wantAssistance {
+			if provider.callCount(LocationVerificationStep) != wantLocation {
+				t.Fatal("location called the model during a shared outage")
+			}
+			if provider.callCount(PublicAssistanceVerificationStep) != 0 {
 				t.Fatal("assistance called the model during a shared outage")
 			}
 			if failedStep == GermanPresentationStep {
@@ -1745,13 +1749,13 @@ func TestSharedModelTransientFailureDefersOtherConsumers(t *testing.T) {
 				t.Fatal(err)
 			}
 			for _, stats := range snapshot.PostProcessing {
-				if stats.ProcessorKey == CategoryVerificationStep && (stats.Pending == 0 || stats.Retrying != 0) {
-					t.Fatalf("unattempted category jobs consumed retries: %#v", stats)
+				if (stats.ProcessorKey == CategoryVerificationStep || stats.ProcessorKey == PublicAssistanceVerificationStep) && (stats.Pending == 0 || stats.Retrying != 0) {
+					t.Fatalf("unattempted verification jobs consumed retries: %#v", stats)
 				}
 			}
 			now = now.Add(time.Minute)
 			worker.processAvailable(ctx)
-			if provider.callCount(CategoryVerificationStep) != 2 || provider.callCount(EnglishTranslationStep) != 2 {
+			if provider.callCount(CategoryVerificationStep) != 2 || provider.callCount(PublicAssistanceVerificationStep) != 2 || provider.callCount(EnglishTranslationStep) != 2 {
 				t.Fatal("jobs did not resume after shared cooldown")
 			}
 		})
