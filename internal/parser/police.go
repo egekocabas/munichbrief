@@ -265,6 +265,7 @@ func parseUnnumberedStandalone(pressContent *html.Node) (domain.Incident, bool) 
 		TitleDE:     title,
 		BodyDE:      body,
 		ContentHash: hash("", title, body),
+		ContextHash: hash("section-context-v2", ""),
 	}, true
 }
 

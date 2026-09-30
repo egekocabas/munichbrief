@@ -1749,3 +1749,41 @@ func TestAdminReportsStoreErrors(t *testing.T) {
 		t.Fatalf("admin process error status = %d, want 500", retryResponse.Code)
 	}
 }
+
+func TestAdminMasterSwitchPreservesAutomaticPreference(t *testing.T) {
+	ctx := context.Background()
+	database := fixtureStore(t)
+	handler := adminTestServer(t, database, nil).Handler()
+	for _, test := range []struct {
+		body      string
+		crossSite bool
+		want      int
+	}{{"enabled=maybe", false, http.StatusBadRequest}, {"enabled=false", true, http.StatusForbidden}, {"enabled=false", false, http.StatusSeeOther}} {
+		request := formRequest(http.MethodPost, "/api/admin/ai/processing", test.body)
+		if test.crossSite {
+			request.Header.Set("Sec-Fetch-Site", "cross-site")
+		}
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if response.Code != test.want {
+			t.Fatalf("switch response=%d want=%d", response.Code, test.want)
+		}
+	}
+	state, err := database.AIControl(ctx)
+	if err != nil || state.ProcessingEnabled || !state.AutomaticProcessingEnabled {
+		t.Fatalf("master changed automatic preference: %#v %v", state, err)
+	}
+	page := httptest.NewRecorder()
+	handler.ServeHTTP(page, httptest.NewRequest(http.MethodGet, "/admin?processing=disabled", nil))
+	for _, want := range []string{"Enable all processing", "All processing: disabled", "current request will finish", "Processing paused"} {
+		if !strings.Contains(page.Body.String(), want) {
+			t.Fatalf("paused page missing %q", want)
+		}
+	}
+	enable := httptest.NewRecorder()
+	handler.ServeHTTP(enable, formRequest(http.MethodPost, "/api/admin/ai/processing", "enabled=true"))
+	state, err = database.AIControl(ctx)
+	if enable.Code != http.StatusSeeOther || err != nil || !state.ProcessingEnabled {
+		t.Fatalf("enable=%d state=%#v err=%v", enable.Code, state, err)
+	}
+}

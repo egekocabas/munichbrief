@@ -66,8 +66,28 @@ writer, preserve the current database and its WAL/SHM files, then restore a
 validated backup. Back up before upgrades that apply migrations.
 Automated off-machine backups are not included.
 
+Gazetteer refresh retains validated downloads for up to 24 hours when a later
+source fails. Retries reuse only downloads with the same source definition and
+parser contract, retaining their original fetch timestamps. Reused sources have
+no new HTTP status in refresh history; the application logs the reuse. Staging
+is cleared after successful activation. The previous complete generation remains
+active until every source validates; partial refreshes are never published.
+OSM queries declare a 128 MiB server memory budget instead of relying on the
+larger default reservation. Responses containing an Overpass server remark are
+rejected even with HTTP 200, because they may contain partial results.
+
 For available commands, see [the CLI](../cmd/munichbrief/main.go); build and
 validation steps are recorded in [CI](../.github/workflows/ci.yml).
+
+## AI processing controls
+
+The admin **Disable all processing** master switch pauses manual and automatic
+AI work after the current request finishes. Pending jobs and completed results
+are preserved, including across restarts. Manual requests may still be queued
+while paused. **Enable all processing** resumes eligible work without changing
+the separate automatic-processing preference. **Cancel all unfinished work**
+remains the separate action for immediately interrupting and discarding queued
+work. The master switch does not control RSS or gazetteer refreshes.
 
 ## Location verification
 

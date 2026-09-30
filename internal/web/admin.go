@@ -110,6 +110,12 @@ func (s *Server) admin(response http.ResponseWriter, request *http.Request) {
 	if state := request.URL.Query().Get("automatic_processing"); state == "enabled" || state == "disabled" {
 		data.Notice = "Automatic AI processing " + state + ". Explicit admin and CLI requests remain available."
 	}
+	if state := request.URL.Query().Get("processing"); state == "enabled" || state == "disabled" {
+		data.Notice = "All AI processing enabled. Queued work can resume under the existing automatic-processing settings."
+		if state == "disabled" {
+			data.Notice = "All AI processing disabled. The current request will finish; manual and automatic queued work will wait until re-enabled."
+		}
+	}
 	if canonical, ok := nonNegativeQueryInt(request, "canceled_canonical"); ok {
 		cycles, _ := nonNegativeQueryInt(request, "canceled_cycles")
 		postProcessing, _ := nonNegativeQueryInt(request, "canceled_post_processing")
@@ -750,6 +756,30 @@ func (s *Server) updateAutomaticProcessing(response http.ResponseWriter, request
 	} else {
 		query.Set("automatic_processing", "disabled")
 	}
+	target.RawQuery = query.Encode()
+	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
+}
+
+func (s *Server) updateProcessingEnabled(response http.ResponseWriter, request *http.Request) {
+	if !s.prepareAIControlMutation(response, request, false) {
+		return
+	}
+	raw := request.PostForm.Get("enabled")
+	if raw != "true" && raw != "false" {
+		http.Error(response, "enabled must be true or false", http.StatusBadRequest)
+		return
+	}
+	if err := s.options.Processor.SetProcessingEnabled(request.Context(), raw == "true"); err != nil {
+		s.internalError(response, request, "update AI processing", err)
+		return
+	}
+	target, _ := url.Parse(adminPaginationURL(positiveFormInt(request.PostForm.Get("unprocessed_page")), positiveFormInt(request.PostForm.Get("all_page"))))
+	query := target.Query()
+	state := "disabled"
+	if raw == "true" {
+		state = "enabled"
+	}
+	query.Set("processing", state)
 	target.RawQuery = query.Encode()
 	http.Redirect(response, request, target.RequestURI(), http.StatusSeeOther)
 }

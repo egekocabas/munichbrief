@@ -7,13 +7,12 @@ import (
 	"time"
 )
 
-// AIControl returns the durable automatic-processing gate. Manual requests do
-// not consult this gate.
+// AIControl returns the durable master and automatic-processing gates.
 func (s *Store) AIControl(ctx context.Context) (AIControlState, error) {
 	var state AIControlState
-	var enabled int
-	var updatedAt string
-	if err := s.db.QueryRowContext(ctx, `SELECT automatic_processing_enabled,updated_at FROM ai_runtime_control WHERE id=1`).Scan(&enabled, &updatedAt); err != nil {
+	var enabled, processingEnabled int
+	var updatedAt, processingUpdatedAt string
+	if err := s.db.QueryRowContext(ctx, `SELECT automatic_processing_enabled,processing_enabled,updated_at,processing_updated_at FROM ai_runtime_control WHERE id=1`).Scan(&enabled, &processingEnabled, &updatedAt, &processingUpdatedAt); err != nil {
 		return state, fmt.Errorf("read AI runtime control: %w", err)
 	}
 	parsed, err := time.Parse(time.RFC3339Nano, updatedAt)
@@ -21,8 +20,25 @@ func (s *Store) AIControl(ctx context.Context) (AIControlState, error) {
 		return state, fmt.Errorf("parse AI runtime control update time: %w", err)
 	}
 	state.AutomaticProcessingEnabled = enabled == 1
+	state.ProcessingEnabled = processingEnabled == 1
 	state.UpdatedAt = parsed
+	if state.ProcessingUpdatedAt, err = time.Parse(time.RFC3339Nano, processingUpdatedAt); err != nil {
+		return state, fmt.Errorf("parse AI master switch update time: %w", err)
+	}
 	return state, nil
+}
+
+// SetProcessingEnabled gates new claims, including manual work. An in-flight
+// request can still finish and publish normally. Queue state is preserved.
+func (s *Store) SetProcessingEnabled(ctx context.Context, enabled bool, now time.Time) error {
+	result, err := s.db.ExecContext(ctx, `UPDATE ai_runtime_control SET processing_enabled=?,processing_updated_at=? WHERE id=1`, boolInt(enabled), formatTime(now.UTC()))
+	if err != nil {
+		return fmt.Errorf("set AI processing: %w", err)
+	}
+	if affected, _ := result.RowsAffected(); affected != 1 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
 
 // SetAutomaticProcessing changes only automatic work eligibility. Existing

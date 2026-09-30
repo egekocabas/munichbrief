@@ -149,9 +149,25 @@ func (m *Manager) refresh(ctx context.Context, trigger RefreshTrigger) (RefreshR
 		if err := m.store.StartRefreshSource(ctx, runID, source.Key, sourceStarted); err != nil {
 			return RefreshResult{}, fail(&source, "storage", SourceFetchDiagnostic{}, fmt.Errorf("record %s source start: %w", source.Key, err))
 		}
-		snapshot, notModified, diagnostic, err := m.fetcher.FetchWithDiagnostics(ctx, source)
+		snapshot, reused, err := m.store.stagedSource(ctx, source, m.clock())
+		if err != nil {
+			return RefreshResult{}, fail(&source, "storage", SourceFetchDiagnostic{}, err)
+		}
+		var notModified bool
+		var diagnostic SourceFetchDiagnostic
+		if reused {
+			diagnostic.RowCount = len(snapshot.Entries)
+			m.logger.Info("reusing validated gazetteer download", "source", source.Key, "fetched_at", snapshot.FetchedAt)
+		} else {
+			snapshot, notModified, diagnostic, err = m.fetcher.FetchWithDiagnostics(ctx, source)
+		}
 		if err != nil {
 			return RefreshResult{}, fail(&source, diagnostic.FailureStage, diagnostic, err)
+		}
+		if !reused {
+			if err := m.store.stageSource(ctx, snapshot); err != nil {
+				return RefreshResult{}, fail(&source, "storage", diagnostic, err)
+			}
 		}
 		if err := m.store.CompleteRefreshSource(ctx, runID, snapshot, notModified, diagnostic, m.clock()); err != nil {
 			return RefreshResult{}, fail(&source, "storage", diagnostic, fmt.Errorf("record %s source completion: %w", source.Key, err))
@@ -176,6 +192,11 @@ func (m *Manager) refresh(ctx context.Context, trigger RefreshTrigger) (RefreshR
 	if changed || !m.ready.Load() {
 		m.matcher.Store(matcher)
 		m.ready.Store(true)
+	}
+	// Clearing after activation is safe across interruption: a leftover validated
+	// snapshot may be reused only within its original freshness window.
+	if _, err := m.store.db.ExecContext(ctx, `DELETE FROM gazetteer_staged_sources`); err != nil {
+		m.logger.Error("clear staged gazetteer downloads", "error", err)
 	}
 	finished := m.clock()
 	if m.observer != nil {

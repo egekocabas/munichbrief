@@ -128,14 +128,14 @@
     setText(connection, "Updates live");
     const cycleState = panel.querySelector("[data-cycle-state]");
     if (cycleState) {
-      cycleState.dataset.state = cycle ? "active" : "idle";
-      setText(cycleState, cycle ? "Cycle in progress" : "No active cycle");
+      cycleState.dataset.state = cycle ? (!status.processing_enabled && !status.running ? "disabled" : "active") : "idle";
+      setText(cycleState, cycle ? (!status.processing_enabled && !status.running ? "Cycle paused" : "Cycle in progress") : "No active cycle");
     }
     const running = status.running;
     const runningKey = running?.key || "";
     const runningSummary = panel.querySelector("[data-running-summary]");
     if (runningSummary) runningSummary.dataset.running = String(Boolean(running));
-    setText(panel.querySelector("[data-running-key]"), runningKey || (cycle ? "Waiting for eligible work" : "Idle"));
+    setText(panel.querySelector("[data-running-key]"), runningKey || (!status.processing_enabled ? "Processing paused" : cycle ? "Waiting for eligible work" : "Idle"));
     setText(panel.querySelector("[data-running-model]"), running ? `${running.model} · incident #${running.incident_id}` : "No request in progress");
     for (const card of panel.querySelectorAll("[data-execution-key]")) {
       const isRunning = card.dataset.executionKey === runningKey;
@@ -181,11 +181,15 @@
     setText(manual, queue.manual_cycles || 0);
     setText(continuations, queue.continuation_cycles || 0);
     setText(candidates, queue.scheduled_candidates || 0);
+    const processingEnabled = Boolean(status.processing_enabled);
+    const processingValue = document.querySelector("[data-processing-value]");
+    if (processingValue instanceof HTMLInputElement) processingValue.value = processingEnabled ? "false" : "true";
+    setText(document.querySelector("[data-processing-button]"), processingEnabled ? "Disable all processing" : "Enable all processing");
     const automaticEnabled = Boolean(status.automatic_processing_enabled);
-    setProcessingState(automaticEnabled ? "enabled" : "disabled", `Automatic processing: ${automaticEnabled ? "enabled" : "disabled"}`);
+    setProcessingState(processingEnabled && automaticEnabled ? "enabled" : "disabled", !processingEnabled ? (status.running ? "Pausing after current request" : "All processing: disabled") : `Automatic processing: ${automaticEnabled ? "enabled" : "disabled"}`);
     if (automaticValue instanceof HTMLInputElement) automaticValue.value = automaticEnabled ? "false" : "true";
     setText(automaticButton, automaticEnabled ? "Disable automatic processing" : "Enable automatic processing");
-    setText(windowState, !automaticEnabled
+    setText(windowState, !processingEnabled ? "All processing disabled · current request finishes · manual and automatic jobs remain queued" : !automaticEnabled
       ? `${status.window_open ? "Processing window open" : "Processing window closed"} · automatic processing disabled · manual requests remain available`
       : status.window_open
         ? (status.scheduled_ready ? "Processing window open · scheduled starts ready" : "Processing window open · model configuration incomplete")
@@ -245,7 +249,9 @@
       const nextRetryAt = processor.next_retry_at && new Date(processor.next_retry_at);
       let retryState = "No retry backlog";
       if (retrying) {
-        if (automaticRetrying && !automaticEnabled) {
+        if (!processingEnabled) {
+          retryState = `All ${retrying} retries are paused by the master switch${reasonSuffix}`;
+        } else if (automaticRetrying && !automaticEnabled) {
           retryState = `${automaticRetrying} automatic ${automaticRetrying === 1 ? "retry is" : "retries are"} paused because automatic processing is disabled${reasonSuffix}`;
         } else if (automaticRetrying && !status.window_open) {
           retryState = automaticRetryReady

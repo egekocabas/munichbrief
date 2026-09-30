@@ -58,6 +58,8 @@ func TestJSONGazetteerParsersRejectIncompleteOrTrailingPayloads(t *testing.T) {
 		{name: "official trailing garbage", parse: parseMunichDistricts, data: `{"features":[]} broken`},
 		{name: "OSM truncated object", parse: func(data []byte) ([]Entry, error) { return parseOSM("osm_transit", data) }, data: `{"elements":[]`},
 		{name: "OSM trailing value", parse: func(data []byte) ([]Entry, error) { return parseOSM("osm_transit", data) }, data: `{"elements":[]} []`},
+		{name: "OSM partial timeout", parse: func(data []byte) ([]Entry, error) { return parseOSM("osm_transit", data) }, data: `{"elements":[{"type":"node","id":42,"tags":{"name":"Example Station"}}],"remark":"runtime error: Query timed out"}`},
+		{name: "OSM memory error before rows", parse: func(data []byte) ([]Entry, error) { return parseOSM("osm_transit", data) }, data: `{"remark":"runtime error: out of memory","elements":[{"type":"node","id":42,"tags":{"name":"Example Station"}}]}`},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

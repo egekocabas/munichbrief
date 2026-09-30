@@ -131,6 +131,7 @@ type ProcessingRequester interface {
 	RequestPostProcessing(context.Context, processing.PostProcessingRequest) (int, error)
 	Status(context.Context) (processing.PipelineRuntimeStatus, error)
 	SetAutomaticProcessing(context.Context, bool) error
+	SetProcessingEnabled(context.Context, bool) error
 	CancelAll(context.Context) (store.PipelineCancellationResult, error)
 }
 
@@ -416,6 +417,7 @@ func (s *Server) Handler() http.Handler {
 		mux.HandleFunc("POST /api/admin/ai/translations/process", s.processTranslations)
 		mux.HandleFunc("POST /api/admin/ai/translations/preference", s.updateTranslationPreference)
 		mux.HandleFunc("POST /api/admin/ai/automatic-processing", s.updateAutomaticProcessing)
+		mux.HandleFunc("POST /api/admin/ai/processing", s.updateProcessingEnabled)
 		mux.HandleFunc("POST /api/admin/ai/cancel-all", s.cancelAllProcessing)
 	}
 	return s.requestLogger(s.accessBoundary(mux))
