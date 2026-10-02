@@ -40,6 +40,8 @@
         if (neighborhoods > 10 || neighborhoodBytes > 1000) return false;
         continue;
       }
+      // District names are catalog IDs; the server validates membership.
+      if (key === "district" && (/^(outside|unassigned)$/.test(value) || /^munich:district:[\p{L} -]{1,100}$/u.test(value))) continue;
       if (key === "period" && /^(today|week)$/.test(value)) continue;
       if (key === "page" && /^[1-9]\d{0,8}$/.test(value)) continue;
       if (key === "page_size" && /^(10|20|30|50)$/.test(value)) continue;

@@ -509,3 +509,129 @@ other = "Bu haber artık seçilen dilde mevcut değil. Genel iletişim sayfasın
 
 [CorrectionMessageLimit]
 other = "En fazla {{.MessageMaxLength}} karakter. Haberin bağlantısı ve dili otomatik olarak eklenir."
+
+[MapNav]
+other = "Harita ve istatistikler"
+
+[MapTitle]
+other = "Bültenlerle Münih."
+
+[MapIntro]
+other = "Arşivimizdeki bültenleri Münih’in 25 şehir bölgesinde keşfedin. Bir dönem seçin, dağılımı inceleyin ve sayıların arkasındaki bültenleri okuyun."
+
+[MapEarliest]
+other = "Arşivdeki en eski yayımlanma tarihi"
+
+[MapAllTime]
+other = "Mevcut tüm bültenler"
+
+[MapMonth]
+other = "Son 30 gün"
+
+[MapPreviousMonth]
+other = "Önceki takvim ayı"
+
+[MapCustom]
+other = "Özel tarih aralığı"
+
+[MapDistrict]
+other = "Şehir bölgesi"
+
+[MapAllDistricts]
+other = "Tüm bölgeler ve yerler"
+
+[MapOutside]
+other = "Münih şehir sınırları dışında"
+
+[MapUnassigned]
+other = "Bölgesi belirlenemeyen"
+
+[MapReset]
+other = "Filtreleri sıfırla"
+
+[MapDateNote]
+other = "Tarihler, Münih yerel saatine göre yayımlanma tarihini esas alır; başlangıç ve bitiş günleri dahildir. Son 7 veya 30 gün bugünü de kapsar. Tüm sayılar ve grafikler bu filtrelere göre hesaplanır; kayıtlı arama filtreleri burada uygulanmaz."
+
+[MapTotal]
+other = "Arşivdeki bültenler"
+
+[MapBasisShort]
+other = "Herkese açık Almanca özetler"
+
+[MapMapped]
+other = "Bir şehir bölgesine atanan"
+
+[MapDistrictCount]
+other = "25 resmî şehir bölgesi"
+
+[MapAvailable]
+other = "Okunabilir bültenler"
+
+[MapCoverageShort]
+other = "Şu anda yayımlanmış dil sürümleri"
+
+[MapCity]
+other = "Bir bakışta şehir"
+
+[MapDistricts]
+other = "Bölgelere göre bültenler"
+
+[MapInteraction]
+other = "Haritada veya aşağıdaki listede bir bölge seçin. Tüm yerleri yeniden göstermek için aynı bölgeyi tekrar seçin."
+
+[MapReportCount]
+other = "Bülten"
+
+[MapBoundaryNote]
+other = "Sınırlar sadeleştirilmiştir"
+
+[MapBehindNumbers]
+other = "Sayıların arkasında"
+
+[MapReadHeading]
+other = "Bu bültenleri keşfedin"
+
+[MapLanguageNote]
+other = "Sayılar herkese açık Almanca özetlere dayanır ve arayüz dili değiştiğinde aynı kalır. Yapay zekâ işlemleri ve çeviri kontrolleri, bir bültenin dilinizde yayımlanmasını geciktirebilir veya engelleyebilir. Her bağlantı yalnızca o dilde mevcut bültenleri gösterir."
+
+[MapReadGerman]
+other = "Almanca oku"
+
+[MapCurrentSelection]
+other = "Seçili filtrelerle"
+
+[MapTopDistricts]
+other = "En çok bülten bulunan bölgeler"
+
+[MapEmpty]
+other = "Bu seçime uygun bülten yok. Tarih aralığını genişletin veya filtreleri sıfırlayın."
+
+[MapCategories]
+other = "Kategorilere göre bültenler"
+
+[MapTrend]
+other = "Zamana göre yayımlanma"
+
+[MapTrendNote]
+other = "Her sütun, yayımlanma tarihlerini gruplar. Kesin tarih aralıklarını ve sayıları görmek için verileri açın. İlk ve son dönemler daha kısa olabilir ve daha az gün içerebilir."
+
+[MapViewData]
+other = "Tarihleri ve sayıları göster"
+
+[MapContext]
+other = "Sayıları anlamak"
+
+[MapMethod]
+other = "Bu harita ne anlatıyor?"
+
+[MapBasis]
+other = "Şu anda herkese açık olan her Almanca bülteni, güncel kategorisi ve konumuyla bir kez sayıyoruz. Takip bültenleri aynı olaya ilişkin olabilir. Arşivdeki en eski yayımlanma tarihi, sitenin bülten toplamaya başladığı tarih değildir."
+
+[MapCaution]
+other = "Bu sayfa, polis basın bültenlerinden bir seçkiyi gösterir; tüm olayların eksiksiz kaydı veya mahalle güvenliğinin bir ölçüsü değildir. Sayılar nüfusa, ziyaretçi sayısına veya bölge büyüklüğüne göre ağırlıklandırılmamıştır."
+
+[MapLocationNote]
+other = "Her bülten bir temsilî bölgeye atanır. İncelenmiş mahalle ilişkileri, bültenleri resmî şehir bölgeleriyle eşleştirir; geniş veya belirsiz yerler için bölge belirtilmez. Münih dışındaki yerler ve bölgesi belirlenemeyen bültenler toplama dahildir, ancak haritada bir bölge içinde gösterilemez. Yapay zekâyla belirlenen kategori ve konumlar hatalı olabilir."
+
+[MapAdvancedHelp]
+other = "Diğer filtreleri değiştirdiğinizde seçili şehir bölgesi etkin kalır. Bir bölge adı girmek veya kayıtlı mahalleleri uygulamak bu seçimin yerini alır."

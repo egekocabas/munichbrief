@@ -509,3 +509,129 @@ other = "Ovaj izvještaj više nije dostupan na odabranom jeziku. I dalje možet
 
 [CorrectionMessageLimit]
 other = "Do {{.MessageMaxLength}} znakova. Link i jezik izvještaja dodaju se automatski."
+
+[MapNav]
+other = "Karta i statistika"
+
+[MapTitle]
+other = "München kroz saopćenja."
+
+[MapIntro]
+other = "Istražite saopćenja iz naše arhive u 25 gradskih četvrti Münchena. Odaberite period, uočite obrasce i pročitajte saopćenja iza brojki."
+
+[MapEarliest]
+other = "Najranija objava u ovoj arhivi"
+
+[MapAllTime]
+other = "Sva dostupna saopćenja"
+
+[MapMonth]
+other = "Posljednjih 30 dana"
+
+[MapPreviousMonth]
+other = "Prethodni kalendarski mjesec"
+
+[MapCustom]
+other = "Prilagođeni datumi"
+
+[MapDistrict]
+other = "Gradska četvrt"
+
+[MapAllDistricts]
+other = "Sve četvrti i lokacije"
+
+[MapOutside]
+other = "Izvan grada Münchena"
+
+[MapUnassigned]
+other = "Četvrt nije određena"
+
+[MapReset]
+other = "Poništi filtere"
+
+[MapDateNote]
+other = "Datumi se zasnivaju na vremenu objave po lokalnom vremenu u Münchenu, uključujući početni i završni dan. Posljednjih 7 ili 30 dana uključuje današnji dan. Svi ukupni brojevi i grafikoni prate ove filtere; spremljeni filteri pretrage ovdje se ne primjenjuju."
+
+[MapTotal]
+other = "Saopćenja u arhivi"
+
+[MapBasisShort]
+other = "Javno dostupni njemački sažeci"
+
+[MapMapped]
+other = "Dodijeljena gradskoj četvrti"
+
+[MapDistrictCount]
+other = "25 službenih gradskih četvrti"
+
+[MapAvailable]
+other = "Dostupno za čitanje"
+
+[MapCoverageShort]
+other = "Trenutno objavljene jezičke verzije"
+
+[MapCity]
+other = "Grad na prvi pogled"
+
+[MapDistricts]
+other = "Saopćenja po četvrtima"
+
+[MapInteraction]
+other = "Odaberite četvrt na karti ili na spisku ispod nje. Ponovo je odaberite za prikaz svih lokacija."
+
+[MapReportCount]
+other = "Saopćenja"
+
+[MapBoundaryNote]
+other = "Pojednostavljene granice"
+
+[MapBehindNumbers]
+other = "Iza brojki"
+
+[MapReadHeading]
+other = "Istražite ova saopćenja"
+
+[MapLanguageNote]
+other = "Brojevi se zasnivaju na javno dostupnim njemačkim sažecima i ostaju jednaki bez obzira na jezik interfejsa. Obrada umjetnom inteligencijom i provjere prijevoda mogu odgoditi ili spriječiti objavu saopćenja na vašem jeziku. Svaki link prikazuje samo saopćenja dostupna na tom jeziku."
+
+[MapReadGerman]
+other = "Čitajte na njemačkom"
+
+[MapCurrentSelection]
+other = "Uz odabrane filtere"
+
+[MapTopDistricts]
+other = "Četvrti s najviše saopćenja"
+
+[MapEmpty]
+other = "Nijedno saopćenje ne odgovara ovom izboru. Proširite period ili poništite filtere."
+
+[MapCategories]
+other = "Saopćenja po kategorijama"
+
+[MapTrend]
+other = "Objave kroz vrijeme"
+
+[MapTrendNote]
+other = "Svaki stupac grupira datume objave. Otvorite podatke za tačne raspone i brojeve. Prvi i posljednji period mogu biti kraći i sadržavati manje dana."
+
+[MapViewData]
+other = "Prikaži datume i brojeve"
+
+[MapContext]
+other = "Kako čitati brojke"
+
+[MapMethod]
+other = "Šta vam ova karta govori"
+
+[MapBasis]
+other = "Svako trenutno javno dostupno njemačko saopćenje brojimo jednom, prema njegovoj trenutnoj kategoriji i lokaciji. Naknadna saopćenja mogu se odnositi na isti događaj. Najranija objava u arhivi nije datum kada je stranica počela prikupljati saopćenja."
+
+[MapCaution]
+other = "Ovo je izbor policijskih saopćenja za javnost, a ne potpuna evidencija događaja ili mjera sigurnosti četvrti. Brojevi nisu prilagođeni broju stanovnika, posjetilaca ni veličini četvrti."
+
+[MapLocationNote]
+other = "Svakom saopćenju dodjeljuje se jedno reprezentativno područje. Provjereni odnosi između naselja i službenih gradskih četvrti omogućavaju njihovo povezivanje; široke ili dvosmislene lokacije ostaju neodređene. Lokacije izvan Münchena i neodređene četvrti uključene su u ukupan broj, ali se ne mogu prikazati unutar četvrti na karti. Kategorije i lokacije koje određuje umjetna inteligencija mogu biti pogrešne."
+
+[MapAdvancedHelp]
+other = "Odabrana gradska četvrt ostaje aktivna kada mijenjate druge filtere. Unos područja ili primjena spremljenih četvrti zamjenjuje taj izbor."

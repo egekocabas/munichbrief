@@ -192,6 +192,7 @@ type Server struct {
 	location                       *time.Location
 	languages                      []readerLanguage
 	localization                   *localization
+	mapTemplate                    *template.Template
 	timelineTemplate               *template.Template
 	detailTemplate                 *template.Template
 	aboutTemplate                  *template.Template
@@ -283,6 +284,10 @@ func newWithLanguages(database incidentStore, logger *slog.Logger, options Optio
 		"tc":                         translations.Count,
 		"shownTotal":                 translations.ShownTotal,
 	}
+	mapView, err := template.New("layout").Funcs(functions).Parse(layoutTemplate + mapTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("parse map template: %w", err)
+	}
 	timeline, err := template.New("layout").Funcs(functions).Parse(layoutTemplate + timelineTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("parse timeline templates: %w", err)
@@ -356,7 +361,7 @@ func newWithLanguages(database incidentStore, logger *slog.Logger, options Optio
 	if err != nil {
 		return nil, fmt.Errorf("initialize social card renderer: %w", err)
 	}
-	return &Server{licensesTemplate: credits, licensesAdminTemplate: licenseAdmin, contactStore: contactDatabase, contactAvailable: contactDatabase != nil && options.AdminEnabled && len(options.ContactSecret) >= 32, contactLimits: make(map[string]contactRate), legalTemplate: legal, contactAdminTemplate: inbox, store: database, logger: logger, options: options, location: location, languages: definitions, localization: translations, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, contactTemplate: contact, adminTemplate: admin, adminHistoryTemplate: adminHistory, adminRSSHistoryTemplate: adminRSSHistory, adminGazetteerTemplate: adminGazetteer, adminTranslationsTemplate: adminTranslations, adminVerificationsTemplate: adminVerifications, socialCards: socialCards}, nil
+	return &Server{licensesTemplate: credits, licensesAdminTemplate: licenseAdmin, contactStore: contactDatabase, contactAvailable: contactDatabase != nil && options.AdminEnabled && len(options.ContactSecret) >= 32, contactLimits: make(map[string]contactRate), legalTemplate: legal, contactAdminTemplate: inbox, store: database, logger: logger, options: options, location: location, languages: definitions, localization: translations, mapTemplate: mapView, timelineTemplate: timeline, detailTemplate: detail, aboutTemplate: about, contactTemplate: contact, adminTemplate: admin, adminHistoryTemplate: adminHistory, adminRSSHistoryTemplate: adminRSSHistory, adminGazetteerTemplate: adminGazetteer, adminTranslationsTemplate: adminTranslations, adminVerificationsTemplate: adminVerifications, socialCards: socialCards}, nil
 }
 
 // Handler returns the complete public and optional review route tree.
@@ -370,6 +375,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /ai-disclosure/acknowledge", s.acknowledgeAIDisclosure)
 	for _, language := range s.languages {
 		mux.HandleFunc("GET /"+language.Code, s.timeline)
+		mux.HandleFunc("GET /"+language.Code+"/map", s.mapPage)
 		mux.HandleFunc("GET /"+language.Code+"/search", s.timeline)
 		mux.HandleFunc("POST /"+language.Code+"/search", s.submitSearch)
 		mux.HandleFunc("POST /"+language.Code+"/search/clear", s.submitSearch)

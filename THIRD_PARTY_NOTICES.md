@@ -481,6 +481,16 @@ AI-generated project illustration used in social images. It is not a third-party
 
 Place names extracted from street-name and Stadtbezirke WFS, filtered and normalized for an internal lookup. The original geometries and complete source datasets are not redistributed.
 
+## Landeshauptstadt München – GeodatenService — Stadtbezirke boundary snapshot, 2026-10-03
+
+- Source: [upstream](https://opendata.muenchen.de/dataset/vablock_stadtbezirke_opendata)
+- Licence: dl-de/by-2-0
+- Included in: repository, browser, binary, container
+- Reviewed: 2026-10-03
+- [dl-de-by-2-0](LICENSES/dl-de-by-2-0.txt)
+
+Official Munich district polygons, grouped by district number and simplified for a locally bundled SVG map. Coordinates are scaled from EPSG:25832; shared borders are simplified with a 10-metre tolerance. Modified boundaries are identified as simplified on the map. Preserve provider attribution, a link to the source dataset, and the dl-de/by-2-0 licence link. The lossless source snapshot is retained in the repository for reproducibility.
+
 ## GeoNames — DE.zip; live source
 
 - Source: [upstream](https://download.geonames.org/export/dump/DE.zip)

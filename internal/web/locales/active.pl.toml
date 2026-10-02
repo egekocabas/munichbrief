@@ -509,3 +509,129 @@ other = "Ta wiadomość nie jest już dostępna w wybranym języku. Nadal możes
 
 [CorrectionMessageLimit]
 other = "Do {{.MessageMaxLength}} znaków. Link i język wiadomości są dołączane automatycznie."
+
+[MapNav]
+other = "Mapa i statystyki"
+
+[MapTitle]
+other = "Monachium w doniesieniach."
+
+[MapIntro]
+other = "Przeglądaj doniesienia z naszego archiwum według 25 dzielnic Monachium. Wybierz okres, sprawdź rozkład i przeczytaj doniesienia kryjące się za liczbami."
+
+[MapEarliest]
+other = "Najwcześniejsza publikacja w archiwum"
+
+[MapAllTime]
+other = "Wszystkie dostępne"
+
+[MapMonth]
+other = "Ostatnie 30 dni"
+
+[MapPreviousMonth]
+other = "Poprzedni miesiąc kalendarzowy"
+
+[MapCustom]
+other = "Własny zakres dat"
+
+[MapDistrict]
+other = "Dzielnica miasta"
+
+[MapAllDistricts]
+other = "Wszystkie dzielnice i lokalizacje"
+
+[MapOutside]
+other = "Poza miastem Monachium"
+
+[MapUnassigned]
+other = "Dzielnica nieustalona"
+
+[MapReset]
+other = "Resetuj filtry"
+
+[MapDateNote]
+other = "Daty odnoszą się do czasu publikacji w Monachium i obejmują dzień początkowy oraz końcowy. Ostatnie 7 lub 30 dni obejmuje dziś. Wszystkie sumy i wykresy uwzględniają te filtry; zapisane filtry czytelnika nie mają tu zastosowania."
+
+[MapTotal]
+other = "Doniesienia w archiwum"
+
+[MapBasisShort]
+other = "Publiczne streszczenia po niemiecku"
+
+[MapMapped]
+other = "Przypisane do dzielnicy miasta"
+
+[MapDistrictCount]
+other = "25 oficjalnych dzielnic miasta"
+
+[MapAvailable]
+other = "Dostępne do przeczytania"
+
+[MapCoverageShort]
+other = "Obecnie opublikowane wersje językowe"
+
+[MapCity]
+other = "Miasto w skrócie"
+
+[MapDistricts]
+other = "Doniesienia według dzielnic"
+
+[MapInteraction]
+other = "Wybierz dzielnicę na mapie lub z listy poniżej. Wybierz ją ponownie, aby pokazać wszystkie lokalizacje."
+
+[MapReportCount]
+other = "Doniesienia"
+
+[MapBoundaryNote]
+other = "Uproszczone granice"
+
+[MapBehindNumbers]
+other = "Co kryje się za liczbami"
+
+[MapReadHeading]
+other = "Przeglądaj te doniesienia"
+
+[MapLanguageNote]
+other = "Liczby opierają się na publicznych streszczeniach w języku niemieckim i nie zmieniają się wraz z językiem interfejsu. Przetwarzanie przez AI i kontrole tłumaczeń mogą opóźnić lub uniemożliwić publikację doniesienia w Twoim języku. Każdy odnośnik pokazuje tylko doniesienia dostępne w danym języku."
+
+[MapReadGerman]
+other = "Czytaj po niemiecku"
+
+[MapCurrentSelection]
+other = "Z wybranymi filtrami"
+
+[MapTopDistricts]
+other = "Dzielnice z największą liczbą doniesień"
+
+[MapEmpty]
+other = "Żadne doniesienia nie pasują do tego wyboru. Rozszerz okres lub zresetuj filtry."
+
+[MapCategories]
+other = "Doniesienia według kategorii"
+
+[MapTrend]
+other = "Publikacje w czasie"
+
+[MapTrendNote]
+other = "Każdy słupek obejmuje zakres dat publikacji. Otwórz dane, aby zobaczyć dokładne zakresy i liczby. Pierwszy i ostatni okres mogą być krótsze i obejmować mniej dni."
+
+[MapViewData]
+other = "Zobacz daty i liczby"
+
+[MapContext]
+other = "Jak odczytywać liczby"
+
+[MapMethod]
+other = "Co pokazuje ta mapa"
+
+[MapBasis]
+other = "Każde obecnie publiczne doniesienie w języku niemieckim liczymy raz, według jego aktualnej kategorii i lokalizacji. Kolejne doniesienia mogą dotyczyć tego samego zdarzenia. Najwcześniejsza publikacja w archiwum nie wyznacza daty rozpoczęcia zbierania doniesień przez stronę."
+
+[MapCaution]
+other = "To wybór komunikatów prasowych policji, a nie pełny rejestr zdarzeń ani miara bezpieczeństwa dzielnic. Liczby nie są korygowane o liczbę mieszkańców, odwiedzających ani wielkość dzielnicy."
+
+[MapLocationNote]
+other = "Każde doniesienie jest przypisane do jednego reprezentatywnego obszaru. Zweryfikowane powiązania osiedli pozwalają przypisać je do oficjalnych dzielnic; rozległe lub niejednoznaczne miejsca pozostają nieustalone. Lokalizacje poza Monachium i nieustalone dzielnice są wliczane do sumy, ale nie pojawiają się wewnątrz dzielnicy na mapie. Kategorie i lokalizacje ustalone przez AI mogą być błędne."
+
+[MapAdvancedHelp]
+other = "Wybrana dzielnica pozostaje aktywna po zmianie innych filtrów. Wpisanie obszaru lub zastosowanie zapisanych osiedli zastępuje wybór dzielnicy."

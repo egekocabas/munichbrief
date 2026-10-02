@@ -1,0 +1,56 @@
+{{define "title"}}{{t .Lang "MapTitle"}} · MunichBrief{{end}}
+{{define "content"}}
+<article class="atlas">
+  <header class="atlas-heading">
+    <div><p class="atlas-eyebrow">{{t .Lang "MapNav"}} <span aria-hidden="true">/</span> München</p><h1>{{t .Lang "MapTitle"}}</h1><p class="atlas-intro">{{t .Lang "MapIntro"}}</p></div>
+    {{if .Earliest}}<p class="atlas-archive">{{t .Lang "MapEarliest"}}<strong>{{.Earliest}}</strong></p>{{end}}
+  </header>
+  <div class="atlas-controls" aria-label="{{t .Lang "SearchFilters"}}">
+    <nav class="atlas-periods" aria-label="{{t .Lang "PublishedDate"}}">{{range .Periods}}<a href="{{.URL}}#map-results" {{if .Selected}}aria-current="true"{{end}}>{{.Label}}</a>{{end}}</nav>
+    <form method="get" action="/{{.Lang}}/map" class="atlas-filter-form">
+      <input type="hidden" name="period" value="{{.Filters.Period}}">
+      <label><span>{{t .Lang "Category"}}</span><select name="category"><option value="">{{t .Lang "AllCategories"}}</option>{{range .Choices}}<option value="{{.Value}}" {{if eq $.Filters.Category .Value}}selected{{end}}>{{.Label}}</option>{{end}}</select></label>
+      <label><span>{{t .Lang "MapDistrict"}}</span><select name="district"><option value="">{{t .Lang "MapAllDistricts"}}</option>{{range .DistrictChoices}}<option value="{{.Value}}" {{if eq $.Filters.District .Value}}selected{{end}}>{{.Label}}</option>{{end}}</select></label>
+      <details class="atlas-date-range" {{if eq .Filters.Period "custom"}}open{{end}}><summary>{{t .Lang "MapCustom"}}</summary><div><label><span>{{t .Lang "DateFrom"}}</span><input type="date" name="from" value="{{.Filters.From}}"></label><label><span>{{t .Lang "DateTo"}}</span><input type="date" name="to" value="{{.Filters.To}}"></label></div></details>
+      <button class="reader-button" type="submit">{{t .Lang "ApplySearch"}}</button><a class="atlas-reset" href="{{.ClearURL}}">{{t .Lang "MapReset"}}</a>
+    </form>
+    <p class="atlas-fineprint">{{t .Lang "MapDateNote"}}</p>
+  </div>
+  <section id="map-results" class="atlas-results" aria-labelledby="atlas-scope">
+    <div class="atlas-scope"><h2 id="atlas-scope">{{.PeriodLabel}} <span aria-hidden="true">·</span> {{.DistrictLabel}}{{if .CategoryLabel}} <span aria-hidden="true">·</span> {{.CategoryLabel}}{{end}}</h2>{{if .Filters.District}}<a href="{{.AllDistrictsURL}}">{{t .Lang "MapAllDistricts"}} ↗</a>{{end}}</div>
+    <div class="atlas-metrics">
+      <div><span>{{t .Lang "MapTotal"}}</span><strong>{{.Stats.Total}}</strong><small>{{t .Lang "MapBasisShort"}}</small></div>
+      <div><span>{{t .Lang "MapMapped"}}</span><strong>{{.Stats.Mapped}}</strong><small>{{t .Lang "MapDistrictCount"}}</small></div>
+      <div><span>{{t .Lang "MapAvailable"}} · {{.LanguageName}}</span><strong>{{.Stats.Available}}<em> / {{.Stats.Total}}</em></strong><small>{{t .Lang "MapCoverageShort"}}</small></div>
+    </div>
+    <div class="atlas-grid">
+      <section class="atlas-map-card" aria-labelledby="atlas-map-title">
+        <div class="atlas-card-heading"><div><p class="atlas-eyebrow">{{t .Lang "MapCity"}}</p><h3 id="atlas-map-title">{{t .Lang "MapDistricts"}}</h3></div><span class="atlas-north" aria-hidden="true">↑<small>N</small></span></div>
+        <p class="atlas-map-help">{{t .Lang "MapInteraction"}}</p>
+        <svg class="atlas-map" viewBox="{{.ViewBox}}" role="group" aria-label="{{t .Lang "MapDistricts"}}">
+          {{range .Districts}}<a href="{{.URL}}" aria-label="{{.Name}}: {{tc $.Lang "Reports" .Total}}" {{if .Selected}}aria-current="true"{{end}} class="atlas-district atlas-level-{{.Level}}">
+            <title>{{.Number}} · {{.Name}}: {{tc $.Lang "Reports" .Total}}</title><path d="{{.Path}}" fill-rule="evenodd"/>
+          </a>{{end}}
+          {{range .Districts}}<text class="atlas-map-count" x="{{.X}}" y="{{.Y}}" aria-hidden="true">{{.Total}}</text>{{end}}
+        </svg>
+        <div class="atlas-legend"><span>0</span><span class="atlas-color-scale" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span><span>{{.Max}}</span><span>{{t .Lang "MapReportCount"}}</span></div>
+    <details class="atlas-district-table"><summary>{{t .Lang "MapAllDistricts"}} <span>25</span></summary><ul>{{range .Districts}}<li><a href="{{.URL}}" {{if .Selected}}aria-current="true"{{end}}><span class="atlas-district-number">{{.Number}}</span><span>{{.Name}}</span><strong>{{.Total}}</strong></a></li>{{end}}</ul></details>
+        <div class="atlas-unmapped"><a href="{{.OutsideURL}}"><span>{{t .Lang "MapOutside"}}</span><strong>{{.Stats.Outside}} ↗</strong></a><a href="{{.UnassignedURL}}"><span>{{t .Lang "MapUnassigned"}}</span><strong>{{.Stats.Unassigned}} ↗</strong></a></div>
+        <p class="atlas-attribution"><a href="{{.SourceURL}}" rel="noopener noreferrer" target="_blank">{{.Attribution}}</a> · <a href="{{.LicenseURL}}" rel="noopener noreferrer" target="_blank">dl-de/by-2-0</a> · {{t .Lang "MapBoundaryNote"}}</p>
+      </section>
+      <aside class="atlas-sidebar">
+        <section class="atlas-card atlas-read" aria-labelledby="atlas-read-heading"><p class="atlas-eyebrow">{{t .Lang "MapBehindNumbers"}}</p><h3 id="atlas-read-heading">{{t .Lang "MapReadHeading"}}</h3><p>{{t .Lang "MapLanguageNote"}}</p><a class="reader-button" href="{{.LanguageURL}}">{{.LanguageName}} <span>{{.Stats.Available}} ↗</span></a>{{if ne .Lang .CanonicalLanguageCode}}<a class="atlas-secondary-link" href="{{.GermanURL}}">{{t .Lang "MapReadGerman"}} <strong>{{.Stats.Total}} ↗</strong></a>{{end}}</section>
+        {{if .Stats.Mapped}}<section class="atlas-card" aria-labelledby="atlas-ranking-heading"><p class="atlas-eyebrow">{{t .Lang "MapCurrentSelection"}}</p><h3 id="atlas-ranking-heading">{{t .Lang "MapTopDistricts"}}</h3><ol class="atlas-ranking">{{range .Ranking}}<li><a href="{{.URL}}"><span>{{.Label}}</span><strong>{{.Total}}</strong><meter min="0" max="{{$.Max}}" value="{{.Total}}" aria-label="{{.Label}}">{{.Total}}</meter></a></li>{{else}}<li class="atlas-empty">{{t .Lang "MapEmpty"}}</li>{{end}}</ol></section>{{end}}
+      </aside>
+    </div>
+    <div class="atlas-chart-grid">
+      <section class="atlas-card" aria-labelledby="atlas-category-heading"><p class="atlas-eyebrow">{{t .Lang "MapCurrentSelection"}}</p><h3 id="atlas-category-heading">{{t .Lang "MapCategories"}}</h3><ol class="atlas-ranking">{{range .Categories}}<li><a href="{{.URL}}"><span>{{.Label}}</span><strong>{{.Total}}</strong><meter min="0" max="{{$.CategoryMax}}" value="{{.Total}}" aria-label="{{.Label}}">{{.Total}}</meter></a></li>{{else}}<li class="atlas-empty">{{t .Lang "MapEmpty"}}</li>{{end}}</ol></section>
+      <section class="atlas-card" aria-labelledby="atlas-trend-heading"><p class="atlas-eyebrow">{{t .Lang "PublishedDate"}}</p><h3 id="atlas-trend-heading">{{t .Lang "MapTrend"}}</h3><p class="atlas-fineprint">{{t .Lang "MapTrendNote"}}</p>
+        {{if .Trend}}<p class="atlas-trend-peak">{{tc .Lang "Reports" .TrendMax}}</p><div class="atlas-trend" aria-label="{{t .Lang "MapTrend"}}">{{range .Trend}}<a href="{{.URL}}" aria-label="{{.Label}}: {{tc $.Lang "Reports" .Total}}" title="{{.Label}}: {{.Total}}"><svg viewBox="0 0 10 100" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="10" height="{{.Width}}"/></svg><span class="sr-only">{{.Label}}: {{.Total}}</span></a>{{end}}</div><div class="atlas-trend-axis"><time>{{.TrendFrom}}</time><time>{{.TrendTo}}</time></div><details class="atlas-trend-table"><summary>{{t .Lang "MapViewData"}}</summary><ul>{{range .Trend}}<li><a href="{{.URL}}"><span>{{.Label}}</span><strong>{{.Total}}</strong></a></li>{{end}}</ul></details>{{else}}<p class="atlas-empty">{{t .Lang "MapEmpty"}}</p>{{end}}
+      </section>
+    </div>
+
+  </section>
+  <section class="atlas-method" aria-labelledby="atlas-method-heading"><div><p class="atlas-eyebrow">{{t .Lang "MapContext"}}</p><h2 id="atlas-method-heading">{{t .Lang "MapMethod"}}</h2>{{if .Stats.Total}}<div class="mt-4">{{template "ai-generated-label" .}}</div>{{end}}</div><div><p>{{t .Lang "MapBasis"}}</p><p>{{t .Lang "MapCaution"}}</p><p>{{t .Lang "MapLocationNote"}}</p><a href="{{.AboutURL}}">{{t .Lang "About"}} ↗</a></div></section>
+</article>
+{{end}}

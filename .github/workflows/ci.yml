@@ -43,6 +43,9 @@ jobs:
       - name: Check documentation links
         run: node scripts/check-docs.mjs
 
+      - name: Verify bundled Munich district boundaries
+        run: python3 scripts/generate-munich-map.py --check
+
       - name: Set up Go
         id: go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0

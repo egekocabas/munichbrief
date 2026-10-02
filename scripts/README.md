@@ -8,6 +8,9 @@ documentation. They are designed to run both locally and in CI:
 - `check-chart.sh` checks the opt-in public example render for required security
   and routing properties.
 - `check-docs.mjs` verifies local file and heading links in repository Markdown.
+- `generate-munich-map.py --check` verifies the bundled district SVG paths against
+  the committed official source snapshot. It uses Python's standard library;
+  see [boundary provenance](../docs/munich-map-boundaries.md) before refreshing.
 
 Keep checks deterministic and free of credentials. A failed assertion should
 name the file or rendered property that needs attention.

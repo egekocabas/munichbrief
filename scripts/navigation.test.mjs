@@ -51,7 +51,7 @@ function savedReturn(timeline, restore = false) {
   return new Map([[storageKey, JSON.stringify({incident, timeline, scrollY: 1840, restore})]]);
 }
 
-for (const timeline of ['/en', '/en?page=2', '/en/search?q=bike&area=Schwabing&page=2', '/en/search?neighborhood=Maxvorstadt&neighborhood=Schwabing&period=week&page=2&view=incident&page_size=10']) {
+for (const timeline of ['/en', '/en?page=2', '/en/search?q=bike&area=Schwabing&page=2', '/en/search?neighborhood=Maxvorstadt&neighborhood=Schwabing&period=week&page=2&view=incident&page_size=10', '/en/search?district=munich%3Adistrict%3Aramersdorf-perlach&page=2&category=traffic', '/en/search?district=munich%3Adistrict%3Athalkirchen-obersendling-forstenried-f%C3%BCrstenried-solln', '/en/search?district=munich%3Adistrict%3Aberg+am+laim', '/en/search?district=outside', '/en/search?district=unassigned']) {
   test(`browser Back restores the saved position after reloading ${timeline}`, () => {
     const storage = savedReturn(timeline);
     const detail = loadPage(incident, storage);
@@ -98,7 +98,7 @@ test('history without saved return state still reloads safely', () => {
 });
 
 test('invalid shortcut queries cannot restore a saved destination', () => {
-  for (const query of ['period=month', 'period=today&period=week', 'neighborhood=', 'neighborhood=%00', Array(11).fill('neighborhood=A').join('&'), 'neighborhood=' + 'A'.repeat(201)]) {
+  for (const query of ['period=month', 'period=today&period=week', 'neighborhood=', 'neighborhood=%00', Array(11).fill('neighborhood=A').join('&'), 'neighborhood=' + 'A'.repeat(201), 'district=', 'district=%00', 'district=outside&district=unassigned', 'district=municipality%3Agarching', 'district=munich%3Adistrict%3A%3Cscript%3E']) {
     const storage = savedReturn('/en/search?' + query, true);
     loadPage(incident, storage);
     assert.equal(JSON.parse(storage.get(storageKey)), null, query);

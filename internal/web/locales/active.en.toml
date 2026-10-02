@@ -938,3 +938,129 @@ other = "This report is no longer available in the selected language. You can st
 
 [CorrectionMessageLimit]
 other = "Up to {{.MessageMaxLength}} characters. The report link and language are attached automatically."
+
+[MapNav]
+other = "Map & statistics"
+
+[MapTitle]
+other = "Munich, in reports."
+
+[MapIntro]
+other = "Explore the reports in our archive across Munich’s 25 city districts. Choose a period, discover patterns, and read the stories behind the numbers."
+
+[MapEarliest]
+other = "Earliest publication in this archive"
+
+[MapAllTime]
+other = "All available"
+
+[MapMonth]
+other = "Last 30 days"
+
+[MapPreviousMonth]
+other = "Previous calendar month"
+
+[MapCustom]
+other = "Custom dates"
+
+[MapDistrict]
+other = "City district"
+
+[MapAllDistricts]
+other = "All districts & locations"
+
+[MapOutside]
+other = "Outside Munich city"
+
+[MapUnassigned]
+other = "District unspecified"
+
+[MapReset]
+other = "Reset filters"
+
+[MapDateNote]
+other = "Dates use publication time in Munich, including both end dates. The last 7 or 30 days include today. All totals and charts follow these filters; saved reader filters do not apply here."
+
+[MapTotal]
+other = "Reports in the archive"
+
+[MapBasisShort]
+other = "Public German summaries"
+
+[MapMapped]
+other = "Located in a city district"
+
+[MapDistrictCount]
+other = "25 official city districts"
+
+[MapAvailable]
+other = "Available to read"
+
+[MapCoverageShort]
+other = "Current published language versions"
+
+[MapCity]
+other = "The city at a glance"
+
+[MapDistricts]
+other = "Reports by district"
+
+[MapInteraction]
+other = "Select a district on the map or use the district list below. Select it again to show all locations."
+
+[MapReportCount]
+other = "Reports"
+
+[MapBoundaryNote]
+other = "Boundaries simplified"
+
+[MapBehindNumbers]
+other = "Behind the numbers"
+
+[MapReadHeading]
+other = "Explore these reports"
+
+[MapLanguageNote]
+other = "Counts use public German summaries and stay the same across interface languages. AI processing and translation checks can delay or prevent a report from appearing in your language. Each link shows only the reports available in that language."
+
+[MapReadGerman]
+other = "Read in German"
+
+[MapCurrentSelection]
+other = "With the selected filters"
+
+[MapTopDistricts]
+other = "Districts with most reports"
+
+[MapEmpty]
+other = "No reports match this selection. Broaden the period or reset the filters."
+
+[MapCategories]
+other = "Reports by category"
+
+[MapTrend]
+other = "Publication over time"
+
+[MapTrendNote]
+other = "Each bar groups publication dates. Open the data to see exact ranges and counts. Short first and last periods may contain fewer days."
+
+[MapViewData]
+other = "View dates and counts"
+
+[MapContext]
+other = "Reading the numbers"
+
+[MapMethod]
+other = "What this map tells you"
+
+[MapBasis]
+other = "We count each currently public German report once, using its current category and location. Follow-up reports may concern the same event. The earliest archive publication is not the date the site started collecting reports."
+
+[MapCaution]
+other = "This is a selection of police press reports, not a complete record of incidents or a measure of neighborhood safety. Counts are not adjusted for population, visitors, or district size."
+
+[MapLocationNote]
+other = "Reports are assigned to one representative area. Reviewed neighborhood relationships connect them to official districts; broad or ambiguous places remain unspecified. Locations outside Munich and unspecified districts are included in the total but cannot appear within a district on the map. AI-derived categories and locations can be wrong."
+
+[MapAdvancedHelp]
+other = "The selected district stays active when you change other filters. Entering an area or applying saved neighborhoods replaces it."

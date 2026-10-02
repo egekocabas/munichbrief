@@ -509,3 +509,129 @@ other = "该报道已无法以所选语言查看。您仍可使用通用联系�
 
 [CorrectionMessageLimit]
 other = "最多{{.MessageMaxLength}}个字符。报道链接和语言会自动附上。"
+
+[MapNav]
+other = "地图与统计"
+
+[MapTitle]
+other = "报道中的慕尼黑"
+
+[MapIntro]
+other = "按慕尼黑的25个行政区探索本站收录的报道。选择时间范围，了解分布，并阅读数字背后的报道。"
+
+[MapEarliest]
+other = "本站收录报道的最早发布日期"
+
+[MapAllTime]
+other = "全部已收录报道"
+
+[MapMonth]
+other = "过去30天"
+
+[MapPreviousMonth]
+other = "上一个自然月"
+
+[MapCustom]
+other = "自定义日期"
+
+[MapDistrict]
+other = "行政区"
+
+[MapAllDistricts]
+other = "所有行政区及地点"
+
+[MapOutside]
+other = "慕尼黑市外"
+
+[MapUnassigned]
+other = "行政区未确定"
+
+[MapReset]
+other = "重置筛选"
+
+[MapDateNote]
+other = "日期按慕尼黑当地发布时间计算，包含起止日期。过去7天或30天均包含今天。所有总数和图表遵循这些筛选条件；已保存的阅读筛选条件不适用于此页。"
+
+[MapTotal]
+other = "本站收录的报道"
+
+[MapBasisShort]
+other = "已公开的德语摘要"
+
+[MapMapped]
+other = "可归入行政区"
+
+[MapDistrictCount]
+other = "25个官方行政区"
+
+[MapAvailable]
+other = "可供阅读"
+
+[MapCoverageShort]
+other = "当前已发布的语言版本"
+
+[MapCity]
+other = "城市概览"
+
+[MapDistricts]
+other = "各行政区的报道"
+
+[MapInteraction]
+other = "在地图上选择行政区，或使用下方的行政区列表。再次选择该区可显示所有地点。"
+
+[MapReportCount]
+other = "报道数"
+
+[MapBoundaryNote]
+other = "边界已简化"
+
+[MapBehindNumbers]
+other = "数字背后"
+
+[MapReadHeading]
+other = "浏览这些报道"
+
+[MapLanguageNote]
+other = "统计以公开的德语摘要为依据，不随界面语言改变。人工智能处理和翻译审核可能导致报道延迟发布，或无法以您所选的语言发布。每个链接仅显示相应语言中可供阅读的报道。"
+
+[MapReadGerman]
+other = "阅读德语报道"
+
+[MapCurrentSelection]
+other = "当前筛选条件下"
+
+[MapTopDistricts]
+other = "报道最多的行政区"
+
+[MapEmpty]
+other = "没有符合这些条件的报道。请扩大时间范围或重置筛选。"
+
+[MapCategories]
+other = "各类别的报道"
+
+[MapTrend]
+other = "发布时间分布"
+
+[MapTrendNote]
+other = "每个柱形汇总一段发布日期范围。展开数据可查看确切日期范围及数量。首尾时段可能较短，包含的天数也可能较少。"
+
+[MapViewData]
+other = "查看日期和数量"
+
+[MapContext]
+other = "如何理解这些数字"
+
+[MapMethod]
+other = "这张地图展示什么"
+
+[MapBasis]
+other = "每篇当前公开的德语报道只计数一次，并采用其当前类别和地点。后续报道可能涉及同一事件。本站收录的最早发布日期不等于网站开始收集报道的日期。"
+
+[MapCaution]
+other = "这里展示的是部分警方新闻报道，并非所有事件的完整记录，也不能用于衡量街区安全程度。数量未按人口、访客量或行政区面积调整。"
+
+[MapLocationNote]
+other = "每篇报道归入一个代表性区域。已审核的街区隶属关系用于对应官方行政区；范围过大或有歧义的地点保留为未确定。慕尼黑市外及行政区未确定的报道计入总数，但不会显示在地图上的某个行政区内。人工智能识别的类别和地点可能有误。"
+
+[MapAdvancedHelp]
+other = "修改其他筛选条件时，所选行政区仍然有效。输入具体区域或应用已保存的街区会替代该行政区筛选。"

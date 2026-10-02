@@ -938,3 +938,129 @@ other = "Diese Meldung ist in der ausgewählten Sprache nicht mehr verfügbar. S
 
 [CorrectionMessageLimit]
 other = "Bis zu {{.MessageMaxLength}} Zeichen. Link und Sprache der Meldung werden automatisch hinzugefügt."
+
+[MapNav]
+other = "Karte & Statistik"
+
+[MapTitle]
+other = "München in Meldungen."
+
+[MapIntro]
+other = "Entdecken Sie die Meldungen aus unserem Archiv in Münchens 25 Stadtbezirken. Wählen Sie einen Zeitraum, erkennen Sie Zusammenhänge und lesen Sie die Meldungen hinter den Zahlen."
+
+[MapEarliest]
+other = "Früheste Veröffentlichung in diesem Archiv"
+
+[MapAllTime]
+other = "Alle verfügbaren Meldungen"
+
+[MapMonth]
+other = "Letzte 30 Tage"
+
+[MapPreviousMonth]
+other = "Vorheriger Kalendermonat"
+
+[MapCustom]
+other = "Eigener Zeitraum"
+
+[MapDistrict]
+other = "Stadtbezirk"
+
+[MapAllDistricts]
+other = "Alle Bezirke & Orte"
+
+[MapOutside]
+other = "Außerhalb der Stadt München"
+
+[MapUnassigned]
+other = "Stadtbezirk unbestimmt"
+
+[MapReset]
+other = "Filter zurücksetzen"
+
+[MapDateNote]
+other = "Maßgeblich ist das Veröffentlichungsdatum nach Münchner Ortszeit, einschließlich Anfangs- und Enddatum. Die letzten 7 oder 30 Tage schließen heute ein. Alle Zahlen und Diagramme berücksichtigen diese Filter; gespeicherte Suchfilter gelten hier nicht."
+
+[MapTotal]
+other = "Meldungen im Archiv"
+
+[MapBasisShort]
+other = "Öffentliche deutsche Zusammenfassungen"
+
+[MapMapped]
+other = "Einem Stadtbezirk zugeordnet"
+
+[MapDistrictCount]
+other = "25 offizielle Stadtbezirke"
+
+[MapAvailable]
+other = "Zum Lesen verfügbar"
+
+[MapCoverageShort]
+other = "Aktuell veröffentlichte Sprachfassungen"
+
+[MapCity]
+other = "Die Stadt im Überblick"
+
+[MapDistricts]
+other = "Meldungen nach Stadtbezirk"
+
+[MapInteraction]
+other = "Wählen Sie einen Stadtbezirk auf der Karte oder in der Liste darunter. Wählen Sie ihn erneut, um wieder alle Orte anzuzeigen."
+
+[MapReportCount]
+other = "Meldungen"
+
+[MapBoundaryNote]
+other = "Grenzen vereinfacht dargestellt"
+
+[MapBehindNumbers]
+other = "Hinter den Zahlen"
+
+[MapReadHeading]
+other = "Diese Meldungen entdecken"
+
+[MapLanguageNote]
+other = "Die Zahlen beruhen auf öffentlichen deutschen Zusammenfassungen und bleiben in allen Oberflächensprachen gleich. KI-Verarbeitung und Übersetzungsprüfungen können die Veröffentlichung in Ihrer Sprache verzögern oder verhindern. Jeder Link zeigt nur die in der jeweiligen Sprache verfügbaren Meldungen."
+
+[MapReadGerman]
+other = "Auf Deutsch lesen"
+
+[MapCurrentSelection]
+other = "Mit den gewählten Filtern"
+
+[MapTopDistricts]
+other = "Stadtbezirke mit den meisten Meldungen"
+
+[MapEmpty]
+other = "Keine Meldungen entsprechen dieser Auswahl. Erweitern Sie den Zeitraum oder setzen Sie die Filter zurück."
+
+[MapCategories]
+other = "Meldungen nach Kategorie"
+
+[MapTrend]
+other = "Veröffentlichungen im Zeitverlauf"
+
+[MapTrendNote]
+other = "Jeder Balken fasst Veröffentlichungsdaten zusammen. Öffnen Sie die Datenansicht für genaue Zeiträume und Zahlen. Der erste und letzte Zeitraum können kürzer sein und weniger Tage umfassen."
+
+[MapViewData]
+other = "Zeiträume und Zahlen anzeigen"
+
+[MapContext]
+other = "Die Zahlen einordnen"
+
+[MapMethod]
+other = "Was diese Karte aussagt"
+
+[MapBasis]
+other = "Jede aktuell öffentliche deutsche Meldung wird einmal gezählt, mit ihrer aktuellen Kategorie und Ortszuordnung. Folgemeldungen können dasselbe Ereignis betreffen. Die früheste Veröffentlichung im Archiv ist nicht das Datum, an dem die Website mit der Sammlung begonnen hat."
+
+[MapCaution]
+other = "Dies ist eine Auswahl von Pressemitteilungen der Polizei, keine vollständige Erfassung aller Vorfälle und kein Maß für die Sicherheit eines Stadtviertels. Die Zahlen sind nicht nach Bevölkerung, Besucherzahl oder Bezirksgröße gewichtet."
+
+[MapLocationNote]
+other = "Jeder Meldung wird ein repräsentatives Gebiet zugeordnet. Geprüfte Zuordnungen von Stadtvierteln verbinden diese mit offiziellen Stadtbezirken; weiträumige oder mehrdeutige Ortsangaben bleiben unbestimmt. Orte außerhalb Münchens und unbestimmte Stadtbezirke sind in der Gesamtzahl enthalten, erscheinen aber in keinem Bezirk auf der Karte. KI-basierte Kategorien und Ortszuordnungen können fehlerhaft sein."
+
+[MapAdvancedHelp]
+other = "Der gewählte Stadtbezirk bleibt aktiv, wenn Sie andere Filter ändern. Die Eingabe eines Gebiets oder das Anwenden gespeicherter Stadtviertel ersetzt ihn."

@@ -47,6 +47,18 @@ func TestLocationPublicationFallbackAndStaleContext(t *testing.T) {
 		if err := db.db.QueryRow(`SELECT area FROM reader_documents WHERE incident_id=? AND language='de'`, id).Scan(&area); err != nil || area != want {
 			t.Fatalf("reader projection %q: %v", area, err)
 		}
+		// Map totals and district report links must track the same retained
+		// verified result, including pending/unresolved replacements and source
+		// context invalidation. No assessment evidence is exposed publicly.
+		filters := ReaderFilters{District: location.DistrictGroup(want)}
+		stats, err := db.ReaderStats(ctx, ReaderStatsQuery{Language: "de", SourceMode: "fixture", Filters: filters})
+		if err != nil || stats.Total != 1 || stats.Available != 1 {
+			t.Fatalf("verified-location map group %q: %+v / %v", filters.District, stats, err)
+		}
+		list, err := db.ListReaderEntries(ctx, ReaderQuery{Language: "de", SourceMode: "fixture", Filters: filters, Limit: 20})
+		if err != nil || list.Total != stats.Total {
+			t.Fatalf("verified-location map/list mismatch: %+v / %v", list, err)
+		}
 	}
 	claim := func() PostProcessingJob {
 		t.Helper()
