@@ -18,9 +18,13 @@ translates them into 13 other languages with links back to the source.
 ## What it does
 
 - **Follow the reports:** search, filter, and browse by publication or incident date.
+- **Find your areas:** combine quick filters with advanced search and save a set
+  of neighborhoods on your device.
 - **Choose a language:** each translation publishes independently when ready.
 - **Keep the context:** source links, incident timing, and AI provenance travel
   with each report.
+- **Flag an error:** open the correction form directly from a report, with its
+  public link and reading language attached.
 
 ## How it works
 

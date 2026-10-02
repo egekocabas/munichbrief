@@ -149,7 +149,7 @@ TranslatePublishCopy = { other = "Le résumé allemand est publié dès qu’il 
 AccuracyOfficialInformation = { other = "Exactitude et informations officielles" }
 AccuracyOfficialInformationCopy = { other = "Les résumés générés par l’IA et les informations extraites peuvent contenir des erreurs. Les communiqués de police peuvent être mis à jour après leur publication. Les informations officielles les plus récentes restent la référence et la présomption d’innocence s’applique." }
 PrivacyDataHandling = { other = "Confidentialité et traitement des données" }
-PrivacyCopy = { other = "Aucun compte n’est nécessaire et il n’y a pas de publicité. Le navigateur mémorise la langue pendant un an, les avis sur l’IA fermés et les recherches appliquées pendant 30 jours. Les critères de recherche sont transmis dans un cookie du site. Le thème reste dans le navigateur jusqu’à sa suppression. L’ordre d’affichage choisi est conservé pendant 30 jours dans un cookie propre à ce site. Les filtres sélectionnés figurent dans l’adresse de la page pour permettre le partage de la recherche." }
+PrivacyCopy = { other = "Aucun compte n’est nécessaire et il n’y a pas de publicité. Le navigateur mémorise la langue pendant un an, les avis sur l’IA fermés et les recherches appliquées pendant 30 jours. Les critères de recherche sont transmis dans un cookie du site. Le thème reste dans le navigateur jusqu’à sa suppression. L’ordre d’affichage choisi est conservé pendant 30 jours dans un cookie propre à ce site. Les filtres sélectionnés figurent dans l’adresse de la page pour permettre le partage de la recherche. Les quartiers choisis sont enregistrés séparément dans un cookie interne HttpOnly pendant 30 jours ; enregistrer une sélection vide le supprime. Lorsqu’ils sont appliqués, leurs noms figurent dans les URL de recherche." }
 DataHandlingCopy = { other = "Les textes sources en allemand sont conservés pour le traitement et les vérifications à accès restreint. Les pages publiques présentent les résumés qui en sont tirés." }
 AboutIndependence = { other = "Indépendance" }
 AboutIndependenceCopy = { other = "MunichBrief est un projet indépendant. Il n’est affilié ni à la police bavaroise ni à aucune autre autorité publique et ne s’exprime pas en leur nom." }
@@ -321,13 +321,13 @@ other = "Le site, la base de données et tous les traitements d’IA fonctionnen
 other = "Cloudflare assure la diffusion et la protection du site et traite notamment les adresses IP. Il peut produire des statistiques sur son réseau. Web Analytics est configuré pour exclure les visiteurs de l’UE et insérer automatiquement un script de mesure ailleurs; les règles de sécurité du navigateur peuvent en empêcher l’exécution. Le traitement lié à la diffusion et à la sécurité reste distinct. Zaraz Consent Management et Google Tag Gateway sont inactifs. La diffusion et la protection répondent à notre intérêt légitime à sécuriser le site (art. 6(1)(f) RGPD). Les politiques des fournisseurs précisent les transferts internationaux."
 
 [PrivacyPreferencesCopy]
-other = "Les cookies internes conservent la langue un an, la confirmation de l’information sur l’IA 30 jours et la dernière recherche 30 jours dans un cookie HttpOnly. Effacer la recherche supprime ces critères. Le thème reste dans le stockage local jusqu’à sa suppression; la position de retour à la liste reste dans l’onglet. Les jetons du formulaire expirent après une heure au plus, les confirmations de réception après cinq minutes; ils ne contiennent aucun message. Ces fonctions servent le service demandé (§25(2)(2) TDDDG; art. 6(1)(f) RGPD). HTMX ne conserve pas de copies de pages dans localStorage. L’ordre d’affichage choisi est conservé pendant 30 jours dans un cookie propre à ce site. Les termes de recherche et les filtres figurent dans l’adresse de la page et peuvent rester dans les liens partagés et l’historique du navigateur."
+other = "Les cookies internes conservent la langue un an, la confirmation de l’information sur l’IA 30 jours et la dernière recherche 30 jours dans un cookie HttpOnly. Effacer la recherche supprime ces critères. Le thème reste dans le stockage local jusqu’à sa suppression; la position de retour à la liste reste dans l’onglet. Les jetons du formulaire expirent après une heure au plus, les confirmations de réception après cinq minutes; ils ne contiennent aucun message. Ces fonctions servent le service demandé (§25(2)(2) TDDDG; art. 6(1)(f) RGPD). HTMX ne conserve pas de copies de pages dans localStorage. L’ordre d’affichage choisi est conservé pendant 30 jours dans un cookie propre à ce site. Les termes de recherche et les filtres figurent dans l’adresse de la page et peuvent rester dans les liens partagés et l’historique du navigateur. Les quartiers choisis sont enregistrés séparément dans un cookie interne HttpOnly pendant 30 jours ; enregistrer une sélection vide le supprime. Lorsqu’ils sont appliqués, leurs noms figurent dans les URL de recherche."
 
 [PrivacyMonitoringCopy]
 other = "Les journaux techniques enregistrent méthode, chemin sans paramètres de recherche, statut, durée et identifiants des requêtes. Ils ne contiennent ni messages, ni adresses e-mail, ni cookies, ni IP des visiteurs. Prometheus et Loki sont configurés pour conserver leurs données 30 jours; Grafana sert à leur consultation interne. Pour limiter les tentatives de contact, nous conservons un compteur et un identifiant pseudonyme dérivé de l’IP uniquement dans la mémoire de l’application, sans enregistrer l’adresse IP d’origine. La limite s’applique pendant 15 minutes à partir de la première tentative. Les compteurs expirés sont supprimés à la prochaine tentative de contact ou au redémarrage de l’application ; sans nouvelle tentative, ils peuvent rester en mémoire plus longtemps. Ces mesures répondent à un intérêt légitime de sécurité et de fiabilité (art. 6(1)(f) RGPD). Cloudflare applique ses propres durées."
 
 [PrivacyCorrespondenceCopy]
-other = "Votre adresse e-mail, l’objet choisi et le message servent à traiter votre demande (art. 6(1)(f) RGPD), ou une obligation légale applicable (art. 6(1)(c)). Le formulaire enregistre d’abord le message dans une boîte privée de la base de données. SMTP2GO envoie une notification à contact@munichbrief.de, puis Cloudflare Email Routing la transmet à Gmail. Les réponses sont rédigées dans Apple Mail et envoyées par SMTP2GO. Aucun message ne passe par l’IA. Les politiques liées ci-dessous expliquent les traitements hors EEE."
+other = "Votre adresse e-mail, l’objet choisi et le message servent à traiter votre demande (art. 6(1)(f) RGPD), ou une obligation légale applicable (art. 6(1)(c)). Le formulaire enregistre d’abord le message dans une boîte privée de la base de données. SMTP2GO envoie une notification à contact@munichbrief.de, puis Cloudflare Email Routing la transmet à Gmail. Les réponses sont rédigées dans Apple Mail et envoyées par SMTP2GO. Aucun message ne passe par l’IA. Les politiques liées ci-dessous expliquent les traitements hors EEE. Lorsque vous signalez une erreur depuis la page d’un article, son lien et la langue de lecture sont automatiquement joints à votre message."
 
 [PrivacyRetentionCopy]
 other = "Les messages de la boîte administrateur sont supprimés 90 jours après la clôture de la demande. Sa réouverture annule ce délai. Les demandes ouvertes sont réexaminées et conservées tant que nécessaire. Un litige ou une obligation légale peut justifier une conservation avec motif et date de réexamen. Les copies Gmail et les réponses envoyées sont examinées et supprimées séparément. Les fournisseurs appliquent leurs propres durées aux données d’envoi."
@@ -354,7 +354,7 @@ other = "est responsable du site. Adresse indiquée ci-dessus. MunichBrief est i
 other = "Pour toute demande, consultez notre page Contact."
 
 [ContactStorage]
-other = "Votre message est enregistré dans une boîte de réception privée avant que nous confirmions sa réception. Les demandes marquées comme résolues y sont supprimées après 90 jours."
+other = "Votre message est enregistré dans une boîte de réception privée avant que nous confirmions sa réception. Les demandes marquées comme résolues y sont supprimées après 90 jours. Lorsque vous signalez une erreur depuis la page d’un article, son lien et la langue de lecture sont automatiquement joints à votre message."
 
 [ContactClosed]
 other = "Le formulaire de contact a été fermé. Votre message n’a pas été envoyé. Écrivez à contact@munichbrief.de."
@@ -458,3 +458,54 @@ other = "Variante du modèle"
 
 [LocationVerificationStep]
 other = "Vérification du lieu"
+
+[QuickFilters]
+other = "Filtres rapides"
+
+[QuickAllDates]
+other = "Toutes les dates"
+
+[QuickToday]
+other = "Aujourd’hui"
+
+[QuickWeek]
+other = "7 derniers jours"
+
+[MyNeighborhoods]
+other = "Mes quartiers"
+
+[EditNeighborhoods]
+other = "Modifier les quartiers"
+
+[ChooseNeighborhoods]
+other = "Choisir des quartiers"
+
+[NeighborhoodsHelp]
+other = "Choisissez jusqu’à 10 zones. Les articles de toutes les zones choisies sont inclus. La sélection est enregistrée sur cet appareil pendant 30 jours. L’enregistrement applique aussi la sélection. Effacer les filtres conserve vos quartiers enregistrés ; enregistrez une sélection vide pour les supprimer."
+
+[NeighborhoodsEmpty]
+other = "Aucun quartier disponible pour le moment."
+
+[SaveNeighborhoods]
+other = "Enregistrer les quartiers"
+
+[NeighborhoodsInvalid]
+other = "Choisissez au maximum 10 zones. Si leurs noms sont très longs, choisissez-en moins."
+
+[PublicationShortcut]
+other = "Publié durant"
+
+[AdvancedShortcutHelp]
+other = "Une zone précise remplace Mes quartiers. Les dates personnalisées remplacent le filtre rapide de publication. Les autres filtres restent actifs. Aujourd’hui et les 7 derniers jours suivent les dates de Munich, incluent aujourd’hui et évoluent chaque jour."
+
+[ReportError]
+other = "Signaler une erreur"
+
+[CorrectionReport]
+other = "Article joint"
+
+[CorrectionUnavailable]
+other = "Cet article n’est plus disponible dans la langue choisie. Vous pouvez toujours utiliser la page de contact générale."
+
+[CorrectionMessageLimit]
+other = "Jusqu’à {{.MessageMaxLength}} caractères. Le lien et la langue de l’article sont joints automatiquement."

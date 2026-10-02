@@ -53,3 +53,6 @@ not retained in those snapshots.
 
 Use the [contact page](https://munichbrief.de/en/contact) for operational issues
 or content corrections, and [SECURITY.md](../SECURITY.md) for vulnerabilities.
+Each published report also links to a correction form with its public URL and
+reading language attached. The reference is included in the private enquiry;
+no retained original text is copied into it.

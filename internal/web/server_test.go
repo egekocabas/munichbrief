@@ -18,6 +18,7 @@ import (
 
 type testPresentation struct {
 	TitleDE, SummaryDE, TitleEN, SummaryEN string
+	AreaName                               string
 }
 
 type testPresentationJob struct {
@@ -58,6 +59,9 @@ func seedV2Presentation(t *testing.T, database *store.Store, presentation testPr
 		t.Fatalf("claim test metadata = %#v/%t/%v", metadata, found, err)
 	}
 	metadataValues := []store.PipelineValue{{Kind: "category", Value: "other"}, {Kind: "report_kind", Value: "incident"}, {Kind: "public_assistance_status", Value: "not_requested"}, {Kind: "public_assistance_types", Value: "[]"}}
+	if presentation.AreaName != "" {
+		metadataValues = append(metadataValues, store.PipelineValue{Kind: "area_name", Value: presentation.AreaName}, store.PipelineValue{Kind: "area_type", Value: "district"})
+	}
 	if err := database.CompletePipelineJob(ctx, metadata, metadataValues, metadata.ModelIdentity, store.HashPipelineInput("metadata", metadata.SourceHash), now); err != nil {
 		t.Fatal(err)
 	}

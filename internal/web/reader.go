@@ -3,9 +3,11 @@ package web
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -14,6 +16,7 @@ import (
 )
 
 const searchCookieName = "munichbrief_search"
+const neighborhoodsCookieName = "munichbrief_neighborhoods"
 const searchLifetime = 30 * 24 * time.Hour
 
 const timelineCookieName = "munichbrief_timeline"
@@ -62,7 +65,7 @@ type readerField struct{ Key, Value string }
 
 const maxReaderQueryBytes = 8192
 
-var readerFilterKeys = []string{"q", "area", "category", "number", "assistance", "date_field", "from", "to"}
+var readerFilterKeys = []string{"q", "area", "neighborhood", "period", "category", "number", "assistance", "date_field", "from", "to"}
 
 // URL filters replace the complete saved search, never merge with it.
 func readerURLFilters(r *http.Request) (store.ReaderFilters, bool, error) {
@@ -75,7 +78,7 @@ func readerURLFilters(r *http.Request) (store.ReaderFilters, bool, error) {
 	}
 	explicit := strings.HasSuffix(r.URL.Path, "/search")
 	for _, key := range append([]string{"page", "page_size", "view"}, readerFilterKeys...) {
-		if len(values[key]) > 1 {
+		if key != "neighborhood" && len(values[key]) > 1 {
 			return store.ReaderFilters{}, false, fmt.Errorf("repeated query parameter")
 		}
 	}
@@ -89,7 +92,38 @@ func readerURLFilters(r *http.Request) (store.ReaderFilters, bool, error) {
 }
 
 func readerFiltersFromValues(values url.Values) (store.ReaderFilters, error) {
-	f := store.ReaderFilters{Text: strings.TrimSpace(values.Get("q")), Area: strings.TrimSpace(values.Get("area")), Category: values.Get("category"), Number: strings.TrimSpace(values.Get("number")), Assistance: values.Get("assistance"), DateField: values.Get("date_field"), From: values.Get("from"), To: values.Get("to")}
+	f := store.ReaderFilters{Text: strings.TrimSpace(values.Get("q")), Area: strings.TrimSpace(values.Get("area")), Period: values.Get("period"), Category: values.Get("category"), Number: strings.TrimSpace(values.Get("number")), Assistance: values.Get("assistance"), DateField: values.Get("date_field"), From: values.Get("from"), To: values.Get("to")}
+	// Validate the complete input before normalizing controls overridden by the
+	// advanced form. Only neighborhoods are allowed to repeat.
+	for _, key := range readerFilterKeys {
+		if key != "neighborhood" && len(values[key]) > 1 {
+			return f, fmt.Errorf("repeated search control")
+		}
+	}
+	if len(values["neighborhood"]) > 10 {
+		return f, fmt.Errorf("too many neighborhoods")
+	}
+	if f.DateField != "" && f.DateField != "published" && f.DateField != "incident" {
+		return f, fmt.Errorf("invalid date field")
+	}
+	for _, area := range values["neighborhood"] {
+		f.Areas = append(f.Areas, strings.TrimSpace(area))
+	}
+	if err := (store.ReaderFilters{Areas: f.Areas, Period: f.Period}).Validate(); err != nil {
+		return f, err
+	}
+	slices.Sort(f.Areas)
+	f.Areas = slices.Compact(f.Areas)
+	// An explicit area or custom date range in advanced search replaces the
+	// corresponding shortcut; all other advanced criteria remain untouched.
+	if f.Area != "" {
+		f.Areas = nil
+	}
+	if f.From != "" || f.To != "" {
+		f.Period = ""
+	} else if f.Period != "" {
+		f.DateField = ""
+	}
 	if err := f.Validate(); err != nil {
 		return store.ReaderFilters{}, err
 	}
@@ -102,16 +136,23 @@ func readerFiltersFromValues(values url.Values) (store.ReaderFilters, error) {
 
 func readerFilterValues(f store.ReaderFilters) url.Values {
 	values := url.Values{}
-	for key, value := range map[string]string{"q": f.Text, "area": f.Area, "category": f.Category, "number": f.Number, "assistance": f.Assistance, "date_field": f.DateField, "from": f.From, "to": f.To} {
+	for key, value := range map[string]string{"q": f.Text, "area": f.Area, "period": f.Period, "category": f.Category, "number": f.Number, "assistance": f.Assistance, "date_field": f.DateField, "from": f.From, "to": f.To} {
 		if value != "" && !(key == "date_field" && (value == "published" || (f.From == "" && f.To == ""))) {
 			values.Set(key, value)
 		}
+	}
+	for _, area := range f.Areas {
+		values.Add("neighborhood", area)
 	}
 	return values
 }
 
 func readSearch(r *http.Request) store.ReaderFilters {
-	c, err := r.Cookie(searchCookieName)
+	return readReaderPreferences(r, searchCookieName)
+}
+
+func readReaderPreferences(r *http.Request, name string) store.ReaderFilters {
+	c, err := r.Cookie(name)
 	if err != nil || len(c.Value) > 3800 {
 		return store.ReaderFilters{}
 	}
@@ -127,6 +168,10 @@ func readSearch(r *http.Request) store.ReaderFilters {
 	return filters
 }
 func (s *Server) writeSearch(w http.ResponseWriter, f store.ReaderFilters) error {
+	return s.writeReaderPreferences(w, searchCookieName, f)
+}
+
+func (s *Server) writeReaderPreferences(w http.ResponseWriter, name string, f store.ReaderFilters) error {
 	expires := time.Now().Add(searchLifetime)
 	var data strings.Builder
 	encoder := json.NewEncoder(&data)
@@ -140,7 +185,7 @@ func (s *Server) writeSearch(w http.ResponseWriter, f store.ReaderFilters) error
 	if len(value) > 3800 {
 		return fmt.Errorf("search preferences too large")
 	}
-	cookie := &http.Cookie{Name: searchCookieName, Value: value, Path: "/", MaxAge: int(searchLifetime.Seconds()), Expires: expires, HttpOnly: true, Secure: s.options.SecureCookies, SameSite: http.SameSiteLaxMode}
+	cookie := &http.Cookie{Name: name, Value: value, Path: "/", MaxAge: int(searchLifetime.Seconds()), Expires: expires, HttpOnly: true, Secure: s.options.SecureCookies, SameSite: http.SameSiteLaxMode}
 	if !f.Active() {
 		cookie.Value = ""
 		cookie.MaxAge = -1
@@ -229,6 +274,42 @@ func (s *Server) submitSearch(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, s.localization.Text(language, "SearchInvalid"), http.StatusBadRequest)
 		return
 	}
+	var savedAreas *store.ReaderFilters
+	anchor := "#timeline-heading"
+	if action := r.PostForm.Get("neighborhoods_action"); action != "" {
+		f = urlFilters
+		if !explicit {
+			f = readSearch(r)
+		}
+		switch action {
+		case "save":
+			selection, e := readerFiltersFromValues(url.Values{"neighborhood": r.PostForm["saved_neighborhood"]})
+			if e != nil {
+				http.Error(w, s.localization.Text(language, "NeighborhoodsInvalid"), http.StatusBadRequest)
+				return
+			}
+			savedAreas = &selection
+			f.Areas = selection.Areas
+			if len(f.Areas) > 0 {
+				f.Area = ""
+			}
+		case "enable":
+			selection := readReaderPreferences(r, neighborhoodsCookieName).Areas
+			if len(selection) == 0 {
+				// A tab can outlive its preference cookie. Keep its current search
+				// and return to the chooser instead of failing or clearing areas.
+				anchor = "#reader-neighborhoods"
+				break
+			}
+			f.Areas = selection
+			f.Area = ""
+		case "disable":
+			f.Areas = nil
+		default:
+			http.Error(w, s.localization.Text(language, "SearchInvalid"), http.StatusBadRequest)
+			return
+		}
+	}
 	if strings.HasSuffix(r.URL.Path, "/clear") {
 		f = store.ReaderFilters{}
 	}
@@ -242,6 +323,8 @@ func (s *Server) submitSearch(w http.ResponseWriter, r *http.Request) {
 			f.Text = ""
 		case "area":
 			f.Area = ""
+		case "neighborhoods":
+			f.Areas = nil
 		case "category":
 			f.Category = ""
 		case "number":
@@ -249,6 +332,7 @@ func (s *Server) submitSearch(w http.ResponseWriter, r *http.Request) {
 		case "assistance":
 			f.Assistance = ""
 		case "dates":
+			f.Period = ""
 			f.From = ""
 			f.To = ""
 			f.DateField = ""
@@ -270,8 +354,14 @@ func (s *Server) submitSearch(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, s.localization.Text(language, "SearchInvalid"), http.StatusBadRequest)
 		return
 	}
+	if savedAreas != nil {
+		if err := s.writeReaderPreferences(w, neighborhoodsCookieName, *savedAreas); err != nil {
+			http.Error(w, s.localization.Text(language, "NeighborhoodsInvalid"), http.StatusBadRequest)
+			return
+		}
+	}
 	w.Header().Set("Cache-Control", "private, no-store")
-	http.Redirect(w, r, listingURL(language, f, view, size, 1)+"#timeline-heading", http.StatusSeeOther)
+	http.Redirect(w, r, listingURL(language, f, view, size, 1)+anchor, http.StatusSeeOther)
 }
 func validReaderMutation(r *http.Request) bool {
 	if strings.EqualFold(r.Header.Get("Sec-Fetch-Site"), "cross-site") {
@@ -331,11 +421,11 @@ func (s *Server) decorateReader(data *timelinePage, language string, search bool
 	data.ListURL = listingURL(language, f, view, size, data.Page)
 	data.FormURL = listingURL(language, f, view, size, 1)
 	if !f.Active() {
-		data.FormURL = "/" + language + "/search"
+		data.FormURL = strings.TrimSuffix(readerActionURL(language, f, view, size), "#timeline-heading")
 	}
 	filterValues := readerFilterValues(f)
 	for _, key := range readerFilterKeys {
-		if value := filterValues.Get(key); value != "" {
+		for _, value := range filterValues[key] {
 			data.FilterFields = append(data.FilterFields, readerField{key, value})
 		}
 	}
@@ -365,6 +455,7 @@ func (s *Server) decorateReader(data *timelinePage, language string, search bool
 	}
 	add("q", "SearchText", f.Text)
 	add("area", "Area", f.Area)
+	add("neighborhoods", "Area", strings.Join(f.Areas, ", "))
 	add("category", "Category", s.metadataCodeLabel(language, "Category", f.Category))
 	add("number", "Report", f.Number)
 	if f.Assistance != "" {
@@ -374,7 +465,13 @@ func (s *Server) decorateReader(data *timelinePage, language string, search bool
 		}
 		add("assistance", "PublicAssistance", s.localization.Text(language, label))
 	}
-	if f.From != "" || f.To != "" {
+	if f.Period != "" {
+		label := "QuickToday"
+		if f.Period == "week" {
+			label = "QuickWeek"
+		}
+		add("dates", "PublishedDate", s.localization.Text(language, label))
+	} else if f.From != "" || f.To != "" {
 		label := "PublishedDate"
 		if f.DateField == "incident" {
 			label = "IncidentDate"
@@ -383,6 +480,58 @@ func (s *Server) decorateReader(data *timelinePage, language string, search bool
 	}
 	for n := range data.LanguageSwitches {
 		data.LanguageSwitches[n].URL = listingURL(data.LanguageSwitches[n].Code, f, view, size, 1)
+	}
+	quick := func(next store.ReaderFilters) string {
+		return readerActionURL(language, next, view, size)
+	}
+	next := f
+	next.From, next.To, next.DateField, next.Period = "", "", "", ""
+	data.AllDatesURL = quick(next)
+	next.Period = "today"
+	data.TodayURL = quick(next)
+	next.Period = "week"
+	data.WeekURL = quick(next)
+	next = f
+	if next.Assistance == "yes" {
+		next.Assistance = ""
+	} else {
+		next.Assistance = "yes"
+	}
+	data.AssistanceURL = quick(next)
+}
+
+// An empty /search URL explicitly clears this filter state instead of restoring
+// another tab's remembered search when following a shortcut.
+func readerActionURL(language string, f store.ReaderFilters, view string, size int) string {
+	path := listingURL(language, f, view, size, 1)
+	if !f.Active() {
+		path = strings.Replace(path, "/"+language, "/"+language+"/search", 1)
+	}
+	return path + "#timeline-heading"
+}
+
+func (s *Server) decorateNeighborhoods(data *timelinePage, r *http.Request) {
+	saved := readReaderPreferences(r, neighborhoodsCookieName).Areas
+	data.NeighborhoodsSaved = len(saved) > 0
+	data.NeighborhoodsActive = len(saved) > 0 && slices.Equal(saved, data.Filters.Areas)
+	// Keep a saved area editable even when it currently has no reports in this
+	// language. Names are always escaped; queries match them literally.
+	areas := append(slices.Clone(data.Areas), saved...)
+	areas = append(areas, data.Filters.Areas...)
+	slices.Sort(areas)
+	for _, area := range slices.Compact(areas) {
+		data.Neighborhoods = append(data.Neighborhoods, neighborhoodChoice{Name: area, Selected: slices.Contains(saved, area)})
+	}
+	for g := range data.Groups {
+		for n := range data.Groups[g].Incidents {
+			incident := &data.Groups[g].Incidents[n]
+			f := data.Filters
+			f.Area, f.Areas = incident.AreaName, nil
+			incident.AreaURL = readerActionURL(data.Lang, f, data.View, data.PageSize)
+			f = data.Filters
+			f.Category = incident.Record.AICategory
+			incident.CategoryURL = readerActionURL(data.Lang, f, data.View, data.PageSize)
+		}
 	}
 }
 
@@ -399,10 +548,27 @@ func readerTitle(title, number string) string {
 	return title
 }
 func (s *Server) contact(w http.ResponseWriter, r *http.Request) {
+	data := contactPage{ReportID: r.URL.Query().Get("incident"), ReportLanguage: r.URL.Query().Get("report_language")}
+	if len(r.URL.RawQuery) > maxReaderQueryBytes || len(r.URL.Query()["incident"]) > 1 || len(r.URL.Query()["report_language"]) > 1 {
+		http.Error(w, "invalid report reference", http.StatusBadRequest)
+		return
+	}
+	if err := s.contactReport(r, &data); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			http.NotFound(w, r)
+		} else {
+			s.internalError(w, r, "get correction report", err)
+		}
+		return
+	}
+	if data.ReportID != "" {
+		data.Topic = "correction"
+	}
 	received := false
 	if c, err := r.Cookie("munichbrief_contact_received"); err == nil {
 		received = s.validContactToken(c.Value, time.Now())
 		http.SetCookie(w, &http.Cookie{Name: "munichbrief_contact_received", Value: "", Path: "/", MaxAge: -1, HttpOnly: true, Secure: s.options.SecureCookies, SameSite: http.SameSiteLaxMode})
 	}
-	s.renderContact(w, r, contactPage{Received: received}, http.StatusOK)
+	data.Received = received
+	s.renderContact(w, r, data, http.StatusOK)
 }

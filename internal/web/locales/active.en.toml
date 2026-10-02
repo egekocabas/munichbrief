@@ -494,7 +494,7 @@ other = "AI-generated summaries and extracted details may contain errors. Police
 other = "Privacy and data handling"
 
 [PrivacyCopy]
-other = "No account is needed and there is no advertising. This browser remembers your language for one year, dismissed AI notices for 30 days, and applied searches for 30 days. Search criteria are sent in a first-party cookie. The colour theme stays in browser storage until removed. Your preferred timeline order is remembered for 30 days in a first-party cookie. Search links contain the selected filters and can be shared."
+other = "No account is needed and there is no advertising. This browser remembers your language for one year, dismissed AI notices for 30 days, and applied searches for 30 days. Search criteria are sent in a first-party cookie. The colour theme stays in browser storage until removed. Your preferred timeline order is remembered for 30 days in a first-party cookie. Search links contain the selected filters and can be shared. Your chosen neighborhoods are saved separately in a first-party HttpOnly cookie for 30 days; saving an empty selection deletes it. When applied, neighborhood names appear in search URLs."
 
 [DataHandlingCopy]
 other = "German source text is retained for processing and restricted review. Public pages show the resulting summaries."
@@ -750,13 +750,13 @@ other = "The website, database and all AI processing run on the operator’s own
 other = "Cloudflare delivers and protects the site, processing connection information including IP addresses. It can produce traffic statistics at its network edge. Cloudflare Web Analytics is configured to exclude EU visitors and automatically insert a performance-measurement script elsewhere. Browser security restrictions may prevent that script from running. This is separate from Cloudflare’s delivery and security processing. Zaraz consent management and Google Tag Gateway are inactive. Delivery and protection serve our legitimate interest in operating a secure website (Article 6(1)(f) GDPR). Provider policies linked below explain their processing and international transfers."
 
 [PrivacyPreferencesCopy]
-other = "We remember your language for one year and acknowledgement of the AI notice for 30 days in first-party cookies. The latest applied search is saved in an HttpOnly cookie for 30 days; clearing it removes those criteria. Your theme stays in local browser storage until cleared. Return-to-list position uses storage for the current browser tab. Contact security tokens expire within one hour and receipt confirmations within five minutes; neither contains your message. These preferences and security functions support the service you request (§25(2)(2) TDDDG; Article 6(1)(f) GDPR). HTMX does not save page snapshots in localStorage. Your preferred timeline order is remembered for 30 days in a first-party cookie. Search terms and filters appear in the page URL and may be retained in shared links and browser history."
+other = "We remember your language for one year and acknowledgement of the AI notice for 30 days in first-party cookies. The latest applied search is saved in an HttpOnly cookie for 30 days; clearing it removes those criteria. Your theme stays in local browser storage until cleared. Return-to-list position uses storage for the current browser tab. Contact security tokens expire within one hour and receipt confirmations within five minutes; neither contains your message. These preferences and security functions support the service you request (§25(2)(2) TDDDG; Article 6(1)(f) GDPR). HTMX does not save page snapshots in localStorage. Your preferred timeline order is remembered for 30 days in a first-party cookie. Search terms and filters appear in the page URL and may be retained in shared links and browser history. Your chosen neighborhoods are saved separately in a first-party HttpOnly cookie for 30 days; saving an empty selection deletes it. When applied, neighborhood names appear in search URLs."
 
 [PrivacyMonitoringCopy]
 other = "To operate the site reliably, technical logs record request method, path without query parameters, status, duration and request identifiers. Application logs do not record message contents, email addresses, cookies or visitor IP addresses. Prometheus metrics and Loki logs are configured for 30-day retention; Grafana displays this internal monitoring. To limit contact attempts, we keep a counter and an IP-derived pseudonymous identifier only in application memory, without saving the original IP address. The limit applies for 15 minutes from the first attempt. Expired counters are removed at the next contact attempt or when the application restarts; they can remain in memory longer if no further attempt occurs. These measures serve security and reliability (Article 6(1)(f) GDPR). Cloudflare’s own retention is separate."
 
 [PrivacyCorrespondenceCopy]
-other = "When you contact us, we process your email address, chosen topic and message to answer your enquiry (Article 6(1)(f) GDPR), or to meet a legal obligation where applicable (Article 6(1)(c)). The form first saves your message in a private database inbox. SMTP2GO sends a notification to contact@munichbrief.de; Cloudflare Email Routing forwards it to a Gmail mailbox. Replies are written in Apple Mail and sent through SMTP2GO. No message is sent to an AI service. The linked provider policies describe their data handling, including processing outside the EEA."
+other = "When you contact us, we process your email address, chosen topic and message to answer your enquiry (Article 6(1)(f) GDPR), or to meet a legal obligation where applicable (Article 6(1)(c)). The form first saves your message in a private database inbox. SMTP2GO sends a notification to contact@munichbrief.de; Cloudflare Email Routing forwards it to a Gmail mailbox. Replies are written in Apple Mail and sent through SMTP2GO. No message is sent to an AI service. The linked provider policies describe their data handling, including processing outside the EEA. When reporting an error from a report page, its link and reading language are attached to your message automatically."
 
 [PrivacyRetentionCopy]
 other = "Admin inbox messages are deleted automatically 90 days after the enquiry is marked resolved. Reopening it cancels that deadline. Unresolved enquiries are reviewed and retained while needed. Correspondence needed for an ongoing dispute or legal obligation may be held with a recorded reason and review date. Gmail copies and sent replies are reviewed and deleted separately. Delivery-provider records follow their own retention policies, not the inbox’s 90-day period."
@@ -783,7 +783,7 @@ other = "is responsible for the website. Address as above. MunichBrief is indepe
 other = "For enquiries, visit our Contact page."
 
 [ContactStorage]
-other = "Your message is saved in a private inbox before we confirm receipt. Resolved messages are deleted from that inbox after 90 days."
+other = "Your message is saved in a private inbox before we confirm receipt. Resolved messages are deleted from that inbox after 90 days. When reporting an error from a report page, its link and reading language are attached to your message automatically."
 
 [ContactClosed]
 other = "The contact form has been closed. Your message was not sent. Please email contact@munichbrief.de instead."
@@ -887,3 +887,54 @@ other = "Model variant"
 
 [LocationVerificationStep]
 other = "Location verification"
+
+[QuickFilters]
+other = "Quick filters"
+
+[QuickAllDates]
+other = "All dates"
+
+[QuickToday]
+other = "Today"
+
+[QuickWeek]
+other = "Last 7 days"
+
+[MyNeighborhoods]
+other = "My neighborhoods"
+
+[EditNeighborhoods]
+other = "Edit neighborhoods"
+
+[ChooseNeighborhoods]
+other = "Choose neighborhoods"
+
+[NeighborhoodsHelp]
+other = "Choose up to 10 areas. Reports from any selected area are included. Saved on this device for 30 days. Saving also applies this selection. Clearing search filters keeps your saved neighborhoods; save an empty selection to delete them."
+
+[NeighborhoodsEmpty]
+other = "No neighborhoods are available yet."
+
+[SaveNeighborhoods]
+other = "Save neighborhoods"
+
+[NeighborhoodsInvalid]
+other = "Choose at most 10 areas. If their names are very long, choose fewer."
+
+[PublicationShortcut]
+other = "Published within"
+
+[AdvancedShortcutHelp]
+other = "A specific area replaces My neighborhoods. Custom dates replace the publication shortcut. Other filters stay active. Today and the last 7 days use Munich calendar dates, including today, and update each day."
+
+[ReportError]
+other = "Report an error"
+
+[CorrectionReport]
+other = "Report attached"
+
+[CorrectionUnavailable]
+other = "This report is no longer available in the selected language. You can still use the general contact page."
+
+[CorrectionMessageLimit]
+other = "Up to {{.MessageMaxLength}} characters. The report link and language are attached automatically."

@@ -9,6 +9,7 @@ import (
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -153,7 +154,7 @@ func TestSharedSearchURLBoundsAndAllFilters(t *testing.T) {
 	target := listingURL("tr", all, "incident", 30, 4)
 	r := httptest.NewRequest("GET", target, nil)
 	got, explicit, err := readerURLFilters(r)
-	if err != nil || !explicit || got != all {
+	if err != nil || !explicit || !reflect.DeepEqual(got, all) {
 		t.Fatalf("all filters lost: %+v %v", got, err)
 	}
 	if strings.Contains(target, "#") || strings.Contains(target, "İstanbul") {

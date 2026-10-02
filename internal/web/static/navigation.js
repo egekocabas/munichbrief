@@ -29,9 +29,18 @@
   function validListingQuery(params) {
     if (params.toString().length > 8192) return false;
     const seen = new Set();
+    let neighborhoods = 0;
+    let neighborhoodBytes = 0;
     for (const [key, value] of params) {
-      if (seen.has(key)) return false;
+      if (seen.has(key) && key !== "neighborhood") return false;
       seen.add(key);
+      if (key === "neighborhood" && value.trim() && [...value].length <= 200 && !value.includes("\0")) {
+        neighborhoods++;
+        neighborhoodBytes += new TextEncoder().encode(value).length;
+        if (neighborhoods > 10 || neighborhoodBytes > 1000) return false;
+        continue;
+      }
+      if (key === "period" && /^(today|week)$/.test(value)) continue;
       if (key === "page" && /^[1-9]\d{0,8}$/.test(value)) continue;
       if (key === "page_size" && /^(10|20|30|50)$/.test(value)) continue;
       if (key === "view" && /^(published|incident)$/.test(value)) continue;
@@ -46,6 +55,26 @@
   }
   document.addEventListener("change", (event) => {
     if (event.target instanceof HTMLSelectElement && event.target.matches("[data-auto-submit]")) event.target.form?.requestSubmit();
+    const field = event.target;
+    const form = field.form;
+    if (form?.matches(".reader-search-form")) {
+      // Keep visible controls consistent before submitting. Native forms
+      // without JavaScript still use the documented custom-range precedence.
+      if (field.name === "period") {
+        form.elements.from.value = "";
+        form.elements.to.value = "";
+        form.elements.date_field.value = "published";
+      } else if (["from", "to", "date_field"].includes(field.name)) {
+        form.elements.period.value = "";
+      }
+    }
+    if (form?.matches("[data-neighborhood-limit]")) {
+      const choices = [...form.querySelectorAll('[name="saved_neighborhood"]')];
+      const selected = choices.filter(input => input.checked);
+      const bytes = selected.reduce((total, input) => total + new TextEncoder().encode(input.value).length, 0);
+      choices.forEach(input => input.setCustomValidity(""));
+      if (selected.length > 10 || bytes > 1000) field.setCustomValidity(form.dataset.neighborhoodLimit);
+    }
   });
   let returnTo = readReturn();
   const saveReturn = () => {

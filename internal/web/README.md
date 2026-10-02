@@ -29,6 +29,28 @@ tab-local session storage, including HTMX navigation. Direct visits and browsers
 without JavaScript retain an ordinary Back link to the language homepage. Existing
 incident URLs with `?page=` still preserve their server-rendered Back destination.
 
+Quick publication filters (`period=today` or `period=week`) use calendar days in
+Europe/Berlin, including today. They remain relative in shared URLs and saved
+searches. Advanced search keeps every existing field; entering a custom date
+range replaces the publication shortcut, and entering a single area replaces
+the neighborhood selection. Other criteria, timeline order, and page size stay
+intact; changing a filter resets pagination.
+
+Repeated `neighborhood` query parameters select reports from any chosen area,
+intersected with the other filters. The native neighborhood editor saves up to
+10 names in a separate first-party HttpOnly cookie for 30 days. Saving an empty
+selection deletes that preference; toggling the filter or clearing the current
+search preserves it. Explicit search URLs remain independent of saved cookies.
+All of these controls also work without JavaScript.
+
+Report correction links use the existing contact form. The server resolves the
+incident and reading language against accepted public presentations, never
+retained originals or caller-supplied titles/URLs. The validated public reference
+is attached to the submitted message and follows the existing private inbox,
+notification, and retention workflow. It survives form validation and changing
+the contact page's language. The character allowance reserves space for that
+reference within the existing 5,000-character message limit.
+
 Keep routes and template data explicit. Never pass database or model structs
 directly to templates without applying the presentation rules. Template output
 must remain escaped; client-side code must not insert incident content as raw
