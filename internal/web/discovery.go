@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"mime"
 	"net/http"
@@ -411,7 +412,7 @@ func (s *Server) renderDetailMarkdown(response http.ResponseWriter, data detailP
 	fmt.Fprintf(&builder, "\n## %s\n\n%s\n\n", markdownText(s.localization.Text(data.Lang, "AuthoritativeSource")), markdownText(s.localization.Text(data.Lang, sourceCopy)))
 	fmt.Fprintf(&builder, "[%s](<%s>)\n", markdownText(s.localization.Text(data.Lang, "OpenOfficialSource")), markdownURL(data.Incident.Record.SourceURL))
 	if data.CorrectionURL != "" {
-		fmt.Fprintf(&builder, "\n[%s](%s)\n", markdownText(s.localization.Text(data.Lang, "ReportError")), data.CorrectionURL)
+		fmt.Fprintf(&builder, "\n[%s](<%s>)\n", markdownText(s.localization.Text(data.Lang, "ReportError")), html.EscapeString(markdownURL(data.CorrectionURL)))
 	}
 	_, _ = io.WriteString(response, builder.String())
 }
