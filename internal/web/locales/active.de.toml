@@ -28,18 +28,6 @@ other = "Dunkelmodus"
 [NoticeLabel]
 other = "Wichtiger Hinweis"
 
-[NoticeLead]
-other = "Unabhängig und nicht offiziell."
-
-[FixtureNotice]
-other = "Diese Ansicht enthält ausschließlich synthetische Testdaten."
-
-[LiveNotice]
-other = "KI wird eingesetzt, um offizielle Polizeimeldungen zusammenzufassen, zu kategorisieren und Angaben daraus zu extrahieren. Dabei können Fehler auftreten, und Meldungen können nachträglich aktualisiert werden."
-
-[AuthorityNotice]
-other = "Maßgeblich sind die jeweils aktuellen offiziellen Informationen; es gilt die Unschuldsvermutung."
-
 [ReviewNotice]
 other = "Prüfmodus: Noch nicht anonymisierte Originaltexte können sichtbar sein. Nicht öffentlich bereitstellen."
 
@@ -88,12 +76,6 @@ other = "Gebaut"
 [Language]
 other = "Sprache"
 
-[German]
-other = "Deutsch"
-
-[English]
-other = "English"
-
 [SwitchToGerman]
 other = "Zur deutschen Version wechseln"
 
@@ -140,9 +122,6 @@ other = "Zur russischen Version wechseln"
 [HeroEyebrowFixture]
 other = "Lokaler Prototyp"
 
-[HeroEyebrowLive]
-other = "Münchner Polizeimeldungen"
-
 [HeroTitle]
 other = "München, kurz gefasst."
 
@@ -158,9 +137,6 @@ other = "Aktuelle Meldungen"
 [Reports]
 one = "{{.Count}} Meldung"
 other = "{{.Count}} Meldungen"
-
-[ShownTotal]
-other = "{{.Shown}} angezeigt / {{.Total}} insgesamt"
 
 [Report]
 other = "Polizeimeldung"
@@ -185,9 +161,6 @@ other = "Älter"
 
 [Page]
 other = "Seite"
-
-[Of]
-other = "von"
 
 [NoIncidents]
 other = "Noch keine Meldungen"
@@ -400,9 +373,6 @@ other = "Polnische Übersetzung"
 [RussianTranslationStep]
 other = "Russische Übersetzung"
 
-[StagedPipeline]
-other = "Mehrstufige Pipeline"
-
 [MetadataFirstPipeline]
 other = "Metadaten-Pipeline v2"
 
@@ -449,9 +419,6 @@ other = "KI-Ausgabe muss geprüft werden"
 other = "Deutscher Originalbericht wird angezeigt."
 
 [AboutTitle]
-other = "Über MunichBrief"
-
-[Methodology]
 other = "Über MunichBrief"
 
 [AboutIntro]

@@ -101,20 +101,6 @@ func (l *localization) Count(locale, messageID string, count int) string {
 	return value
 }
 
-func (l *localization) ShownTotal(locale string, shown, total int) string {
-	value, err := i18n.NewLocalizer(l.bundle, locale).Localize(&i18n.LocalizeConfig{
-		MessageID: "ShownTotal",
-		TemplateData: map[string]any{
-			"Shown": shown,
-			"Total": total,
-		},
-	})
-	if err != nil {
-		return "[ShownTotal]"
-	}
-	return value
-}
-
 func validateCatalogParity(files fs.FS, names ...string) error {
 	if len(names) < 2 {
 		return fmt.Errorf("at least two translation catalogs are required")
@@ -163,9 +149,6 @@ func catalogMessageIDs(files fs.FS, name string) (map[string]struct{}, error) {
 					return nil, fmt.Errorf("translation catalog %s plural form %s for %s does not render Count", name, pluralForm, id)
 				}
 			}
-		}
-		if id == "ShownTotal" && (!strings.Contains(fmt.Sprint(other), "{{.Shown}}") || !strings.Contains(fmt.Sprint(other), "{{.Total}}")) {
-			return nil, fmt.Errorf("translation catalog %s message %s does not render Shown and Total", name, id)
 		}
 		ids[id] = struct{}{}
 	}

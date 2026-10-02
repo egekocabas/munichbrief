@@ -282,7 +282,6 @@ func newWithLanguages(database incidentStore, logger *slog.Logger, options Optio
 		"t":                          translations.Text,
 		"message":                    translations.Format,
 		"tc":                         translations.Count,
-		"shownTotal":                 translations.ShownTotal,
 	}
 	mapView, err := template.New("layout").Funcs(functions).Parse(layoutTemplate + mapTemplate)
 	if err != nil {

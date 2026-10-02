@@ -7,10 +7,6 @@ PrimaryNavigation = { other = "Основна навігація" }
 SkipToContent = { other = "Перейти до вмісту" }
 DarkMode = { other = "Темний режим" }
 NoticeLabel = { other = "Важливе повідомлення" }
-NoticeLead = { other = "Незалежний і неофіційний ресурс." }
-FixtureNotice = { other = "Ця сторінка містить лише синтетичні тестові дані." }
-LiveNotice = { other = "ШІ використовується для узагальнення, категоризації та вилучення відомостей з офіційних повідомлень поліції. Можливі помилки, а повідомлення можуть оновлюватися після публікації." }
-AuthorityNotice = { other = "Найновіша офіційна інформація залишається визначальною; діє презумпція невинуватості." }
 ReviewNotice = { other = "Режим перевірки: може відображатися неанонімізований оригінальний текст. Не публікуйте його у відкритому доступі." }
 AIGeneratedContent = { other = "Вміст, створений ШІ" }
 AIFixtureLabelPreview = { other = "Попередній перегляд позначки — цей синтетичний вміст не оброблявся ШІ" }
@@ -26,8 +22,6 @@ EUIconGuidance = { other = "Настанови ЄС щодо значків" }
 EUCodePractice = { other = "Кодекс практики ЄС" }
 Built = { other = "Збірка" }
 Language = { other = "Мова" }
-German = { other = "Німецька" }
-English = { other = "Англійська" }
 SwitchToGerman = { other = "Перейти до німецької версії" }
 SwitchToEnglish = { other = "Перейти до англійської версії" }
 SwitchToTurkish = { other = "Перейти до турецької версії" }
@@ -40,19 +34,16 @@ SwitchToHindi = { other = "Перейти до версії гінді" }
 SwitchToSpanish = { other = "Перейти до іспанської версії" }
 SwitchToFrench = { other = "Перейти до французької версії" }
 HeroEyebrowFixture = { other = "Локальний прототип" }
-HeroEyebrowLive = { other = "Повідомлення поліції Мюнхена" }
 HeroTitle = { other = "Мюнхен — коротко." }
 FixtureIncidents = { other = "Синтетичні повідомлення" }
 LatestIncidents = { other = "Останні події" }
 Reports = { one = "{{.Count}} повідомлення", few = "{{.Count}} повідомлення", many = "{{.Count}} повідомлень", other = "{{.Count}} повідомлення" }
-ShownTotal = { other = "показано {{.Shown}} / усього {{.Total}}" }
 Report = { other = "Повідомлення поліції" }
 SourceMetadata = { other = "Метадані джерела" }
 ReadIncident = { other = "Прочитати повідомлення" }
 Newer = { other = "Новіші" }
 Older = { other = "Старіші" }
 Page = { other = "Сторінка" }
-Of = { other = "з" }
 NoIncidents = { other = "Повідомлень поки немає" }
 NoFixtureCopy = { other = "Запустіть імпорт тестових даних, щоб заповнити цю сторінку." }
 NoLiveCopy = { other = "Синхронізатор ще не знайшов повідомлень у межах часового вікна." }
@@ -120,7 +111,6 @@ ChineseTranslationStep = { other = "Переклад спрощеною кита
 HindiTranslationStep = { other = "Переклад гінді" }
 SpanishTranslationStep = { other = "Переклад іспанською" }
 FrenchTranslationStep = { other = "Переклад французькою" }
-StagedPipeline = { other = "Поетапний процес" }
 MetadataFirstPipeline = { other = "Процес із пріоритетом метаданих v2" }
 Generated = { other = "Створено" }
 AISummary = { other = "Огляд, створений ШІ" }
@@ -136,7 +126,6 @@ Running = { other = "Огляд і переклад ШІ виконується"
 Retrying = { other = "ШІ тимчасово недоступний; заплановано повторну спробу" }
 NeedsReview = { other = "Результат ШІ потребує перевірки" }
 OriginalShown = { other = "Показано оригінальне повідомлення німецькою." }
-Methodology = { other = "Про MunichBrief" }
 FromReleaseToIncident = { other = "Від повідомлення до події" }
 Discover = { other = "Виявлення" }
 DiscoverCopy = { other = "Нові повідомлення виявляються лише через офіційний RSS-канал поліції Мюнхена." }

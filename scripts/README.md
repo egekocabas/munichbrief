@@ -11,6 +11,10 @@ documentation. They are designed to run both locally and in CI:
 - `generate-munich-map.py --check` verifies the bundled district SVG paths against
   the committed official source snapshot. It uses Python's standard library;
   see [boundary provenance](../docs/munich-map-boundaries.md) before refreshing.
+- `go run ./cmd/check-translations` checks UI catalog completeness, source usage,
+  message structure, and template placeholders. Its focused tests run with
+  `go test ./internal/translationcheck`; see [UI translations](../docs/ui-translations.md)
+  for the validation order and how to update messages.
 
 Keep checks deterministic and free of credentials. A failed assertion should
 name the file or rendered property that needs attention.

@@ -7,10 +7,6 @@ PrimaryNavigation = { other = "Nawigacja główna" }
 SkipToContent = { other = "Przejdź do treści" }
 DarkMode = { other = "Tryb ciemny" }
 NoticeLabel = { other = "Ważna informacja" }
-NoticeLead = { other = "Niezależny i nieoficjalny serwis." }
-FixtureNotice = { other = "Ten widok zawiera wyłącznie syntetyczne dane testowe." }
-LiveNotice = { other = "AI służy do podsumowywania, klasyfikowania i wyodrębniania szczegółów z oficjalnych komunikatów policji. Mogą wystąpić błędy, a komunikaty mogą zostać zaktualizowane po publikacji." }
-AuthorityNotice = { other = "Najnowsze oficjalne informacje pozostają rozstrzygające i obowiązuje domniemanie niewinności." }
 ReviewNotice = { other = "Tryb weryfikacji: może być widoczny niezanonimizowany tekst źródłowy. Nie publikuj go." }
 AIGeneratedContent = { other = "Treść wygenerowana przez AI" }
 AIFixtureLabelPreview = { other = "Podgląd oznaczenia — te syntetyczne dane nie zostały przetworzone przez AI" }
@@ -26,8 +22,6 @@ EUIconGuidance = { other = "Wytyczne UE dotyczące ikony" }
 EUCodePractice = { other = "Kodeks postępowania UE" }
 Built = { other = "Wersja" }
 Language = { other = "Język" }
-German = { other = "Niemiecki" }
-English = { other = "Angielski" }
 SwitchToGerman = { other = "Przejdź do wersji niemieckiej" }
 SwitchToEnglish = { other = "Przejdź do wersji angielskiej" }
 SwitchToTurkish = { other = "Przejdź do wersji tureckiej" }
@@ -43,19 +37,16 @@ SwitchToRomanian = { other = "Przejdź do wersji rumuńskiej" }
 SwitchToPolish = { other = "Przejdź do wersji polskiej" }
 SwitchToRussian = { other = "Przejdź do wersji rosyjskiej" }
 HeroEyebrowFixture = { other = "Lokalny prototyp" }
-HeroEyebrowLive = { other = "Komunikaty policji w Monachium" }
 HeroTitle = { other = "Monachium w skrócie." }
 FixtureIncidents = { other = "Syntetyczne zgłoszenia" }
 LatestIncidents = { other = "Najnowsze zdarzenia" }
 Reports = { one = "{{.Count}} zgłoszenie", few = "{{.Count}} zgłoszenia", many = "{{.Count}} zgłoszeń", other = "{{.Count}} zgłoszenia" }
-ShownTotal = { other = "Wyświetlono {{.Shown}} z {{.Total}}" }
 Report = { other = "Komunikat policji" }
 SourceMetadata = { other = "Metadane źródła" }
 ReadIncident = { other = "Przeczytaj zgłoszenie" }
 Newer = { other = "Nowsze" }
 Older = { other = "Starsze" }
 Page = { other = "Strona" }
-Of = { other = "z" }
 NoIncidents = { other = "Nie ma jeszcze zgłoszeń" }
 NoFixtureCopy = { other = "Uruchom import danych testowych, aby wypełnić ten widok." }
 NoLiveCopy = { other = "Synchronizator nie znalazł jeszcze komunikatów w aktywnym przedziale czasu." }
@@ -126,7 +117,6 @@ FrenchTranslationStep = { other = "Tłumaczenie francuskie" }
 RomanianTranslationStep = { other = "Tłumaczenie rumuńskie" }
 PolishTranslationStep = { other = "Tłumaczenie polskie" }
 RussianTranslationStep = { other = "Tłumaczenie rosyjskie" }
-StagedPipeline = { other = "Potok etapowy" }
 MetadataFirstPipeline = { other = "Potok najpierw metadane v2" }
 Generated = { other = "Wygenerowano" }
 AISummary = { other = "Podsumowanie wygenerowane przez AI" }
@@ -142,7 +132,6 @@ Running = { other = "Trwa podsumowywanie i tłumaczenie przez AI" }
 Retrying = { other = "AI jest chwilowo niedostępna; zaplanowano ponowną próbę" }
 NeedsReview = { other = "Wynik AI wymaga weryfikacji" }
 OriginalShown = { other = "Wyświetlany jest oryginalny komunikat niemiecki." }
-Methodology = { other = "O MunichBrief" }
 FromReleaseToIncident = { other = "Od komunikatu do zdarzenia" }
 Discover = { other = "Wykrywanie" }
 DiscoverCopy = { other = "Nowe komunikaty są wykrywane wyłącznie za pośrednictwem oficjalnego kanału RSS policji w Monachium." }

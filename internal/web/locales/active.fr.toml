@@ -7,10 +7,6 @@ PrimaryNavigation = { other = "Navigation principale" }
 SkipToContent = { other = "Aller au contenu" }
 DarkMode = { other = "Mode sombre" }
 NoticeLabel = { other = "Avis important" }
-NoticeLead = { other = "Indépendant et non officiel." }
-FixtureNotice = { other = "Cette vue contient uniquement des données de test synthétiques." }
-LiveNotice = { other = "L’IA est utilisée pour résumer, classer et extraire des informations des communiqués officiels de la police. Des erreurs sont possibles et les communiqués peuvent être mis à jour après leur publication." }
-AuthorityNotice = { other = "Les informations officielles les plus récentes restent la référence et la présomption d’innocence s’applique." }
 ReviewNotice = { other = "Mode de révision : du texte original non anonymisé peut être visible. Ne pas rendre public." }
 AIGeneratedContent = { other = "Contenu généré par l’IA" }
 AIFixtureLabelPreview = { other = "Aperçu du label — ce contenu synthétique n’a pas été traité par l’IA" }
@@ -26,8 +22,6 @@ EUIconGuidance = { other = "Orientations de l’UE sur les icônes" }
 EUCodePractice = { other = "Code de bonnes pratiques de l’UE" }
 Built = { other = "Version" }
 Language = { other = "Langue" }
-German = { other = "Allemand" }
-English = { other = "Anglais" }
 SwitchToGerman = { other = "Passer à la version allemande" }
 SwitchToEnglish = { other = "Passer à la version anglaise" }
 SwitchToTurkish = { other = "Passer à la version turque" }
@@ -40,19 +34,16 @@ SwitchToHindi = { other = "Passer à la version hindi" }
 SwitchToSpanish = { other = "Passer à la version espagnole" }
 SwitchToFrench = { other = "Passer à la version française" }
 HeroEyebrowFixture = { other = "Prototype local" }
-HeroEyebrowLive = { other = "Communiqués de la police de Munich" }
 HeroTitle = { other = "Munich, en bref." }
 FixtureIncidents = { other = "Rapports synthétiques" }
 LatestIncidents = { other = "Derniers incidents" }
 Reports = { one = "{{.Count}} rapport", other = "{{.Count}} rapports" }
-ShownTotal = { other = "{{.Shown}} affichés / {{.Total}} au total" }
 Report = { other = "Rapport de police" }
 SourceMetadata = { other = "Métadonnées de la source" }
 ReadIncident = { other = "Lire le rapport" }
 Newer = { other = "Plus récents" }
 Older = { other = "Plus anciens" }
 Page = { other = "Page" }
-Of = { other = "sur" }
 NoIncidents = { other = "Aucun rapport pour le moment" }
 NoFixtureCopy = { other = "Exécutez l’importation des données de test pour remplir cette vue." }
 NoLiveCopy = { other = "Le synchroniseur n’a pas encore découvert de communiqué dans la période prévue." }
@@ -120,7 +111,6 @@ ChineseTranslationStep = { other = "Traduction chinoise simplifiée" }
 HindiTranslationStep = { other = "Traduction hindi" }
 SpanishTranslationStep = { other = "Traduction espagnole" }
 FrenchTranslationStep = { other = "Traduction française" }
-StagedPipeline = { other = "Pipeline par étapes" }
 MetadataFirstPipeline = { other = "Pipeline avec métadonnées en premier v2" }
 Generated = { other = "Généré" }
 AISummary = { other = "Résumé généré par l’IA" }
@@ -136,7 +126,6 @@ Running = { other = "Résumé et traduction par IA en cours" }
 Retrying = { other = "IA temporairement indisponible ; nouvelle tentative planifiée" }
 NeedsReview = { other = "Le résultat de l’IA nécessite une révision" }
 OriginalShown = { other = "Le rapport original allemand est affiché." }
-Methodology = { other = "À propos de MunichBrief" }
 FromReleaseToIncident = { other = "Du communiqué à l’incident" }
 Discover = { other = "Découvrir" }
 DiscoverCopy = { other = "Les nouveaux communiqués sont découverts uniquement par le flux RSS officiel de la police de Munich." }

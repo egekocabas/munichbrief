@@ -19,14 +19,6 @@ other = "Sari la conținut"
 other = "Mod întunecat"
 [NoticeLabel]
 other = "Notă importantă"
-[NoticeLead]
-other = "Independent și neoficial."
-[FixtureNotice]
-other = "Această vizualizare conține numai date de test sintetice."
-[LiveNotice]
-other = "AI este utilizată pentru a rezuma, clasifica și extrage detalii din comunicatele oficiale ale poliției. Pot apărea erori, iar comunicatele pot fi actualizate după publicare."
-[AuthorityNotice]
-other = "Cele mai recente informații oficiale rămân autoritatea de referință, iar prezumția de nevinovăție se aplică."
 [ReviewNotice]
 other = "Mod de verificare: textul original care nu a fost anonimizat poate fi vizibil. Nu îl publicați."
 [AIGeneratedContent]
@@ -62,10 +54,6 @@ other = "MunichBrief este independent de poliție. Fără cont și fără reclam
 other = "Versiune"
 [Language]
 other = "Limbă"
-[German]
-other = "Deutsch"
-[English]
-other = "English"
 [SwitchToGerman]
 other = "Comută la versiunea în germană"
 [SwitchToEnglish]
@@ -96,8 +84,6 @@ other = "Comută la versiunea în polonă"
 other = "Comută la versiunea în rusă"
 [HeroEyebrowFixture]
 other = "Prototip local"
-[HeroEyebrowLive]
-other = "Comunicatele Poliției din München"
 [HeroTitle]
 other = "München, pe scurt."
 
@@ -112,8 +98,6 @@ other = "Cele mai recente incidente"
 one = "{{.Count}} informare"
 few = "{{.Count}} informări"
 other = "{{.Count}} de informări"
-[ShownTotal]
-other = "{{.Shown}} afișate / {{.Total}} în total"
 [Report]
 other = "Comunicat al poliției"
 [SourceMetadata]
@@ -132,8 +116,6 @@ other = "Mai noi"
 other = "Mai vechi"
 [Page]
 other = "Pagina"
-[Of]
-other = "din"
 [NoIncidents]
 other = "Nu există încă informări"
 [NoFixtureCopy]
@@ -274,8 +256,6 @@ other = "Traducere în română"
 other = "Traducere în polonă"
 [RussianTranslationStep]
 other = "Traducere în rusă"
-[StagedPipeline]
-other = "Flux pe etape"
 [MetadataFirstPipeline]
 other = "Flux cu metadatele mai întâi v2"
 [Generated]
@@ -309,8 +289,6 @@ other = "Este afișat comunicatul original în germană."
 [AboutTitle]
 other = "Despre MunichBrief"
 
-[Methodology]
-other = "Despre MunichBrief"
 [AboutIntro]
 other = "MunichBrief te ajută să urmărești comunicatele poliției locale în limba ta. Citește un rezumat, află unde și când s-a petrecut un incident și deschide comunicatul oficial pentru detalii."
 

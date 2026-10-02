@@ -7,10 +7,6 @@ PrimaryNavigation = { other = "主导航" }
 SkipToContent = { other = "跳至内容" }
 DarkMode = { other = "深色模式" }
 NoticeLabel = { other = "重要提示" }
-NoticeLead = { other = "独立且非官方。" }
-FixtureNotice = { other = "此视图仅包含合成测试数据。" }
-LiveNotice = { other = "本网站使用 AI 对警方官方通报进行摘要、分类和信息提取。内容可能有误，通报也可能在发布后更新。" }
-AuthorityNotice = { other = "最新官方信息始终具有权威性，并适用无罪推定原则。" }
 ReviewNotice = { other = "审查模式：可能显示未经匿名处理的原文。请勿公开。" }
 AIGeneratedContent = { other = "AI 生成的内容" }
 AIFixtureLabelPreview = { other = "标签预览——此合成测试内容尚未经过 AI 处理" }
@@ -26,8 +22,6 @@ EUIconGuidance = { other = "欧盟图标指南" }
 EUCodePractice = { other = "欧盟行为准则" }
 Built = { other = "构建" }
 Language = { other = "语言" }
-German = { other = "德语" }
-English = { other = "英语" }
 SwitchToGerman = { other = "切换至德语版本" }
 SwitchToEnglish = { other = "切换至英语版本" }
 SwitchToTurkish = { other = "切换至土耳其语版本" }
@@ -40,19 +34,16 @@ SwitchToHindi = { other = "切换至印地语版本" }
 SwitchToSpanish = { other = "切换至西班牙语版本" }
 SwitchToFrench = { other = "切换至法语版本" }
 HeroEyebrowFixture = { other = "本地原型" }
-HeroEyebrowLive = { other = "慕尼黑警方通报" }
 HeroTitle = { other = "慕尼黑，简明速览。" }
 FixtureIncidents = { other = "合成测试通报" }
 LatestIncidents = { other = "最新事件" }
 Reports = { other = "{{.Count}} 条通报" }
-ShownTotal = { other = "显示 {{.Shown}} 条 / 共 {{.Total}} 条" }
 Report = { other = "警方通报" }
 SourceMetadata = { other = "来源元数据" }
 ReadIncident = { other = "阅读通报" }
 Newer = { other = "较新" }
 Older = { other = "较早" }
 Page = { other = "第" }
-Of = { other = "页，共" }
 NoIncidents = { other = "暂无通报" }
 NoFixtureCopy = { other = "运行测试数据导入以填充此视图。" }
 NoLiveCopy = { other = "同步程序尚未发现时间范围内的通报。" }
@@ -120,7 +111,6 @@ ChineseTranslationStep = { other = "简体中文翻译" }
 HindiTranslationStep = { other = "印地语翻译" }
 SpanishTranslationStep = { other = "西班牙语翻译" }
 FrenchTranslationStep = { other = "法语翻译" }
-StagedPipeline = { other = "分阶段处理流程" }
 MetadataFirstPipeline = { other = "元数据优先处理流程 v2" }
 Generated = { other = "生成于" }
 AISummary = { other = "AI 生成的摘要" }
@@ -136,7 +126,6 @@ Running = { other = "正在生成 AI 摘要与翻译" }
 Retrying = { other = "AI 暂时不可用；已安排重试" }
 NeedsReview = { other = "AI 输出需要审查" }
 OriginalShown = { other = "当前显示德语原始通报。" }
-Methodology = { other = "关于 MunichBrief" }
 FromReleaseToIncident = { other = "从通报到事件" }
 Discover = { other = "发现" }
 DiscoverCopy = { other = "新通报仅通过慕尼黑警方官方 RSS 源发现。" }

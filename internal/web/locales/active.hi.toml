@@ -7,10 +7,6 @@ PrimaryNavigation = { other = "मुख्य नेविगेशन" }
 SkipToContent = { other = "सामग्री पर जाएँ" }
 DarkMode = { other = "डार्क मोड" }
 NoticeLabel = { other = "महत्वपूर्ण सूचना" }
-NoticeLead = { other = "स्वतंत्र और अनाधिकारिक।" }
-FixtureNotice = { other = "इस दृश्य में केवल कृत्रिम परीक्षण डेटा है।" }
-LiveNotice = { other = "आधिकारिक पुलिस विज्ञप्तियों का सारांश बनाने, वर्गीकरण करने और विवरण निकालने के लिए AI का उपयोग किया जाता है। त्रुटियाँ हो सकती हैं और प्रकाशन के बाद विज्ञप्तियाँ अपडेट की जा सकती हैं।" }
-AuthorityNotice = { other = "नवीनतम आधिकारिक जानकारी ही प्रामाणिक है और निर्दोष माने जाने का सिद्धांत लागू होता है।" }
 ReviewNotice = { other = "समीक्षा मोड: ऐसा मूल पाठ दिखाई दे सकता है जिसे गुमनाम नहीं किया गया है। इसे सार्वजनिक न करें।" }
 AIGeneratedContent = { other = "AI द्वारा तैयार सामग्री" }
 AIFixtureLabelPreview = { other = "लेबल पूर्वावलोकन — इस कृत्रिम परीक्षण सामग्री को AI ने संसाधित नहीं किया है" }
@@ -26,8 +22,6 @@ EUIconGuidance = { other = "EU आइकन मार्गदर्शन" }
 EUCodePractice = { other = "EU आचार संहिता" }
 Built = { other = "बिल्ड" }
 Language = { other = "भाषा" }
-German = { other = "जर्मन" }
-English = { other = "अंग्रेज़ी" }
 SwitchToGerman = { other = "जर्मन संस्करण पर जाएँ" }
 SwitchToEnglish = { other = "अंग्रेज़ी संस्करण पर जाएँ" }
 SwitchToTurkish = { other = "तुर्की संस्करण पर जाएँ" }
@@ -40,19 +34,16 @@ SwitchToHindi = { other = "हिन्दी संस्करण पर ज�
 SwitchToSpanish = { other = "स्पेनी संस्करण पर जाएँ" }
 SwitchToFrench = { other = "फ़्रांसीसी संस्करण पर जाएँ" }
 HeroEyebrowFixture = { other = "स्थानीय प्रोटोटाइप" }
-HeroEyebrowLive = { other = "म्यूनिख पुलिस की विज्ञप्तियाँ" }
 HeroTitle = { other = "म्यूनिख, संक्षेप में।" }
 FixtureIncidents = { other = "कृत्रिम परीक्षण रिपोर्ट" }
 LatestIncidents = { other = "नवीनतम घटनाएँ" }
 Reports = { one = "{{.Count}} रिपोर्ट", other = "{{.Count}} रिपोर्टें" }
-ShownTotal = { other = "{{.Shown}} दिखाई गईं / कुल {{.Total}}" }
 Report = { other = "पुलिस रिपोर्ट" }
 SourceMetadata = { other = "स्रोत मेटाडेटा" }
 ReadIncident = { other = "रिपोर्ट पढ़ें" }
 Newer = { other = "नई" }
 Older = { other = "पुरानी" }
 Page = { other = "पृष्ठ" }
-Of = { other = "में से" }
 NoIncidents = { other = "अभी कोई रिपोर्ट नहीं" }
 NoFixtureCopy = { other = "इस दृश्य को भरने के लिए परीक्षण डेटा आयात चलाएँ।" }
 NoLiveCopy = { other = "सिंक्रोनाइज़र को अभी समय-सीमा के भीतर कोई विज्ञप्ति नहीं मिली है।" }
@@ -120,7 +111,6 @@ ChineseTranslationStep = { other = "सरलीकृत चीनी अनु
 HindiTranslationStep = { other = "हिन्दी अनुवाद" }
 SpanishTranslationStep = { other = "स्पेनी अनुवाद" }
 FrenchTranslationStep = { other = "फ़्रांसीसी अनुवाद" }
-StagedPipeline = { other = "चरणबद्ध पाइपलाइन" }
 MetadataFirstPipeline = { other = "मेटाडेटा-प्रथम पाइपलाइन v2" }
 Generated = { other = "तैयार किया गया" }
 AISummary = { other = "AI द्वारा तैयार सारांश" }
@@ -136,7 +126,6 @@ Running = { other = "AI सारांश और अनुवाद जार�
 Retrying = { other = "AI अस्थायी रूप से उपलब्ध नहीं; पुनः प्रयास निर्धारित है" }
 NeedsReview = { other = "AI आउटपुट की समीक्षा आवश्यक है" }
 OriginalShown = { other = "मूल जर्मन रिपोर्ट दिखाई जा रही है।" }
-Methodology = { other = "MunichBrief के बारे में" }
 FromReleaseToIncident = { other = "विज्ञप्ति से घटना तक" }
 Discover = { other = "खोजना" }
 DiscoverCopy = { other = "नई विज्ञप्तियाँ केवल म्यूनिख पुलिस के आधिकारिक RSS फ़ीड से खोजी जाती हैं।" }

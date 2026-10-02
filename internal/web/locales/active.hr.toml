@@ -7,10 +7,6 @@ PrimaryNavigation = { other = "Glavna navigacija" }
 SkipToContent = { other = "Prijeđi na sadržaj" }
 DarkMode = { other = "Tamni način" }
 NoticeLabel = { other = "Važna napomena" }
-NoticeLead = { other = "Neovisno i neslužbeno." }
-FixtureNotice = { other = "Ovaj prikaz sadrži samo sintetičke testne podatke." }
-LiveNotice = { other = "AI se koristi za sažimanje, kategoriziranje i izdvajanje podataka iz službenih policijskih priopćenja. Moguće su pogreške, a priopćenja se mogu naknadno ažurirati." }
-AuthorityNotice = { other = "Najnovije službene informacije ostaju mjerodavne i primjenjuje se pretpostavka nedužnosti." }
 ReviewNotice = { other = "Način pregleda: može biti vidljiv izvorni tekst koji nije anonimiziran. Nemojte ga javno izlagati." }
 AIGeneratedContent = { other = "Sadržaj generiran umjetnom inteligencijom" }
 AIFixtureLabelPreview = { other = "Pregled oznake — ovaj sintetički sadržaj nije obrađen umjetnom inteligencijom" }
@@ -26,8 +22,6 @@ EUIconGuidance = { other = "Smjernice EU-a za ikone" }
 EUCodePractice = { other = "Kodeks prakse EU-a" }
 Built = { other = "Izgrađeno" }
 Language = { other = "Jezik" }
-German = { other = "Njemački" }
-English = { other = "Engleski" }
 SwitchToGerman = { other = "Prijeđi na njemačku verziju" }
 SwitchToEnglish = { other = "Prijeđi na englesku verziju" }
 SwitchToTurkish = { other = "Prijeđi na tursku verziju" }
@@ -40,19 +34,16 @@ SwitchToHindi = { other = "Prijeđi na hindsku verziju" }
 SwitchToSpanish = { other = "Prijeđi na španjolsku verziju" }
 SwitchToFrench = { other = "Prijeđi na francusku verziju" }
 HeroEyebrowFixture = { other = "Lokalni prototip" }
-HeroEyebrowLive = { other = "Priopćenja minhenske policije" }
 HeroTitle = { other = "München, ukratko." }
 FixtureIncidents = { other = "Sintetička priopćenja" }
 LatestIncidents = { other = "Najnoviji događaji" }
 Reports = { one = "{{.Count}} priopćenje", few = "{{.Count}} priopćenja", other = "{{.Count}} priopćenja" }
-ShownTotal = { other = "prikazano {{.Shown}} / ukupno {{.Total}}" }
 Report = { other = "Policijsko priopćenje" }
 SourceMetadata = { other = "Metapodaci izvora" }
 ReadIncident = { other = "Pročitaj priopćenje" }
 Newer = { other = "Novije" }
 Older = { other = "Starije" }
 Page = { other = "Stranica" }
-Of = { other = "od" }
 NoIncidents = { other = "Još nema priopćenja" }
 NoFixtureCopy = { other = "Pokrenite uvoz testnih podataka kako biste popunili ovaj prikaz." }
 NoLiveCopy = { other = "Sinkronizator još nije pronašao priopćenje unutar vremenskog okvira." }
@@ -120,7 +111,6 @@ ChineseTranslationStep = { other = "Pojednostavljeni kineski prijevod" }
 HindiTranslationStep = { other = "Hindski prijevod" }
 SpanishTranslationStep = { other = "Španjolski prijevod" }
 FrenchTranslationStep = { other = "Francuski prijevod" }
-StagedPipeline = { other = "Fazni proces" }
 MetadataFirstPipeline = { other = "Proces s metapodacima na prvom mjestu v2" }
 Generated = { other = "Generirano" }
 AISummary = { other = "AI sažetak" }
@@ -136,7 +126,6 @@ Running = { other = "AI sažetak i prijevod su u tijeku" }
 Retrying = { other = "AI je privremeno nedostupan; zakazan je novi pokušaj" }
 NeedsReview = { other = "AI rezultat zahtijeva pregled" }
 OriginalShown = { other = "Prikazano je izvorno njemačko priopćenje." }
-Methodology = { other = "O MunichBriefu" }
 FromReleaseToIncident = { other = "Od priopćenja do događaja" }
 Discover = { other = "Otkrivanje" }
 DiscoverCopy = { other = "Nova priopćenja otkrivaju se isključivo putem službenog RSS kanala minhenske policije." }
