@@ -1078,3 +1078,9 @@ html[data-theme="dark"]:has(.reader) {
 .atlas-map-card .atlas-district-table ul { grid-template-columns:1fr; max-height:26rem; overflow:auto; }
 @media(max-width:600px){.atlas-map-count {font-size:30px;stroke-width:3.2px;}}
 }
+
+@layer components {
+.atlas-map-count.atlas-count-three {font-size:20px;}
+.atlas-map-count.atlas-count-many {font-size:16px;}
+.atlas-map-count.atlas-count-dense {font-size:12px;}
+}

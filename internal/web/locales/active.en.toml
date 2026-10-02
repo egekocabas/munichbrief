@@ -1064,3 +1064,6 @@ other = "Reports are assigned to one representative area. Reviewed neighborhood 
 
 [MapAdvancedHelp]
 other = "The selected district stays active when you change other filters. Entering an area or applying saved neighborhoods replaces it."
+
+[MapExcluded]
+other = "Outside the selected location filter"

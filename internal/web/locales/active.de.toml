@@ -1064,3 +1064,6 @@ other = "Jeder Meldung wird ein repräsentatives Gebiet zugeordnet. Geprüfte Zu
 
 [MapAdvancedHelp]
 other = "Der gewählte Stadtbezirk bleibt aktiv, wenn Sie andere Filter ändern. Die Eingabe eines Gebiets oder das Anwenden gespeicherter Stadtviertel ersetzt ihn."
+
+[MapExcluded]
+other = "Außerhalb des gewählten Ortsfilters"

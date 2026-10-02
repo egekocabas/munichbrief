@@ -635,3 +635,6 @@ other = "Chaque article est associé à une zone représentative. Des rattacheme
 
 [MapAdvancedHelp]
 other = "L’arrondissement sélectionné reste actif lorsque vous modifiez d’autres filtres. Saisir une zone ou appliquer les quartiers enregistrés remplace cette sélection."
+
+[MapExcluded]
+other = "Hors du filtre de lieu sélectionné"

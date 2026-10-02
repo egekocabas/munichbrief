@@ -635,3 +635,6 @@ other = "Cada artículo se asigna a una zona representativa. Las relaciones de p
 
 [MapAdvancedHelp]
 other = "El distrito seleccionado sigue activo al cambiar otros filtros. Introducir una zona o aplicar los barrios guardados sustituye la selección del distrito."
+
+[MapExcluded]
+other = "Fuera del filtro de ubicación seleccionado"

@@ -28,14 +28,14 @@
         <div class="atlas-card-heading"><div><p class="atlas-eyebrow">{{t .Lang "MapCity"}}</p><h3 id="atlas-map-title">{{t .Lang "MapDistricts"}}</h3></div><span class="atlas-north" aria-hidden="true">↑<small>N</small></span></div>
         <p class="atlas-map-help">{{t .Lang "MapInteraction"}}</p>
         <svg class="atlas-map" viewBox="{{.ViewBox}}" role="group" aria-label="{{t .Lang "MapDistricts"}}">
-          {{range .Districts}}<a href="{{.URL}}" aria-label="{{.Name}}: {{tc $.Lang "Reports" .Total}}" {{if .Selected}}aria-current="true"{{end}} class="atlas-district atlas-level-{{.Level}}">
-            <title>{{.Number}} · {{.Name}}: {{tc $.Lang "Reports" .Total}}</title><path d="{{.Path}}" fill-rule="evenodd"/>
+          {{range .Districts}}<a href="{{.URL}}" aria-label="{{.Name}}: {{if .InScope}}{{tc $.Lang "Reports" .Total}}{{else}}{{t $.Lang "MapExcluded"}}{{end}}" {{if .Selected}}aria-current="true"{{end}} class="atlas-district atlas-level-{{.Level}}">
+            <title>{{.Number}} · {{.Name}}: {{if .InScope}}{{tc $.Lang "Reports" .Total}}{{else}}{{t $.Lang "MapExcluded"}}{{end}}</title><path d="{{.Path}}" fill-rule="evenodd"/>
           </a>{{end}}
-          {{range .Districts}}<text class="atlas-map-count" x="{{.X}}" y="{{.Y}}" aria-hidden="true">{{.Total}}</text>{{end}}
+          {{range .Districts}}{{if .InScope}}<text class="atlas-map-count {{.CountClass}}" x="{{.X}}" y="{{.Y}}" aria-hidden="true">{{.Total}}</text>{{end}}{{end}}
         </svg>
         <div class="atlas-legend"><span>0</span><span class="atlas-color-scale" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span><span>{{.Max}}</span><span>{{t .Lang "MapReportCount"}}</span></div>
-    <details class="atlas-district-table"><summary>{{t .Lang "MapAllDistricts"}} <span>25</span></summary><ul>{{range .Districts}}<li><a href="{{.URL}}" {{if .Selected}}aria-current="true"{{end}}><span class="atlas-district-number">{{.Number}}</span><span>{{.Name}}</span><strong>{{.Total}}</strong></a></li>{{end}}</ul></details>
-        <div class="atlas-unmapped"><a href="{{.OutsideURL}}"><span>{{t .Lang "MapOutside"}}</span><strong>{{.Stats.Outside}} ↗</strong></a><a href="{{.UnassignedURL}}"><span>{{t .Lang "MapUnassigned"}}</span><strong>{{.Stats.Unassigned}} ↗</strong></a></div>
+    <details class="atlas-district-table"><summary>{{t .Lang "MapAllDistricts"}} <span>25</span></summary><ul>{{range .Districts}}<li><a href="{{.URL}}" {{if .Selected}}aria-current="true"{{end}}><span class="atlas-district-number">{{.Number}}</span><span>{{.Name}}</span><strong>{{if .InScope}}{{.Total}}{{else}}<span aria-hidden="true">—</span><span class="sr-only">{{t $.Lang "MapExcluded"}}</span>{{end}}</strong></a></li>{{end}}</ul></details>
+        <div class="atlas-unmapped"><a href="{{.OutsideURL}}"><span>{{t .Lang "MapOutside"}}</span><strong>{{if or (eq .Filters.District "") (eq .Filters.District "outside")}}{{.Stats.Outside}}{{else}}<span aria-hidden="true">—</span><span class="sr-only">{{t .Lang "MapExcluded"}}</span>{{end}} ↗</strong></a><a href="{{.UnassignedURL}}"><span>{{t .Lang "MapUnassigned"}}</span><strong>{{if or (eq .Filters.District "") (eq .Filters.District "unassigned")}}{{.Stats.Unassigned}}{{else}}<span aria-hidden="true">—</span><span class="sr-only">{{t .Lang "MapExcluded"}}</span>{{end}} ↗</strong></a></div>
         <p class="atlas-attribution"><a href="{{.SourceURL}}" rel="noopener noreferrer" target="_blank">{{.Attribution}}</a> · <a href="{{.LicenseURL}}" rel="noopener noreferrer" target="_blank">dl-de/by-2-0</a> · {{t .Lang "MapBoundaryNote"}}</p>
       </section>
       <aside class="atlas-sidebar">

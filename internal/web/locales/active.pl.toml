@@ -635,3 +635,6 @@ other = "Każde doniesienie jest przypisane do jednego reprezentatywnego obszaru
 
 [MapAdvancedHelp]
 other = "Wybrana dzielnica pozostaje aktywna po zmianie innych filtrów. Wpisanie obszaru lub zastosowanie zapisanych osiedli zastępuje wybór dzielnicy."
+
+[MapExcluded]
+other = "Poza wybranym filtrem lokalizacji"

@@ -23,6 +23,8 @@ type mapStore interface {
 }
 type mapFilters struct{ Period, From, To, Category, District string }
 type mapDistrict struct {
+	InScope    bool
+	CountClass string
 	munichmap.District
 	Total, Available, Level int
 	URL                     string
@@ -200,7 +202,15 @@ func (s *Server) mapPage(w http.ResponseWriter, r *http.Request) {
 			next.District = ""
 			data.DistrictLabel = shape.Name
 		}
-		d := mapDistrict{District: shape, Total: count.Total, Available: count.Available, URL: mapURL(lang, next) + "#map-results", Selected: shape.ID == filters.District}
+		d := mapDistrict{District: shape, Total: count.Total, Available: count.Available, URL: mapURL(lang, next) + "#map-results", Selected: shape.ID == filters.District, InScope: filters.District == "" || filters.District == shape.ID}
+		switch {
+		case count.Total >= 1000000:
+			d.CountClass = "atlas-count-dense"
+		case count.Total >= 1000:
+			d.CountClass = "atlas-count-many"
+		case count.Total >= 100:
+			d.CountClass = "atlas-count-three"
+		}
 		if data.Max > 0 && count.Total > 0 {
 			d.Level = (count.Total*5 + data.Max - 1) / data.Max
 		}
@@ -285,9 +295,16 @@ func (s *Server) renderMapMarkdown(w http.ResponseWriter, data mapPage) {
 	fmt.Fprintf(&b, "%s: %s\n\n%s · %s\n\n%s: %d\n\n%s (%s): %d\n\n", mapMarkdownText(s.localization.Text(data.Lang, "MapEarliest")), mapMarkdownText(data.Earliest), mapMarkdownText(data.PeriodLabel), mapMarkdownText(strings.Trim(strings.Join([]string{data.DistrictLabel, data.CategoryLabel}, " · "), " ·")), mapMarkdownText(s.localization.Text(data.Lang, "MapTotal")), data.Stats.Total, mapMarkdownText(s.localization.Text(data.Lang, "MapAvailable")), mapMarkdownText(data.LanguageName), data.Stats.Available)
 	fmt.Fprintf(&b, "## %s\n\n", mapMarkdownText(s.localization.Text(data.Lang, "MapDistricts")))
 	for _, d := range data.Districts {
-		fmt.Fprintf(&b, "- %s: %d\n", mapMarkdownText(d.Name), d.Total)
+		if d.InScope {
+			fmt.Fprintf(&b, "- %s: %d\n", mapMarkdownText(d.Name), d.Total)
+		}
 	}
-	fmt.Fprintf(&b, "- %s: %d\n- %s: %d\n\n", mapMarkdownText(s.localization.Text(data.Lang, "MapOutside")), data.Stats.Outside, mapMarkdownText(s.localization.Text(data.Lang, "MapUnassigned")), data.Stats.Unassigned)
+	if data.Filters.District == "" || data.Filters.District == "outside" {
+		fmt.Fprintf(&b, "- %s: %d\n", mapMarkdownText(s.localization.Text(data.Lang, "MapOutside")), data.Stats.Outside)
+	}
+	if data.Filters.District == "" || data.Filters.District == "unassigned" {
+		fmt.Fprintf(&b, "- %s: %d\n", mapMarkdownText(s.localization.Text(data.Lang, "MapUnassigned")), data.Stats.Unassigned)
+	}
 	fmt.Fprintf(&b, "\n## %s\n\n", mapMarkdownText(s.localization.Text(data.Lang, "MapCategories")))
 	for _, c := range data.Categories {
 		fmt.Fprintf(&b, "- %s: %d\n", mapMarkdownText(c.Label), c.Total)

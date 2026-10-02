@@ -909,3 +909,6 @@ other = "Fiecare relatare este atribuită unei singure zone reprezentative. Rela
 
 [MapAdvancedHelp]
 other = "Districtul selectat rămâne activ când schimbi alte filtre. Introducerea unei zone sau aplicarea cartierelor salvate înlocuiește selecția districtului."
+
+[MapExcluded]
+other = "În afara filtrului de locație selectat"

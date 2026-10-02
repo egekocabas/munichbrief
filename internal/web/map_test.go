@@ -66,6 +66,12 @@ func TestMapPublicCountsLinksTranslationsAndCookies(t *testing.T) {
 			t.Errorf("missing %s", want)
 		}
 	}
+	if strings.Contains(page.Body.String(), `aria-label="Maxvorstadt: 0 reports"`) || !strings.Contains(page.Body.String(), `aria-label="Maxvorstadt: Outside the selected location filter"`) {
+		t.Fatal("excluded district misrepresented as zero reports")
+	}
+	if strings.Count(page.Body.String(), `class="atlas-map-count `) != 1 {
+		t.Fatal("counts rendered outside selected district")
+	}
 	if strings.Contains(page.Body.String(), "Does not exist") {
 		t.Fatal("saved reader filter leaked into map")
 	}
@@ -105,6 +111,10 @@ func TestMapPublicCountsLinksTranslationsAndCookies(t *testing.T) {
 	empty := contactRequest(s, "GET", "/en/map?from=2099-01-01", nil)
 	if empty.Code != 200 || !strings.Contains(empty.Body.String(), s.localization.Text("en", "MapEmpty")) {
 		t.Fatal("empty map missing helpful state", empty.Code)
+	}
+	tooLong := contactRequest(s, "GET", "/en/map?"+strings.Repeat("x", maxReaderQueryBytes+1), nil)
+	if tooLong.Code != 414 {
+		t.Fatal("oversized map query", tooLong.Code)
 	}
 	for _, raw := range []string{"?from=%zz", "?district=invalid", "?category=other&category=traffic"} {
 		if res := contactRequest(s, "GET", "/en/map"+raw, nil); res.Code != 400 {

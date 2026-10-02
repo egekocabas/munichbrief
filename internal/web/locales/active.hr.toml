@@ -635,3 +635,6 @@ other = "Svakom priopćenju dodjeljuje se jedno reprezentativno područje. Provj
 
 [MapAdvancedHelp]
 other = "Odabrana gradska četvrt ostaje aktivna kada mijenjate druge filtre. Unos područja ili primjena spremljenih četvrti zamjenjuje taj odabir."
+
+[MapExcluded]
+other = "Izvan odabranog filtra lokacije"

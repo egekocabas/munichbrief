@@ -635,3 +635,6 @@ other = "Her bülten bir temsilî bölgeye atanır. İncelenmiş mahalle ilişki
 
 [MapAdvancedHelp]
 other = "Diğer filtreleri değiştirdiğinizde seçili şehir bölgesi etkin kalır. Bir bölge adı girmek veya kayıtlı mahalleleri uygulamak bu seçimin yerini alır."
+
+[MapExcluded]
+other = "Seçili konum filtresinin dışında"

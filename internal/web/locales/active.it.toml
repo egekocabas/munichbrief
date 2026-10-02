@@ -635,3 +635,6 @@ other = "A ogni comunicato viene assegnata un’area rappresentativa. Le relazio
 
 [MapAdvancedHelp]
 other = "Il distretto selezionato resta attivo quando cambi gli altri filtri. Inserire una zona o applicare i quartieri salvati sostituisce questa selezione."
+
+[MapExcluded]
+other = "Fuori dal filtro di località selezionato"
