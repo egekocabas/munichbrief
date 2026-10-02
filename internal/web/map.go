@@ -204,7 +204,7 @@ func (s *Server) mapPage(w http.ResponseWriter, r *http.Request) {
 		}
 		d := mapDistrict{District: shape, Total: count.Total, Available: count.Available, URL: mapURL(lang, next) + "#map-results", Selected: shape.ID == filters.District, InScope: filters.District == "" || filters.District == shape.ID}
 		switch {
-		case count.Total >= 1000000:
+		case count.Total >= 10000:
 			d.CountClass = "atlas-count-dense"
 		case count.Total >= 1000:
 			d.CountClass = "atlas-count-many"
