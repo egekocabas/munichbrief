@@ -149,7 +149,7 @@ TranslatePublishCopy = { other = "Njemački sažetak objavljuje se čim prođe p
 AccuracyOfficialInformation = { other = "Točnost i službene informacije" }
 AccuracyOfficialInformationCopy = { other = "AI sažeci i izdvojeni podaci mogu sadržavati pogreške. Policijska priopćenja mogu se naknadno ažurirati. Najnovije službene informacije ostaju mjerodavne i primjenjuje se pretpostavka nedužnosti." }
 PrivacyDataHandling = { other = "Privatnost i obrada podataka" }
-PrivacyCopy = { other = "Nisu potrebni korisnički računi i nema oglasa. Preglednik pamti jezik godinu dana, a zatvorenu obavijest o umjetnoj inteligenciji i primijenjene pretrage 30 dana. Kriteriji pretrage šalju se kolačićem ove stranice. Tema boja ostaje u pregledniku dok je ne izbrišete. Odabrani redoslijed prikaza pamti se 30 dana u kolačiću ove stranice. Odabrani filtri nalaze se u adresi stranice pa pretragu možete podijeliti." }
+PrivacyCopy = { other = "Nisu potrebni korisnički računi i nema oglasa. Preglednik pamti jezik godinu dana, a zatvorenu obavijest o umjetnoj inteligenciji i primijenjene pretrage 30 dana. Kriteriji pretrage šalju se kolačićem ove stranice. Tema boja ostaje u pregledniku dok je ne izbrišete. Odabrani redoslijed prikaza pamti se 30 dana u kolačiću ove stranice. Odabrani filtri nalaze se u adresi stranice pa pretragu možete podijeliti. Odabrane četvrti čuvaju se zasebno 30 dana u HttpOnly kolačiću prve strane; spremanje praznog odabira briše taj kolačić. Kada se primijene, nazivi četvrti pojavljuju se u URL-ovima pretraživanja." }
 DataHandlingCopy = { other = "Njemački izvorni tekstovi čuvaju se za obradu i provjeru s ograničenim pristupom. Na javnim stranicama prikazuju se sažeci nastali iz tih tekstova." }
 AboutIndependence = { other = "Neovisnost" }
 AboutIndependenceCopy = { other = "MunichBrief je neovisan projekt. Nije povezan s bavarskom policijom ni s drugim javnim tijelima i ne govori u njihovo ime." }
@@ -327,7 +327,7 @@ other = "Vlastiti kolačići pamte jezik godinu dana, potvrdu obavijesti o umjet
 other = "Tehnički zapisi sadrže metodu, putanju bez parametara pretrage, status, trajanje i identifikatore zahtjeva, ali ne poruke, e-adrese, kolačiće ni IP-adrese posjetitelja. Prometheus i Loki podešeni su na čuvanje 30 dana; Grafana prikazuje interne podatke. Za ograničavanje pokušaja kontakta čuvamo brojač i pseudonimnu oznaku izvedenu iz IP-adrese samo u memoriji aplikacije, bez pohrane izvorne IP-adrese. Ograničenje traje 15 minuta od prvog pokušaja. Istekli brojači uklanjaju se pri sljedećem pokušaju kontakta ili ponovnom pokretanju aplikacije; ako nema novih pokušaja, mogu ostati u memoriji dulje. Svrha je sigurnost i pouzdanost (čl. 6. st. 1. t. f GDPR-a). Cloudflare ima vlastite rokove."
 
 [PrivacyCorrespondenceCopy]
-other = "E-adresu, temu i poruku obrađujemo radi odgovora na upit (čl. 6. st. 1. t. f GDPR-a) ili primjenjive zakonske obveze (t. c). Obrazac prvo sprema poruku u privatni pretinac baze podataka. SMTP2GO šalje obavijest na contact@munichbrief.de, a Cloudflare Email Routing prosljeđuje je u Gmail. Odgovori se pišu u Apple Mailu i šalju preko SMTP2GO-a. Poruke se ne obrađuju umjetnom inteligencijom. Pravila pružatelja opisuju i obradu izvan EGP-a."
+other = "E-adresu, temu i poruku obrađujemo radi odgovora na upit (čl. 6. st. 1. t. f GDPR-a) ili primjenjive zakonske obveze (t. c). Obrazac prvo sprema poruku u privatni pretinac baze podataka. SMTP2GO šalje obavijest na contact@munichbrief.de, a Cloudflare Email Routing prosljeđuje je u Gmail. Odgovori se pišu u Apple Mailu i šalju preko SMTP2GO-a. Poruke se ne obrađuju umjetnom inteligencijom. Pravila pružatelja opisuju i obradu izvan EGP-a. Kada prijavite pogrešku sa stranice izvještaja, njegova poveznica i jezik čitanja automatski se prilažu vašoj poruci."
 
 [PrivacyRetentionCopy]
 other = "Poruke u administratorskom pretincu automatski se brišu 90 dana nakon označavanja upita riješenim. Ponovno otvaranje poništava rok. Otvoreni upiti pregledavaju se i čuvaju dok su potrebni. Spor ili zakonska obveza mogu opravdati zadržavanje uz zabilježen razlog i datum pregleda. Kopije u Gmailu i poslani odgovori pregledavaju se i brišu zasebno. Pružatelji imaju vlastite rokove za podatke o slanju."
@@ -354,7 +354,7 @@ other = "odgovoran je za ovu web-stranicu. Adresa je navedena iznad. MunichBrief
 other = "Za upite posjetite našu stranicu za kontakt."
 
 [ContactStorage]
-other = "Poruka se sprema u privatnu pristiglu poštu prije nego što potvrdimo primitak. Riješene poruke brišu se iz nje nakon 90 dana."
+other = "Poruka se sprema u privatnu pristiglu poštu prije nego što potvrdimo primitak. Riješene poruke brišu se iz nje nakon 90 dana. Kada prijavite pogrešku sa stranice izvještaja, njegova poveznica i jezik čitanja automatski se prilažu vašoj poruci."
 
 [ContactClosed]
 other = "Obrazac za kontakt je zatvoren. Vaša poruka nije poslana. Pišite na contact@munichbrief.de."
@@ -481,7 +481,7 @@ other = "Uredi četvrti"
 other = "Odaberi četvrti"
 
 [NeighborhoodsHelp]
-other = "Odaberite do 10 područja. Prikazuju se izvještaji iz bilo kojeg odabranog područja. Odabir se čuva na ovom uređaju 30 dana."
+other = "Odaberite do 10 područja. Prikazuju se izvještaji iz bilo kojeg odabranog područja. Odabir se čuva na ovom uređaju 30 dana. Spremanje također primjenjuje odabir. Brisanje filtara pretraživanja zadržava spremljene četvrti; spremite prazan odabir da ih izbrišete."
 
 [NeighborhoodsEmpty]
 other = "Još nema dostupnih četvrti."
@@ -490,13 +490,13 @@ other = "Još nema dostupnih četvrti."
 other = "Spremi četvrti"
 
 [NeighborhoodsInvalid]
-other = "Odaberite do 10 četvrti s kraćim nazivima."
+other = "Odaberite najviše 10 područja. Ako su nazivi vrlo dugi, odaberite manje."
 
 [PublicationShortcut]
 other = "Objavljeno u razdoblju"
 
 [AdvancedShortcutHelp]
-other = "Određeno područje zamjenjuje Moje četvrti. Prilagođeni datumi zamjenjuju brzi filtar objave. Ostali filtri ostaju aktivni."
+other = "Određeno područje zamjenjuje Moje četvrti. Prilagođeni datumi zamjenjuju brzi filtar objave. Ostali filtri ostaju aktivni. Danas i posljednjih 7 dana koriste minhenske kalendarske datume, uključuju današnji dan i ažuriraju se svakodnevno."
 
 [ReportError]
 other = "Prijavi pogrešku"

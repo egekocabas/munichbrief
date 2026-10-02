@@ -149,7 +149,7 @@ TranslatePublishCopy = { other = "Almanca özet, ilk otomatik kontrolleri geçer
 AccuracyOfficialInformation = { other = "Doğruluk ve resmî bilgiler" }
 AccuracyOfficialInformationCopy = { other = "Yapay zekâ özetlerinde ve olay ayrıntılarında hatalar olabilir. Polis bültenleri yayımlandıktan sonra güncellenebilir; en güncel bilgi için resmî bültene bakın. Hakkında suç isnadı bulunan herkes, suçluluğu kanıtlanana kadar masum sayılır." }
 PrivacyDataHandling = { other = "Gizlilik ve veri işleme" }
-PrivacyCopy = { other = "Siteyi kullanmak için hesap açmanız gerekmez; sitede reklam yoktur. Dil tercihiniz bir yıl, kapattığınız yapay zekâ bildirimi ve uyguladığınız arama filtreleri 30 gün hatırlanır. Arama ölçütleri siteye ait bir çerezle iletilir. Renk teması, siz silene kadar tarayıcıda saklanır. Seçtiğiniz sıralama, bu siteye ait bir çerezde 30 gün boyunca saklanır. Seçtiğiniz filtreler sayfanın adresinde yer alır; böylece aramanızı paylaşabilirsiniz." }
+PrivacyCopy = { other = "Siteyi kullanmak için hesap açmanız gerekmez; sitede reklam yoktur. Dil tercihiniz bir yıl, kapattığınız yapay zekâ bildirimi ve uyguladığınız arama filtreleri 30 gün hatırlanır. Arama ölçütleri siteye ait bir çerezle iletilir. Renk teması, siz silene kadar tarayıcıda saklanır. Seçtiğiniz sıralama, bu siteye ait bir çerezde 30 gün boyunca saklanır. Seçtiğiniz filtreler sayfanın adresinde yer alır; böylece aramanızı paylaşabilirsiniz. Seçtiğiniz mahalleler ayrı bir birinci taraf HttpOnly çerezinde 30 gün saklanır; boş seçim kaydedildiğinde çerez silinir. Uygulandığında mahalle adları arama URL’lerinde görünür." }
 DataHandlingCopy = { other = "Almanca kaynak metinler, işleme ve erişimi kısıtlı inceleme amacıyla saklanır. Herkese açık sayfalarda bu metinlerden hazırlanan özetler gösterilir." }
 AboutIndependence = { other = "Bağımsızlık" }
 AboutIndependenceCopy = { other = "MunichBrief bağımsız bir projedir. Bavyera Polisi veya başka bir kamu kurumuyla bağlantısı yoktur ve bu kurumlar adına açıklama yapmaz." }
@@ -327,7 +327,7 @@ other = "Dil tercihi bir yıl, yapay zekâ bilgilendirmesinin onayı 30 gün sü
 other = "Sitenin güvenilir çalışması için teknik kayıtlarda istek yöntemi, sorgu parametreleri olmadan sayfa yolu, durum, süre ve istek kimlikleri tutulur. Uygulama kayıtlarına mesajlar, e-posta adresleri, çerezler veya ziyaretçilerin IP adresleri yazılmaz. Prometheus ölçümleri ve Loki kayıtları için saklama süresi 30 gün olarak ayarlanmıştır; Grafana bu teknik izleme verilerini gösterir. İletişim denemelerini sınırlandırmak için IP adresinin kendisini kaydetmeden, bu adresten türetilen takma bir kimliği ve deneme sayacını yalnızca uygulamanın belleğinde tutarız. Sınır, ilk denemeden itibaren 15 dakika geçerlidir. Süresi dolan sayaçlar bir sonraki iletişim denemesinde veya uygulama yeniden başlatıldığında silinir; yeni bir deneme yapılmazsa bellekte daha uzun kalabilirler. Amaç güvenlik ve güvenilirliktir (GDPR madde 6(1)(f)). Cloudflare’ın saklama süreleri ayrıdır."
 
 [PrivacyCorrespondenceCopy]
-other = "Bize yazdığınızda e-posta adresinizi, seçtiğiniz konuyu ve mesajınızı sorunuza yanıt vermek için işleriz (GDPR madde 6(1)(f)); gerektiğinde yasal yükümlülükler de geçerlidir (6(1)(c)). Form önce mesajınızı özel bir veritabanı gelen kutusuna kaydeder. SMTP2GO, contact@munichbrief.de adresine bildirim gönderir; Cloudflare Email Routing bunu Gmail gelen kutusuna iletir. Yanıtlar Apple Mail’de yazılır ve SMTP2GO üzerinden gönderilir. Mesajlar yapay zekâya gönderilmez. Sağlayıcı açıklamaları AEA dışındaki işlemleri de kapsar."
+other = "Bize yazdığınızda e-posta adresinizi, seçtiğiniz konuyu ve mesajınızı sorunuza yanıt vermek için işleriz (GDPR madde 6(1)(f)); gerektiğinde yasal yükümlülükler de geçerlidir (6(1)(c)). Form önce mesajınızı özel bir veritabanı gelen kutusuna kaydeder. SMTP2GO, contact@munichbrief.de adresine bildirim gönderir; Cloudflare Email Routing bunu Gmail gelen kutusuna iletir. Yanıtlar Apple Mail’de yazılır ve SMTP2GO üzerinden gönderilir. Mesajlar yapay zekâya gönderilmez. Sağlayıcı açıklamaları AEA dışındaki işlemleri de kapsar. Bir haber sayfasından hata bildirdiğinizde haberin bağlantısı ve okuma dili mesajınıza otomatik olarak eklenir."
 
 [PrivacyRetentionCopy]
 other = "Yönetici gelen kutusundaki mesajlar, konu çözüldü olarak işaretlendikten 90 gün sonra otomatik silinir. Konu yeniden açılırsa bu süre iptal edilir. Açık talepler gözden geçirilir ve ihtiyaç sürdükçe saklanır. Devam eden bir uyuşmazlık veya yasal yükümlülük varsa, gerekçesi ve inceleme tarihi kaydedilerek mesaj tutulabilir. Gmail kopyaları ve gönderilen yanıtlar ayrıca gözden geçirilip silinir. Sağlayıcıların gönderim kayıtları kendi saklama kurallarına tabidir."
@@ -354,7 +354,7 @@ other = "web sitesinden sorumludur. Adres yukarıda belirtilmiştir. MunichBrief
 other = "Sorularınız için iletişim sayfamızı ziyaret edebilirsiniz."
 
 [ContactStorage]
-other = "Mesajınızın alındığını onaylamadan önce onu özel bir gelen kutusuna kaydederiz. Çözüldü olarak işaretlenen mesajlar bu kutudan 90 gün sonra silinir."
+other = "Mesajınızın alındığını onaylamadan önce onu özel bir gelen kutusuna kaydederiz. Çözüldü olarak işaretlenen mesajlar bu kutudan 90 gün sonra silinir. Bir haber sayfasından hata bildirdiğinizde haberin bağlantısı ve okuma dili mesajınıza otomatik olarak eklenir."
 
 [ContactClosed]
 other = "İletişim formu kullanıma kapatıldı. Mesajınız gönderilmedi. Lütfen contact@munichbrief.de adresine e-posta gönderin."
@@ -481,7 +481,7 @@ other = "Mahalleleri düzenle"
 other = "Mahalle seç"
 
 [NeighborhoodsHelp]
-other = "En fazla 10 bölge seçin. Seçilen bölgelerden herhangi birindeki haberler gösterilir. Seçiminiz bu cihazda 30 gün saklanır."
+other = "En fazla 10 bölge seçin. Seçilen bölgelerden herhangi birindeki haberler gösterilir. Seçiminiz bu cihazda 30 gün saklanır. Kaydetmek seçimi de uygular. Arama filtrelerini temizlemek kayıtlı mahallelerinizi silmez; silmek için boş seçim kaydedin."
 
 [NeighborhoodsEmpty]
 other = "Henüz kullanılabilir mahalle yok."
@@ -490,13 +490,13 @@ other = "Henüz kullanılabilir mahalle yok."
 other = "Mahalleleri kaydet"
 
 [NeighborhoodsInvalid]
-other = "Daha kısa adlara sahip en fazla 10 mahalle seçin."
+other = "En fazla 10 bölge seçin. Adlar çok uzunsa daha az bölge seçin."
 
 [PublicationShortcut]
 other = "Yayın dönemi"
 
 [AdvancedShortcutHelp]
-other = "Belirli bir bölge Mahallelerim seçiminin yerini alır. Özel tarihler hızlı yayın filtresinin yerini alır. Diğer filtreler etkin kalır."
+other = "Belirli bir bölge Mahallelerim seçiminin yerini alır. Özel tarihler hızlı yayın filtresinin yerini alır. Diğer filtreler etkin kalır. Bugün ve son 7 gün Münih takvim tarihlerine göredir, bugünü içerir ve her gün güncellenir."
 
 [ReportError]
 other = "Hata bildir"

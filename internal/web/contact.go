@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"html"
 	"net"
 	"net/http"
 	"net/netip"
@@ -238,7 +239,7 @@ func (s *Server) renderContact(w http.ResponseWriter, r *http.Request, data cont
 		w.WriteHeader(status)
 		fmt.Fprintf(w, "# %s\n\n%s\n\n%s: %s\n\ncontact@munichbrief.de\n\n", s.localization.Text(language, "ContactHeading"), base.Description, s.localization.Text(language, "LegalLastUpdated"), data.UpdatedLabel)
 		if data.ReportURL != "" {
-			fmt.Fprintf(w, "%s: [%s](%s) (%s)\n\n", s.localization.Text(language, "CorrectionReport"), markdownText(data.ReportTitle), data.ReportURL, data.ReportLanguage)
+			fmt.Fprintf(w, "%s: [%s](%s) (%s)\n\n", s.localization.Text(language, "CorrectionReport"), markdownText(html.EscapeString(data.ReportTitle)), html.EscapeString(data.ReportURL), html.EscapeString(data.ReportLanguage))
 		}
 		for _, key := range []string{"ContactCorrectionCopy", "ContactPrivacyCopy", "ContactTechnicalCopy", "ContactPoliceCopy", "ContactStorage"} {
 			if key == "ContactPoliceCopy" {

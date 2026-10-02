@@ -129,6 +129,10 @@ func TestNeighborhoodPreferencesAndNativeAdvancedSearch(t *testing.T) {
 	if len(readReaderPreferences(r, neighborhoodsCookieName).Areas) != 0 {
 		t.Fatal("expired neighborhoods restored")
 	}
+	stale := post("/en/search?area=Sendling&q=train", url.Values{"neighborhoods_action": {"enable"}})
+	if stale.Code != 303 || stale.Header().Get("Location") != "/en/search?area=Sendling&q=train#reader-neighborhoods" {
+		t.Fatal("expired preference lost the current search", stale.Code, stale.Header())
+	}
 	r = httptest.NewRequest("POST", "https://munichbrief.de/en/search", strings.NewReader("neighborhoods_action=save&saved_neighborhood=Schwabing"))
 	r.Header.Set("Origin", "https://evil.invalid")
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -178,5 +182,66 @@ func TestIncidentCorrectionContextSurvivesValidationAndLanguageSwitch(t *testing
 	w := contactRequest(s, "GET", "/en/contact?incident="+formatID(private[0].ID), nil)
 	if w.Code != 404 || strings.Contains(w.Body.String(), private[0].BodyDE) {
 		t.Fatal("unpublished report exposed")
+	}
+}
+
+func TestSharedNeighborhoodsDoNotPretendToBeSavedPreferences(t *testing.T) {
+	s, _ := newContactServer(t)
+	w := httptest.NewRecorder()
+	if err := s.writeReaderPreferences(w, neighborhoodsCookieName, store.ReaderFilters{Areas: []string{"Schwabing"}}); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		areas          []string
+		cookie, active bool
+	}{
+		{[]string{"Maxvorstadt"}, false, false},
+		{[]string{"Maxvorstadt"}, true, false},
+		{[]string{"Schwabing"}, true, true},
+		{nil, true, false},
+	} {
+		r := httptest.NewRequest("GET", "/en/search", nil)
+		if tc.cookie {
+			r.AddCookie(w.Result().Cookies()[0])
+		}
+		data := timelinePage{}
+		s.decorateReader(&data, "en", true, "published", 20, store.ReaderFilters{Areas: tc.areas})
+		s.decorateNeighborhoods(&data, r)
+		if data.NeighborhoodsSaved != tc.cookie || data.NeighborhoodsActive != tc.active {
+			t.Fatalf("shared selection mislabeled as saved: %+v", tc)
+		}
+		for _, filter := range data.ActiveFilters {
+			if filter.Key == "neighborhoods" && filter.Label == s.localization.Text("en", "MyNeighborhoods") {
+				t.Fatal("shared areas presented as personal preferences")
+			}
+		}
+	}
+}
+
+func TestCorrectionMarkdownEscapesReportContextAndIsNotIndexed(t *testing.T) {
+	s, db := newContactServer(t)
+	job := seedV2Presentation(t, db, testPresentation{TitleDE: "Test", SummaryDE: "Test.", TitleEN: `<script>alert(1)</script> [title]`, SummaryEN: "Test."}, time.Now())
+	r := httptest.NewRequest("GET", "/en/contact?incident="+formatID(job.IncidentID), nil)
+	r.Header.Set("Accept", "text/markdown")
+	w := httptest.NewRecorder()
+	s.Handler().ServeHTTP(w, r)
+	if w.Code != 200 || w.Header().Get("X-Robots-Tag") != "noindex,follow" || strings.Contains(w.Body.String(), "<script>") || !strings.Contains(w.Body.String(), "&lt;script&gt;") || !strings.Contains(w.Body.String(), "](/en/incidents/"+formatID(job.IncidentID)+") (en)") {
+		t.Fatal("unsafe or indexable correction reference", w.Code, w.Header(), w.Body.String())
+	}
+}
+
+func TestLargestCombinedNeighborhoodSearchFitsPreferences(t *testing.T) {
+	s, _ := newContactServer(t)
+	f := store.ReaderFilters{Text: strings.Repeat("𐐀", 200), Number: strings.Repeat("𐐀", 200), Areas: []string{strings.Repeat("𐐀", 50), strings.Repeat("𐐀", 200)}, Category: "robbery_extortion", Assistance: "yes", DateField: "incident", From: "2026-01-01", To: "2026-12-31"}
+	if err := f.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	path := listingURL("en", f, "incident", 50, 1)
+	w := contactRequest(s, "GET", path, nil)
+	if w.Code != 200 {
+		t.Fatalf("valid combined search failed: %d (%d URL bytes)", w.Code, len(path))
+	}
+	if len(w.Result().Cookies()) == 0 {
+		t.Fatal("no preferences stored")
 	}
 }

@@ -341,7 +341,7 @@ other = "Rezumatele și detaliile extrase de AI pot conține erori. Comunicatele
 [PrivacyDataHandling]
 other = "Confidențialitate și gestionarea datelor"
 [PrivacyCopy]
-other = "Nu ai nevoie de cont și nu există reclame. Browserul păstrează limba timp de un an, iar notificările IA închise și căutările aplicate timp de 30 de zile. Criteriile căutării sunt transmise într-un cookie propriu. Tema de culoare rămâne în browser până la ștergere. Ordinea de afișare aleasă este păstrată timp de 30 de zile într-un cookie al acestui site. Filtrele selectate sunt incluse în adresa paginii, astfel încât poți distribui căutarea."
+other = "Nu ai nevoie de cont și nu există reclame. Browserul păstrează limba timp de un an, iar notificările IA închise și căutările aplicate timp de 30 de zile. Criteriile căutării sunt transmise într-un cookie propriu. Tema de culoare rămâne în browser până la ștergere. Ordinea de afișare aleasă este păstrată timp de 30 de zile într-un cookie al acestui site. Filtrele selectate sunt incluse în adresa paginii, astfel încât poți distribui căutarea. Cartierele alese sunt salvate separat într-un cookie propriu HttpOnly timp de 30 de zile; salvarea unei selecții goale îl șterge. La aplicare, numele cartierelor apar în adresele URL de căutare."
 
 [DataHandlingCopy]
 other = "Textele originale în germană sunt păstrate pentru procesare și verificare cu acces restricționat. Paginile publice afișează rezumatele rezultate."
@@ -601,7 +601,7 @@ other = "Cookie-urile proprii păstrează limba un an, confirmarea informării d
 other = "Jurnalele tehnice înregistrează metoda, calea fără parametrii căutării, starea, durata și identificatorii cererilor. Nu înregistrează mesaje, e-mailuri, cookie-uri sau IP-urile vizitatorilor. Prometheus și Loki sunt configurate pentru păstrarea datelor 30 de zile; Grafana le afișează intern. Pentru a limita încercările de contact, păstrăm un contor și un identificator pseudonim derivat din IP doar în memoria aplicației, fără a salva adresa IP originală. Limita se aplică timp de 15 minute de la prima încercare. Contoarele expirate sunt șterse la următoarea încercare de contact sau la repornirea aplicației; dacă nu mai există încercări, pot rămâne în memorie mai mult timp. Scopul este securitatea și fiabilitatea (art. 6(1)(f) GDPR). Cloudflare are termene proprii."
 
 [PrivacyCorrespondenceCopy]
-other = "Prelucrăm adresa de e-mail, subiectul și mesajul pentru a răspunde solicitării (art. 6(1)(f) GDPR) sau pentru obligații legale aplicabile (art. 6(1)(c)). Formularul salvează întâi mesajul într-o căsuță privată din baza de date. SMTP2GO trimite notificarea la contact@munichbrief.de, iar Cloudflare Email Routing o redirecționează către Gmail. Răspunsurile sunt scrise în Apple Mail și trimise prin SMTP2GO. Mesajele nu sunt procesate de IA. Politicile furnizorilor descriu și prelucrarea în afara SEE."
+other = "Prelucrăm adresa de e-mail, subiectul și mesajul pentru a răspunde solicitării (art. 6(1)(f) GDPR) sau pentru obligații legale aplicabile (art. 6(1)(c)). Formularul salvează întâi mesajul într-o căsuță privată din baza de date. SMTP2GO trimite notificarea la contact@munichbrief.de, iar Cloudflare Email Routing o redirecționează către Gmail. Răspunsurile sunt scrise în Apple Mail și trimise prin SMTP2GO. Mesajele nu sunt procesate de IA. Politicile furnizorilor descriu și prelucrarea în afara SEE. Când semnalezi o eroare de pe pagina unei știri, linkul și limba de lectură sunt atașate automat mesajului."
 
 [PrivacyRetentionCopy]
 other = "Mesajele din căsuța de administrare se șterg automat la 90 de zile după marcarea solicitării ca rezolvată. Redeschiderea anulează termenul. Solicitările deschise sunt revizuite și păstrate cât este necesar. Un litigiu sau o obligație legală poate justifica păstrarea cu motiv și dată de revizuire înregistrate. Copiile Gmail și răspunsurile trimise sunt revizuite și șterse separat. Furnizorii aplică propriile termene datelor de expediere."
@@ -628,7 +628,7 @@ other = "este responsabil pentru acest site. Adresa este indicată mai sus. Muni
 other = "Pentru întrebări, vizitează pagina noastră de contact."
 
 [ContactStorage]
-other = "Mesajul este salvat într-o căsuță privată înainte de confirmarea primirii. Mesajele marcate ca rezolvate sunt șterse din această căsuță după 90 de zile."
+other = "Mesajul este salvat într-o căsuță privată înainte de confirmarea primirii. Mesajele marcate ca rezolvate sunt șterse din această căsuță după 90 de zile. Când semnalezi o eroare de pe pagina unei știri, linkul și limba de lectură sunt atașate automat mesajului."
 
 [ContactClosed]
 other = "Formularul de contact a fost închis. Mesajul tău nu a fost trimis. Scrie la contact@munichbrief.de."
@@ -755,7 +755,7 @@ other = "Editează cartierele"
 other = "Alege cartierele"
 
 [NeighborhoodsHelp]
-other = "Alege până la 10 zone. Sunt incluse știrile din oricare dintre zonele selectate. Selecția este salvată pe acest dispozitiv timp de 30 de zile."
+other = "Alege până la 10 zone. Sunt incluse știrile din oricare dintre zonele selectate. Selecția este salvată pe acest dispozitiv timp de 30 de zile. Salvarea aplică și selecția. Ștergerea filtrelor păstrează cartierele salvate; salvează o selecție goală pentru a le șterge."
 
 [NeighborhoodsEmpty]
 other = "Nu există încă niciun cartier disponibil."
@@ -764,13 +764,13 @@ other = "Nu există încă niciun cartier disponibil."
 other = "Salvează cartierele"
 
 [NeighborhoodsInvalid]
-other = "Alege până la 10 cartiere cu nume mai scurte."
+other = "Alege cel mult 10 zone. Dacă numele sunt foarte lungi, alege mai puține."
 
 [PublicationShortcut]
 other = "Publicat în perioada"
 
 [AdvancedShortcutHelp]
-other = "O zonă anume înlocuiește Cartierele mele. Datele personalizate înlocuiesc filtrul rapid de publicare. Celelalte filtre rămân active."
+other = "O zonă anume înlocuiește Cartierele mele. Datele personalizate înlocuiesc filtrul rapid de publicare. Celelalte filtre rămân active. Astăzi și ultimele 7 zile folosesc datele calendaristice din München, includ ziua de azi și se actualizează zilnic."
 
 [ReportError]
 other = "Semnalează o eroare"

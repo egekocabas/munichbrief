@@ -186,6 +186,9 @@ func (s *Server) prepareMarkdown(response http.ResponseWriter, page basePage) {
 	response.Header().Set("Content-Language", page.LanguageTag)
 	response.Header().Set("Cache-Control", "private, no-store")
 	response.Header().Set("X-Content-Type-Options", "nosniff")
+	if strings.HasPrefix(page.Robots, "noindex") {
+		response.Header().Set("X-Robots-Tag", page.Robots)
+	}
 	setAIResponseHeaders(response.Header(), page)
 	response.Header().Set("Content-Signal", contentSignal)
 	addVary(response.Header(), "Cookie", "Accept-Language", "Accept")

@@ -149,7 +149,7 @@ TranslatePublishCopy = { other = "El resumen en alemán se publica en cuanto sup
 AccuracyOfficialInformation = { other = "Exactitud e información oficial" }
 AccuracyOfficialInformationCopy = { other = "Los resúmenes generados por IA y los datos extraídos pueden contener errores. Los comunicados policiales pueden actualizarse después de publicarse. La información oficial más reciente sigue siendo la fuente autorizada y se aplica la presunción de inocencia." }
 PrivacyDataHandling = { other = "Privacidad y tratamiento de datos" }
-PrivacyCopy = { other = "No hacen falta cuentas y no hay publicidad. El navegador recuerda el idioma durante un año, y los avisos de IA cerrados y las búsquedas aplicadas durante 30 días. Los criterios de búsqueda se envían en una cookie propia. El tema de color permanece en el navegador hasta que lo elimines. El orden de visualización que elijas se guarda durante 30 días en una cookie propia del sitio. La dirección de la página incluye los filtros seleccionados para que puedas compartir la búsqueda." }
+PrivacyCopy = { other = "No hacen falta cuentas y no hay publicidad. El navegador recuerda el idioma durante un año, y los avisos de IA cerrados y las búsquedas aplicadas durante 30 días. Los criterios de búsqueda se envían en una cookie propia. El tema de color permanece en el navegador hasta que lo elimines. El orden de visualización que elijas se guarda durante 30 días en una cookie propia del sitio. La dirección de la página incluye los filtros seleccionados para que puedas compartir la búsqueda. Los barrios elegidos se guardan por separado en una cookie propia HttpOnly durante 30 días; guardar una selección vacía la elimina. Al aplicarlos, sus nombres aparecen en las URL de búsqueda." }
 DataHandlingCopy = { other = "Los textos originales en alemán se conservan para su procesamiento y revisión con acceso restringido. Las páginas públicas muestran los resúmenes elaborados a partir de ellos." }
 AboutIndependence = { other = "Independencia" }
 AboutIndependenceCopy = { other = "MunichBrief es un proyecto independiente. No está vinculado a la policía de Baviera ni a ninguna otra autoridad pública y no habla en su nombre." }
@@ -327,7 +327,7 @@ other = "Las cookies propias guardan el idioma un año, la confirmación del avi
 other = "Los registros técnicos incluyen método, ruta sin parámetros de consulta, estado, duración e identificadores de solicitud. No registran mensajes, correos electrónicos, cookies ni IP de visitantes. Prometheus y Loki están configurados para conservar métricas y registros 30 días; Grafana los muestra internamente. Para limitar los intentos de contacto, guardamos un contador y un identificador seudónimo derivado de la IP solo en la memoria de la aplicación, sin almacenar la dirección IP original. El límite se aplica durante 15 minutos desde el primer intento. Los contadores caducados se eliminan con el siguiente intento de contacto o al reiniciar la aplicación; si no hay más intentos, pueden permanecer en memoria durante más tiempo. Su finalidad es la seguridad y fiabilidad (art. 6(1)(f) RGPD). Cloudflare tiene plazos propios."
 
 [PrivacyCorrespondenceCopy]
-other = "Tratamos tu correo, tema y mensaje para responder a la consulta (art. 6(1)(f) RGPD), o cumplir obligaciones legales cuando corresponda (art. 6(1)(c)). El formulario guarda primero el mensaje en un buzón privado de la base de datos. SMTP2GO envía una notificación a contact@munichbrief.de y Cloudflare Email Routing la reenvía a Gmail. Las respuestas se redactan en Apple Mail y se envían mediante SMTP2GO. No se usa IA para tratar los mensajes. Las políticas enlazadas describen el tratamiento fuera del EEE."
+other = "Tratamos tu correo, tema y mensaje para responder a la consulta (art. 6(1)(f) RGPD), o cumplir obligaciones legales cuando corresponda (art. 6(1)(c)). El formulario guarda primero el mensaje en un buzón privado de la base de datos. SMTP2GO envía una notificación a contact@munichbrief.de y Cloudflare Email Routing la reenvía a Gmail. Las respuestas se redactan en Apple Mail y se envían mediante SMTP2GO. No se usa IA para tratar los mensajes. Las políticas enlazadas describen el tratamiento fuera del EEE. Al informar de un error desde la página de una noticia, su enlace y el idioma de lectura se adjuntan automáticamente al mensaje."
 
 [PrivacyRetentionCopy]
 other = "Los mensajes del buzón de administración se eliminan 90 días después de marcar la consulta como resuelta. Reabrirla cancela el plazo. Las consultas abiertas se revisan y conservan mientras sean necesarias. Un litigio u obligación legal puede justificar conservarlas con un motivo y fecha de revisión registrados. Las copias en Gmail y respuestas enviadas se revisan y eliminan por separado. Los proveedores aplican sus propios plazos a los registros de envío."
@@ -354,7 +354,7 @@ other = "es responsable del sitio web. Dirección indicada arriba. MunichBrief e
 other = "Para consultas, visita nuestra página de contacto."
 
 [ContactStorage]
-other = "Guardamos tu mensaje en una bandeja privada antes de confirmar su recepción. Los mensajes marcados como resueltos se eliminan de esa bandeja a los 90 días."
+other = "Guardamos tu mensaje en una bandeja privada antes de confirmar su recepción. Los mensajes marcados como resueltos se eliminan de esa bandeja a los 90 días. Al informar de un error desde la página de una noticia, su enlace y el idioma de lectura se adjuntan automáticamente al mensaje."
 
 [ContactClosed]
 other = "El formulario de contacto se ha cerrado. Tu mensaje no se ha enviado. Escribe a contact@munichbrief.de."
@@ -481,7 +481,7 @@ other = "Editar barrios"
 other = "Elegir barrios"
 
 [NeighborhoodsHelp]
-other = "Elige hasta 10 zonas. Se incluyen noticias de cualquiera de las zonas elegidas. La selección se guarda en este dispositivo durante 30 días."
+other = "Elige hasta 10 zonas. Se incluyen noticias de cualquiera de las zonas elegidas. La selección se guarda en este dispositivo durante 30 días. Guardar también aplica la selección. Borrar los filtros conserva tus barrios guardados; guarda una selección vacía para eliminarlos."
 
 [NeighborhoodsEmpty]
 other = "Aún no hay barrios disponibles."
@@ -490,13 +490,13 @@ other = "Aún no hay barrios disponibles."
 other = "Guardar barrios"
 
 [NeighborhoodsInvalid]
-other = "Elige hasta 10 barrios con nombres más cortos."
+other = "Elige como máximo 10 zonas. Si los nombres son muy largos, elige menos."
 
 [PublicationShortcut]
 other = "Publicado en"
 
 [AdvancedShortcutHelp]
-other = "Una zona concreta sustituye a Mis barrios. Las fechas personalizadas sustituyen al filtro rápido de publicación. Los demás filtros siguen activos."
+other = "Una zona concreta sustituye a Mis barrios. Las fechas personalizadas sustituyen al filtro rápido de publicación. Los demás filtros siguen activos. Hoy y los últimos 7 días usan las fechas de Múnich, incluyen hoy y se actualizan cada día."
 
 [ReportError]
 other = "Informar de un error"

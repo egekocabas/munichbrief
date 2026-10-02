@@ -22,12 +22,12 @@
       </div>
       <div class="reader-shortcut-row">
         <a href="{{.AssistanceURL}}" {{if eq .Filters.Assistance "yes"}}aria-current="true"{{end}}>{{t .Lang "PublicAssistanceNeeded"}}</a>
-        <form method="post" action="{{.FormURL}}" hx-boost="false"><button type="submit" name="neighborhoods_action" value="{{if .Filters.Areas}}disable{{else}}enable{{end}}" aria-pressed="{{if .Filters.Areas}}true{{else}}false{{end}}" {{if and (not .NeighborhoodsSaved) (not .Filters.Areas)}}disabled{{end}}>{{t .Lang "MyNeighborhoods"}}</button></form>
+        <form method="post" action="{{.FormURL}}" hx-boost="false"><button type="submit" name="neighborhoods_action" value="{{if .NeighborhoodsActive}}disable{{else}}enable{{end}}" aria-pressed="{{if .NeighborhoodsActive}}true{{else}}false{{end}}" {{if not .NeighborhoodsSaved}}disabled{{end}}>{{t .Lang "MyNeighborhoods"}}</button></form>
       </div>
     </div>
-    <details class="reader-neighborhoods">
+    <details class="reader-neighborhoods" id="reader-neighborhoods">
       <summary>{{if .NeighborhoodsSaved}}{{t .Lang "EditNeighborhoods"}}{{else}}{{t .Lang "ChooseNeighborhoods"}}{{end}}</summary>
-      <form method="post" action="{{.FormURL}}" hx-boost="false">
+      <form method="post" action="{{.FormURL}}" hx-boost="false" data-neighborhood-limit="{{t .Lang "NeighborhoodsInvalid"}}">
         <fieldset><legend>{{t .Lang "MyNeighborhoods"}}</legend><p id="neighborhoods-help">{{t .Lang "NeighborhoodsHelp"}}</p>
           <div class="reader-neighborhood-options">{{range .Neighborhoods}}<label><input type="checkbox" name="saved_neighborhood" value="{{.Name}}" {{if .Selected}}checked{{end}} aria-describedby="neighborhoods-help"><span>{{.Name}}</span></label>{{else}}<p>{{t .Lang "NeighborhoodsEmpty"}}</p>{{end}}</div>
         </fieldset>

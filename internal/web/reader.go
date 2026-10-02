@@ -275,6 +275,7 @@ func (s *Server) submitSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var savedAreas *store.ReaderFilters
+	anchor := "#timeline-heading"
 	if action := r.PostForm.Get("neighborhoods_action"); action != "" {
 		f = urlFilters
 		if !explicit {
@@ -293,11 +294,14 @@ func (s *Server) submitSearch(w http.ResponseWriter, r *http.Request) {
 				f.Area = ""
 			}
 		case "enable":
-			f.Areas = readReaderPreferences(r, neighborhoodsCookieName).Areas
-			if len(f.Areas) == 0 {
-				http.Error(w, s.localization.Text(language, "NeighborhoodsInvalid"), http.StatusBadRequest)
-				return
+			selection := readReaderPreferences(r, neighborhoodsCookieName).Areas
+			if len(selection) == 0 {
+				// A tab can outlive its preference cookie. Keep its current search
+				// and return to the chooser instead of failing or clearing areas.
+				anchor = "#reader-neighborhoods"
+				break
 			}
+			f.Areas = selection
 			f.Area = ""
 		case "disable":
 			f.Areas = nil
@@ -357,7 +361,7 @@ func (s *Server) submitSearch(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.Header().Set("Cache-Control", "private, no-store")
-	http.Redirect(w, r, listingURL(language, f, view, size, 1)+"#timeline-heading", http.StatusSeeOther)
+	http.Redirect(w, r, listingURL(language, f, view, size, 1)+anchor, http.StatusSeeOther)
 }
 func validReaderMutation(r *http.Request) bool {
 	if strings.EqualFold(r.Header.Get("Sec-Fetch-Site"), "cross-site") {
@@ -451,7 +455,7 @@ func (s *Server) decorateReader(data *timelinePage, language string, search bool
 	}
 	add("q", "SearchText", f.Text)
 	add("area", "Area", f.Area)
-	add("neighborhoods", "MyNeighborhoods", strings.Join(f.Areas, ", "))
+	add("neighborhoods", "Area", strings.Join(f.Areas, ", "))
 	add("category", "Category", s.metadataCodeLabel(language, "Category", f.Category))
 	add("number", "Report", f.Number)
 	if f.Assistance != "" {
@@ -509,6 +513,7 @@ func readerActionURL(language string, f store.ReaderFilters, view string, size i
 func (s *Server) decorateNeighborhoods(data *timelinePage, r *http.Request) {
 	saved := readReaderPreferences(r, neighborhoodsCookieName).Areas
 	data.NeighborhoodsSaved = len(saved) > 0
+	data.NeighborhoodsActive = len(saved) > 0 && slices.Equal(saved, data.Filters.Areas)
 	// Keep a saved area editable even when it currently has no reports in this
 	// language. Names are always escaped; queries match them literally.
 	areas := append(slices.Clone(data.Areas), saved...)

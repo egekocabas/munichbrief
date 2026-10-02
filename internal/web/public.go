@@ -741,7 +741,7 @@ type timelinePage struct {
 	Categories                                                                      []readerChoice
 	Areas                                                                           []string
 	Neighborhoods                                                                   []neighborhoodChoice
-	NeighborhoodsSaved                                                              bool
+	NeighborhoodsSaved, NeighborhoodsActive                                         bool
 	AllDatesURL, TodayURL, WeekURL, AssistanceURL                                   string
 	ActiveFilters                                                                   []activeFilter
 	First, Last                                                                     int

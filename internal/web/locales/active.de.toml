@@ -494,7 +494,7 @@ other = "KI-generierte Zusammenfassungen und extrahierte Angaben können Fehler 
 other = "Datenschutz und Datenverarbeitung"
 
 [PrivacyCopy]
-other = "Es gibt weder Benutzerkonten noch Werbung. Dieser Browser merkt sich die Sprache ein Jahr lang, geschlossene KI-Hinweise und angewendete Suchen jeweils 30 Tage. Suchkriterien werden in einem eigenen Cookie übertragen. Das Farbschema bleibt bis zum Löschen im Browserspeicher. Die gewählte Sortierung der Meldungen wird für 30 Tage in einem Cookie dieser Website gespeichert. Die gewählten Suchfilter stehen in der URL, sodass du die Suche teilen kannst."
+other = "Es gibt weder Benutzerkonten noch Werbung. Dieser Browser merkt sich die Sprache ein Jahr lang, geschlossene KI-Hinweise und angewendete Suchen jeweils 30 Tage. Suchkriterien werden in einem eigenen Cookie übertragen. Das Farbschema bleibt bis zum Löschen im Browserspeicher. Die gewählte Sortierung der Meldungen wird für 30 Tage in einem Cookie dieser Website gespeichert. Die gewählten Suchfilter stehen in der URL, sodass du die Suche teilen kannst. Ihre ausgewählten Stadtviertel werden separat für 30 Tage in einem eigenen HttpOnly-Cookie gespeichert. Das Speichern einer leeren Auswahl löscht es. Bei aktiver Auswahl erscheinen die Gebietsnamen in Such-URLs."
 
 [DataHandlingCopy]
 other = "Die deutschen Quelltexte werden zur Verarbeitung und für interne Prüfungen mit beschränktem Zugriff gespeichert. Öffentlich zu sehen sind die daraus erstellten Zusammenfassungen."
@@ -756,7 +756,7 @@ other = "Ein Erstanbieter-Cookie speichert die Sprache ein Jahr und die Bestäti
 other = "Für einen zuverlässigen Betrieb erfassen technische Protokolle Methode, Pfad ohne Suchparameter, Status, Dauer und Kennungen einer Anfrage. Nachrichten, E-Mail-Adressen, Cookies und Besucher-IP-Adressen werden nicht in Anwendungsprotokollen erfasst. Für Prometheus-Metriken und Loki-Protokolle sind 30 Tage Aufbewahrung konfiguriert; Grafana dient der internen Anzeige. Zur Begrenzung von Kontaktversuchen speichern wir einen Zähler und eine aus der IP-Adresse abgeleitete pseudonyme Kennung ausschließlich im Arbeitsspeicher, nicht die ursprüngliche IP-Adresse. Das Limit gilt 15 Minuten ab dem ersten Versuch. Abgelaufene Zähler werden beim nächsten Kontaktversuch oder beim Neustart der Anwendung entfernt; ohne weiteren Versuch können sie länger im Arbeitsspeicher bleiben. Grundlage ist das berechtigte Interesse an Sicherheit und Zuverlässigkeit (Art. 6 Abs. 1 lit. f DSGVO). Cloudflares Aufbewahrung richtet sich nach eigenen Regeln."
 
 [PrivacyCorrespondenceCopy]
-other = "Bei einer Kontaktaufnahme verarbeiten wir E-Mail-Adresse, Thema und Nachricht zur Beantwortung Ihrer Anfrage (Art. 6 Abs. 1 lit. f DSGVO), gegebenenfalls zur Erfüllung gesetzlicher Pflichten (lit. c). Das Formular speichert die Nachricht zuerst in einem geschützten Datenbank-Postfach. SMTP2GO benachrichtigt contact@munichbrief.de; Cloudflare Email Routing leitet an ein Gmail-Postfach weiter. Antworten werden in Apple Mail geschrieben und über SMTP2GO versendet. Nachrichten werden nicht durch KI verarbeitet. Die verlinkten Anbieterinformationen erläutern auch Verarbeitungen außerhalb des EWR."
+other = "Bei einer Kontaktaufnahme verarbeiten wir E-Mail-Adresse, Thema und Nachricht zur Beantwortung Ihrer Anfrage (Art. 6 Abs. 1 lit. f DSGVO), gegebenenfalls zur Erfüllung gesetzlicher Pflichten (lit. c). Das Formular speichert die Nachricht zuerst in einem geschützten Datenbank-Postfach. SMTP2GO benachrichtigt contact@munichbrief.de; Cloudflare Email Routing leitet an ein Gmail-Postfach weiter. Antworten werden in Apple Mail geschrieben und über SMTP2GO versendet. Nachrichten werden nicht durch KI verarbeitet. Die verlinkten Anbieterinformationen erläutern auch Verarbeitungen außerhalb des EWR. Wenn Sie einen Fehler von einer Meldungsseite aus melden, werden der Link und die Lesesprache automatisch an Ihre Nachricht angehängt."
 
 [PrivacyRetentionCopy]
 other = "Nachrichten im Admin-Postfach werden 90 Tage nach Kennzeichnung als erledigt automatisch gelöscht. Beim Wiederöffnen entfällt diese Frist. Offene Anfragen werden überprüft und so lange aufbewahrt, wie sie benötigt werden. Für laufende Streitfälle oder gesetzliche Pflichten kann die Löschung mit dokumentiertem Grund und Prüftermin ausgesetzt werden. Gmail-Kopien und versendete Antworten werden gesondert geprüft und gelöscht. Für Versanddaten der Anbieter gelten eigene Fristen."
@@ -783,7 +783,7 @@ other = "ist für diese Website verantwortlich. Anschrift wie oben. MunichBrief 
 other = "Für Anfragen besuchen Sie bitte unsere Kontaktseite."
 
 [ContactStorage]
-other = "Ihre Nachricht wird in einem geschützten Posteingang gespeichert, bevor wir den Eingang bestätigen. Erledigte Anfragen werden dort nach 90 Tagen gelöscht."
+other = "Ihre Nachricht wird in einem geschützten Posteingang gespeichert, bevor wir den Eingang bestätigen. Erledigte Anfragen werden dort nach 90 Tagen gelöscht. Wenn Sie einen Fehler von einer Meldungsseite aus melden, werden der Link und die Lesesprache automatisch an Ihre Nachricht angehängt."
 
 [ContactClosed]
 other = "Das Kontaktformular wurde geschlossen. Ihre Nachricht wurde nicht gesendet. Bitte schreiben Sie stattdessen an contact@munichbrief.de."
@@ -910,7 +910,7 @@ other = "Stadtviertel bearbeiten"
 other = "Stadtviertel auswählen"
 
 [NeighborhoodsHelp]
-other = "Wählen Sie bis zu 10 Gebiete. Meldungen aus jedem ausgewählten Gebiet werden angezeigt. Die Auswahl bleibt 30 Tage auf diesem Gerät gespeichert."
+other = "Wählen Sie bis zu 10 Gebiete. Meldungen aus jedem ausgewählten Gebiet werden angezeigt. Die Auswahl bleibt 30 Tage auf diesem Gerät gespeichert. Speichern wendet die Auswahl auch an. Das Zurücksetzen der Suchfilter behält Ihre gespeicherten Stadtviertel bei; speichern Sie eine leere Auswahl, um sie zu löschen."
 
 [NeighborhoodsEmpty]
 other = "Noch keine Stadtviertel verfügbar."
@@ -919,13 +919,13 @@ other = "Noch keine Stadtviertel verfügbar."
 other = "Stadtviertel speichern"
 
 [NeighborhoodsInvalid]
-other = "Wählen Sie bis zu 10 Stadtviertel mit kürzeren Namen."
+other = "Wählen Sie höchstens 10 Gebiete. Bei sehr langen Namen wählen Sie weniger."
 
 [PublicationShortcut]
 other = "Veröffentlicht im Zeitraum"
 
 [AdvancedShortcutHelp]
-other = "Ein bestimmtes Gebiet ersetzt Meine Stadtviertel. Eigene Datumsangaben ersetzen den Veröffentlichungs-Schnellfilter. Andere Filter bleiben aktiv."
+other = "Ein bestimmtes Gebiet ersetzt Meine Stadtviertel. Eigene Datumsangaben ersetzen den Veröffentlichungs-Schnellfilter. Andere Filter bleiben aktiv. Heute und die letzten 7 Tage richten sich nach dem Münchner Kalenderdatum, schließen heute ein und ändern sich täglich."
 
 [ReportError]
 other = "Fehler melden"

@@ -258,7 +258,7 @@ func TestLegalPagesEveryLanguageHTMLAndMarkdown(t *testing.T) {
 				}
 			}
 			if path == "privacy" {
-				for _, key := range []string{"PrivacyRequired", "PrivacySourcePeople", "PrivacyAutomation", "PrivacyObjection"} {
+				for _, key := range []string{"PrivacyPreferences", "PrivacyCorrespondence", "PrivacyRequired", "PrivacySourcePeople", "PrivacyAutomation", "PrivacyObjection"} {
 					for _, suffix := range []string{"", "Copy"} {
 						text := s.localization.Text(lang.Code, key+suffix)
 						if text == "" || strings.Contains(text, "["+key) || !strings.Contains(w.Body.String(), html.EscapeString(text)) || !strings.Contains(mw.Body.String(), text) {
