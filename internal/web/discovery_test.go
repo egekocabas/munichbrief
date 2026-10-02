@@ -38,6 +38,36 @@ func publicDiscoveryRequest(method, target string) *http.Request {
 	return request
 }
 
+func TestDetailMarkdownEscapesCorrectionLink(t *testing.T) {
+	t.Parallel()
+	server, job := publicDiscoveryServer(t, fixtureStore(t), testPresentation{
+		TitleDE: "Sicherer Titel", SummaryDE: "Sichere Zusammenfassung.",
+		TitleEN: "Safe title", SummaryEN: "Safe summary.",
+	})
+	// The public route retains a usable localized correction link and serves
+	// Markdown with nosniff, rather than relying on a renderer's HTML policy.
+	request := publicDiscoveryRequest(http.MethodGet, "/en/incidents/"+formatID(job.IncidentID))
+	request.Header.Set("Accept", "text/markdown")
+	response := httptest.NewRecorder()
+	server.Handler().ServeHTTP(response, request)
+	want := "[Report an error](</en/contact?incident=" + formatID(job.IncidentID) + "#contact-form>)"
+	if response.Code != http.StatusOK || response.Header().Get("Content-Type") != "text/markdown; charset=utf-8" || response.Header().Get("X-Content-Type-Options") != "nosniff" || !strings.Contains(response.Body.String(), want) {
+		t.Fatalf("invalid correction link response: %d/%v/%s", response.Code, response.Header(), response.Body.String())
+	}
+	// Exercise the output boundary directly: route validation currently limits
+	// this value, but escaping must remain safe if its source changes later.
+	data := detailPage{
+		basePage:      server.base(request, "en", request.URL.Path),
+		CorrectionURL: `/en/contact?incident=1&context=quoted#"><img src=x onerror=alert(1)>`,
+	}
+	response = httptest.NewRecorder()
+	server.renderDetailMarkdown(response, data)
+	want = `[Report an error](</en/contact?incident=1&amp;context=quoted#&#34;%3E&lt;img src=x onerror=alert(1)%3E>)`
+	if strings.Contains(response.Body.String(), "<img") || !strings.Contains(response.Body.String(), want) {
+		t.Fatalf("correction URL escaped its Markdown destination: %s", response.Body.String())
+	}
+}
+
 func TestRobotsAdvertisesCrawlAndContentUsePolicy(t *testing.T) {
 	t.Parallel()
 	server, _ := publicDiscoveryServer(t, fixtureStore(t), testPresentation{
