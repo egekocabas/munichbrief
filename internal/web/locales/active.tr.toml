@@ -321,7 +321,7 @@ other = "Web sitesi, veritabanı ve tüm yapay zekâ işlemleri, işletmecinin A
 other = "Cloudflare, siteyi ziyaretçilere sunmak ve korumak için IP adresleri dâhil bağlantı verilerini işler. Kendi ağı üzerinden ziyaret istatistikleri de oluşturabilir. Web Analytics ayarında AB’deki ziyaretçiler kapsam dışıdır; diğer bölgelerde performans ölçüm kodu otomatik eklenir. Tarayıcının güvenlik kuralları bu kodun çalışmasını engelleyebilir. Cloudflare’ın sitenin sunumu ve güvenliği için yaptığı işlemler bundan ayrıdır. Zaraz onay yönetimi ve Google Tag Gateway etkin değildir. Sunum ve koruma işlemleri, sitenin güvenli çalışmasına yönelik meşru menfaate dayanır (GDPR madde 6(1)(f)). Aşağıdaki sağlayıcı açıklamaları yurt dışına veri aktarımını da ele alır."
 
 [PrivacyPreferencesCopy]
-other = "Dil tercihi bir yıl, yapay zekâ bilgilendirmesinin onayı 30 gün süreyle birinci taraf çerezlerde saklanır. Son uygulanan arama ölçütleri 30 gün boyunca HttpOnly çerezde tutulur; aramayı temizlemek bunları siler. Tema tercihi siz silene kadar tarayıcının yerel depolamasında kalır. Listeye dönüş konumu yalnızca açık tarayıcı sekmesinde tutulur. İletişim formunun güvenlik belirteci en fazla bir saat, alındı bilgisi beş dakika geçerlidir; mesajınızı içermezler. Bu işlevler talep ettiğiniz hizmeti sağlar (TDDDG §25(2)(2); GDPR madde 6(1)(f)). HTMX, localStorage içinde sayfa kopyaları saklamaz. Seçtiğiniz sıralama, bu siteye ait bir çerezde 30 gün boyunca saklanır. Arama terimleri ve filtreler sayfa adresine eklenir; paylaşılan bağlantılarda ve tarayıcı geçmişinde kalabilir."
+other = "Dil tercihi bir yıl, yapay zekâ bilgilendirmesinin onayı 30 gün süreyle birinci taraf çerezlerde saklanır. Son uygulanan arama ölçütleri 30 gün boyunca HttpOnly çerezde tutulur; aramayı temizlemek bunları siler. Tema tercihi siz silene kadar tarayıcının yerel depolamasında kalır. Listeye dönüş konumu yalnızca açık tarayıcı sekmesinde tutulur. İletişim formunun güvenlik belirteci en fazla bir saat, alındı bilgisi beş dakika geçerlidir; mesajınızı içermezler. Bu işlevler talep ettiğiniz hizmeti sağlar (TDDDG §25(2)(2); GDPR madde 6(1)(f)). HTMX, localStorage içinde sayfa kopyaları saklamaz. Seçtiğiniz sıralama, bu siteye ait bir çerezde 30 gün boyunca saklanır. Arama terimleri ve filtreler sayfa adresine eklenir; paylaşılan bağlantılarda ve tarayıcı geçmişinde kalabilir. Seçtiğiniz mahalleler ayrı bir birinci taraf HttpOnly çerezinde 30 gün saklanır; boş seçim kaydedildiğinde çerez silinir. Uygulandığında mahalle adları arama URL’lerinde görünür."
 
 [PrivacyMonitoringCopy]
 other = "Sitenin güvenilir çalışması için teknik kayıtlarda istek yöntemi, sorgu parametreleri olmadan sayfa yolu, durum, süre ve istek kimlikleri tutulur. Uygulama kayıtlarına mesajlar, e-posta adresleri, çerezler veya ziyaretçilerin IP adresleri yazılmaz. Prometheus ölçümleri ve Loki kayıtları için saklama süresi 30 gün olarak ayarlanmıştır; Grafana bu teknik izleme verilerini gösterir. İletişim denemelerini sınırlandırmak için IP adresinin kendisini kaydetmeden, bu adresten türetilen takma bir kimliği ve deneme sayacını yalnızca uygulamanın belleğinde tutarız. Sınır, ilk denemeden itibaren 15 dakika geçerlidir. Süresi dolan sayaçlar bir sonraki iletişim denemesinde veya uygulama yeniden başlatıldığında silinir; yeni bir deneme yapılmazsa bellekte daha uzun kalabilirler. Amaç güvenlik ve güvenilirliktir (GDPR madde 6(1)(f)). Cloudflare’ın saklama süreleri ayrıdır."
@@ -458,3 +458,54 @@ other = "Model varyantı"
 
 [LocationVerificationStep]
 other = "Konum doğrulaması"
+
+[QuickFilters]
+other = "Hızlı filtreler"
+
+[QuickAllDates]
+other = "Tüm tarihler"
+
+[QuickToday]
+other = "Bugün"
+
+[QuickWeek]
+other = "Son 7 gün"
+
+[MyNeighborhoods]
+other = "Mahallelerim"
+
+[EditNeighborhoods]
+other = "Mahalleleri düzenle"
+
+[ChooseNeighborhoods]
+other = "Mahalle seç"
+
+[NeighborhoodsHelp]
+other = "En fazla 10 bölge seçin. Seçilen bölgelerden herhangi birindeki haberler gösterilir. Seçiminiz bu cihazda 30 gün saklanır."
+
+[NeighborhoodsEmpty]
+other = "Henüz kullanılabilir mahalle yok."
+
+[SaveNeighborhoods]
+other = "Mahalleleri kaydet"
+
+[NeighborhoodsInvalid]
+other = "Daha kısa adlara sahip en fazla 10 mahalle seçin."
+
+[PublicationShortcut]
+other = "Yayın dönemi"
+
+[AdvancedShortcutHelp]
+other = "Belirli bir bölge Mahallelerim seçiminin yerini alır. Özel tarihler hızlı yayın filtresinin yerini alır. Diğer filtreler etkin kalır."
+
+[ReportError]
+other = "Hata bildir"
+
+[CorrectionReport]
+other = "İlgili haber"
+
+[CorrectionUnavailable]
+other = "Bu haber artık seçilen dilde mevcut değil. Genel iletişim sayfasını kullanabilirsiniz."
+
+[CorrectionMessageLimit]
+other = "En fazla {{.MessageMaxLength}} karakter. Haberin bağlantısı ve dili otomatik olarak eklenir."

@@ -321,7 +321,7 @@ other = "Web-stranica, baza podataka i svi postupci vještačke inteligencije ra
 other = "Cloudflare omogućava pristup stranici i štiti je, obrađujući podatke o vezi, uključujući IP adrese. Može praviti i statistike na svojoj mreži. Web Analytics isključuje posjetioce iz EU-a, a drugdje automatski ubacuje skriptu za mjerenje; sigurnosna pravila preglednika mogu spriječiti njeno izvršavanje. Obrada za isporuku i sigurnost je odvojena. Zaraz Consent Management i Google Tag Gateway nisu aktivni. Isporuka i zaštita zasnivaju se na legitimnom interesu za siguran rad (član 6(1)(f) GDPR-a). Politike pružalaca objašnjavaju međunarodne prijenose."
 
 [PrivacyPreferencesCopy]
-other = "Vlastiti kolačići pamte jezik godinu dana, potvrdu obavijesti o vještačkoj inteligenciji 30 dana i posljednju pretragu 30 dana u HttpOnly kolačiću. Brisanje pretrage uklanja kriterije. Tema ostaje u lokalnoj pohrani dok je ne izbrišete; povratni položaj liste čuva se za trenutnu karticu. Sigurnosni tokeni obrasca vrijede najviše sat, a potvrde prijema pet minuta; ne sadrže poruku. Ove funkcije omogućavaju traženu uslugu (§25(2)(2) TDDDG-a; član 6(1)(f) GDPR-a). HTMX ne čuva kopije stranica u localStorage. Odabrani redoslijed prikaza pamti se 30 dana u kolačiću ove stranice. Pojmovi za pretragu i filteri dio su adrese stranice te mogu ostati u podijeljenim linkovima i historiji preglednika."
+other = "Vlastiti kolačići pamte jezik godinu dana, potvrdu obavijesti o vještačkoj inteligenciji 30 dana i posljednju pretragu 30 dana u HttpOnly kolačiću. Brisanje pretrage uklanja kriterije. Tema ostaje u lokalnoj pohrani dok je ne izbrišete; povratni položaj liste čuva se za trenutnu karticu. Sigurnosni tokeni obrasca vrijede najviše sat, a potvrde prijema pet minuta; ne sadrže poruku. Ove funkcije omogućavaju traženu uslugu (§25(2)(2) TDDDG-a; član 6(1)(f) GDPR-a). HTMX ne čuva kopije stranica u localStorage. Odabrani redoslijed prikaza pamti se 30 dana u kolačiću ove stranice. Pojmovi za pretragu i filteri dio su adrese stranice te mogu ostati u podijeljenim linkovima i historiji preglednika. Odabrane četvrti čuvaju se zasebno 30 dana u HttpOnly kolačiću prve strane; spremanje praznog izbora briše taj kolačić. Kada se primijene, nazivi četvrti pojavljuju se u URL-ovima pretrage."
 
 [PrivacyMonitoringCopy]
 other = "Tehnički zapisi sadrže metodu, putanju bez parametara pretrage, status, trajanje i identifikatore zahtjeva, ali ne poruke, e-mail adrese, kolačiće ni IP adrese posjetilaca. Prometheus i Loki podešeni su na čuvanje 30 dana; Grafana prikazuje interne podatke. Za ograničavanje pokušaja kontakta čuvamo brojač i pseudonimnu oznaku izvedenu iz IP adrese samo u memoriji aplikacije, bez pohranjivanja izvorne IP adrese. Ograničenje traje 15 minuta od prvog pokušaja. Istekli brojači uklanjaju se pri sljedećem pokušaju kontakta ili ponovnom pokretanju aplikacije; ako nema novih pokušaja, mogu ostati u memoriji duže. Svrha je sigurnost i pouzdanost (član 6(1)(f) GDPR-a). Cloudflare ima vlastite rokove."
@@ -458,3 +458,54 @@ other = "Varijanta modela"
 
 [LocationVerificationStep]
 other = "Provjera lokacije"
+
+[QuickFilters]
+other = "Brzi filteri"
+
+[QuickAllDates]
+other = "Svi datumi"
+
+[QuickToday]
+other = "Danas"
+
+[QuickWeek]
+other = "Posljednjih 7 dana"
+
+[MyNeighborhoods]
+other = "Moje četvrti"
+
+[EditNeighborhoods]
+other = "Uredi četvrti"
+
+[ChooseNeighborhoods]
+other = "Odaberi četvrti"
+
+[NeighborhoodsHelp]
+other = "Odaberite do 10 područja. Prikazuju se izvještaji iz bilo kojeg odabranog područja. Izbor se čuva na ovom uređaju 30 dana."
+
+[NeighborhoodsEmpty]
+other = "Još nema dostupnih četvrti."
+
+[SaveNeighborhoods]
+other = "Sačuvaj četvrti"
+
+[NeighborhoodsInvalid]
+other = "Odaberite do 10 četvrti s kraćim nazivima."
+
+[PublicationShortcut]
+other = "Objavljeno u periodu"
+
+[AdvancedShortcutHelp]
+other = "Određeno područje zamjenjuje Moje četvrti. Prilagođeni datumi zamjenjuju brzi filter objavljivanja. Ostali filteri ostaju aktivni."
+
+[ReportError]
+other = "Prijavi grešku"
+
+[CorrectionReport]
+other = "Priloženi izvještaj"
+
+[CorrectionUnavailable]
+other = "Ovaj izvještaj više nije dostupan na odabranom jeziku. I dalje možete koristiti opću stranicu za kontakt."
+
+[CorrectionMessageLimit]
+other = "Do {{.MessageMaxLength}} znakova. Link i jezik izvještaja dodaju se automatski."

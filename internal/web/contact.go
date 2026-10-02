@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/egekocabas/munichbrief/internal/store"
 )
@@ -26,10 +27,50 @@ type contactRate struct {
 }
 type contactPage struct {
 	basePage
-	UpdatedLabel                        string
-	Enabled, Received, Draft            bool
-	Token, Email, Topic, Message, Error string
-	Errors                              map[string]string
+	UpdatedLabel                                     string
+	Enabled, Received, Draft                         bool
+	Token, Email, Topic, Message, Error              string
+	Errors                                           map[string]string
+	ReportID, ReportLanguage, ReportURL, ReportTitle string
+	MessageMaxLength                                 int
+}
+
+func (s *Server) correctionReference(r *http.Request, data contactPage) string {
+	if data.ReportURL == "" {
+		return ""
+	}
+	return fmt.Sprintf("Report: %s%s\nLanguage: %s\n\n", s.canonicalOrigin(r), data.ReportURL, data.ReportLanguage)
+}
+
+// Resolve only an accepted public presentation. Caller-supplied titles and URLs
+// never become correction context, even on a protected review host.
+func (s *Server) contactReport(r *http.Request, data *contactPage) error {
+	if data.ReportID == "" {
+		return nil
+	}
+	id, err := strconv.ParseInt(data.ReportID, 10, 64)
+	if err != nil || id < 1 {
+		return store.ErrNotFound
+	}
+	if data.ReportLanguage == "" {
+		data.ReportLanguage, _ = s.routeLanguage(r)
+	}
+	if _, ok := s.languageByCode(data.ReportLanguage); !ok {
+		return store.ErrNotFound
+	}
+	scope := s.scope(r)
+	scope.PublicOnly, scope.Language, scope.TranslationLanguage = true, data.ReportLanguage, data.ReportLanguage
+	record, err := s.store.GetPresentationIncident(r.Context(), id, scope)
+	if err != nil {
+		return err
+	}
+	if (s.options.SourceMode == "fixture" && record.FetchStatus != "fixture") || (s.options.SourceMode == "live" && record.FetchStatus == "fixture") {
+		return store.ErrNotFound
+	}
+	data.ReportID = strconv.FormatInt(id, 10)
+	data.ReportURL = fmt.Sprintf("/%s/incidents/%d", data.ReportLanguage, id)
+	data.ReportTitle = s.incidentForLanguage(record, data.ReportLanguage).Title
+	return nil
 }
 
 func (s *Server) contactToken(now time.Time) string {
@@ -157,13 +198,19 @@ func (s *Server) renderContact(w http.ResponseWriter, r *http.Request, data cont
 	base.ShowReviewNotice = false
 	base.Description = s.localization.Text(language, "ContactIntro")
 	base.SocialTitle = s.localization.Text(language, "ContactHeading") + " · MunichBrief"
-	if data.Received || status != http.StatusOK {
+	if data.ReportID != "" {
+		for n := range base.LanguageSwitches {
+			base.LanguageSwitches[n].URL = "/" + base.LanguageSwitches[n].Code + "/contact?" + url.Values{"incident": {data.ReportID}, "report_language": {data.ReportLanguage}}.Encode() + "#contact-form"
+		}
+	}
+	if data.Received || data.ReportID != "" || status != http.StatusOK {
 		base.Robots = "noindex,follow"
 	}
 	base.DocumentModifiedDate = informationPageUpdatedAt("contact").Format(time.DateOnly)
 	base.StructuredData = structuredPageData(base, "ContactPage")
 	data.UpdatedLabel = s.formatIncidentDate(language, informationPageUpdatedAt("contact"))
 	data.basePage = base
+	data.MessageMaxLength = 5000 - utf8.RuneCountInString(s.correctionReference(r, data))
 	data.Enabled = s.contactAvailable
 	if data.Enabled {
 		settings, err := s.contactStore.ContactSettings(r.Context())
@@ -190,6 +237,9 @@ func (s *Server) renderContact(w http.ResponseWriter, r *http.Request, data cont
 		w.Header().Set("Cache-Control", "private, no-store")
 		w.WriteHeader(status)
 		fmt.Fprintf(w, "# %s\n\n%s\n\n%s: %s\n\ncontact@munichbrief.de\n\n", s.localization.Text(language, "ContactHeading"), base.Description, s.localization.Text(language, "LegalLastUpdated"), data.UpdatedLabel)
+		if data.ReportURL != "" {
+			fmt.Fprintf(w, "%s: [%s](%s) (%s)\n\n", s.localization.Text(language, "CorrectionReport"), markdownText(data.ReportTitle), data.ReportURL, data.ReportLanguage)
+		}
 		for _, key := range []string{"ContactCorrectionCopy", "ContactPrivacyCopy", "ContactTechnicalCopy", "ContactPoliceCopy", "ContactStorage"} {
 			if key == "ContactPoliceCopy" {
 				fmt.Fprintf(w, "%s [%s](https://kontakte.polizei.bayern.de/)\n\n", markdownText(s.localization.Text(language, key)), markdownText(s.localization.Text(language, "ContactPoliceLink")))
@@ -233,6 +283,8 @@ func (s *Server) submitContact(w http.ResponseWriter, r *http.Request) {
 	data.Email = strings.TrimSpace(r.PostForm.Get("email"))
 	data.Topic = r.PostForm.Get("topic")
 	data.Message = strings.TrimSpace(r.PostForm.Get("message"))
+	data.ReportID = r.PostForm.Get("incident")
+	data.ReportLanguage = r.PostForm.Get("report_language")
 	token := r.PostForm.Get("token")
 	validToken := s.validContactForm(r, token, "public", time.Now())
 	if validToken {
@@ -245,6 +297,10 @@ func (s *Server) submitContact(w http.ResponseWriter, r *http.Request) {
 	}
 	if !validToken || r.PostForm.Get("website") != "" {
 		invalid(http.StatusForbidden, "ContactInvalid")
+		return
+	}
+	if err := s.contactReport(r, &data); err != nil {
+		invalid(http.StatusBadRequest, "CorrectionUnavailable")
 		return
 	}
 	if !s.contactAvailable {
@@ -261,6 +317,16 @@ func (s *Server) submitContact(w http.ResponseWriter, r *http.Request) {
 		data.Errors = map[string]string{err.Error(): key}
 		invalid(http.StatusBadRequest, "ContactInvalid")
 		return
+	}
+	if data.ReportURL != "" {
+		// The message stays blank in the form; attach a canonical public reference
+		// when storing it so existing inbox, notifications and retention all apply.
+		message.Message = s.correctionReference(r, data) + data.Message
+		if err := message.Validate(); err != nil {
+			data.Errors = map[string]string{"message": "ContactMessageInvalid"}
+			invalid(http.StatusBadRequest, "ContactInvalid")
+			return
+		}
 	}
 	created, err := s.contactStore.CreateContact(r.Context(), message)
 	if errors.Is(err, store.ErrContactClosed) {

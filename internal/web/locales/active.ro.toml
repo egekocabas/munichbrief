@@ -595,7 +595,7 @@ other = "Site-ul, baza de date și toate procesele de IA rulează pe echipamente
 other = "Cloudflare livrează și protejează site-ul, prelucrează date de conexiune, inclusiv adrese IP, și poate genera statistici în propria rețea. Web Analytics exclude vizitatorii din UE și inserează automat un script de măsurare în alte regiuni; restricțiile de securitate ale browserului pot împiedica rularea lui. Livrarea și securitatea sunt prelucrări distincte. Zaraz Consent Management și Google Tag Gateway sunt inactive. Livrarea și protecția se bazează pe interesul legitim de a opera un site sigur (art. 6(1)(f) GDPR). Politicile furnizorilor explică transferurile internaționale."
 
 [PrivacyPreferencesCopy]
-other = "Cookie-urile proprii păstrează limba un an, confirmarea informării despre IA 30 de zile și ultima căutare 30 de zile într-un cookie HttpOnly. Ștergerea căutării elimină criteriile. Tema rămâne în stocarea locală până la ștergere; poziția de revenire în listă se păstrează pentru fila curentă. Tokenurile formularului expiră în cel mult o oră, iar confirmările în cinci minute; nu conțin mesaje. Aceste funcții asigură serviciul solicitat (§25(2)(2) TDDDG; art. 6(1)(f) GDPR). HTMX nu păstrează copii ale paginilor în localStorage. Ordinea de afișare aleasă este păstrată timp de 30 de zile într-un cookie al acestui site. Termenii de căutare și filtrele apar în adresa paginii și pot rămâne în linkurile distribuite și în istoricul browserului."
+other = "Cookie-urile proprii păstrează limba un an, confirmarea informării despre IA 30 de zile și ultima căutare 30 de zile într-un cookie HttpOnly. Ștergerea căutării elimină criteriile. Tema rămâne în stocarea locală până la ștergere; poziția de revenire în listă se păstrează pentru fila curentă. Tokenurile formularului expiră în cel mult o oră, iar confirmările în cinci minute; nu conțin mesaje. Aceste funcții asigură serviciul solicitat (§25(2)(2) TDDDG; art. 6(1)(f) GDPR). HTMX nu păstrează copii ale paginilor în localStorage. Ordinea de afișare aleasă este păstrată timp de 30 de zile într-un cookie al acestui site. Termenii de căutare și filtrele apar în adresa paginii și pot rămâne în linkurile distribuite și în istoricul browserului. Cartierele alese sunt salvate separat într-un cookie propriu HttpOnly timp de 30 de zile; salvarea unei selecții goale îl șterge. La aplicare, numele cartierelor apar în adresele URL de căutare."
 
 [PrivacyMonitoringCopy]
 other = "Jurnalele tehnice înregistrează metoda, calea fără parametrii căutării, starea, durata și identificatorii cererilor. Nu înregistrează mesaje, e-mailuri, cookie-uri sau IP-urile vizitatorilor. Prometheus și Loki sunt configurate pentru păstrarea datelor 30 de zile; Grafana le afișează intern. Pentru a limita încercările de contact, păstrăm un contor și un identificator pseudonim derivat din IP doar în memoria aplicației, fără a salva adresa IP originală. Limita se aplică timp de 15 minute de la prima încercare. Contoarele expirate sunt șterse la următoarea încercare de contact sau la repornirea aplicației; dacă nu mai există încercări, pot rămâne în memorie mai mult timp. Scopul este securitatea și fiabilitatea (art. 6(1)(f) GDPR). Cloudflare are termene proprii."
@@ -732,3 +732,54 @@ other = "Varianta modelului"
 
 [LocationVerificationStep]
 other = "Verificarea locației"
+
+[QuickFilters]
+other = "Filtre rapide"
+
+[QuickAllDates]
+other = "Toate datele"
+
+[QuickToday]
+other = "Astăzi"
+
+[QuickWeek]
+other = "Ultimele 7 zile"
+
+[MyNeighborhoods]
+other = "Cartierele mele"
+
+[EditNeighborhoods]
+other = "Editează cartierele"
+
+[ChooseNeighborhoods]
+other = "Alege cartierele"
+
+[NeighborhoodsHelp]
+other = "Alege până la 10 zone. Sunt incluse știrile din oricare dintre zonele selectate. Selecția este salvată pe acest dispozitiv timp de 30 de zile."
+
+[NeighborhoodsEmpty]
+other = "Nu există încă niciun cartier disponibil."
+
+[SaveNeighborhoods]
+other = "Salvează cartierele"
+
+[NeighborhoodsInvalid]
+other = "Alege până la 10 cartiere cu nume mai scurte."
+
+[PublicationShortcut]
+other = "Publicat în perioada"
+
+[AdvancedShortcutHelp]
+other = "O zonă anume înlocuiește Cartierele mele. Datele personalizate înlocuiesc filtrul rapid de publicare. Celelalte filtre rămân active."
+
+[ReportError]
+other = "Semnalează o eroare"
+
+[CorrectionReport]
+other = "Știre atașată"
+
+[CorrectionUnavailable]
+other = "Această știre nu mai este disponibilă în limba selectată. Poți folosi în continuare pagina generală de contact."
+
+[CorrectionMessageLimit]
+other = "Până la {{.MessageMaxLength}} de caractere. Linkul și limba știrii sunt atașate automat."

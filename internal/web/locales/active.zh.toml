@@ -321,7 +321,7 @@ other = "网站、数据库和所有人工智能处理均在运营者位于德�
 other = "Cloudflare 提供网站访问和安全防护，会处理包括 IP 地址在内的连接数据，也可在其网络端生成访问统计。Web Analytics 已设置为排除欧盟访客，并在其他地区自动插入性能测量脚本；浏览器安全限制可能阻止该脚本运行。这与网站传输和安全处理相互独立。Zaraz 同意管理及 Google Tag Gateway 未启用。网站传输与防护基于安全运营的合法利益（GDPR 第 6(1)(f) 条）。服务商政策说明了数据处理及跨境传输。"
 
 [PrivacyPreferencesCopy]
-other = "第一方 Cookie 将语言偏好保存一年，将人工智能提示确认保存 30 天，并通过 HttpOnly Cookie 将最近一次搜索条件保存 30 天；清除搜索会删除这些条件。主题保存在浏览器本地存储中，直到您清除；返回列表的位置仅保留在当前标签页。联系表单安全令牌最长有效一小时，收件确认最长五分钟，均不包含留言内容。这些功能支持您请求的服务（TDDDG §25(2)(2)；GDPR 第 6(1)(f) 条）。HTMX 不会在 localStorage 中保存页面快照。 您选择的时间排序方式会保存在本站的 Cookie 中，有效期为 30 天。 搜索词和筛选条件会出现在页面网址中，并可能保留在分享的链接和浏览器历史记录中。"
+other = "第一方 Cookie 将语言偏好保存一年，将人工智能提示确认保存 30 天，并通过 HttpOnly Cookie 将最近一次搜索条件保存 30 天；清除搜索会删除这些条件。主题保存在浏览器本地存储中，直到您清除；返回列表的位置仅保留在当前标签页。联系表单安全令牌最长有效一小时，收件确认最长五分钟，均不包含留言内容。这些功能支持您请求的服务（TDDDG §25(2)(2)；GDPR 第 6(1)(f) 条）。HTMX 不会在 localStorage 中保存页面快照。 您选择的时间排序方式会保存在本站的 Cookie 中，有效期为 30 天。 搜索词和筛选条件会出现在页面网址中，并可能保留在分享的链接和浏览器历史记录中。 您选择的街区会单独保存在本站的HttpOnly Cookie中，为期30天；保存空选项会删除该Cookie。应用筛选时，街区名称会出现在搜索网址中。"
 
 [PrivacyMonitoringCopy]
 other = "技术日志记录请求方法、不含查询参数的路径、状态、耗时及请求标识，不记录留言、电子邮箱、Cookie 或访客 IP 地址。Prometheus 指标及 Loki 日志的保留时间设置为 30 天，Grafana 用于内部查看。为限制联系尝试次数，我们仅在应用内存中保存计数器和由 IP 地址生成的假名标识，不保存原始 IP 地址。限制从首次尝试起持续 15 分钟。过期计数器会在下一次联系尝试或应用重启时删除；如果没有新的尝试，它们可能在内存中保留更久。这些措施用于安全与可靠运行（GDPR 第 6(1)(f) 条）。Cloudflare 有独立的保留规则。"
@@ -458,3 +458,54 @@ other = "模型变体"
 
 [LocationVerificationStep]
 other = "地点核验"
+
+[QuickFilters]
+other = "快捷筛选"
+
+[QuickAllDates]
+other = "所有日期"
+
+[QuickToday]
+other = "今天"
+
+[QuickWeek]
+other = "最近7天"
+
+[MyNeighborhoods]
+other = "我的街区"
+
+[EditNeighborhoods]
+other = "编辑街区"
+
+[ChooseNeighborhoods]
+other = "选择街区"
+
+[NeighborhoodsHelp]
+other = "最多选择10个区域。将显示任一所选区域的报道。选择会在此设备上保存30天。"
+
+[NeighborhoodsEmpty]
+other = "暂无可选街区。"
+
+[SaveNeighborhoods]
+other = "保存街区"
+
+[NeighborhoodsInvalid]
+other = "请选择最多10个名称较短的街区。"
+
+[PublicationShortcut]
+other = "发布时间范围"
+
+[AdvancedShortcutHelp]
+other = "指定区域会替代“我的街区”。自定义日期会替代发布时间快捷筛选。其他筛选条件保持有效。"
+
+[ReportError]
+other = "报告错误"
+
+[CorrectionReport]
+other = "关联报道"
+
+[CorrectionUnavailable]
+other = "该报道已无法以所选语言查看。您仍可使用通用联系页面。"
+
+[CorrectionMessageLimit]
+other = "最多{{.MessageMaxLength}}个字符。报道链接和语言会自动附上。"

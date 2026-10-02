@@ -1,5 +1,5 @@
 {{define "title"}}{{.Incident.Title}} · MunichBrief{{end}}
-{{define "detail-official-source-link"}}<div class="detail-source"><a class="reader-button" href="{{.Incident.Record.SourceURL}}" target="_blank" rel="noopener noreferrer"><span>{{t .Lang "OpenOfficialPoliceRelease"}}</span>{{template "external-icon" .}}</a></div>{{end}}
+{{define "detail-official-source-link"}}<div class="detail-source"><a class="reader-button" href="{{.Incident.Record.SourceURL}}" target="_blank" rel="noopener noreferrer"><span>{{t .Lang "OpenOfficialPoliceRelease"}}</span>{{template "external-icon" .}}</a>{{if .CorrectionURL}}<a class="reader-correction-link" href="{{.CorrectionURL}}">{{t .Lang "ReportError"}}</a>{{end}}</div>{{end}}
 {{define "content"}}
 <nav class="detail-breadcrumb" aria-label="{{t .Lang "Breadcrumb"}}"><a class="font-bold text-civic no-underline hover:text-civic-dark" href="{{.BackURL}}" data-timeline-back="{{.BackURL}}"><span aria-hidden="true">←</span> {{t .Lang "Back"}}</a></nav>
 
@@ -12,8 +12,8 @@
     <h1 lang="{{.Incident.ContentLanguage}}">{{.Incident.Title}}</h1>
     {{if or .Incident.CategoryLabel .Incident.AreaName .Incident.EventText .Incident.PublicAssistance .Incident.Record.Number}}
     <dl class="detail-meta">
-      {{if .Incident.CategoryLabel}}<div><dt>{{t .Lang "Category"}}</dt><dd>{{.Incident.CategoryLabel}}</dd></div>{{end}}
-      {{if .Incident.AreaName}}<div><dt>{{t .Lang "Area"}}</dt><dd>{{template "pin-icon" .}} {{.Incident.AreaName}}</dd></div>{{end}}
+      {{if .Incident.CategoryLabel}}<div><dt>{{t .Lang "Category"}}</dt><dd>{{if .Incident.CategoryURL}}<a class="reader-metadata-link" href="{{.Incident.CategoryURL}}">{{.Incident.CategoryLabel}}</a>{{else}}{{.Incident.CategoryLabel}}{{end}}</dd></div>{{end}}
+      {{if .Incident.AreaName}}<div><dt>{{t .Lang "Area"}}</dt><dd>{{template "pin-icon" .}} {{if .Incident.AreaURL}}<a class="reader-metadata-link" href="{{.Incident.AreaURL}}">{{.Incident.AreaName}}</a>{{else}}{{.Incident.AreaName}}{{end}}</dd></div>{{end}}
       {{if .Incident.EventText}}<div><dt>{{.Incident.EventLabel}}</dt><dd>{{template "clock-icon" .}} {{.Incident.EventText}}</dd></div>{{end}}
       {{if .Incident.Record.Number}}<div><dt>{{t .Lang "Report"}}</dt><dd>{{template "hash-icon" .}} {{.Incident.Record.Number}}</dd></div>{{end}}
       {{if .Incident.PublicAssistance}}<div class="detail-assistance"><dt class="sr-only">{{t .Lang "PublicAssistance"}}</dt><dd class="assistance-tag">{{t .Lang "PublicAssistanceNeeded"}}</dd></div>{{end}}

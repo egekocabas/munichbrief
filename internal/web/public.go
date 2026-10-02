@@ -201,7 +201,7 @@ func (s *Server) timeline(response http.ResponseWriter, request *http.Request) {
 	}
 	listURL := listingURL(language, filters, view, size, page)
 	if scope.PublicOnly {
-		if explicit && filters != readSearch(request) {
+		if explicit && readerFilterValues(filters).Encode() != readerFilterValues(readSearch(request)).Encode() {
 			if err := s.writeSearch(response, filters); err != nil {
 				http.Error(response, s.localization.Text(language, "SearchInvalid"), http.StatusBadRequest)
 				return
@@ -242,6 +242,7 @@ func (s *Server) timeline(response http.ResponseWriter, request *http.Request) {
 		s.internalError(response, request, "list reader areas", err)
 		return
 	}
+	s.decorateNeighborhoods(&data, request)
 	if scope.PublicOnly && wantsMarkdown(request.Header.Get("Accept")) {
 		s.prepareMarkdown(response, base)
 		s.renderTimelineMarkdown(response, data)
@@ -338,6 +339,15 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 	base.ModifiedTime = modifiedAt.Format(time.RFC3339)
 	base.StructuredData = structuredArticleData(base, view)
 	data := detailPage{basePage: base, Incident: view, BackURL: listingURL(base.Lang, readSearch(request), readTimelineView(request), s.options.PageSize, page), ShowOriginalSection: base.Review && view.Record.HasAI}
+	if scope.PublicOnly {
+		data.CorrectionURL = fmt.Sprintf("/%s/contact?incident=%d#contact-form", language, id)
+		filters := readSearch(request)
+		filters.Area, filters.Areas = view.AreaName, nil
+		data.Incident.AreaURL = readerActionURL(language, filters, readTimelineView(request), s.options.PageSize)
+		filters = readSearch(request)
+		filters.Category = view.Record.AICategory
+		data.Incident.CategoryURL = readerActionURL(language, filters, readTimelineView(request), s.options.PageSize)
+	}
 	if scope.PublicOnly && wantsMarkdown(request.Header.Get("Accept")) {
 		s.prepareMarkdown(response, base)
 		s.renderDetailMarkdown(response, data)
@@ -687,6 +697,7 @@ func stringsWithout(values []string, excluded string) []string {
 }
 
 type incidentView struct {
+	AreaURL, CategoryURL      string
 	Record                    store.IncidentRecord
 	Title                     string
 	Summary                   string
@@ -729,6 +740,9 @@ type timelinePage struct {
 	PageSizes                                                                       []int
 	Categories                                                                      []readerChoice
 	Areas                                                                           []string
+	Neighborhoods                                                                   []neighborhoodChoice
+	NeighborhoodsSaved                                                              bool
+	AllDatesURL, TodayURL, WeekURL, AssistanceURL                                   string
 	ActiveFilters                                                                   []activeFilter
 	First, Last                                                                     int
 	Groups                                                                          []dayGroup
@@ -742,6 +756,11 @@ type timelinePage struct {
 	HasNext                                                                         bool
 }
 
+type neighborhoodChoice struct {
+	Name     string
+	Selected bool
+}
+
 type dayGroup struct {
 	TimeLabel string
 	ID        string
@@ -753,6 +772,7 @@ type detailPage struct {
 	basePage
 	Incident            incidentView
 	BackURL             string
+	CorrectionURL       string
 	ShowOriginalSection bool
 }
 

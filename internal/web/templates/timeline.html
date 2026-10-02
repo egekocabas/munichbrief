@@ -14,18 +14,41 @@
       <a href="{{.PublishedURL}}" {{if eq .View "published"}}aria-current="page"{{end}}>{{t .Lang "ByPublication"}}</a>
       <a href="{{.IncidentViewURL}}" {{if eq .View "incident"}}aria-current="page"{{end}}>{{t .Lang "ByIncident"}}</a>
     </nav>
+    <div class="reader-shortcuts" aria-label="{{t .Lang "QuickFilters"}}">
+      <div class="reader-shortcut-row"><span class="reader-shortcut-label">{{t .Lang "Published"}}</span>
+        <a href="{{.AllDatesURL}}" {{if and (not .Filters.Period) (not .Filters.From) (not .Filters.To)}}aria-current="true"{{end}}>{{t .Lang "QuickAllDates"}}</a>
+        <a href="{{.TodayURL}}" {{if eq .Filters.Period "today"}}aria-current="true"{{end}}>{{t .Lang "QuickToday"}}</a>
+        <a href="{{.WeekURL}}" {{if eq .Filters.Period "week"}}aria-current="true"{{end}}>{{t .Lang "QuickWeek"}}</a>
+      </div>
+      <div class="reader-shortcut-row">
+        <a href="{{.AssistanceURL}}" {{if eq .Filters.Assistance "yes"}}aria-current="true"{{end}}>{{t .Lang "PublicAssistanceNeeded"}}</a>
+        <form method="post" action="{{.FormURL}}" hx-boost="false"><button type="submit" name="neighborhoods_action" value="{{if .Filters.Areas}}disable{{else}}enable{{end}}" aria-pressed="{{if .Filters.Areas}}true{{else}}false{{end}}" {{if and (not .NeighborhoodsSaved) (not .Filters.Areas)}}disabled{{end}}>{{t .Lang "MyNeighborhoods"}}</button></form>
+      </div>
+    </div>
+    <details class="reader-neighborhoods">
+      <summary>{{if .NeighborhoodsSaved}}{{t .Lang "EditNeighborhoods"}}{{else}}{{t .Lang "ChooseNeighborhoods"}}{{end}}</summary>
+      <form method="post" action="{{.FormURL}}" hx-boost="false">
+        <fieldset><legend>{{t .Lang "MyNeighborhoods"}}</legend><p id="neighborhoods-help">{{t .Lang "NeighborhoodsHelp"}}</p>
+          <div class="reader-neighborhood-options">{{range .Neighborhoods}}<label><input type="checkbox" name="saved_neighborhood" value="{{.Name}}" {{if .Selected}}checked{{end}} aria-describedby="neighborhoods-help"><span>{{.Name}}</span></label>{{else}}<p>{{t .Lang "NeighborhoodsEmpty"}}</p>{{end}}</div>
+        </fieldset>
+        <button class="reader-button" type="submit" name="neighborhoods_action" value="save">{{t .Lang "SaveNeighborhoods"}}</button>
+      </form>
+    </details>
     <details class="reader-search">
       <summary>{{t .Lang "SearchFilters"}}</summary>
       <form method="get" action="/{{.Lang}}/search#timeline-heading" hx-boost="false" class="reader-search-form">
         {{if eq .View "incident"}}<input type="hidden" name="view" value="incident">{{end}}{{if ne .PageSize 20}}<input type="hidden" name="page_size" value="{{.PageSize}}">{{end}}
+        {{range .Filters.Areas}}<input type="hidden" name="neighborhood" value="{{.}}">{{end}}
         <label class="search-wide">{{t .Lang "SearchText"}}<input type="search" name="q" maxlength="200" value="{{.Filters.Text}}" placeholder="{{t .Lang "SearchPlaceholder"}}"></label>
         <label>{{t .Lang "Area"}}<input name="area" list="reader-areas" maxlength="200" value="{{.Filters.Area}}"><datalist id="reader-areas">{{range .Areas}}<option value="{{.}}">{{end}}</datalist></label>
         <label>{{t .Lang "Category"}}<select name="category"><option value="">{{t .Lang "AllCategories"}}</option>{{range .Categories}}<option value="{{.Value}}" {{if eq $.Filters.Category .Value}}selected{{end}}>{{.Label}}</option>{{end}}</select></label>
         <label>{{t .Lang "Report"}}<input name="number" maxlength="200" value="{{.Filters.Number}}"></label>
         <label>{{t .Lang "PublicAssistance"}}<select name="assistance"><option value="">{{t .Lang "AnyAssistance"}}</option><option value="yes" {{if eq .Filters.Assistance "yes"}}selected{{end}}>{{t .Lang "AssistanceYes"}}</option><option value="no" {{if eq .Filters.Assistance "no"}}selected{{end}}>{{t .Lang "AssistanceNo"}}</option></select></label>
+        <label>{{t .Lang "PublicationShortcut"}}<select name="period"><option value="">{{t .Lang "QuickAllDates"}}</option><option value="today" {{if eq .Filters.Period "today"}}selected{{end}}>{{t .Lang "QuickToday"}}</option><option value="week" {{if eq .Filters.Period "week"}}selected{{end}}>{{t .Lang "QuickWeek"}}</option></select></label>
         <label>{{t .Lang "DateType"}}<select name="date_field"><option value="published" {{if ne .Filters.DateField "incident"}}selected{{end}}>{{t .Lang "PublishedDate"}}</option><option value="incident" {{if eq .Filters.DateField "incident"}}selected{{end}}>{{t .Lang "IncidentDate"}}</option></select></label>
         <label>{{t .Lang "DateFrom"}}<input type="date" name="from" value="{{.Filters.From}}"></label>
         <label>{{t .Lang "DateTo"}}<input type="date" name="to" value="{{.Filters.To}}"></label>
+        <p class="search-wide reader-filter-help">{{t .Lang "AdvancedShortcutHelp"}}</p>
         <div class="search-wide search-submit"><button class="reader-button" type="submit">{{t .Lang "ApplySearch"}}</button><p>{{t .Lang "SearchRemembered"}}</p></div>
       </form>
     </details>
@@ -50,14 +73,14 @@
           {{if .Record.HasIncident}}
             {{if or .CategoryLabel .PublicAssistance}}
             <div class="incident-kicker">
-              {{if .CategoryLabel}}<dl><div class="incident-category"><dt class="sr-only">{{t $.Lang "Category"}}</dt><dd>{{.CategoryLabel}}</dd></div></dl>{{end}}
+              {{if .CategoryLabel}}<dl><div class="incident-category"><dt class="sr-only">{{t $.Lang "Category"}}</dt><dd><a class="reader-metadata-link" href="{{.CategoryURL}}">{{.CategoryLabel}}</a></dd></div></dl>{{end}}
               {{if .PublicAssistance}}<span class="assistance-tag">{{t $.Lang "PublicAssistanceNeeded"}}</span>{{end}}
             </div>
             {{end}}
             <h4 class="incident-title"><a href="{{incidentURL $.Lang .Record.ID}}" data-incident-link lang="{{.ContentLanguage}}">{{.Title}}</a></h4>
             {{if or .AreaName .EventText .Record.Number}}
             <dl class="incident-meta">
-              {{if .AreaName}}<div><dt class="sr-only">{{t $.Lang "Area"}}</dt><dd>{{template "pin-icon" .}}<span>{{.AreaName}}</span></dd></div>{{end}}
+              {{if .AreaName}}<div><dt class="sr-only">{{t $.Lang "Area"}}</dt><dd>{{template "pin-icon" .}}<a class="reader-metadata-link" href="{{.AreaURL}}">{{.AreaName}}</a></dd></div>{{end}}
               {{if .EventText}}<div><dt class="sr-only">{{.EventLabel}}</dt><dd>{{template "clock-icon" .}}<span>{{.EventText}}</span></dd></div>{{end}}
               {{if .Record.Number}}<div><dt class="sr-only">{{t $.Lang "Report"}}</dt><dd>{{template "hash-icon" .}}<span>{{.Record.Number}}</span></dd></div>{{end}}
             </dl>

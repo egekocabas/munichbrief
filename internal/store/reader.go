@@ -18,20 +18,41 @@ import (
 
 // ReaderFilters contains the last applied search, never an executable query.
 type ReaderFilters struct {
-	Text       string `json:"q,omitempty"`
-	Area       string `json:"area,omitempty"`
-	Category   string `json:"category,omitempty"`
-	Number     string `json:"number,omitempty"`
-	Assistance string `json:"assistance,omitempty"`
-	DateField  string `json:"date_field,omitempty"`
-	From       string `json:"from,omitempty"`
-	To         string `json:"to,omitempty"`
+	Text       string   `json:"q,omitempty"`
+	Area       string   `json:"area,omitempty"`
+	Areas      []string `json:"neighborhoods,omitempty"`
+	Period     string   `json:"period,omitempty"`
+	Category   string   `json:"category,omitempty"`
+	Number     string   `json:"number,omitempty"`
+	Assistance string   `json:"assistance,omitempty"`
+	DateField  string   `json:"date_field,omitempty"`
+	From       string   `json:"from,omitempty"`
+	To         string   `json:"to,omitempty"`
 }
 
 func (f ReaderFilters) Active() bool {
-	return f.Text != "" || f.Area != "" || f.Category != "" || f.Number != "" || f.Assistance != "" || f.From != "" || f.To != ""
+	return f.Text != "" || f.Area != "" || len(f.Areas) > 0 || f.Period != "" || f.Category != "" || f.Number != "" || f.Assistance != "" || f.From != "" || f.To != ""
 }
 func (f ReaderFilters) Validate() error {
+	if len(f.Areas) > 10 || (f.Area != "" && len(f.Areas) > 0) {
+		return errors.New("invalid neighborhoods")
+	}
+	areaBytes := 0
+	for _, area := range f.Areas {
+		areaBytes += len(area)
+		if strings.TrimSpace(area) == "" || !utf8.ValidString(area) || utf8.RuneCountInString(area) > 200 || strings.ContainsRune(area, 0) {
+			return errors.New("invalid neighborhood")
+		}
+	}
+	if areaBytes > 1000 {
+		return errors.New("neighborhoods too large")
+	}
+	if f.Period != "" && f.Period != "today" && f.Period != "week" {
+		return errors.New("invalid publication period")
+	}
+	if f.Period != "" && (f.From != "" || f.To != "" || f.DateField == "incident") {
+		return errors.New("conflicting date filters")
+	}
 	for _, v := range []string{f.Text, f.Area, f.Number} {
 		if !utf8.ValidString(v) || utf8.RuneCountInString(v) > 200 || strings.ContainsRune(v, 0) {
 			return errors.New("invalid search text")
@@ -284,6 +305,15 @@ func (s *Store) ListReaderEntries(ctx context.Context, q ReaderQuery) (ReaderRes
 		}
 	}
 	add("rd.area", "area", q.Filters.Area)
+	if len(q.Filters.Areas) > 0 {
+		var names []string
+		for n, area := range q.Filters.Areas {
+			key := fmt.Sprintf("neighborhood%d", n)
+			names = append(names, "@"+key)
+			args = append(args, sql.Named(key, area))
+		}
+		where += " AND rd.area IN (" + strings.Join(names, ",") + ")"
+	}
 	add("rd.category", "category", q.Filters.Category)
 	add("rd.number", "number", q.Filters.Number)
 	if q.Filters.Assistance == "yes" {
@@ -295,13 +325,20 @@ func (s *Store) ListReaderEntries(ctx context.Context, q ReaderQuery) (ReaderRes
 	if q.Filters.DateField == "incident" {
 		date = "rd.event_date"
 	}
-	if q.Filters.From != "" {
-		where += " AND " + date + ">=@from_date"
-		args = append(args, sql.Named("from_date", q.Filters.From))
+	fromDate, toDate := q.Filters.From, q.Filters.To
+	if q.Filters.Period != "" {
+		fromDate, toDate, err = publicationPeriod(q.Filters.Period, time.Now())
+		if err != nil {
+			return out, err
+		}
 	}
-	if q.Filters.To != "" {
+	if fromDate != "" {
+		where += " AND " + date + ">=@from_date"
+		args = append(args, sql.Named("from_date", fromDate))
+	}
+	if toDate != "" {
 		where += " AND " + date + "<>'' AND " + date + "<=@to_date"
-		args = append(args, sql.Named("to_date", q.Filters.To))
+		args = append(args, sql.Named("to_date", toDate))
 	}
 	var terms []string
 	for n, word := range strings.Fields(normalizeReaderText(q.Filters.Text)) {
@@ -352,6 +389,21 @@ func (s *Store) ListReaderEntries(ctx context.Context, q ReaderQuery) (ReaderRes
 	}
 	return out, tx.Commit()
 }
+
+// Calendar days in Munich, including across daylight-saving transitions.
+func publicationPeriod(period string, now time.Time) (string, string, error) {
+	location, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		return "", "", err
+	}
+	now = now.In(location)
+	start := now
+	if period == "week" {
+		start = now.AddDate(0, 0, -6)
+	}
+	return start.Format(time.DateOnly), now.Format(time.DateOnly), nil
+}
+
 func (s *Store) ReaderAreas(ctx context.Context, language, sourceMode string) ([]string, error) {
 	status, err := sourceStatusCondition(sourceMode)
 	if err != nil {

@@ -321,7 +321,7 @@ other = "Il sito, il database e tutti i processi di IA funzionano su hardware de
 other = "Cloudflare distribuisce e protegge il sito, trattando dati di connessione, compresi gli indirizzi IP, e può produrre statistiche sulla propria rete. Web Analytics esclude i visitatori dell’UE e inserisce automaticamente uno script di misurazione altrove; le restrizioni di sicurezza del browser possono impedirne l’esecuzione. La distribuzione e la sicurezza restano trattamenti distinti. Zaraz Consent Management e Google Tag Gateway sono inattivi. Distribuzione e protezione si basano sul legittimo interesse alla sicurezza del sito (art. 6(1)(f) GDPR). Le informative dei fornitori spiegano i trasferimenti internazionali."
 
 [PrivacyPreferencesCopy]
-other = "I cookie del sito conservano la lingua per un anno, la conferma dell’avviso IA per 30 giorni e l’ultima ricerca in un cookie HttpOnly per 30 giorni. Cancellare la ricerca rimuove i criteri. Il tema resta nella memoria locale fino alla cancellazione; la posizione di ritorno all’elenco dura per la sessione della scheda. I token del modulo scadono entro un’ora e le conferme entro cinque minuti, senza contenere messaggi. Queste funzioni servono il servizio richiesto (§25(2)(2) TDDDG; art. 6(1)(f) GDPR). HTMX non salva copie delle pagine in localStorage. L’ordine di visualizzazione scelto viene ricordato per 30 giorni in un cookie di questo sito. I termini di ricerca e i filtri compaiono nell’indirizzo della pagina e possono rimanere nei link condivisi e nella cronologia del browser."
+other = "I cookie del sito conservano la lingua per un anno, la conferma dell’avviso IA per 30 giorni e l’ultima ricerca in un cookie HttpOnly per 30 giorni. Cancellare la ricerca rimuove i criteri. Il tema resta nella memoria locale fino alla cancellazione; la posizione di ritorno all’elenco dura per la sessione della scheda. I token del modulo scadono entro un’ora e le conferme entro cinque minuti, senza contenere messaggi. Queste funzioni servono il servizio richiesto (§25(2)(2) TDDDG; art. 6(1)(f) GDPR). HTMX non salva copie delle pagine in localStorage. L’ordine di visualizzazione scelto viene ricordato per 30 giorni in un cookie di questo sito. I termini di ricerca e i filtri compaiono nell’indirizzo della pagina e possono rimanere nei link condivisi e nella cronologia del browser. I quartieri scelti vengono salvati separatamente in un cookie proprietario HttpOnly per 30 giorni; salvare una selezione vuota lo elimina. Quando vengono applicati, i nomi dei quartieri compaiono negli URL di ricerca."
 
 [PrivacyMonitoringCopy]
 other = "I log tecnici registrano metodo, percorso senza parametri di ricerca, stato, durata e identificativi delle richieste. Non registrano messaggi, email, cookie o IP dei visitatori. Prometheus e Loki sono configurati per una conservazione di 30 giorni; Grafana mostra i dati internamente. Per limitare i tentativi di contatto, conserviamo un contatore e un identificativo pseudonimo derivato dall’IP soltanto nella memoria dell’applicazione, senza salvare l’indirizzo IP originale. Il limite vale per 15 minuti dal primo tentativo. I contatori scaduti vengono eliminati al tentativo di contatto successivo o al riavvio dell’applicazione; in assenza di altri tentativi possono rimanere in memoria più a lungo. La finalità è sicurezza e affidabilità (art. 6(1)(f) GDPR). Cloudflare applica tempi propri."
@@ -458,3 +458,54 @@ other = "Variante del modello"
 
 [LocationVerificationStep]
 other = "Verifica della località"
+
+[QuickFilters]
+other = "Filtri rapidi"
+
+[QuickAllDates]
+other = "Tutte le date"
+
+[QuickToday]
+other = "Oggi"
+
+[QuickWeek]
+other = "Ultimi 7 giorni"
+
+[MyNeighborhoods]
+other = "I miei quartieri"
+
+[EditNeighborhoods]
+other = "Modifica quartieri"
+
+[ChooseNeighborhoods]
+other = "Scegli quartieri"
+
+[NeighborhoodsHelp]
+other = "Scegli fino a 10 zone. Sono incluse le notizie di qualsiasi zona selezionata. La selezione viene salvata su questo dispositivo per 30 giorni."
+
+[NeighborhoodsEmpty]
+other = "Nessun quartiere ancora disponibile."
+
+[SaveNeighborhoods]
+other = "Salva quartieri"
+
+[NeighborhoodsInvalid]
+other = "Scegli fino a 10 quartieri con nomi più brevi."
+
+[PublicationShortcut]
+other = "Pubblicato nel periodo"
+
+[AdvancedShortcutHelp]
+other = "Una zona specifica sostituisce I miei quartieri. Le date personalizzate sostituiscono il filtro rapido di pubblicazione. Gli altri filtri restano attivi."
+
+[ReportError]
+other = "Segnala un errore"
+
+[CorrectionReport]
+other = "Notizia allegata"
+
+[CorrectionUnavailable]
+other = "Questa notizia non è più disponibile nella lingua selezionata. Puoi comunque usare la pagina di contatto generale."
+
+[CorrectionMessageLimit]
+other = "Fino a {{.MessageMaxLength}} caratteri. Il link e la lingua della notizia vengono allegati automaticamente."
