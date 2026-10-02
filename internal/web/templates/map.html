@@ -2,7 +2,7 @@
 {{define "content"}}
 <article class="atlas">
   <header class="atlas-heading">
-    <div><p class="atlas-eyebrow">{{t .Lang "MapNav"}} <span aria-hidden="true">/</span> München</p><h1>{{t .Lang "MapTitle"}}</h1><p class="atlas-intro">{{t .Lang "MapIntro"}}</p></div>
+    <div><h1>{{t .Lang "MapTitle"}}</h1><p class="atlas-intro">{{t .Lang "MapIntro"}}</p></div>
     {{if .Earliest}}<p class="atlas-archive">{{t .Lang "MapEarliest"}}<strong>{{.Earliest}}</strong></p>{{end}}
   </header>
   <div class="atlas-controls" aria-label="{{t .Lang "SearchFilters"}}">
