@@ -7,10 +7,6 @@ PrimaryNavigation = { other = "Glavna navigacija" }
 SkipToContent = { other = "Prijeđi na sadržaj" }
 DarkMode = { other = "Tamni način" }
 NoticeLabel = { other = "Važna napomena" }
-NoticeLead = { other = "Neovisno i neslužbeno." }
-FixtureNotice = { other = "Ovaj prikaz sadrži samo sintetičke testne podatke." }
-LiveNotice = { other = "AI se koristi za sažimanje, kategoriziranje i izdvajanje podataka iz službenih policijskih priopćenja. Moguće su pogreške, a priopćenja se mogu naknadno ažurirati." }
-AuthorityNotice = { other = "Najnovije službene informacije ostaju mjerodavne i primjenjuje se pretpostavka nedužnosti." }
 ReviewNotice = { other = "Način pregleda: može biti vidljiv izvorni tekst koji nije anonimiziran. Nemojte ga javno izlagati." }
 AIGeneratedContent = { other = "Sadržaj generiran umjetnom inteligencijom" }
 AIFixtureLabelPreview = { other = "Pregled oznake — ovaj sintetički sadržaj nije obrađen umjetnom inteligencijom" }
@@ -26,8 +22,6 @@ EUIconGuidance = { other = "Smjernice EU-a za ikone" }
 EUCodePractice = { other = "Kodeks prakse EU-a" }
 Built = { other = "Izgrađeno" }
 Language = { other = "Jezik" }
-German = { other = "Njemački" }
-English = { other = "Engleski" }
 SwitchToGerman = { other = "Prijeđi na njemačku verziju" }
 SwitchToEnglish = { other = "Prijeđi na englesku verziju" }
 SwitchToTurkish = { other = "Prijeđi na tursku verziju" }
@@ -40,19 +34,16 @@ SwitchToHindi = { other = "Prijeđi na hindsku verziju" }
 SwitchToSpanish = { other = "Prijeđi na španjolsku verziju" }
 SwitchToFrench = { other = "Prijeđi na francusku verziju" }
 HeroEyebrowFixture = { other = "Lokalni prototip" }
-HeroEyebrowLive = { other = "Priopćenja minhenske policije" }
 HeroTitle = { other = "München, ukratko." }
 FixtureIncidents = { other = "Sintetička priopćenja" }
 LatestIncidents = { other = "Najnoviji događaji" }
 Reports = { one = "{{.Count}} priopćenje", few = "{{.Count}} priopćenja", other = "{{.Count}} priopćenja" }
-ShownTotal = { other = "prikazano {{.Shown}} / ukupno {{.Total}}" }
 Report = { other = "Policijsko priopćenje" }
 SourceMetadata = { other = "Metapodaci izvora" }
 ReadIncident = { other = "Pročitaj priopćenje" }
 Newer = { other = "Novije" }
 Older = { other = "Starije" }
 Page = { other = "Stranica" }
-Of = { other = "od" }
 NoIncidents = { other = "Još nema priopćenja" }
 NoFixtureCopy = { other = "Pokrenite uvoz testnih podataka kako biste popunili ovaj prikaz." }
 NoLiveCopy = { other = "Sinkronizator još nije pronašao priopćenje unutar vremenskog okvira." }
@@ -120,7 +111,6 @@ ChineseTranslationStep = { other = "Pojednostavljeni kineski prijevod" }
 HindiTranslationStep = { other = "Hindski prijevod" }
 SpanishTranslationStep = { other = "Španjolski prijevod" }
 FrenchTranslationStep = { other = "Francuski prijevod" }
-StagedPipeline = { other = "Fazni proces" }
 MetadataFirstPipeline = { other = "Proces s metapodacima na prvom mjestu v2" }
 Generated = { other = "Generirano" }
 AISummary = { other = "AI sažetak" }
@@ -136,7 +126,6 @@ Running = { other = "AI sažetak i prijevod su u tijeku" }
 Retrying = { other = "AI je privremeno nedostupan; zakazan je novi pokušaj" }
 NeedsReview = { other = "AI rezultat zahtijeva pregled" }
 OriginalShown = { other = "Prikazano je izvorno njemačko priopćenje." }
-Methodology = { other = "O MunichBriefu" }
 FromReleaseToIncident = { other = "Od priopćenja do događaja" }
 Discover = { other = "Otkrivanje" }
 DiscoverCopy = { other = "Nova priopćenja otkrivaju se isključivo putem službenog RSS kanala minhenske policije." }
@@ -509,3 +498,132 @@ other = "Ovaj izvještaj više nije dostupan na odabranom jeziku. I dalje možet
 
 [CorrectionMessageLimit]
 other = "Do {{.MessageMaxLength}} znakova. Poveznica i jezik izvještaja dodaju se automatski."
+
+[MapNav]
+other = "Karta i statistika"
+
+[MapTitle]
+other = "München kroz priopćenja."
+
+[MapIntro]
+other = "Istražite priopćenja iz naše arhive u 25 gradskih četvrti Münchena. Odaberite razdoblje, uočite obrasce i pročitajte priopćenja iza brojki."
+
+[MapEarliest]
+other = "Najranija objava u ovoj arhivi"
+
+[MapAllTime]
+other = "Sva dostupna priopćenja"
+
+[MapMonth]
+other = "Posljednjih 30 dana"
+
+[MapPreviousMonth]
+other = "Prethodni kalendarski mjesec"
+
+[MapCustom]
+other = "Prilagođeni datumi"
+
+[MapDistrict]
+other = "Gradska četvrt"
+
+[MapAllDistricts]
+other = "Sve četvrti i lokacije"
+
+[MapOutside]
+other = "Izvan grada Münchena"
+
+[MapUnassigned]
+other = "Četvrt nije određena"
+
+[MapReset]
+other = "Poništi filtre"
+
+[MapDateNote]
+other = "Datumi se temelje na vremenu objave po lokalnom vremenu u Münchenu, uključujući početni i završni dan. Posljednjih 7 ili 30 dana uključuje današnji dan. Svi ukupni brojevi i grafikoni prate ove filtre; spremljeni filtri pretraživanja ovdje se ne primjenjuju."
+
+[MapTotal]
+other = "Priopćenja u arhivi"
+
+[MapBasisShort]
+other = "Javno dostupni njemački sažeci"
+
+[MapMapped]
+other = "Dodijeljena gradskoj četvrti"
+
+[MapDistrictCount]
+other = "25 službenih gradskih četvrti"
+
+[MapAvailable]
+other = "Dostupno za čitanje"
+
+[MapCoverageShort]
+other = "Trenutačno objavljene jezične verzije"
+
+[MapCity]
+other = "Grad na prvi pogled"
+
+[MapDistricts]
+other = "Priopćenja po četvrtima"
+
+[MapInteraction]
+other = "Odaberite četvrt na karti ili na popisu ispod nje. Ponovno je odaberite za prikaz svih lokacija."
+
+[MapReportCount]
+other = "Priopćenja"
+
+[MapBoundaryNote]
+other = "Pojednostavljene granice"
+
+[MapBehindNumbers]
+other = "Iza brojki"
+
+[MapReadHeading]
+other = "Istražite ova priopćenja"
+
+[MapLanguageNote]
+other = "Brojevi se temelje na javno dostupnim njemačkim sažecima i ostaju jednaki bez obzira na jezik sučelja. Obrada umjetnom inteligencijom i provjere prijevoda mogu odgoditi ili spriječiti objavu priopćenja na vašem jeziku. Svaka poveznica prikazuje samo priopćenja dostupna na tom jeziku."
+
+[MapReadGerman]
+other = "Čitajte na njemačkom"
+
+[MapCurrentSelection]
+other = "Uz odabrane filtre"
+
+[MapTopDistricts]
+other = "Četvrti s najviše priopćenja"
+
+[MapEmpty]
+other = "Nijedno priopćenje ne odgovara ovom odabiru. Proširite razdoblje ili poništite filtre."
+
+[MapCategories]
+other = "Priopćenja po kategorijama"
+
+[MapTrend]
+other = "Objave kroz vrijeme"
+
+[MapTrendNote]
+other = "Svaki stupac grupira datume objave. Otvorite podatke za točne raspone i brojeve. Prvo i posljednje razdoblje mogu biti kraći i sadržavati manje dana."
+
+[MapViewData]
+other = "Prikaži datume i brojeve"
+
+[MapContext]
+other = "Kako čitati brojke"
+
+[MapMethod]
+other = "Što vam ova karta govori"
+
+[MapBasis]
+other = "Svako trenutačno javno dostupno njemačko priopćenje brojimo jednom, prema njegovoj trenutačnoj kategoriji i lokaciji. Naknadna priopćenja mogu se odnositi na isti događaj. Najranija objava u arhivi nije datum kada je stranica počela prikupljati priopćenja."
+
+[MapCaution]
+other = "Ovo je izbor policijskih priopćenja za javnost, a ne potpuna evidencija događaja ili mjera sigurnosti četvrti. Brojevi nisu prilagođeni broju stanovnika, posjetitelja ni veličini četvrti."
+
+[MapLocationNote]
+other = "Svakom priopćenju dodjeljuje se jedno reprezentativno područje. Provjereni odnosi između naselja i službenih gradskih četvrti omogućuju njihovo povezivanje; široke ili dvosmislene lokacije ostaju neodređene. Lokacije izvan Münchena i neodređene četvrti uključene su u ukupan broj, ali se ne mogu prikazati unutar četvrti na karti. Kategorije i lokacije koje određuje umjetna inteligencija mogu biti pogrešne."
+
+[MapAdvancedHelp]
+other = "Odabrana gradska četvrt ostaje aktivna kada mijenjate druge filtre. Unos područja ili primjena spremljenih četvrti zamjenjuje taj odabir."
+
+[MapExcluded]
+other = "Izvan odabranog filtra lokacije"

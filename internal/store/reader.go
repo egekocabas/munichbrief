@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	langregistry "github.com/egekocabas/munichbrief/internal/languages"
+	"github.com/egekocabas/munichbrief/internal/location"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/unicode/norm"
 	"modernc.org/sqlite"
@@ -20,6 +21,7 @@ import (
 type ReaderFilters struct {
 	Text       string   `json:"q,omitempty"`
 	Area       string   `json:"area,omitempty"`
+	District   string   `json:"district,omitempty"`
 	Areas      []string `json:"neighborhoods,omitempty"`
 	Period     string   `json:"period,omitempty"`
 	Category   string   `json:"category,omitempty"`
@@ -31,9 +33,15 @@ type ReaderFilters struct {
 }
 
 func (f ReaderFilters) Active() bool {
-	return f.Text != "" || f.Area != "" || len(f.Areas) > 0 || f.Period != "" || f.Category != "" || f.Number != "" || f.Assistance != "" || f.From != "" || f.To != ""
+	return f.Text != "" || f.Area != "" || f.District != "" || len(f.Areas) > 0 || f.Period != "" || f.Category != "" || f.Number != "" || f.Assistance != "" || f.From != "" || f.To != ""
 }
 func (f ReaderFilters) Validate() error {
+	if f.District != "" {
+		_, district := location.District(f.District)
+		if (!district && f.District != location.DistrictOutside && f.District != location.DistrictUnassigned) || f.Area != "" || len(f.Areas) > 0 {
+			return errors.New("invalid district")
+		}
+	}
 	if len(f.Areas) > 10 || (f.Area != "" && len(f.Areas) > 0) {
 		return errors.New("invalid neighborhoods")
 	}
@@ -99,6 +107,10 @@ func normalizeReaderText(s string) string {
 	return norm.NFC.String(cases.Fold().String(norm.NFC.String(s)))
 }
 func init() {
+	sqlite.MustRegisterDeterministicScalarFunction("reader_district", 1, func(_ *sqlite.FunctionContext, a []driver.Value) (driver.Value, error) {
+		area, _ := a[0].(string)
+		return location.DistrictGroup(area), nil
+	})
 	sqlite.MustRegisterDeterministicScalarFunction("reader_normalize", 1, func(_ *sqlite.FunctionContext, a []driver.Value) (driver.Value, error) {
 		s, _ := a[0].(string)
 		return normalizeReaderText(s), nil
@@ -291,70 +303,10 @@ func (s *Store) ListReaderEntries(ctx context.Context, q ReaderQuery) (ReaderRes
 	if err := q.Filters.Validate(); err != nil {
 		return out, err
 	}
-	status, err := sourceStatusCondition(q.SourceMode)
+	from, args, err := readerSelection(q)
 	if err != nil {
 		return out, err
 	}
-	scope := PresentationScope{Language: q.Language, TranslationLanguage: q.Language, PublicOnly: true}
-	args := presentationArgs(scope)
-	where := ` rd.language=@language AND ` + status + ` AND rd.run_id=` + latestPresentationRun + ` AND ` + publicReadyCondition
-	add := func(column, key, value string) {
-		if value != "" {
-			where += " AND " + column + "=@" + key
-			args = append(args, sql.Named(key, value))
-		}
-	}
-	add("rd.area", "area", q.Filters.Area)
-	if len(q.Filters.Areas) > 0 {
-		var names []string
-		for n, area := range q.Filters.Areas {
-			key := fmt.Sprintf("neighborhood%d", n)
-			names = append(names, "@"+key)
-			args = append(args, sql.Named(key, area))
-		}
-		where += " AND rd.area IN (" + strings.Join(names, ",") + ")"
-	}
-	add("rd.category", "category", q.Filters.Category)
-	add("rd.number", "number", q.Filters.Number)
-	if q.Filters.Assistance == "yes" {
-		where += " AND rd.assistance='requested'"
-	} else if q.Filters.Assistance == "no" {
-		where += " AND rd.assistance='not_requested'"
-	}
-	date := "rd.published_date"
-	if q.Filters.DateField == "incident" {
-		date = "rd.event_date"
-	}
-	fromDate, toDate := q.Filters.From, q.Filters.To
-	if q.Filters.Period != "" {
-		fromDate, toDate, err = publicationPeriod(q.Filters.Period, time.Now())
-		if err != nil {
-			return out, err
-		}
-	}
-	if fromDate != "" {
-		where += " AND " + date + ">=@from_date"
-		args = append(args, sql.Named("from_date", fromDate))
-	}
-	if toDate != "" {
-		where += " AND " + date + "<>'' AND " + date + "<=@to_date"
-		args = append(args, sql.Named("to_date", toDate))
-	}
-	var terms []string
-	for n, word := range strings.Fields(normalizeReaderText(q.Filters.Text)) {
-		if utf8.RuneCountInString(word) >= 3 {
-			terms = append(terms, `"`+strings.ReplaceAll(word, `"`, `""`)+`"`)
-		} else {
-			key := fmt.Sprintf("short%d", n)
-			where += " AND instr(rd.search_text,@" + key + ")>0"
-			args = append(args, sql.Named(key, word))
-		}
-	}
-	if len(terms) > 0 {
-		where += " AND rd.id IN (SELECT rowid FROM reader_fts WHERE reader_fts MATCH @terms)"
-		args = append(args, sql.Named("terms", strings.Join(terms, " AND ")))
-	}
-	from := ` FROM reader_documents rd JOIN incidents i ON i.id=rd.incident_id JOIN source_documents d ON d.id=i.source_document_id WHERE ` + where
 	// Count and page share a snapshot. The public safety predicate is retained in
 	// addition to trigger maintenance, so stale index rows can never expose text.
 	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
@@ -388,6 +340,80 @@ func (s *Store) ListReaderEntries(ctx context.Context, q ReaderQuery) (ReaderRes
 		return out, err
 	}
 	return out, tx.Commit()
+}
+
+// readerSelection is shared by the paginated reader and archive statistics.
+// Both routes must apply the same current-source publication and filter rules.
+func readerSelection(q ReaderQuery) (string, []any, error) {
+	if err := q.Filters.Validate(); err != nil {
+		return "", nil, err
+	}
+	status, err := sourceStatusCondition(q.SourceMode)
+	if err != nil {
+		return "", nil, err
+	}
+	scope := PresentationScope{Language: q.Language, TranslationLanguage: q.Language, PublicOnly: true}
+	args := presentationArgs(scope)
+	where := ` rd.language=@language AND ` + status + ` AND rd.run_id=` + latestPresentationRun + ` AND ` + publicReadyCondition
+	add := func(column, key, value string) {
+		if value != "" {
+			where += " AND " + column + "=@" + key
+			args = append(args, sql.Named(key, value))
+		}
+	}
+	add("rd.area", "area", q.Filters.Area)
+	add("reader_district(rd.area)", "district", q.Filters.District)
+	if len(q.Filters.Areas) > 0 {
+		var names []string
+		for n, area := range q.Filters.Areas {
+			key := fmt.Sprintf("neighborhood%d", n)
+			names = append(names, "@"+key)
+			args = append(args, sql.Named(key, area))
+		}
+		where += " AND rd.area IN (" + strings.Join(names, ",") + ")"
+	}
+	add("rd.category", "category", q.Filters.Category)
+	add("rd.number", "number", q.Filters.Number)
+	if q.Filters.Assistance == "yes" {
+		where += " AND rd.assistance='requested'"
+	} else if q.Filters.Assistance == "no" {
+		where += " AND rd.assistance='not_requested'"
+	}
+	date := "rd.published_date"
+	if q.Filters.DateField == "incident" {
+		date = "rd.event_date"
+	}
+	fromDate, toDate := q.Filters.From, q.Filters.To
+	if q.Filters.Period != "" {
+		fromDate, toDate, err = publicationPeriod(q.Filters.Period, time.Now())
+		if err != nil {
+			return "", nil, err
+		}
+	}
+	if fromDate != "" {
+		where += " AND " + date + ">=@from_date"
+		args = append(args, sql.Named("from_date", fromDate))
+	}
+	if toDate != "" {
+		where += " AND " + date + "<>'' AND " + date + "<=@to_date"
+		args = append(args, sql.Named("to_date", toDate))
+	}
+	var terms []string
+	for n, word := range strings.Fields(normalizeReaderText(q.Filters.Text)) {
+		if utf8.RuneCountInString(word) >= 3 {
+			terms = append(terms, `"`+strings.ReplaceAll(word, `"`, `""`)+`"`)
+		} else {
+			key := fmt.Sprintf("short%d", n)
+			where += " AND instr(rd.search_text,@" + key + ")>0"
+			args = append(args, sql.Named(key, word))
+		}
+	}
+	if len(terms) > 0 {
+		where += " AND rd.id IN (SELECT rowid FROM reader_fts WHERE reader_fts MATCH @terms)"
+		args = append(args, sql.Named("terms", strings.Join(terms, " AND ")))
+	}
+	from := ` FROM reader_documents rd JOIN incidents i ON i.id=rd.incident_id JOIN source_documents d ON d.id=i.source_document_id WHERE ` + where
+	return from, args, nil
 }
 
 // Calendar days in Munich, including across daylight-saving transitions.

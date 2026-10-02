@@ -25,6 +25,8 @@ function manifest(change, pattern) {
   rejects('internal/licensing/manifest.json', text => {const m=JSON.parse(text);change(m);return JSON.stringify(m);},pattern);
 }
 test('changed dependency inputs need a review', () => rejects('go.sum', s=>s+'\n', /Licence inputs changed/));
+test('changed bundled district geometry needs a review', () => rejects('internal/munichmap/districts.json', s=>s+'\n', /Licence inputs changed/));
+test('bundled map boundaries need a reviewed owner', () => manifest(m=>{m.components=m.components.filter(c=>c.id!=='munich-district-map');}, /Asset has no reviewed owner: internal\/munichmap/));
 test('changed original texts fail integrity checks', () => rejects('LICENSES/munichbrief-mit.txt', s=>s+'modified', /Notice integrity failure/));
 test('unreviewed shipped components fail', () => manifest(m=>{m.components[0].review_status='review_needed';}, /unreviewed shipped component/));
 test('unknown notice identifiers fail', () => manifest(m=>{m.components[0].notices.push('missing');}, /unknown notice/));

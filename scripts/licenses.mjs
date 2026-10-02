@@ -14,6 +14,7 @@ const manifest = JSON.parse(readFileSync(manifestPath));
 const hash = b => createHash('sha256').update(b).digest('hex');
 const fail = message => { throw new Error(message); };
 const inputs = ['go.mod', 'go.sum', 'package.json', 'package-lock.json', 'Dockerfile', 'LICENSE',
+  'internal/munichmap/districts.json', 'internal/munichmap/source/stadtbezirke.geojson.gz',
   ...readdirSync('internal/web/static').filter(n => !n.startsWith('.')).map(n => `internal/web/static/${n}`),
   ...readdirSync('internal/web/fonts').filter(n => /\.(ttf|txt)$/.test(n)).map(n => `internal/web/fonts/${n}`)].sort();
 const fingerprints = Object.fromEntries(inputs.map(p => [p, hash(readFileSync(p))]));
@@ -52,7 +53,7 @@ for (const c of manifest.components) {
     if (c.public && ['excluded','review_needed'].includes(c.review_status)) fail(`${c.id}: unresolved model in public credits`);
   }
 }
-for (const file of inputs.filter(p => p.startsWith('internal/web/') && !p.endsWith('OFL.txt'))) {
+for (const file of inputs.filter(p => (p.startsWith('internal/web/') || p.startsWith('internal/munichmap/')) && !p.endsWith('OFL.txt'))) {
   if (!manifest.components.some(c => c.files?.includes(file))) fail(`Asset has no reviewed owner: ${file}`);
 }
 for (const archive of manifest.source_archives ?? []) {

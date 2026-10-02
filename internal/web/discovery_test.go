@@ -115,6 +115,7 @@ func TestSitemapContainsOnlyCanonicalPublicDocuments(t *testing.T) {
 	for _, definition := range langregistry.Registered() {
 		wantLocations["https://munichbrief.de/"+definition.Code] = false
 		wantLocations["https://munichbrief.de/"+definition.Code+"/about"] = false
+		wantLocations["https://munichbrief.de/"+definition.Code+"/map"] = false
 		wantLocations["https://munichbrief.de/"+definition.Code+"/contact"] = false
 		wantLocations["https://munichbrief.de/"+definition.Code+"/licenses"] = false
 		wantLocations["https://munichbrief.de/"+definition.Code+"/privacy"] = false

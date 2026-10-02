@@ -924,13 +924,6 @@ func TestTranslationCatalogsAreCompleteAndPluralized(t *testing.T) {
 			t.Errorf("Count(%q, %d) = %q, want %q", test.language, test.count, actual, test.expected)
 		}
 	}
-	if actual := translations.ShownTotal("en", 20, 28); actual != "20 shown / 28 total" {
-		t.Errorf("ShownTotal() = %q", actual)
-	}
-	if actual := translations.ShownTotal("de", 20, 28); actual != "20 angezeigt / 28 insgesamt" {
-		t.Errorf("ShownTotal() German = %q", actual)
-	}
-
 	broken := fstest.MapFS{
 		"de.toml": {Data: []byte("[OnlyGerman]\nother = 'Deutsch'\n")},
 		"en.toml": {Data: []byte("[OnlyEnglish]\nother = 'English'\n")},

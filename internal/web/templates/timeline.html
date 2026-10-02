@@ -39,6 +39,7 @@
       <form method="get" action="/{{.Lang}}/search#timeline-heading" hx-boost="false" class="reader-search-form">
         {{if eq .View "incident"}}<input type="hidden" name="view" value="incident">{{end}}{{if ne .PageSize 20}}<input type="hidden" name="page_size" value="{{.PageSize}}">{{end}}
         {{range .Filters.Areas}}<input type="hidden" name="neighborhood" value="{{.}}">{{end}}
+        {{if .Filters.District}}<input type="hidden" name="district" value="{{.Filters.District}}">{{end}}
         <label class="search-wide">{{t .Lang "SearchText"}}<input type="search" name="q" maxlength="200" value="{{.Filters.Text}}" placeholder="{{t .Lang "SearchPlaceholder"}}"></label>
         <label>{{t .Lang "Area"}}<input name="area" list="reader-areas" maxlength="200" value="{{.Filters.Area}}"><datalist id="reader-areas">{{range .Areas}}<option value="{{.}}">{{end}}</datalist></label>
         <label>{{t .Lang "Category"}}<select name="category"><option value="">{{t .Lang "AllCategories"}}</option>{{range .Categories}}<option value="{{.Value}}" {{if eq $.Filters.Category .Value}}selected{{end}}>{{.Label}}</option>{{end}}</select></label>
@@ -49,6 +50,7 @@
         <label>{{t .Lang "DateFrom"}}<input type="date" name="from" value="{{.Filters.From}}"></label>
         <label>{{t .Lang "DateTo"}}<input type="date" name="to" value="{{.Filters.To}}"></label>
         <p class="search-wide reader-filter-help">{{t .Lang "AdvancedShortcutHelp"}}</p>
+        {{if .Filters.District}}<p class="search-wide reader-filter-help">{{t .Lang "MapAdvancedHelp"}}</p>{{end}}
         <div class="search-wide search-submit"><button class="reader-button" type="submit">{{t .Lang "ApplySearch"}}</button><p>{{t .Lang "SearchRemembered"}}</p></div>
       </form>
     </details>

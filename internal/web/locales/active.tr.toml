@@ -7,10 +7,6 @@ PrimaryNavigation = { other = "Ana gezinme" }
 SkipToContent = { other = "İçeriğe geç" }
 DarkMode = { other = "Karanlık mod" }
 NoticeLabel = { other = "Önemli uyarı" }
-NoticeLead = { other = "Bağımsız ve resmî değildir." }
-FixtureNotice = { other = "Bu görünüm yalnızca sentetik test verileri içerir." }
-LiveNotice = { other = "Resmî polis bildirimlerini özetlemek, kategorilere ayırmak ve ayrıntıları çıkarmak için yapay zekâ kullanılır. Hatalar oluşabilir ve bildirimler yayımlandıktan sonra güncellenebilir." }
-AuthorityNotice = { other = "En güncel resmî bilgiler esas alınır ve masumiyet karinesi geçerlidir." }
 ReviewNotice = { other = "İnceleme modu: anonimleştirilmemiş özgün metin görünebilir. Herkese açık olarak sunmayın." }
 AIGeneratedContent = { other = "Yapay zekâ tarafından oluşturulan içerik" }
 AIFixtureLabelPreview = { other = "Etiket önizlemesi — bu sentetik test içeriği yapay zekâ ile işlenmemiştir" }
@@ -26,8 +22,6 @@ EUIconGuidance = { other = "AB simge rehberi" }
 EUCodePractice = { other = "AB Uygulama Kuralları" }
 Built = { other = "Derleme" }
 Language = { other = "Dil" }
-German = { other = "Almanca" }
-English = { other = "İngilizce" }
 SwitchToGerman = { other = "Almanca sürüme geç" }
 SwitchToEnglish = { other = "İngilizce sürüme geç" }
 SwitchToTurkish = { other = "Türkçe sürüme geç" }
@@ -40,19 +34,16 @@ SwitchToHindi = { other = "Hintçe sürüme geç" }
 SwitchToSpanish = { other = "İspanyolca sürüme geç" }
 SwitchToFrench = { other = "Fransızca sürüme geç" }
 HeroEyebrowFixture = { other = "Yerel prototip" }
-HeroEyebrowLive = { other = "Münih Polisi bildirimleri" }
 HeroTitle = { other = "Münih’ten kısa kısa." }
 FixtureIncidents = { other = "Sentetik bildirimler" }
 LatestIncidents = { other = "Son bültenler" }
 Reports = { one = "{{.Count}} bülten", other = "{{.Count}} bülten" }
-ShownTotal = { other = "{{.Shown}} gösteriliyor / toplam {{.Total}}" }
 Report = { other = "Bülten numarası" }
 SourceMetadata = { other = "Kaynak üst verileri" }
 ReadIncident = { other = "Özeti oku" }
 Newer = { other = "Daha yeni" }
 Older = { other = "Daha eski" }
 Page = { other = "Sayfa" }
-Of = { other = "/" }
 NoIncidents = { other = "Gösterilecek bülten yok" }
 NoFixtureCopy = { other = "Bu görünümü doldurmak için test verisi içe aktarımını çalıştırın." }
 NoLiveCopy = { other = "Yeni bültenler hazır olduğunda burada görünecek." }
@@ -120,7 +111,6 @@ ChineseTranslationStep = { other = "Basitleştirilmiş Çince çeviri" }
 HindiTranslationStep = { other = "Hintçe çeviri" }
 SpanishTranslationStep = { other = "İspanyolca çeviri" }
 FrenchTranslationStep = { other = "Fransızca çeviri" }
-StagedPipeline = { other = "Aşamalı işlem hattı" }
 MetadataFirstPipeline = { other = "Önce üst veri işlem hattı v2" }
 Generated = { other = "Oluşturuldu" }
 AISummary = { other = "Yapay zekâ özeti" }
@@ -136,7 +126,6 @@ Running = { other = "Yapay zekâ özeti ve çeviri işleniyor" }
 Retrying = { other = "Yapay zekâ geçici olarak kullanılamıyor; yeniden deneme planlandı" }
 NeedsReview = { other = "Yapay zekâ çıktısının incelenmesi gerekiyor" }
 OriginalShown = { other = "Bu içerik henüz özetlenmediği için Almanca kaynak metin gösteriliyor." }
-Methodology = { other = "MunichBrief hakkında" }
 FromReleaseToIncident = { other = "Bir bülten nasıl özete dönüşür?" }
 Discover = { other = "Keşfet" }
 DiscoverCopy = { other = "Yeni bültenler, Münih Emniyet Müdürlüğünün resmî RSS akışından alınır." }
@@ -509,3 +498,132 @@ other = "Bu haber artık seçilen dilde mevcut değil. Genel iletişim sayfasın
 
 [CorrectionMessageLimit]
 other = "En fazla {{.MessageMaxLength}} karakter. Haberin bağlantısı ve dili otomatik olarak eklenir."
+
+[MapNav]
+other = "Harita ve istatistikler"
+
+[MapTitle]
+other = "Bültenlerle Münih."
+
+[MapIntro]
+other = "Arşivimizdeki bültenleri Münih’in 25 şehir bölgesinde keşfedin. Bir dönem seçin, dağılımı inceleyin ve sayıların arkasındaki bültenleri okuyun."
+
+[MapEarliest]
+other = "Arşivdeki en eski yayımlanma tarihi"
+
+[MapAllTime]
+other = "Mevcut tüm bültenler"
+
+[MapMonth]
+other = "Son 30 gün"
+
+[MapPreviousMonth]
+other = "Önceki takvim ayı"
+
+[MapCustom]
+other = "Özel tarih aralığı"
+
+[MapDistrict]
+other = "Şehir bölgesi"
+
+[MapAllDistricts]
+other = "Tüm bölgeler ve yerler"
+
+[MapOutside]
+other = "Münih şehir sınırları dışında"
+
+[MapUnassigned]
+other = "Bölgesi belirlenemeyen"
+
+[MapReset]
+other = "Filtreleri sıfırla"
+
+[MapDateNote]
+other = "Tarihler, Münih yerel saatine göre yayımlanma tarihini esas alır; başlangıç ve bitiş günleri dahildir. Son 7 veya 30 gün bugünü de kapsar. Tüm sayılar ve grafikler bu filtrelere göre hesaplanır; kayıtlı arama filtreleri burada uygulanmaz."
+
+[MapTotal]
+other = "Arşivdeki bültenler"
+
+[MapBasisShort]
+other = "Herkese açık Almanca özetler"
+
+[MapMapped]
+other = "Bir şehir bölgesine atanan"
+
+[MapDistrictCount]
+other = "25 resmî şehir bölgesi"
+
+[MapAvailable]
+other = "Okunabilir bültenler"
+
+[MapCoverageShort]
+other = "Şu anda yayımlanmış dil sürümleri"
+
+[MapCity]
+other = "Bir bakışta şehir"
+
+[MapDistricts]
+other = "Bölgelere göre bültenler"
+
+[MapInteraction]
+other = "Haritada veya aşağıdaki listede bir bölge seçin. Tüm yerleri yeniden göstermek için aynı bölgeyi tekrar seçin."
+
+[MapReportCount]
+other = "Bülten"
+
+[MapBoundaryNote]
+other = "Sınırlar sadeleştirilmiştir"
+
+[MapBehindNumbers]
+other = "Sayıların arkasında"
+
+[MapReadHeading]
+other = "Bu bültenleri keşfedin"
+
+[MapLanguageNote]
+other = "Sayılar herkese açık Almanca özetlere dayanır ve arayüz dili değiştiğinde aynı kalır. Yapay zekâ işlemleri ve çeviri kontrolleri, bir bültenin dilinizde yayımlanmasını geciktirebilir veya engelleyebilir. Her bağlantı yalnızca o dilde mevcut bültenleri gösterir."
+
+[MapReadGerman]
+other = "Almanca oku"
+
+[MapCurrentSelection]
+other = "Seçili filtrelerle"
+
+[MapTopDistricts]
+other = "En çok bülten bulunan bölgeler"
+
+[MapEmpty]
+other = "Bu seçime uygun bülten yok. Tarih aralığını genişletin veya filtreleri sıfırlayın."
+
+[MapCategories]
+other = "Kategorilere göre bültenler"
+
+[MapTrend]
+other = "Zamana göre yayımlanma"
+
+[MapTrendNote]
+other = "Her sütun, yayımlanma tarihlerini gruplar. Kesin tarih aralıklarını ve sayıları görmek için verileri açın. İlk ve son dönemler daha kısa olabilir ve daha az gün içerebilir."
+
+[MapViewData]
+other = "Tarihleri ve sayıları göster"
+
+[MapContext]
+other = "Sayıları anlamak"
+
+[MapMethod]
+other = "Bu harita ne anlatıyor?"
+
+[MapBasis]
+other = "Şu anda herkese açık olan her Almanca bülteni, güncel kategorisi ve konumuyla bir kez sayıyoruz. Takip bültenleri aynı olaya ilişkin olabilir. Arşivdeki en eski yayımlanma tarihi, sitenin bülten toplamaya başladığı tarih değildir."
+
+[MapCaution]
+other = "Bu sayfa, polis basın bültenlerinden bir seçkiyi gösterir; tüm olayların eksiksiz kaydı veya mahalle güvenliğinin bir ölçüsü değildir. Sayılar nüfusa, ziyaretçi sayısına veya bölge büyüklüğüne göre ağırlıklandırılmamıştır."
+
+[MapLocationNote]
+other = "Her bülten bir temsilî bölgeye atanır. İncelenmiş mahalle ilişkileri, bültenleri resmî şehir bölgeleriyle eşleştirir; geniş veya belirsiz yerler için bölge belirtilmez. Münih dışındaki yerler ve bölgesi belirlenemeyen bültenler toplama dahildir, ancak haritada bir bölge içinde gösterilemez. Yapay zekâyla belirlenen kategori ve konumlar hatalı olabilir."
+
+[MapAdvancedHelp]
+other = "Diğer filtreleri değiştirdiğinizde seçili şehir bölgesi etkin kalır. Bir bölge adı girmek veya kayıtlı mahalleleri uygulamak bu seçimin yerini alır."
+
+[MapExcluded]
+other = "Seçili konum filtresinin dışında"

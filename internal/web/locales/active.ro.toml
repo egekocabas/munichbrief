@@ -19,14 +19,6 @@ other = "Sari la conținut"
 other = "Mod întunecat"
 [NoticeLabel]
 other = "Notă importantă"
-[NoticeLead]
-other = "Independent și neoficial."
-[FixtureNotice]
-other = "Această vizualizare conține numai date de test sintetice."
-[LiveNotice]
-other = "AI este utilizată pentru a rezuma, clasifica și extrage detalii din comunicatele oficiale ale poliției. Pot apărea erori, iar comunicatele pot fi actualizate după publicare."
-[AuthorityNotice]
-other = "Cele mai recente informații oficiale rămân autoritatea de referință, iar prezumția de nevinovăție se aplică."
 [ReviewNotice]
 other = "Mod de verificare: textul original care nu a fost anonimizat poate fi vizibil. Nu îl publicați."
 [AIGeneratedContent]
@@ -62,10 +54,6 @@ other = "MunichBrief este independent de poliție. Fără cont și fără reclam
 other = "Versiune"
 [Language]
 other = "Limbă"
-[German]
-other = "Deutsch"
-[English]
-other = "English"
 [SwitchToGerman]
 other = "Comută la versiunea în germană"
 [SwitchToEnglish]
@@ -96,8 +84,6 @@ other = "Comută la versiunea în polonă"
 other = "Comută la versiunea în rusă"
 [HeroEyebrowFixture]
 other = "Prototip local"
-[HeroEyebrowLive]
-other = "Comunicatele Poliției din München"
 [HeroTitle]
 other = "München, pe scurt."
 
@@ -112,8 +98,6 @@ other = "Cele mai recente incidente"
 one = "{{.Count}} informare"
 few = "{{.Count}} informări"
 other = "{{.Count}} de informări"
-[ShownTotal]
-other = "{{.Shown}} afișate / {{.Total}} în total"
 [Report]
 other = "Comunicat al poliției"
 [SourceMetadata]
@@ -132,8 +116,6 @@ other = "Mai noi"
 other = "Mai vechi"
 [Page]
 other = "Pagina"
-[Of]
-other = "din"
 [NoIncidents]
 other = "Nu există încă informări"
 [NoFixtureCopy]
@@ -274,8 +256,6 @@ other = "Traducere în română"
 other = "Traducere în polonă"
 [RussianTranslationStep]
 other = "Traducere în rusă"
-[StagedPipeline]
-other = "Flux pe etape"
 [MetadataFirstPipeline]
 other = "Flux cu metadatele mai întâi v2"
 [Generated]
@@ -309,8 +289,6 @@ other = "Este afișat comunicatul original în germană."
 [AboutTitle]
 other = "Despre MunichBrief"
 
-[Methodology]
-other = "Despre MunichBrief"
 [AboutIntro]
 other = "MunichBrief te ajută să urmărești comunicatele poliției locale în limba ta. Citește un rezumat, află unde și când s-a petrecut un incident și deschide comunicatul oficial pentru detalii."
 
@@ -783,3 +761,132 @@ other = "Această știre nu mai este disponibilă în limba selectată. Poți fo
 
 [CorrectionMessageLimit]
 other = "Până la {{.MessageMaxLength}} de caractere. Linkul și limba știrii sunt atașate automat."
+
+[MapNav]
+other = "Hartă și statistici"
+
+[MapTitle]
+other = "München, în relatări."
+
+[MapIntro]
+other = "Explorează relatările din arhivă în cele 25 de districte ale orașului München. Alege o perioadă, descoperă tendințe și citește relatările din spatele cifrelor."
+
+[MapEarliest]
+other = "Cea mai veche publicare din arhivă"
+
+[MapAllTime]
+other = "Toate cele disponibile"
+
+[MapMonth]
+other = "Ultimele 30 de zile"
+
+[MapPreviousMonth]
+other = "Luna calendaristică anterioară"
+
+[MapCustom]
+other = "Date personalizate"
+
+[MapDistrict]
+other = "District al orașului"
+
+[MapAllDistricts]
+other = "Toate districtele și locurile"
+
+[MapOutside]
+other = "În afara orașului München"
+
+[MapUnassigned]
+other = "District neprecizat"
+
+[MapReset]
+other = "Resetează filtrele"
+
+[MapDateNote]
+other = "Datele folosesc ora locală a publicării în München și includ atât prima, cât și ultima zi. Ultimele 7 sau 30 de zile includ ziua de azi. Toate totalurile și graficele urmează aceste filtre; filtrele de lectură salvate nu se aplică aici."
+
+[MapTotal]
+other = "Relatări în arhivă"
+
+[MapBasisShort]
+other = "Rezumate publice în germană"
+
+[MapMapped]
+other = "Localizate într-un district"
+
+[MapDistrictCount]
+other = "25 de districte oficiale"
+
+[MapAvailable]
+other = "Disponibile pentru lectură"
+
+[MapCoverageShort]
+other = "Versiuni lingvistice publicate în prezent"
+
+[MapCity]
+other = "Orașul dintr-o privire"
+
+[MapDistricts]
+other = "Relatări pe districte"
+
+[MapInteraction]
+other = "Selectează un district pe hartă sau din lista de mai jos. Selectează-l din nou pentru a afișa toate locurile."
+
+[MapReportCount]
+other = "Relatări"
+
+[MapBoundaryNote]
+other = "Limite simplificate"
+
+[MapBehindNumbers]
+other = "În spatele cifrelor"
+
+[MapReadHeading]
+other = "Explorează aceste relatări"
+
+[MapLanguageNote]
+other = "Numărătoarea folosește rezumatele publice în germană și rămâne aceeași indiferent de limba interfeței. Procesarea prin IA și verificările traducerilor pot întârzia sau împiedica apariția unei relatări în limba ta. Fiecare link arată doar relatările disponibile în limba respectivă."
+
+[MapReadGerman]
+other = "Citește în germană"
+
+[MapCurrentSelection]
+other = "Cu filtrele selectate"
+
+[MapTopDistricts]
+other = "Districtele cu cele mai multe relatări"
+
+[MapEmpty]
+other = "Nicio relatare nu corespunde acestei selecții. Extinde perioada sau resetează filtrele."
+
+[MapCategories]
+other = "Relatări pe categorii"
+
+[MapTrend]
+other = "Publicări în timp"
+
+[MapTrendNote]
+other = "Fiecare bară grupează date de publicare. Deschide datele pentru a vedea intervalele și numerele exacte. Primul și ultimul interval pot fi mai scurte și pot cuprinde mai puține zile."
+
+[MapViewData]
+other = "Vezi datele și numerele"
+
+[MapContext]
+other = "Cum se citesc cifrele"
+
+[MapMethod]
+other = "Ce arată această hartă"
+
+[MapBasis]
+other = "Numărăm o singură dată fiecare relatare în germană care este publică în prezent, folosind categoria și locul său actual. Relatările ulterioare pot privi același eveniment. Cea mai veche publicare din arhivă nu indică data la care site-ul a început să colecteze relatări."
+
+[MapCaution]
+other = "Aceasta este o selecție de comunicate de presă ale poliției, nu o evidență completă a incidentelor sau o măsură a siguranței cartierelor. Numerele nu sunt ajustate în funcție de populație, vizitatori sau suprafața districtului."
+
+[MapLocationNote]
+other = "Fiecare relatare este atribuită unei singure zone reprezentative. Relațiile de apartenență ale cartierelor, verificate în prealabil, le leagă de districtele oficiale; locurile vaste sau ambigue rămân neprecizate. Locurile din afara orașului München și districtele neprecizate sunt incluse în total, dar nu pot apărea într-un district pe hartă. Categoriile și locurile determinate prin IA pot fi greșite."
+
+[MapAdvancedHelp]
+other = "Districtul selectat rămâne activ când schimbi alte filtre. Introducerea unei zone sau aplicarea cartierelor salvate înlocuiește selecția districtului."
+
+[MapExcluded]
+other = "În afara filtrului de locație selectat"

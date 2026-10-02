@@ -256,6 +256,7 @@ func (s *Server) sitemap(response http.ResponseWriter, request *http.Request) {
 		}
 		urls = append(urls,
 			sitemapURL{Location: origin + "/" + definition.Code},
+			sitemapURL{Location: origin + "/" + definition.Code + "/map"},
 			sitemapURL{Location: origin + "/" + definition.Code + "/about", LastMod: informationPageUpdatedAt("about").Format(time.DateOnly)},
 			sitemapURL{Location: origin + "/" + definition.Code + "/contact", LastMod: informationPageUpdatedAt("contact").Format(time.DateOnly)},
 			sitemapURL{Location: origin + "/" + definition.Code + "/licenses", LastMod: licensing.CreditsUpdatedAt()},

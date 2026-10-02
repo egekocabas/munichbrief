@@ -7,10 +7,6 @@ PrimaryNavigation = { other = "Navigazione principale" }
 SkipToContent = { other = "Vai al contenuto" }
 DarkMode = { other = "Modalità scura" }
 NoticeLabel = { other = "Avviso importante" }
-NoticeLead = { other = "Indipendente e non ufficiale." }
-FixtureNotice = { other = "Questa vista contiene esclusivamente dati di prova sintetici." }
-LiveNotice = { other = "L’AI viene usata per riassumere, classificare ed estrarre dettagli dai comunicati ufficiali della polizia. Possono verificarsi errori e i comunicati possono essere aggiornati dopo la pubblicazione." }
-AuthorityNotice = { other = "Le informazioni ufficiali più recenti restano autorevoli e si applica la presunzione d’innocenza." }
 ReviewNotice = { other = "Modalità di revisione: potrebbe essere visibile testo originale non anonimizzato. Non esporre pubblicamente." }
 AIGeneratedContent = { other = "Contenuto generato dall’AI" }
 AIFixtureLabelPreview = { other = "Anteprima etichetta — questo contenuto sintetico non è stato elaborato dall’AI" }
@@ -26,8 +22,6 @@ EUIconGuidance = { other = "Orientamenti UE sulle icone" }
 EUCodePractice = { other = "Codice di buone pratiche UE" }
 Built = { other = "Build" }
 Language = { other = "Lingua" }
-German = { other = "Tedesco" }
-English = { other = "Inglese" }
 SwitchToGerman = { other = "Passa alla versione tedesca" }
 SwitchToEnglish = { other = "Passa alla versione inglese" }
 SwitchToTurkish = { other = "Passa alla versione turca" }
@@ -40,19 +34,16 @@ SwitchToHindi = { other = "Passa alla versione hindi" }
 SwitchToSpanish = { other = "Passa alla versione spagnola" }
 SwitchToFrench = { other = "Passa alla versione francese" }
 HeroEyebrowFixture = { other = "Prototipo locale" }
-HeroEyebrowLive = { other = "Comunicati della Polizia di Monaco" }
 HeroTitle = { other = "Monaco, in breve." }
 FixtureIncidents = { other = "Comunicati sintetici" }
 LatestIncidents = { other = "Ultimi eventi" }
 Reports = { one = "{{.Count}} comunicato", other = "{{.Count}} comunicati" }
-ShownTotal = { other = "{{.Shown}} visualizzati / {{.Total}} totali" }
 Report = { other = "Comunicato della polizia" }
 SourceMetadata = { other = "Metadati della fonte" }
 ReadIncident = { other = "Leggi il comunicato" }
 Newer = { other = "Più recenti" }
 Older = { other = "Meno recenti" }
 Page = { other = "Pagina" }
-Of = { other = "di" }
 NoIncidents = { other = "Nessun comunicato per ora" }
 NoFixtureCopy = { other = "Esegui l’importazione dei dati di prova per popolare questa vista." }
 NoLiveCopy = { other = "Il sincronizzatore non ha ancora trovato comunicati nell’intervallo previsto." }
@@ -120,7 +111,6 @@ ChineseTranslationStep = { other = "Traduzione cinese semplificata" }
 HindiTranslationStep = { other = "Traduzione hindi" }
 SpanishTranslationStep = { other = "Traduzione spagnola" }
 FrenchTranslationStep = { other = "Traduzione francese" }
-StagedPipeline = { other = "Pipeline a fasi" }
 MetadataFirstPipeline = { other = "Pipeline con metadati prioritari v2" }
 Generated = { other = "Generato" }
 AISummary = { other = "Riepilogo generato dall’AI" }
@@ -136,7 +126,6 @@ Running = { other = "Riepilogo e traduzione AI in elaborazione" }
 Retrying = { other = "AI temporaneamente non disponibile; nuovo tentativo pianificato" }
 NeedsReview = { other = "Il risultato AI richiede revisione" }
 OriginalShown = { other = "Viene mostrato il comunicato originale tedesco." }
-Methodology = { other = "Informazioni su MunichBrief" }
 FromReleaseToIncident = { other = "Dal comunicato all’evento" }
 Discover = { other = "Individuazione" }
 DiscoverCopy = { other = "I nuovi comunicati vengono individuati esclusivamente tramite il feed RSS ufficiale della Polizia di Monaco." }
@@ -509,3 +498,132 @@ other = "Questa notizia non è più disponibile nella lingua selezionata. Puoi c
 
 [CorrectionMessageLimit]
 other = "Fino a {{.MessageMaxLength}} caratteri. Il link e la lingua della notizia vengono allegati automaticamente."
+
+[MapNav]
+other = "Mappa e statistiche"
+
+[MapTitle]
+other = "Monaco, nei comunicati."
+
+[MapIntro]
+other = "Esplora i comunicati del nostro archivio nei 25 distretti di Monaco. Scegli un periodo, osserva la distribuzione e leggi i comunicati dietro ai numeri."
+
+[MapEarliest]
+other = "Prima pubblicazione presente nell’archivio"
+
+[MapAllTime]
+other = "Tutti i comunicati disponibili"
+
+[MapMonth]
+other = "Ultimi 30 giorni"
+
+[MapPreviousMonth]
+other = "Mese solare precedente"
+
+[MapCustom]
+other = "Date personalizzate"
+
+[MapDistrict]
+other = "Distretto cittadino"
+
+[MapAllDistricts]
+other = "Tutti i distretti e le località"
+
+[MapOutside]
+other = "Fuori dalla città di Monaco"
+
+[MapUnassigned]
+other = "Distretto non determinato"
+
+[MapReset]
+other = "Reimposta i filtri"
+
+[MapDateNote]
+other = "Le date si riferiscono alla pubblicazione nell’ora locale di Monaco, con entrambi gli estremi inclusi. Gli ultimi 7 o 30 giorni comprendono oggi. Tutti i totali e i grafici rispettano questi filtri; i filtri di ricerca salvati non si applicano qui."
+
+[MapTotal]
+other = "Comunicati nell’archivio"
+
+[MapBasisShort]
+other = "Sintesi pubbliche in tedesco"
+
+[MapMapped]
+other = "Assegnati a un distretto cittadino"
+
+[MapDistrictCount]
+other = "25 distretti ufficiali"
+
+[MapAvailable]
+other = "Disponibili da leggere"
+
+[MapCoverageShort]
+other = "Versioni linguistiche attualmente pubblicate"
+
+[MapCity]
+other = "La città a colpo d’occhio"
+
+[MapDistricts]
+other = "Comunicati per distretto"
+
+[MapInteraction]
+other = "Seleziona un distretto sulla mappa o nell’elenco qui sotto. Selezionalo di nuovo per visualizzare tutte le località."
+
+[MapReportCount]
+other = "Comunicati"
+
+[MapBoundaryNote]
+other = "Confini semplificati"
+
+[MapBehindNumbers]
+other = "Dietro ai numeri"
+
+[MapReadHeading]
+other = "Esplora questi comunicati"
+
+[MapLanguageNote]
+other = "I conteggi si basano sulle sintesi pubbliche in tedesco e restano uguali in tutte le lingue dell’interfaccia. L’elaborazione con IA e i controlli delle traduzioni possono ritardare o impedire la pubblicazione di un comunicato nella tua lingua. Ogni link mostra solo i comunicati disponibili in quella lingua."
+
+[MapReadGerman]
+other = "Leggi in tedesco"
+
+[MapCurrentSelection]
+other = "Con i filtri selezionati"
+
+[MapTopDistricts]
+other = "Distretti con più comunicati"
+
+[MapEmpty]
+other = "Nessun comunicato corrisponde alla selezione. Amplia il periodo o reimposta i filtri."
+
+[MapCategories]
+other = "Comunicati per categoria"
+
+[MapTrend]
+other = "Pubblicazioni nel tempo"
+
+[MapTrendNote]
+other = "Ogni barra raggruppa le date di pubblicazione. Apri i dati per vedere gli intervalli e i conteggi esatti. Il primo e l’ultimo periodo possono essere più brevi e comprendere meno giorni."
+
+[MapViewData]
+other = "Mostra date e conteggi"
+
+[MapContext]
+other = "Come leggere i numeri"
+
+[MapMethod]
+other = "Che cosa mostra questa mappa"
+
+[MapBasis]
+other = "Contiamo una sola volta ogni comunicato attualmente pubblico in tedesco, utilizzando la categoria e la località attuali. Comunicati successivi possono riguardare lo stesso evento. La prima pubblicazione presente nell’archivio non coincide necessariamente con la data in cui il sito ha iniziato a raccogliere i comunicati."
+
+[MapCaution]
+other = "Questa è una selezione di comunicati stampa della polizia, non un registro completo degli eventi né una misura della sicurezza dei quartieri. I conteggi non sono rapportati alla popolazione, ai visitatori o alla superficie dei distretti."
+
+[MapLocationNote]
+other = "A ogni comunicato viene assegnata un’area rappresentativa. Le relazioni verificate tra quartieri e distretti consentono l’associazione ai distretti ufficiali; le località generiche o ambigue restano non determinate. Le località fuori Monaco e i distretti non determinati sono inclusi nel totale, ma non possono comparire in un distretto sulla mappa. Le categorie e le località individuate dall’IA possono essere errate."
+
+[MapAdvancedHelp]
+other = "Il distretto selezionato resta attivo quando cambi gli altri filtri. Inserire una zona o applicare i quartieri salvati sostituisce questa selezione."
+
+[MapExcluded]
+other = "Fuori dal filtro di località selezionato"

@@ -7,10 +7,6 @@ PrimaryNavigation = { other = "Navegación principal" }
 SkipToContent = { other = "Ir al contenido" }
 DarkMode = { other = "Modo oscuro" }
 NoticeLabel = { other = "Aviso importante" }
-NoticeLead = { other = "Independiente y no oficial." }
-FixtureNotice = { other = "Esta vista contiene únicamente datos de prueba sintéticos." }
-LiveNotice = { other = "Se utiliza IA para resumir, clasificar y extraer detalles de comunicados oficiales de la policía. Puede haber errores y los comunicados pueden actualizarse después de su publicación." }
-AuthorityNotice = { other = "La información oficial más reciente sigue siendo la fuente autorizada y se aplica la presunción de inocencia." }
 ReviewNotice = { other = "Modo de revisión: puede mostrarse texto original sin anonimizar. No debe exponerse públicamente." }
 AIGeneratedContent = { other = "Contenido generado por IA" }
 AIFixtureLabelPreview = { other = "Vista previa de la etiqueta — este contenido sintético no ha sido procesado por IA" }
@@ -26,8 +22,6 @@ EUIconGuidance = { other = "Orientaciones de la UE sobre iconos" }
 EUCodePractice = { other = "Código de buenas prácticas de la UE" }
 Built = { other = "Compilación" }
 Language = { other = "Idioma" }
-German = { other = "Alemán" }
-English = { other = "Inglés" }
 SwitchToGerman = { other = "Cambiar a la versión en alemán" }
 SwitchToEnglish = { other = "Cambiar a la versión en inglés" }
 SwitchToTurkish = { other = "Cambiar a la versión en turco" }
@@ -40,19 +34,16 @@ SwitchToHindi = { other = "Cambiar a la versión en hindi" }
 SwitchToSpanish = { other = "Cambiar a la versión en español" }
 SwitchToFrench = { other = "Cambiar a la versión en francés" }
 HeroEyebrowFixture = { other = "Prototipo local" }
-HeroEyebrowLive = { other = "Comunicados de la Policía de Múnich" }
 HeroTitle = { other = "Múnich, en breve." }
 FixtureIncidents = { other = "Informes sintéticos" }
 LatestIncidents = { other = "Últimos incidentes" }
 Reports = { one = "{{.Count}} informe", other = "{{.Count}} informes" }
-ShownTotal = { other = "{{.Shown}} mostrados / {{.Total}} en total" }
 Report = { other = "Informe policial" }
 SourceMetadata = { other = "Metadatos de la fuente" }
 ReadIncident = { other = "Leer el informe" }
 Newer = { other = "Más recientes" }
 Older = { other = "Más antiguos" }
 Page = { other = "Página" }
-Of = { other = "de" }
 NoIncidents = { other = "Todavía no hay informes" }
 NoFixtureCopy = { other = "Ejecuta la importación de datos de prueba para rellenar esta vista." }
 NoLiveCopy = { other = "El sincronizador aún no ha encontrado ningún comunicado dentro del intervalo previsto." }
@@ -120,7 +111,6 @@ ChineseTranslationStep = { other = "Traducción al chino simplificado" }
 HindiTranslationStep = { other = "Traducción al hindi" }
 SpanishTranslationStep = { other = "Traducción al español" }
 FrenchTranslationStep = { other = "Traducción al francés" }
-StagedPipeline = { other = "Proceso por etapas" }
 MetadataFirstPipeline = { other = "Proceso con metadatos primero v2" }
 Generated = { other = "Generado" }
 AISummary = { other = "Resumen generado por IA" }
@@ -136,7 +126,6 @@ Running = { other = "Resumen y traducción mediante IA en curso" }
 Retrying = { other = "IA temporalmente no disponible; reintento programado" }
 NeedsReview = { other = "El resultado de la IA requiere revisión" }
 OriginalShown = { other = "Se muestra el informe original en alemán." }
-Methodology = { other = "Acerca de MunichBrief" }
 FromReleaseToIncident = { other = "Del comunicado al incidente" }
 Discover = { other = "Descubrir" }
 DiscoverCopy = { other = "Los nuevos comunicados se detectan únicamente mediante el canal RSS oficial de la Policía de Múnich." }
@@ -509,3 +498,132 @@ other = "Esta noticia ya no está disponible en el idioma seleccionado. Puedes s
 
 [CorrectionMessageLimit]
 other = "Hasta {{.MessageMaxLength}} caracteres. El enlace y el idioma de la noticia se adjuntan automáticamente."
+
+[MapNav]
+other = "Mapa y estadísticas"
+
+[MapTitle]
+other = "Múnich, en sus noticias."
+
+[MapIntro]
+other = "Explora los artículos de nuestro archivo en los 25 distritos de Múnich. Elige un periodo, descubre tendencias y lee las historias detrás de las cifras."
+
+[MapEarliest]
+other = "Publicación más antigua del archivo"
+
+[MapAllTime]
+other = "Todo lo disponible"
+
+[MapMonth]
+other = "Últimos 30 días"
+
+[MapPreviousMonth]
+other = "Mes natural anterior"
+
+[MapCustom]
+other = "Fechas personalizadas"
+
+[MapDistrict]
+other = "Distrito municipal"
+
+[MapAllDistricts]
+other = "Todos los distritos y lugares"
+
+[MapOutside]
+other = "Fuera de la ciudad de Múnich"
+
+[MapUnassigned]
+other = "Distrito sin determinar"
+
+[MapReset]
+other = "Restablecer filtros"
+
+[MapDateNote]
+other = "Las fechas corresponden a la publicación en la hora local de Múnich, con inicio y fin incluidos. Los últimos 7 o 30 días incluyen hoy. Todos los totales y gráficos siguen estos filtros; los filtros de lectura guardados no se aplican aquí."
+
+[MapTotal]
+other = "Artículos del archivo"
+
+[MapBasisShort]
+other = "Resúmenes públicos en alemán"
+
+[MapMapped]
+other = "Ubicados en un distrito"
+
+[MapDistrictCount]
+other = "25 distritos municipales oficiales"
+
+[MapAvailable]
+other = "Disponibles para leer"
+
+[MapCoverageShort]
+other = "Versiones lingüísticas publicadas actualmente"
+
+[MapCity]
+other = "La ciudad de un vistazo"
+
+[MapDistricts]
+other = "Artículos por distrito"
+
+[MapInteraction]
+other = "Selecciona un distrito en el mapa o en la lista de abajo. Vuelve a seleccionarlo para mostrar todos los lugares."
+
+[MapReportCount]
+other = "Artículos"
+
+[MapBoundaryNote]
+other = "Límites simplificados"
+
+[MapBehindNumbers]
+other = "Detrás de las cifras"
+
+[MapReadHeading]
+other = "Explora estos artículos"
+
+[MapLanguageNote]
+other = "Las cifras se basan en los resúmenes públicos en alemán y no cambian al elegir otro idioma de interfaz. El procesamiento con IA y las revisiones de traducción pueden retrasar o impedir que un artículo aparezca en tu idioma. Cada enlace muestra solo los artículos disponibles en ese idioma."
+
+[MapReadGerman]
+other = "Leer en alemán"
+
+[MapCurrentSelection]
+other = "Con los filtros seleccionados"
+
+[MapTopDistricts]
+other = "Distritos con más artículos"
+
+[MapEmpty]
+other = "No hay artículos que coincidan con esta selección. Amplía el periodo o restablece los filtros."
+
+[MapCategories]
+other = "Artículos por categoría"
+
+[MapTrend]
+other = "Publicaciones a lo largo del tiempo"
+
+[MapTrendNote]
+other = "Cada barra agrupa fechas de publicación. Abre los datos para ver los intervalos y las cifras exactas. El primer y el último periodo pueden ser más cortos y abarcar menos días."
+
+[MapViewData]
+other = "Ver fechas y cifras"
+
+[MapContext]
+other = "Cómo interpretar las cifras"
+
+[MapMethod]
+other = "Qué muestra este mapa"
+
+[MapBasis]
+other = "Contamos una vez cada artículo en alemán que está publicado actualmente, con su categoría y ubicación actuales. Los artículos de seguimiento pueden referirse al mismo suceso. La publicación más antigua del archivo no indica cuándo empezó el sitio a recopilar artículos."
+
+[MapCaution]
+other = "Es una selección de comunicados de prensa policiales, no un registro completo de sucesos ni una medida de la seguridad de los barrios. Las cifras no se ajustan por población, visitantes ni tamaño del distrito."
+
+[MapLocationNote]
+other = "Cada artículo se asigna a una zona representativa. Las relaciones de pertenencia de los barrios, previamente revisadas, los vinculan con los distritos oficiales; los lugares amplios o ambiguos quedan sin determinar. Los lugares fuera de Múnich y los distritos sin determinar se incluyen en el total, pero no pueden aparecer dentro de un distrito en el mapa. Las categorías y ubicaciones obtenidas mediante IA pueden ser incorrectas."
+
+[MapAdvancedHelp]
+other = "El distrito seleccionado sigue activo al cambiar otros filtros. Introducir una zona o aplicar los barrios guardados sustituye la selección del distrito."
+
+[MapExcluded]
+other = "Fuera del filtro de ubicación seleccionado"

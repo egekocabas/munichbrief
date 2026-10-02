@@ -7,10 +7,6 @@ PrimaryNavigation = { other = "主导航" }
 SkipToContent = { other = "跳至内容" }
 DarkMode = { other = "深色模式" }
 NoticeLabel = { other = "重要提示" }
-NoticeLead = { other = "独立且非官方。" }
-FixtureNotice = { other = "此视图仅包含合成测试数据。" }
-LiveNotice = { other = "本网站使用 AI 对警方官方通报进行摘要、分类和信息提取。内容可能有误，通报也可能在发布后更新。" }
-AuthorityNotice = { other = "最新官方信息始终具有权威性，并适用无罪推定原则。" }
 ReviewNotice = { other = "审查模式：可能显示未经匿名处理的原文。请勿公开。" }
 AIGeneratedContent = { other = "AI 生成的内容" }
 AIFixtureLabelPreview = { other = "标签预览——此合成测试内容尚未经过 AI 处理" }
@@ -26,8 +22,6 @@ EUIconGuidance = { other = "欧盟图标指南" }
 EUCodePractice = { other = "欧盟行为准则" }
 Built = { other = "构建" }
 Language = { other = "语言" }
-German = { other = "德语" }
-English = { other = "英语" }
 SwitchToGerman = { other = "切换至德语版本" }
 SwitchToEnglish = { other = "切换至英语版本" }
 SwitchToTurkish = { other = "切换至土耳其语版本" }
@@ -40,19 +34,16 @@ SwitchToHindi = { other = "切换至印地语版本" }
 SwitchToSpanish = { other = "切换至西班牙语版本" }
 SwitchToFrench = { other = "切换至法语版本" }
 HeroEyebrowFixture = { other = "本地原型" }
-HeroEyebrowLive = { other = "慕尼黑警方通报" }
 HeroTitle = { other = "慕尼黑，简明速览。" }
 FixtureIncidents = { other = "合成测试通报" }
 LatestIncidents = { other = "最新事件" }
 Reports = { other = "{{.Count}} 条通报" }
-ShownTotal = { other = "显示 {{.Shown}} 条 / 共 {{.Total}} 条" }
 Report = { other = "警方通报" }
 SourceMetadata = { other = "来源元数据" }
 ReadIncident = { other = "阅读通报" }
 Newer = { other = "较新" }
 Older = { other = "较早" }
 Page = { other = "第" }
-Of = { other = "页，共" }
 NoIncidents = { other = "暂无通报" }
 NoFixtureCopy = { other = "运行测试数据导入以填充此视图。" }
 NoLiveCopy = { other = "同步程序尚未发现时间范围内的通报。" }
@@ -120,7 +111,6 @@ ChineseTranslationStep = { other = "简体中文翻译" }
 HindiTranslationStep = { other = "印地语翻译" }
 SpanishTranslationStep = { other = "西班牙语翻译" }
 FrenchTranslationStep = { other = "法语翻译" }
-StagedPipeline = { other = "分阶段处理流程" }
 MetadataFirstPipeline = { other = "元数据优先处理流程 v2" }
 Generated = { other = "生成于" }
 AISummary = { other = "AI 生成的摘要" }
@@ -136,7 +126,6 @@ Running = { other = "正在生成 AI 摘要与翻译" }
 Retrying = { other = "AI 暂时不可用；已安排重试" }
 NeedsReview = { other = "AI 输出需要审查" }
 OriginalShown = { other = "当前显示德语原始通报。" }
-Methodology = { other = "关于 MunichBrief" }
 FromReleaseToIncident = { other = "从通报到事件" }
 Discover = { other = "发现" }
 DiscoverCopy = { other = "新通报仅通过慕尼黑警方官方 RSS 源发现。" }
@@ -509,3 +498,132 @@ other = "该报道已无法以所选语言查看。您仍可使用通用联系�
 
 [CorrectionMessageLimit]
 other = "最多{{.MessageMaxLength}}个字符。报道链接和语言会自动附上。"
+
+[MapNav]
+other = "地图与统计"
+
+[MapTitle]
+other = "报道中的慕尼黑"
+
+[MapIntro]
+other = "按慕尼黑的25个行政区探索本站收录的报道。选择时间范围，了解分布，并阅读数字背后的报道。"
+
+[MapEarliest]
+other = "本站收录报道的最早发布日期"
+
+[MapAllTime]
+other = "全部已收录报道"
+
+[MapMonth]
+other = "过去30天"
+
+[MapPreviousMonth]
+other = "上一个自然月"
+
+[MapCustom]
+other = "自定义日期"
+
+[MapDistrict]
+other = "行政区"
+
+[MapAllDistricts]
+other = "所有行政区及地点"
+
+[MapOutside]
+other = "慕尼黑市外"
+
+[MapUnassigned]
+other = "行政区未确定"
+
+[MapReset]
+other = "重置筛选"
+
+[MapDateNote]
+other = "日期按慕尼黑当地发布时间计算，包含起止日期。过去7天或30天均包含今天。所有总数和图表遵循这些筛选条件；已保存的阅读筛选条件不适用于此页。"
+
+[MapTotal]
+other = "本站收录的报道"
+
+[MapBasisShort]
+other = "已公开的德语摘要"
+
+[MapMapped]
+other = "可归入行政区"
+
+[MapDistrictCount]
+other = "25个官方行政区"
+
+[MapAvailable]
+other = "可供阅读"
+
+[MapCoverageShort]
+other = "当前已发布的语言版本"
+
+[MapCity]
+other = "城市概览"
+
+[MapDistricts]
+other = "各行政区的报道"
+
+[MapInteraction]
+other = "在地图上选择行政区，或使用下方的行政区列表。再次选择该区可显示所有地点。"
+
+[MapReportCount]
+other = "报道数"
+
+[MapBoundaryNote]
+other = "边界已简化"
+
+[MapBehindNumbers]
+other = "数字背后"
+
+[MapReadHeading]
+other = "浏览这些报道"
+
+[MapLanguageNote]
+other = "统计以公开的德语摘要为依据，不随界面语言改变。人工智能处理和翻译审核可能导致报道延迟发布，或无法以您所选的语言发布。每个链接仅显示相应语言中可供阅读的报道。"
+
+[MapReadGerman]
+other = "阅读德语报道"
+
+[MapCurrentSelection]
+other = "当前筛选条件下"
+
+[MapTopDistricts]
+other = "报道最多的行政区"
+
+[MapEmpty]
+other = "没有符合这些条件的报道。请扩大时间范围或重置筛选。"
+
+[MapCategories]
+other = "各类别的报道"
+
+[MapTrend]
+other = "发布时间分布"
+
+[MapTrendNote]
+other = "每个柱形汇总一段发布日期范围。展开数据可查看确切日期范围及数量。首尾时段可能较短，包含的天数也可能较少。"
+
+[MapViewData]
+other = "查看日期和数量"
+
+[MapContext]
+other = "如何理解这些数字"
+
+[MapMethod]
+other = "这张地图展示什么"
+
+[MapBasis]
+other = "每篇当前公开的德语报道只计数一次，并采用其当前类别和地点。后续报道可能涉及同一事件。本站收录的最早发布日期不等于网站开始收集报道的日期。"
+
+[MapCaution]
+other = "这里展示的是部分警方新闻报道，并非所有事件的完整记录，也不能用于衡量街区安全程度。数量未按人口、访客量或行政区面积调整。"
+
+[MapLocationNote]
+other = "每篇报道归入一个代表性区域。已审核的街区隶属关系用于对应官方行政区；范围过大或有歧义的地点保留为未确定。慕尼黑市外及行政区未确定的报道计入总数，但不会显示在地图上的某个行政区内。人工智能识别的类别和地点可能有误。"
+
+[MapAdvancedHelp]
+other = "修改其他筛选条件时，所选行政区仍然有效。输入具体区域或应用已保存的街区会替代该行政区筛选。"
+
+[MapExcluded]
+other = "不在所选地点筛选范围内"

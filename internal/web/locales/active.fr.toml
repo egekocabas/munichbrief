@@ -7,10 +7,6 @@ PrimaryNavigation = { other = "Navigation principale" }
 SkipToContent = { other = "Aller au contenu" }
 DarkMode = { other = "Mode sombre" }
 NoticeLabel = { other = "Avis important" }
-NoticeLead = { other = "Indépendant et non officiel." }
-FixtureNotice = { other = "Cette vue contient uniquement des données de test synthétiques." }
-LiveNotice = { other = "L’IA est utilisée pour résumer, classer et extraire des informations des communiqués officiels de la police. Des erreurs sont possibles et les communiqués peuvent être mis à jour après leur publication." }
-AuthorityNotice = { other = "Les informations officielles les plus récentes restent la référence et la présomption d’innocence s’applique." }
 ReviewNotice = { other = "Mode de révision : du texte original non anonymisé peut être visible. Ne pas rendre public." }
 AIGeneratedContent = { other = "Contenu généré par l’IA" }
 AIFixtureLabelPreview = { other = "Aperçu du label — ce contenu synthétique n’a pas été traité par l’IA" }
@@ -26,8 +22,6 @@ EUIconGuidance = { other = "Orientations de l’UE sur les icônes" }
 EUCodePractice = { other = "Code de bonnes pratiques de l’UE" }
 Built = { other = "Version" }
 Language = { other = "Langue" }
-German = { other = "Allemand" }
-English = { other = "Anglais" }
 SwitchToGerman = { other = "Passer à la version allemande" }
 SwitchToEnglish = { other = "Passer à la version anglaise" }
 SwitchToTurkish = { other = "Passer à la version turque" }
@@ -40,19 +34,16 @@ SwitchToHindi = { other = "Passer à la version hindi" }
 SwitchToSpanish = { other = "Passer à la version espagnole" }
 SwitchToFrench = { other = "Passer à la version française" }
 HeroEyebrowFixture = { other = "Prototype local" }
-HeroEyebrowLive = { other = "Communiqués de la police de Munich" }
 HeroTitle = { other = "Munich, en bref." }
 FixtureIncidents = { other = "Rapports synthétiques" }
 LatestIncidents = { other = "Derniers incidents" }
 Reports = { one = "{{.Count}} rapport", other = "{{.Count}} rapports" }
-ShownTotal = { other = "{{.Shown}} affichés / {{.Total}} au total" }
 Report = { other = "Rapport de police" }
 SourceMetadata = { other = "Métadonnées de la source" }
 ReadIncident = { other = "Lire le rapport" }
 Newer = { other = "Plus récents" }
 Older = { other = "Plus anciens" }
 Page = { other = "Page" }
-Of = { other = "sur" }
 NoIncidents = { other = "Aucun rapport pour le moment" }
 NoFixtureCopy = { other = "Exécutez l’importation des données de test pour remplir cette vue." }
 NoLiveCopy = { other = "Le synchroniseur n’a pas encore découvert de communiqué dans la période prévue." }
@@ -120,7 +111,6 @@ ChineseTranslationStep = { other = "Traduction chinoise simplifiée" }
 HindiTranslationStep = { other = "Traduction hindi" }
 SpanishTranslationStep = { other = "Traduction espagnole" }
 FrenchTranslationStep = { other = "Traduction française" }
-StagedPipeline = { other = "Pipeline par étapes" }
 MetadataFirstPipeline = { other = "Pipeline avec métadonnées en premier v2" }
 Generated = { other = "Généré" }
 AISummary = { other = "Résumé généré par l’IA" }
@@ -136,7 +126,6 @@ Running = { other = "Résumé et traduction par IA en cours" }
 Retrying = { other = "IA temporairement indisponible ; nouvelle tentative planifiée" }
 NeedsReview = { other = "Le résultat de l’IA nécessite une révision" }
 OriginalShown = { other = "Le rapport original allemand est affiché." }
-Methodology = { other = "À propos de MunichBrief" }
 FromReleaseToIncident = { other = "Du communiqué à l’incident" }
 Discover = { other = "Découvrir" }
 DiscoverCopy = { other = "Les nouveaux communiqués sont découverts uniquement par le flux RSS officiel de la police de Munich." }
@@ -509,3 +498,132 @@ other = "Cet article n’est plus disponible dans la langue choisie. Vous pouvez
 
 [CorrectionMessageLimit]
 other = "Jusqu’à {{.MessageMaxLength}} caractères. Le lien et la langue de l’article sont joints automatiquement."
+
+[MapNav]
+other = "Carte et statistiques"
+
+[MapTitle]
+other = "Munich au fil des articles."
+
+[MapIntro]
+other = "Explorez les articles de nos archives dans les 25 arrondissements de Munich. Choisissez une période, découvrez les tendances et lisez les articles derrière les chiffres."
+
+[MapEarliest]
+other = "Publication la plus ancienne des archives"
+
+[MapAllTime]
+other = "Tout ce qui est disponible"
+
+[MapMonth]
+other = "30 derniers jours"
+
+[MapPreviousMonth]
+other = "Mois civil précédent"
+
+[MapCustom]
+other = "Dates personnalisées"
+
+[MapDistrict]
+other = "Arrondissement"
+
+[MapAllDistricts]
+other = "Tous les arrondissements et lieux"
+
+[MapOutside]
+other = "Hors de la ville de Munich"
+
+[MapUnassigned]
+other = "Arrondissement indéterminé"
+
+[MapReset]
+other = "Réinitialiser les filtres"
+
+[MapDateNote]
+other = "Les dates suivent l’heure de publication à Munich, bornes incluses. Les 7 ou 30 derniers jours incluent aujourd’hui. Tous les totaux et graphiques suivent ces filtres ; les filtres de lecture enregistrés ne s’appliquent pas ici."
+
+[MapTotal]
+other = "Articles dans les archives"
+
+[MapBasisShort]
+other = "Résumés publics en allemand"
+
+[MapMapped]
+other = "Situés dans un arrondissement"
+
+[MapDistrictCount]
+other = "25 arrondissements officiels"
+
+[MapAvailable]
+other = "Disponibles à la lecture"
+
+[MapCoverageShort]
+other = "Versions linguistiques actuellement publiées"
+
+[MapCity]
+other = "La ville en un coup d’œil"
+
+[MapDistricts]
+other = "Articles par arrondissement"
+
+[MapInteraction]
+other = "Sélectionnez un arrondissement sur la carte ou dans la liste ci-dessous. Sélectionnez-le à nouveau pour afficher tous les lieux."
+
+[MapReportCount]
+other = "Articles"
+
+[MapBoundaryNote]
+other = "Limites simplifiées"
+
+[MapBehindNumbers]
+other = "Derrière les chiffres"
+
+[MapReadHeading]
+other = "Explorez ces articles"
+
+[MapLanguageNote]
+other = "Les chiffres reposent sur les résumés publics en allemand et restent identiques quelle que soit la langue de l’interface. Le traitement par IA et les contrôles de traduction peuvent retarder ou empêcher la publication d’un article dans votre langue. Chaque lien affiche uniquement les articles disponibles dans cette langue."
+
+[MapReadGerman]
+other = "Lire en allemand"
+
+[MapCurrentSelection]
+other = "Avec les filtres sélectionnés"
+
+[MapTopDistricts]
+other = "Arrondissements les plus représentés"
+
+[MapEmpty]
+other = "Aucun article ne correspond à cette sélection. Élargissez la période ou réinitialisez les filtres."
+
+[MapCategories]
+other = "Articles par catégorie"
+
+[MapTrend]
+other = "Publications au fil du temps"
+
+[MapTrendNote]
+other = "Chaque barre regroupe des dates de publication. Ouvrez les données pour consulter les périodes et les chiffres exacts. Les première et dernière périodes peuvent couvrir moins de jours."
+
+[MapViewData]
+other = "Voir les dates et les chiffres"
+
+[MapContext]
+other = "Interpréter les chiffres"
+
+[MapMethod]
+other = "Ce que montre cette carte"
+
+[MapBasis]
+other = "Chaque article en allemand actuellement public est compté une fois, selon sa catégorie et son lieu actuels. Les articles de suivi peuvent concerner un même événement. La publication la plus ancienne des archives ne correspond pas à la date à laquelle le site a commencé à recueillir des articles."
+
+[MapCaution]
+other = "Il s’agit d’une sélection de communiqués de presse de la police, et non d’un relevé exhaustif des incidents ni d’une mesure de la sécurité des quartiers. Les chiffres ne sont pas ajustés en fonction de la population, des visiteurs ou de la superficie des arrondissements."
+
+[MapLocationNote]
+other = "Chaque article est associé à une zone représentative. Des rattachements de quartiers vérifiés permettent de les relier aux arrondissements officiels ; les lieux trop larges ou ambigus restent indéterminés. Les lieux hors de Munich et les arrondissements indéterminés sont inclus dans le total, mais ne peuvent pas apparaître dans un arrondissement sur la carte. Les catégories et lieux déterminés par IA peuvent être erronés."
+
+[MapAdvancedHelp]
+other = "L’arrondissement sélectionné reste actif lorsque vous modifiez d’autres filtres. Saisir une zone ou appliquer les quartiers enregistrés remplace cette sélection."
+
+[MapExcluded]
+other = "Hors du filtre de lieu sélectionné"

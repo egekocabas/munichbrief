@@ -342,7 +342,7 @@ func (s *Server) detail(response http.ResponseWriter, request *http.Request) {
 	if scope.PublicOnly {
 		data.CorrectionURL = fmt.Sprintf("/%s/contact?incident=%d#contact-form", language, id)
 		filters := readSearch(request)
-		filters.Area, filters.Areas = view.AreaName, nil
+		filters.Area, filters.Areas, filters.District = view.AreaName, nil, ""
 		data.Incident.AreaURL = readerActionURL(language, filters, readTimelineView(request), s.options.PageSize)
 		filters = readSearch(request)
 		filters.Category = view.Record.AICategory

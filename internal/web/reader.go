@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/egekocabas/munichbrief/internal/location"
 	"github.com/egekocabas/munichbrief/internal/store"
 )
 
@@ -65,7 +66,7 @@ type readerField struct{ Key, Value string }
 
 const maxReaderQueryBytes = 8192
 
-var readerFilterKeys = []string{"q", "area", "neighborhood", "period", "category", "number", "assistance", "date_field", "from", "to"}
+var readerFilterKeys = []string{"q", "area", "neighborhood", "district", "period", "category", "number", "assistance", "date_field", "from", "to"}
 
 // URL filters replace the complete saved search, never merge with it.
 func readerURLFilters(r *http.Request) (store.ReaderFilters, bool, error) {
@@ -92,7 +93,7 @@ func readerURLFilters(r *http.Request) (store.ReaderFilters, bool, error) {
 }
 
 func readerFiltersFromValues(values url.Values) (store.ReaderFilters, error) {
-	f := store.ReaderFilters{Text: strings.TrimSpace(values.Get("q")), Area: strings.TrimSpace(values.Get("area")), Period: values.Get("period"), Category: values.Get("category"), Number: strings.TrimSpace(values.Get("number")), Assistance: values.Get("assistance"), DateField: values.Get("date_field"), From: values.Get("from"), To: values.Get("to")}
+	f := store.ReaderFilters{Text: strings.TrimSpace(values.Get("q")), Area: strings.TrimSpace(values.Get("area")), District: values.Get("district"), Period: values.Get("period"), Category: values.Get("category"), Number: strings.TrimSpace(values.Get("number")), Assistance: values.Get("assistance"), DateField: values.Get("date_field"), From: values.Get("from"), To: values.Get("to")}
 	// Validate the complete input before normalizing controls overridden by the
 	// advanced form. Only neighborhoods are allowed to repeat.
 	for _, key := range readerFilterKeys {
@@ -112,12 +113,18 @@ func readerFiltersFromValues(values url.Values) (store.ReaderFilters, error) {
 	if err := (store.ReaderFilters{Areas: f.Areas, Period: f.Period}).Validate(); err != nil {
 		return f, err
 	}
+	if err := (store.ReaderFilters{District: f.District}).Validate(); err != nil {
+		return f, err
+	}
 	slices.Sort(f.Areas)
 	f.Areas = slices.Compact(f.Areas)
 	// An explicit area or custom date range in advanced search replaces the
 	// corresponding shortcut; all other advanced criteria remain untouched.
 	if f.Area != "" {
 		f.Areas = nil
+	}
+	if f.Area != "" || len(f.Areas) > 0 {
+		f.District = ""
 	}
 	if f.From != "" || f.To != "" {
 		f.Period = ""
@@ -136,7 +143,7 @@ func readerFiltersFromValues(values url.Values) (store.ReaderFilters, error) {
 
 func readerFilterValues(f store.ReaderFilters) url.Values {
 	values := url.Values{}
-	for key, value := range map[string]string{"q": f.Text, "area": f.Area, "period": f.Period, "category": f.Category, "number": f.Number, "assistance": f.Assistance, "date_field": f.DateField, "from": f.From, "to": f.To} {
+	for key, value := range map[string]string{"q": f.Text, "area": f.Area, "district": f.District, "period": f.Period, "category": f.Category, "number": f.Number, "assistance": f.Assistance, "date_field": f.DateField, "from": f.From, "to": f.To} {
 		if value != "" && !(key == "date_field" && (value == "published" || (f.From == "" && f.To == ""))) {
 			values.Set(key, value)
 		}
@@ -292,6 +299,7 @@ func (s *Server) submitSearch(w http.ResponseWriter, r *http.Request) {
 			f.Areas = selection.Areas
 			if len(f.Areas) > 0 {
 				f.Area = ""
+				f.District = ""
 			}
 		case "enable":
 			selection := readReaderPreferences(r, neighborhoodsCookieName).Areas
@@ -303,6 +311,7 @@ func (s *Server) submitSearch(w http.ResponseWriter, r *http.Request) {
 			}
 			f.Areas = selection
 			f.Area = ""
+			f.District = ""
 		case "disable":
 			f.Areas = nil
 		default:
@@ -325,6 +334,8 @@ func (s *Server) submitSearch(w http.ResponseWriter, r *http.Request) {
 			f.Area = ""
 		case "neighborhoods":
 			f.Areas = nil
+		case "district":
+			f.District = ""
 		case "category":
 			f.Category = ""
 		case "number":
@@ -455,6 +466,20 @@ func (s *Server) decorateReader(data *timelinePage, language string, search bool
 	}
 	add("q", "SearchText", f.Text)
 	add("area", "Area", f.Area)
+	if f.District != "" {
+		name := ""
+		switch f.District {
+		case location.DistrictOutside:
+			name = s.localization.Text(language, "MapOutside")
+		case location.DistrictUnassigned:
+			name = s.localization.Text(language, "MapUnassigned")
+		default:
+			if district, ok := location.District(f.District); ok {
+				name = district.Name
+			}
+		}
+		add("district", "MapDistrict", name)
+	}
 	add("neighborhoods", "Area", strings.Join(f.Areas, ", "))
 	add("category", "Category", s.metadataCodeLabel(language, "Category", f.Category))
 	add("number", "Report", f.Number)
@@ -526,7 +551,7 @@ func (s *Server) decorateNeighborhoods(data *timelinePage, r *http.Request) {
 		for n := range data.Groups[g].Incidents {
 			incident := &data.Groups[g].Incidents[n]
 			f := data.Filters
-			f.Area, f.Areas = incident.AreaName, nil
+			f.Area, f.Areas, f.District = incident.AreaName, nil, ""
 			incident.AreaURL = readerActionURL(data.Lang, f, data.View, data.PageSize)
 			f = data.Filters
 			f.Category = incident.Record.AICategory

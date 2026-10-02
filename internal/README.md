@@ -16,6 +16,7 @@ units:
 | `processing` | Staged AI processing, validation, scheduling, and model access |
 | `store` | SQLite schema, transactions, queries, and pipeline persistence |
 | `web` | Public/review HTTP presentation and access boundaries |
+| `translationcheck` | Offline source usage and UI catalog integrity checks for CI |
 | `observability` | Prometheus-compatible metrics and HTTP instrumentation |
 
 The expected dependency direction is adapters toward domain and persistence:
