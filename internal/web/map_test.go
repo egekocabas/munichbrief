@@ -122,3 +122,25 @@ func TestMapSitemapAndNavigation(t *testing.T) {
 		}
 	}
 }
+
+func TestMapMarkdownEscapesTrendAndScopeText(t *testing.T) {
+	s, _ := newContactServer(t)
+	base := s.base(httptest.NewRequest("GET", "https://munichbrief.de/en/map", nil), "en", "/en/map")
+	attack := `<img src=x onerror="alert(1)"> & [label]`
+	data := mapPage{basePage: base, PeriodLabel: attack, DistrictLabel: attack, LanguageName: attack, Trend: []mapBar{{Label: attack, Total: 1}}, GermanURL: "/de/search", LanguageURL: "/en/search"}
+	w := httptest.NewRecorder()
+	s.renderMapMarkdown(w, data)
+	body := w.Body.String()
+	if strings.Contains(body, "<img") || !strings.Contains(body, "&lt;img") || !strings.Contains(body, "&amp;") || !strings.Contains(body, `\[label\]`) {
+		t.Fatal(body)
+	}
+	if w.Header().Get("X-Content-Type-Options") != "nosniff" || w.Header().Get("Cache-Control") != "private, no-store" {
+		t.Fatal(w.Header())
+	}
+	for _, key := range []string{"from", "to"} {
+		path := "/en/map?" + url.Values{key: {attack}}.Encode()
+		if res := contactRequest(s, "GET", path, nil); res.Code != 400 {
+			t.Fatal("accepted malformed date", res.Code)
+		}
+	}
+}

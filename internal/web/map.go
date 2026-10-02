@@ -278,24 +278,27 @@ func (s *Server) renderMapMarkdown(w http.ResponseWriter, data mapPage) {
 	s.prepareMarkdown(w, data.basePage)
 	var b strings.Builder
 	writeMarkdownFrontMatter(&b, s.localization.Text(data.Lang, "MapTitle"), data.basePage)
-	fmt.Fprintf(&b, "# %s\n\n%s\n\n", markdownText(s.localization.Text(data.Lang, "MapTitle")), markdownText(data.Description))
+	fmt.Fprintf(&b, "# %s\n\n%s\n\n", mapMarkdownText(s.localization.Text(data.Lang, "MapTitle")), mapMarkdownText(data.Description))
 	for _, key := range []string{"MapBasis", "MapCaution", "MapLanguageNote", "MapLocationNote"} {
-		fmt.Fprintf(&b, "%s\n\n", markdownText(s.localization.Text(data.Lang, key)))
+		fmt.Fprintf(&b, "%s\n\n", mapMarkdownText(s.localization.Text(data.Lang, key)))
 	}
-	fmt.Fprintf(&b, "%s: %s\n\n%s · %s\n\n%s: %d\n\n%s (%s): %d\n\n", markdownText(s.localization.Text(data.Lang, "MapEarliest")), markdownText(data.Earliest), markdownText(data.PeriodLabel), markdownText(strings.Trim(strings.Join([]string{data.DistrictLabel, data.CategoryLabel}, " · "), " ·")), markdownText(s.localization.Text(data.Lang, "MapTotal")), data.Stats.Total, markdownText(s.localization.Text(data.Lang, "MapAvailable")), markdownText(data.LanguageName), data.Stats.Available)
-	fmt.Fprintf(&b, "## %s\n\n", markdownText(s.localization.Text(data.Lang, "MapDistricts")))
+	fmt.Fprintf(&b, "%s: %s\n\n%s · %s\n\n%s: %d\n\n%s (%s): %d\n\n", mapMarkdownText(s.localization.Text(data.Lang, "MapEarliest")), mapMarkdownText(data.Earliest), mapMarkdownText(data.PeriodLabel), mapMarkdownText(strings.Trim(strings.Join([]string{data.DistrictLabel, data.CategoryLabel}, " · "), " ·")), mapMarkdownText(s.localization.Text(data.Lang, "MapTotal")), data.Stats.Total, mapMarkdownText(s.localization.Text(data.Lang, "MapAvailable")), mapMarkdownText(data.LanguageName), data.Stats.Available)
+	fmt.Fprintf(&b, "## %s\n\n", mapMarkdownText(s.localization.Text(data.Lang, "MapDistricts")))
 	for _, d := range data.Districts {
-		fmt.Fprintf(&b, "- %s: %d\n", markdownText(d.Name), d.Total)
+		fmt.Fprintf(&b, "- %s: %d\n", mapMarkdownText(d.Name), d.Total)
 	}
-	fmt.Fprintf(&b, "- %s: %d\n- %s: %d\n\n", markdownText(s.localization.Text(data.Lang, "MapOutside")), data.Stats.Outside, markdownText(s.localization.Text(data.Lang, "MapUnassigned")), data.Stats.Unassigned)
-	fmt.Fprintf(&b, "\n## %s\n\n", markdownText(s.localization.Text(data.Lang, "MapCategories")))
+	fmt.Fprintf(&b, "- %s: %d\n- %s: %d\n\n", mapMarkdownText(s.localization.Text(data.Lang, "MapOutside")), data.Stats.Outside, mapMarkdownText(s.localization.Text(data.Lang, "MapUnassigned")), data.Stats.Unassigned)
+	fmt.Fprintf(&b, "\n## %s\n\n", mapMarkdownText(s.localization.Text(data.Lang, "MapCategories")))
 	for _, c := range data.Categories {
-		fmt.Fprintf(&b, "- %s: %d\n", markdownText(c.Label), c.Total)
+		fmt.Fprintf(&b, "- %s: %d\n", mapMarkdownText(c.Label), c.Total)
 	}
-	fmt.Fprintf(&b, "\n## %s\n\n", markdownText(s.localization.Text(data.Lang, "MapTrend")))
+	fmt.Fprintf(&b, "\n## %s\n\n", mapMarkdownText(s.localization.Text(data.Lang, "MapTrend")))
 	for _, period := range data.Trend {
-		fmt.Fprintf(&b, "- %s: %d\n", markdownText(period.Label), period.Total)
+		fmt.Fprintf(&b, "- %s: %d\n", mapMarkdownText(period.Label), period.Total)
 	}
-	fmt.Fprintf(&b, "\n[%s](<%s>) · [%s](<%s>)\n\n%s · [dl-de/by-2-0](%s) · [Source](%s)\n", markdownText(s.localization.Text(data.Lang, "MapReadGerman")), html.EscapeString(markdownURL(data.GermanURL)), markdownText(data.LanguageName), html.EscapeString(markdownURL(data.LanguageURL)), markdownText(data.Attribution+" · "+s.localization.Text(data.Lang, "MapBoundaryNote")), data.LicenseURL, data.SourceURL)
+	fmt.Fprintf(&b, "\n[%s](<%s>) · [%s](<%s>)\n\n%s · [dl-de/by-2-0](%s) · [Source](%s)\n", mapMarkdownText(s.localization.Text(data.Lang, "MapReadGerman")), html.EscapeString(markdownURL(data.GermanURL)), mapMarkdownText(data.LanguageName), html.EscapeString(markdownURL(data.LanguageURL)), mapMarkdownText(data.Attribution+" · "+s.localization.Text(data.Lang, "MapBoundaryNote")), data.LicenseURL, data.SourceURL)
 	fmt.Fprint(w, b.String())
 }
+
+// Keep Markdown text safe even if rendered by an HTML-aware Markdown client.
+func mapMarkdownText(value string) string { return markdownText(html.EscapeString(value)) }
