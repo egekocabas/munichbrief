@@ -1676,8 +1676,8 @@
     "internal/web/static/social-brand.png": "b7eff4f3853d9c324236cfaa16bbd0b32333207c1552c1f324450014733a1960",
     "internal/web/static/social-brand.svg": "3f861b7ad462f05cb4e124da53ab486479e25bdf6ea679d392eb4f7812cb4c48",
     "internal/web/static/theme.js": "d67879f8af292d69e13930f2049305c6334775498fdd9819bff6a6f561731500",
-    "package-lock.json": "80893ca5bb0ce89b1334098751a3e4119ea53a631fc395af7660bf0b07854b7c",
-    "package.json": "daae8eb164ce0e988b9058cc386ca7f9fe74f133c0df9f9bbd95e3cce579d119"
+    "package-lock.json": "3cd65b44d96c5265a6a670f18b032c043b8befec3b36453720938e85b9494633",
+    "package.json": "e63bc2484cbefc05135aebc09fec7864851eb05884dd6f36d50c116c4667f6ce"
   },
   "container_zoneinfo_sha256": "602843bacd2b0d8b3bc135e0f2cbb7b9c25e4a6d31c53aae3ad35aea558478a7",
   "credits_updated_at": "2026-10-03"
