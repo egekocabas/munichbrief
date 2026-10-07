@@ -1158,6 +1158,9 @@ func normalizePrivacyFlags(flags *[]string) error {
 }
 
 func validatePublicText(value string) error {
+	if len(telephoneNumberMatches(value)) != 0 {
+		return errorOf(ErrorPrivacy, "model output contains a possible telephone number")
+	}
 	for _, detector := range privacyDetectors {
 		if detector.expression.MatchString(value) {
 			return errorOf(ErrorPrivacy, "model output contains a possible %s", detector.label)
