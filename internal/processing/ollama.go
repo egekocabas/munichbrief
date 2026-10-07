@@ -318,7 +318,7 @@ var privacyDetectors = []struct {
 	{label: "email address", expression: regexp.MustCompile(`(?i)\b[[:alnum:]._%+-]+@[[:alnum:].-]+\.[a-z]{2,}\b`)},
 	{label: "web address", expression: regexp.MustCompile(`(?i)\b(?:https?://|www\.)\S+`)},
 	{label: "social handle", expression: regexp.MustCompile(`(?:^|\s)@[[:alnum:]_]{2,}\b`)},
-	{label: "date of birth", expression: regexp.MustCompile(`(?i)(?:geboren(?: am)?|geburtsdatum|born(?: on)?)\s*:?\s*\d{1,2}[./-]\d{1,2}[./-](?:19|20)?\d{2}\b`)},
+	{label: "date of birth", expression: regexp.MustCompile(`(?i)\b(?:geboren(?:\s+am)?|geb\.(?:\s+am)?|geburtsdatum|born(?:\s+on)?|date\s+of\s+birth|d\.?o\.?b\.?)\s*:?\s*\d{1,2}[./-]\d{1,2}[./-](?:\d{4}|\d{2})\b`)},
 	{label: "exact age", expression: regexp.MustCompile(`(?i)\b\d{1,3}[- ]?(?:jährig(?:e[rsn]?)?|year[- ]old)\b`)},
 	{label: "vehicle registration", expression: regexp.MustCompile(`\b[A-ZÄÖÜ]{1,3}-[A-Z]{1,2}\s?\d{1,4}\b`)},
 	{label: "case number", expression: regexp.MustCompile(`(?i)(?:aktenzeichen|vorgangsnummer|case(?: number)?|reference)\s*:?\s*(?:[A-Z]{1,10}[-/]?)?\d[A-Z0-9/-]{3,}`)},
@@ -327,21 +327,39 @@ var privacyDetectors = []struct {
 
 var (
 	telephoneNumberPattern = regexp.MustCompile(`(?:\+49|\b0)[\d ()/.-]{7,}\d\b`)
-	telephoneLabelPattern  = regexp.MustCompile(`(?i)\b(?:telefon(?:nummer|isch)?|tel\.?|phone|telephone|mobil(?:nummer)?|fax|rufnummer|hotline|kontakt)(?:\s+(?:unter|at))?\s*[:=]?\s*$`)
+	telephoneLabelPattern  = regexp.MustCompile(`(?i)\b(?:tel\b\.?|(?:telefon(?:nummer|isch)?|phone|telephone|mobil(?:nummer)?|fax|rufnummer|hotline|kontakt)\b)` +
+		`(?:\s*\([^()\n]{1,40}\))?(?:\s+(?:lautet|ist|is))?(?:\s+(?:unter|at)(?:\s+der\s+(?:Nummer|Rufnummer))?)?\s*[:=]?\s*["'„“(]?\s*$`)
+	clockMinutePattern = regexp.MustCompile(`^:[0-5]\d(?:$|[^\p{L}\p{N}:])`)
 )
 
 func telephoneNumberMatches(value string) [][]int {
 	matches := telephoneNumberPattern.FindAllStringIndex(value, -1)
 	private := matches[:0]
 	for _, indices := range matches {
-		// Only exempt an entire calendar date, never a date-shaped fragment of
-		// a longer phone number or a value explicitly labelled as a phone number.
-		if isCalendarDate(value[indices[0]:indices[1]]) && !telephoneLabelPattern.MatchString(value[:indices[0]]) {
+		// Phone labels take precedence even when quotes or descriptive words
+		// separate the label from a date-shaped number.
+		if isCalendarDateMatch(value, indices) && !telephoneLabelPattern.MatchString(value[:indices[0]]) {
 			continue
 		}
 		private = append(private, indices)
 	}
 	return private
+}
+
+func isCalendarDateMatch(value string, indices []int) bool {
+	matched := value[indices[0]:indices[1]]
+	if isCalendarDate(matched) {
+		return true
+	}
+	// The phone regexp can consume the hour of a date followed by HH:MM.
+	// Require a complete valid clock time, not an arbitrary numeric suffix.
+	fields := strings.Fields(matched)
+	tail := value[indices[1]:]
+	if len(fields) != 2 || !isCalendarDate(fields[0]) || !clockMinutePattern.MatchString(tail) {
+		return false
+	}
+	_, err := time.Parse("15:04", fields[1]+tail[:3])
+	return err == nil
 }
 
 func isCalendarDate(value string) bool {
@@ -357,10 +375,13 @@ func isCalendarDate(value string) bool {
 const streetAddressExpression = `([[:alpha:]ÄÖÜäöüß-]+(?:straße|strasse|str\.|weg|platz|allee|gasse))\s+(\d+)([a-z]?)\b`
 
 var (
-	preciseStreetAddressPattern   = regexp.MustCompile(`(?i)\b` + streetAddressExpression)
-	sourceStreetAddressPattern    = regexp.MustCompile(`(?i)\b(?:in|an|aus)\s+(?:der|dem|den)?\s*` + streetAddressExpression)
-	numberedRoadClassPattern      = regexp.MustCompile(`(?i)^(?:staats|bundes|landes|kreis)(?:straße|strasse|str\.)$`)
-	streetNameModifierPattern     = regexp.MustCompile(`(?i)(?:^|\s)(?:alte[nmrs]?|neue[nmrs]?|äußere[nmrs]?|innere[nmrs]?|obere[nmrs]?|untere[nmrs]?)\s+$`)
+	preciseStreetAddressPattern = regexp.MustCompile(`(?i)\b` + streetAddressExpression)
+	sourceStreetAddressPattern  = regexp.MustCompile(`(?i)\b(?:in|an|aus)\s+(?:der|dem|den)?\s*` + streetAddressExpression)
+	numberedRoadClassPattern    = regexp.MustCompile(`(?i)^(?:staats|bundes|landes|kreis)(?:straße|strasse|str\.)$`)
+	streetNameModifierPattern   = regexp.MustCompile(`(?i)(?:^|\s)(?:alte[nmrs]?|neue[nmrs]?|äußere[nmrs]?|innere[nmrs]?|obere[nmrs]?|untere[nmrs]?)\s+$`)
+	residentialAddressPattern   = regexp.MustCompile(`(?i)\b(?:` +
+		`(?:wohn(?:anschrift|adresse)|adresse|anschrift|hausnummer|address)\b[^.!?\d\n;]{0,80}|` +
+		`(?:wohnsitz|wohnhaft|wohnt|wohnen|wohnte[n]?|resides?|lives?)\s+(?:in|an|at|on)\s+(?:(?:der|dem|den|the)\s+)?["'„“]?\s*)$`)
 	localizedMonthAfterDayPattern = regexp.MustCompile(`(?i)^(?:[.,]\s*|\s+)(?:de\s+)?(?:` +
 		`january|february|march|april|may|june|july|august|september|october|november|december|` +
 		`januar|februar|märz|mai|juni|juli|oktober|dezember|` +
@@ -400,9 +421,17 @@ func isPreciseStreetAddress(value string, indices []int) bool {
 	if indices[6] >= 0 && indices[6] != indices[7] {
 		return true
 	}
+	prefix := value[:indices[2]]
+	// Explicit home-address context takes precedence over every exception,
+	// including a calendar date immediately following an address.
+	if residentialAddressPattern.MatchString(prefix) {
+		return true
+	}
 	street := value[indices[2]:indices[3]]
-	if numberedRoadClassPattern.MatchString(street) && number >= 1 && number <= 9999 && numberText[0] != '0' && !streetNameModifierPattern.MatchString(value[:indices[2]]) {
-		return false
+	if numberedRoadClassPattern.MatchString(street) && number >= 1 && number <= 9999 && numberText[0] != '0' {
+		if !streetNameModifierPattern.MatchString(prefix) {
+			return false
+		}
 	}
 	tail := value[indices[1]:]
 	if number >= 1 && number <= 31 && localizedMonthAfterDayPattern.MatchString(tail) {

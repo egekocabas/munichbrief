@@ -151,6 +151,13 @@ func TestCalendarDatesArePreservedWithoutAllowingPhoneNumbersOrBirthDates(t *tes
 		{"geboren am 07.09.2000", "07.09.2000"},
 		{"Geburtsdatum: 07/09/2000", "07/09/2000"},
 		{"born on 07-09-2000", "07-09-2000"},
+		{"geb. am 07.09.2000", "07.09.2000"},
+		{"geb. 07.09.2000", "07.09.2000"},
+		{"DOB: 07/09/2000", "07/09/2000"},
+		{"Date of birth: 07-09-2000", "07-09-2000"},
+		{"geboren am 07.09.2100", "07.09.2100"},
+		{"geboren  am\t07.09.2000", "07.09.2000"},
+		{"D.O.B.: 07.09.2000", "07.09.2000"},
 	} {
 		t.Run(test.value, func(t *testing.T) {
 			if got := redactDirectIdentifiers(test.value); strings.Contains(got, test.private) {
@@ -236,6 +243,77 @@ func TestCanonicalStepInputsPreserveDatesAndRoadsWithPrivateDetailsRemoved(t *te
 				}
 			}
 		})
+	}
+}
+
+func TestCalendarDateExceptionsRespectPhoneContextAndClockTimes(t *testing.T) {
+	for _, value := range []string{
+		"Am 07.09.2026 13:45 Uhr ereignete sich ein Unfall.",
+		"Am 07.09.2026 00:05 Uhr ereignete sich ein Unfall.",
+		"Am 07/09/2026 09:30 ereignete sich ein Unfall.",
+		"Die Telefonnummer ist unbekannt. Am 07.09.2026 gab es einen Unfall.",
+		"Telefonisch meldete sie am 07.09.2026 einen Unfall.",
+	} {
+		if got := redactDirectIdentifiers(value); got != value {
+			t.Errorf("date and time removed: %q", got)
+		}
+		if err := validatePublicText(value); err != nil {
+			t.Errorf("date and time rejected: %q: %v", value, err)
+		}
+	}
+	for _, test := range []struct{ value, private string }{
+		{`Telefon (privat): 07.09.2026`, "07.09.2026"},
+		{`Telefonnummer lautet 07.09.2026`, "07.09.2026"},
+		{`Tel.: "07.09.2026"`, "07.09.2026"},
+		{`Phone (home): 07/09/2026`, "07/09/2026"},
+		{`Telefon: 07.09.2026 13:45`, "07.09.2026"},
+		{"07.09.2026 25:05", "07.09.2026"},
+		{"07.09.2026 13:65", "07.09.2026"},
+		{"07.09.2026 13:456789", "07.09.2026"},
+	} {
+		if got := redactDirectIdentifiers(test.value); strings.Contains(got, test.private) {
+			t.Errorf("phone candidate retained: %q", got)
+		}
+		if err := validatePublicText(test.value); err == nil || KindOf(err) != ErrorPrivacy {
+			t.Errorf("phone candidate accepted: %q: %v", test.value, err)
+		}
+	}
+}
+
+func TestNumberedRoadExceptionsRespectResidentialAddressContext(t *testing.T) {
+	for _, value := range []string{
+		"Eine Person wohnt in der Bundesstraße 2.",
+		"Eine Person war wohnhaft an der Staatsstraße 2053.",
+		"Die Wohnanschrift lautet: Landesstraße 123.",
+		"Adresse: Kreisstraße 12.",
+		"The home address is Bundesstraße 2.",
+		"Wohnanschrift: Bundesstraße 2, September 2026.",
+		"Wohnanschrift: Ganghoferstraße 29, August 2026.",
+	} {
+		if err := validatePublicText(value); err == nil || KindOf(err) != ErrorPrivacy {
+			t.Errorf("residential address accepted as a road: %q: %v", value, err)
+		}
+	}
+	for _, test := range []struct{ value, address string }{
+		{"Eine Person wohnt in der Bundesstraße 2.", "Bundesstraße 2"},
+		{"Eine Person war wohnhaft an der Staatsstraße 2053.", "Staatsstraße 2053"},
+		{"Die Wohnanschrift war in der Bundesstraße 2, September 2026.", "Bundesstraße 2"},
+	} {
+		if got := redactDirectIdentifiers(test.value); strings.Contains(got, test.address) {
+			t.Errorf("residential address retained as a road: %q", got)
+		}
+	}
+	for _, value := range []string{
+		"Die Wohnanschrift ist unbekannt. Auf der Bundesstraße 2 ereignete sich ein Unfall.",
+		"Ein Mann ohne festen Wohnsitz verursachte auf der Staatsstraße 2053 einen Unfall.",
+		"Eine Person wohnt in München und fuhr auf der Staatsstraße 2053.",
+	} {
+		if got := redactDirectIdentifiers(value); got != value {
+			t.Errorf("unrelated address context removed a road: %q", got)
+		}
+		if err := validatePublicText(value); err != nil {
+			t.Errorf("unrelated address context rejected a road: %v", err)
+		}
 	}
 }
 
