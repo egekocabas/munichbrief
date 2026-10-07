@@ -31,3 +31,17 @@ Licence checks:
   Docker must support execution of that architecture; CI uses native runners.
 
 See [the licence review](../docs/licensing-review.md) for the review/update process.
+
+## Frontend dependency updates
+
+`package.json` uses a scoped [npm override](https://docs.npmjs.com/cli/v11/configuring-npm/package-json/#overrides)
+for Tailwind CLI's `@parcel/watcher`: version 2.6.0 removes the vulnerable
+`micromatch` / `braces` dependency chain. Tailwind CLI 4.3.3 pins watcher 2.5.1;
+remove the override when an updated CLI resolves a safe watcher without it.
+
+Use npm commands to regenerate `package-lock.json`; do not edit it manually.
+Verify dependency changes with `npm ci`, `npm audit --audit-level=high`,
+`npm run build`, and `git diff --exit-code -- internal/web/static`.
+For watcher updates, also check that `npm run watch:css` rebuilds after a template
+change. Review dependency terms and refresh the licence inventory as described
+above.
