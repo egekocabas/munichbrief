@@ -537,7 +537,8 @@
       "source": "https://go.dev/blog/go-fonts",
       "license": "BSD-3-Clause",
       "notices": [
-        "go-4-0"
+        "go-4-0",
+        "go-fonts"
       ],
       "kind": "font",
       "locations": [
@@ -545,7 +546,7 @@
         "container"
       ],
       "public": true,
-      "conditions": "Fonts designed by Bigelow & Holmes; Copyright 2016 The Go Authors. Used in server-rendered social images.",
+      "conditions": "Fonts designed by Bigelow & Holmes; Copyright 2016 Bigelow & Holmes Inc. Used in server-rendered social images.",
       "reviewed_at": "2026-10-13",
       "review_status": "reviewed",
       "files": []
@@ -1600,6 +1601,12 @@
       "file": "LICENSES/unicode-bidi.txt",
       "sha256": "8c993d844859ad3a79bbe47d6831322ac1c9e84ceb3a63db566723a884bff87f",
       "source": "https://www.unicode.org/Public/PROGRAMS/BidiReferenceJava/"
+    },
+    {
+      "id": "go-fonts",
+      "file": "LICENSES/go-fonts.txt",
+      "sha256": "dc588a7ba9130043b67c2380cc03cc6644ed3557f6d5e8589b96acba1c64e343",
+      "source": "https://go.googlesource.com/image/+/refs/tags/v0.47.0/font/gofont/ttfs/README"
     }
   ],
   "source_archives": [

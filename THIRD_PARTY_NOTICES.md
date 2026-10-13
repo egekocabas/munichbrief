@@ -256,8 +256,9 @@ Unmodified embedded fonts used to render social cards. Font licences do not auto
 - Included in: binary, container
 - Reviewed: 2026-10-13
 - [go-4-0](LICENSES/go-4-0.txt)
+- [go-fonts](LICENSES/go-fonts.txt)
 
-Fonts designed by Bigelow & Holmes; Copyright 2016 The Go Authors. Used in server-rendered social images.
+Fonts designed by Bigelow & Holmes; Copyright 2016 Bigelow & Holmes Inc. Used in server-rendered social images.
 
 ## MADLAD400 7B — Q4_K_M
 
