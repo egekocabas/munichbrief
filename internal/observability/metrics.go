@@ -54,7 +54,7 @@ type Metrics struct {
 
 type pipelineStepMetrics struct {
 	attempts, successes, failures, durationNanos, durationCount atomic.Uint64
-	failureKinds                                                [4]atomic.Uint64
+	failureKinds                                                [len(pipelineFailureKinds)]atomic.Uint64
 	queued, running, retrying, review, failed, succeeded        atomic.Int64
 }
 
@@ -403,7 +403,7 @@ func (m *Metrics) write(writer io.Writer) {
 	writeCounter(writer, "munichbrief_retention_deletions_total", "Records removed by retention processing.", 0)
 }
 
-var pipelineFailureKinds = [...]string{"transient", "configuration", "output", "privacy"}
+var pipelineFailureKinds = [...]string{"transient", "configuration", "output", "privacy", "timeout"}
 
 func writeDurationSummary(writer io.Writer, name, help string, nanoseconds, count uint64) {
 	fmt.Fprintf(writer, "# HELP %s %s\n", name, help)

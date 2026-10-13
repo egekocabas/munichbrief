@@ -108,6 +108,7 @@ func TestMetricsExposeStagedPipelineState(t *testing.T) {
 	metrics.RecordPipelineSuccess("incident_metadata", time.Unix(4567, 0))
 	metrics.RecordPipelineSuccess("category_verification/default", time.Unix(4568, 0))
 	metrics.RecordPipelineFailure("translation/en", "output")
+	metrics.RecordPipelineFailure("translation/it", "timeout")
 	metrics.RecordPipelineDuration("category_verification/default", 1250*time.Millisecond)
 	metrics.RecordPipelineDuration("translation/en", 1750*time.Millisecond)
 	metrics.SetPipelineSnapshot(store.PipelineSnapshot{
@@ -133,6 +134,8 @@ func TestMetricsExposeStagedPipelineState(t *testing.T) {
 		`munichbrief_pipeline_successes_total{step="category_verification/default"} 1`,
 		`munichbrief_pipeline_failures_total{step="translation/en"} 1`,
 		`munichbrief_pipeline_failures_by_kind_total{step="translation/en",kind="output"} 1`,
+		`munichbrief_pipeline_failures_total{step="translation/it"} 1`,
+		`munichbrief_pipeline_failures_by_kind_total{step="translation/it",kind="timeout"} 1`,
 		`munichbrief_pipeline_duration_seconds_sum{step="category_verification/default"} 1.250000`,
 		`munichbrief_pipeline_duration_seconds_sum{step="translation/en"} 1.750000`,
 		`munichbrief_pipeline_jobs{step="incident_metadata",state="queued"} 2`,
