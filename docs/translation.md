@@ -48,7 +48,9 @@ implicitly translate the historical archive.
 - Ollama runs separately; the application image includes no model weights.
 - Adapters handle different model request formats.
 - Jobs retain the model, adapter, and prompt version used for that attempt.
-- Output and privacy failures stop after three attempts. Automatic discovery
+- Output, privacy, and model request timeout failures stop after three attempts
+  and require review. Connection failures and temporary server errors keep
+  retrying with backoff so processing can recover after an outage. Automatic discovery
   does not recreate terminally failed jobs for unchanged inputs, model, adapter,
   and prompt; an explicit manual retry or changed work can start a new job.
 - Queued jobs whose scope or prompt is no longer registered fail without a model

@@ -1122,7 +1122,7 @@ func (w *PipelineWorker) handlePostProcessingFailure(ctx context.Context, job st
 	now := w.clock()
 	status := "pending"
 	var retryAt *time.Time
-	if (kind == ErrorOutput || kind == ErrorPrivacy) && job.AttemptCount >= contentMaxAttempts {
+	if (kind == ErrorOutput || kind == ErrorPrivacy || kind == ErrorTimeout) && job.AttemptCount >= contentMaxAttempts {
 		status = "needs_review"
 	} else {
 		delay := contentRetryDelay(job.AttemptCount)
@@ -1151,7 +1151,7 @@ func (w *PipelineWorker) handlePostProcessingFailure(ctx context.Context, job st
 		w.observer.RecordPipelineFailure(executionKey, string(kind))
 	}
 	w.logger.Warn("AI post-processing request failed", "job_id", job.ID, "incident_id", job.IncidentID, "processor", job.ProcessorKey, "scope", job.ScopeKey, "failure_kind", kind, "status", status, "retry_at", retryAt)
-	return kind == ErrorOutput || kind == ErrorPrivacy
+	return kind == ErrorOutput || kind == ErrorPrivacy || kind == ErrorTimeout
 }
 
 func stepInputAndHash(job store.PipelineJob, step StepDefinition) (StepInput, string) {
@@ -1171,7 +1171,7 @@ func (w *PipelineWorker) handleJobFailure(ctx context.Context, job store.Pipelin
 	now := w.clock()
 	status := "pending"
 	var retryAt *time.Time
-	if (kind == ErrorOutput || kind == ErrorPrivacy) && job.AttemptCount >= contentMaxAttempts {
+	if (kind == ErrorOutput || kind == ErrorPrivacy || kind == ErrorTimeout) && job.AttemptCount >= contentMaxAttempts {
 		status = "needs_review"
 	} else {
 		delay := contentRetryDelay(job.AttemptCount)
@@ -1201,7 +1201,7 @@ func (w *PipelineWorker) handleJobFailure(ctx context.Context, job store.Pipelin
 		w.observer.RecordPipelineFailure(job.StepKey, string(kind))
 	}
 	w.logger.Warn("staged AI request failed", "cycle_id", job.CycleID, "job_id", job.ID, "incident_id", job.IncidentID, "step", job.StepKey, "failure_kind", kind, "status", status, "retry_at", retryAt)
-	return kind == ErrorOutput || kind == ErrorPrivacy
+	return kind == ErrorOutput || kind == ErrorPrivacy || kind == ErrorTimeout
 }
 
 func pipelineCircuitKey(step, model string) string { return step + "\x00" + model }

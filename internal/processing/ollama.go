@@ -20,6 +20,7 @@ type ErrorKind string
 
 const (
 	ErrorTransient     ErrorKind = "transient"
+	ErrorTimeout       ErrorKind = "timeout"
 	ErrorConfiguration ErrorKind = "configuration"
 	ErrorOutput        ErrorKind = "output"
 	ErrorPrivacy       ErrorKind = "privacy"
@@ -46,6 +47,16 @@ func KindOf(err error) ErrorKind {
 		return processingError.Kind
 	}
 	return ErrorTransient
+}
+
+// ollamaRequestError distinguishes a provider request that exhausted its own
+// deadline from cancellation or expiry of the calling worker's context.
+func ollamaRequestError(ctx context.Context, operation string, err error) error {
+	kind := ErrorTransient
+	if ctx.Err() == nil && errors.Is(err, context.DeadlineExceeded) {
+		kind = ErrorTimeout
+	}
+	return errorOf(kind, "%s: %w", operation, err)
 }
 
 // OllamaGeneratorProvider creates constrained clients for selected local models.
@@ -239,12 +250,12 @@ func (c *OllamaClient) chatWithOptions(ctx context.Context, userOnly bool, syste
 	request.Header.Set("Accept", "application/json")
 	response, err := c.client.Do(request)
 	if err != nil {
-		return "", "", errorOf(ErrorTransient, "call Ollama: %v", err)
+		return "", "", ollamaRequestError(ctx, "call Ollama", err)
 	}
 	defer response.Body.Close()
 	bodyBytes, err := readBounded(response.Body, 1<<20)
 	if err != nil {
-		return "", "", errorOf(ErrorTransient, "read ollama response: %v", err)
+		return "", "", ollamaRequestError(ctx, "read ollama response", err)
 	}
 	if response.StatusCode != http.StatusOK {
 		kind := ErrorConfiguration
@@ -283,12 +294,12 @@ func (c *OllamaClient) rawGenerate(ctx context.Context, prompt string, options c
 	request.Header.Set("Accept", "application/json")
 	response, err := c.client.Do(request)
 	if err != nil {
-		return "", "", errorOf(ErrorTransient, "call Ollama: %v", err)
+		return "", "", ollamaRequestError(ctx, "call Ollama", err)
 	}
 	defer response.Body.Close()
 	bodyBytes, err := readBounded(response.Body, 1<<20)
 	if err != nil {
-		return "", "", errorOf(ErrorTransient, "read ollama response: %v", err)
+		return "", "", ollamaRequestError(ctx, "read ollama response", err)
 	}
 	if response.StatusCode != http.StatusOK {
 		kind := ErrorConfiguration

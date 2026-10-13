@@ -55,6 +55,11 @@ expanded canonical cycle progress; per-stage history remains expandable.
 - Translations use accepted German text with place-name protection and restoration.
 - Automatic work follows scheduling controls. Manual requests still require
   available models and valid output.
+- A model request that exceeds the client timeout uses the same three-attempt
+  job budget as output and privacy failures, then becomes `needs_review`.
+  Other jobs remain eligible; a single slow request does not open a shared
+  model outage circuit. Connection failures and temporary HTTP errors retain
+  automatic retries with backoff. Caller cancellation is not a request timeout.
 - Add post-processors through the registry so scheduling, admin controls,
   history, and metrics use the shared lifecycle.
 

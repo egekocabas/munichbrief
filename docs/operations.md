@@ -2,7 +2,7 @@
 
 ## Try it locally
 
-Requires Go 1.26.6 or newer:
+Requires Go 1.26.9 or newer:
 
 ```bash
 go run ./cmd/munichbrief
