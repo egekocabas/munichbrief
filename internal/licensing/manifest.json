@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "reviewed_at": "2026-10-03",
+  "reviewed_at": "2026-10-13",
   "components": [
     {
       "id": "munichbrief",
@@ -142,7 +142,7 @@
     {
       "id": "go-5",
       "name": "golang.org/x/net",
-      "version": "v0.59.0",
+      "version": "v0.60.0",
       "source": "https://golang.org/x/net",
       "license": "BSD-3-Clause",
       "notices": [
@@ -156,7 +156,7 @@
       ],
       "public": true,
       "conditions": "Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.",
-      "reviewed_at": "2026-09-14",
+      "reviewed_at": "2026-10-13",
       "review_status": "reviewed",
       "module": "golang.org/x/net",
       "files": []
@@ -400,7 +400,7 @@
     {
       "id": "go-runtime",
       "name": "Go runtime and standard library",
-      "version": "go1.26.6 / container go1.27.1",
+      "version": "go1.26.9 / container go1.27.2",
       "source": "https://go.dev",
       "license": "BSD-3-Clause",
       "notices": [
@@ -414,7 +414,7 @@
       ],
       "public": true,
       "conditions": "Runtime notices are included for compiled Go code. Build verification checks the actual container toolchain licence. Includes the standard library’s vendored golang.org/x packages under the Go BSD licence and patent grant. Compiler-only dependencies and optional BoringCrypto are not linked into the supported CGO-disabled builds.",
-      "reviewed_at": "2026-09-14",
+      "reviewed_at": "2026-10-13",
       "review_status": "reviewed",
       "files": []
     },
@@ -1647,12 +1647,12 @@
       "arm64": "sha256:06c3c14b7fa252d9f4285242d2d665ce3b51f74b02d3c529464f220f2912aecb"
     }
   },
-  "container_builder": "golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195",
+  "container_builder": "golang:1.27.2-bookworm@sha256:5cf287a799e6b94384bad13d16b14904c531f51ba65792237e122ce42b392f61",
   "source_hashes": {
-    "Dockerfile": "a0b1b7692a6454c4acfbfac8cd7a377ade6942b22232dd3359b14b036b70b1a0",
+    "Dockerfile": "5966bcfee34db6aa56ceb0a9563cb921b14cd2a6f8d1a50c56611b845052132e",
     "LICENSE": "ff01c1c270a6924fcd28aeddef170c7e8054876348bab5a43753954cd3c6de16",
-    "go.mod": "71654d54a6ffb1fb6f868dd2b1855506dd1f293a5f9f7084678e81ef66ac7f0f",
-    "go.sum": "0f883c4b5561dedee1c95e49ee81783353ff3383bfbe252eaecbdb7cf834fa35",
+    "go.mod": "a3c2982023a43db0af4665e526ea97b137a319b70c820650427209f99175b944",
+    "go.sum": "4c0da489e62b767a69e4cb6e84017a779d67ffe4d7562652cdbe9791659b869f",
     "internal/munichmap/districts.json": "bd9f6968ddc821db5ac5954a4f54ef151636fad36a00c871d89b89337ca66a05",
     "internal/munichmap/source/stadtbezirke.geojson.gz": "30486f4019e6f2c181cef2b30a521d8e4914df552ada0f7122ba6cd3b44edffa",
     "internal/web/fonts/NotoSansDevanagari-VF.ttf": "9ce7b04f60e363d8870e5997744cf85cf69d38a4d7d129d364d92a3b14b461d7",
@@ -1680,5 +1680,5 @@
     "package.json": "e63bc2484cbefc05135aebc09fec7864851eb05884dd6f36d50c116c4667f6ce"
   },
   "container_zoneinfo_sha256": "602843bacd2b0d8b3bc135e0f2cbb7b9c25e4a6d31c53aae3ad35aea558478a7",
-  "credits_updated_at": "2026-10-03"
+  "credits_updated_at": "2026-10-13"
 }

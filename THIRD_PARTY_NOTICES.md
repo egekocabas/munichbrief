@@ -66,12 +66,12 @@ Preserve bundled copyright, licence and third-party notices when redistributing.
 
 Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.
 
-## golang.org/x/net — v0.59.0
+## golang.org/x/net — v0.60.0
 
 - Source: [upstream](https://golang.org/x/net)
 - Licence: BSD-3-Clause
 - Included in: binary, container
-- Reviewed: 2026-09-14
+- Reviewed: 2026-10-13
 - [go-4-0](LICENSES/go-4-0.txt)
 - [go-patents](LICENSES/go-patents.txt)
 
@@ -194,12 +194,12 @@ Preserve bundled copyright, licence and third-party notices when redistributing.
 
 Preserve bundled copyright, licence and third-party notices when redistributing. See the full notices for file-specific terms.
 
-## Go runtime and standard library — go1.26.6 / container go1.27.1
+## Go runtime and standard library — go1.26.9 / container go1.27.2
 
 - Source: [upstream](https://go.dev)
 - Licence: BSD-3-Clause
 - Included in: binary, container
-- Reviewed: 2026-09-14
+- Reviewed: 2026-10-13
 - [go-4-0](LICENSES/go-4-0.txt)
 - [go-patents](LICENSES/go-patents.txt)
 
